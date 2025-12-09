@@ -1,0 +1,275 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>RecSys Tracker Demo Page</title>
+    
+    <!-- ============================================ -->
+    <!-- BƯỚC 1: Cấu hình SDK trước khi load -->
+    <!-- ============================================ -->
+    <script>
+      window.RecSysTrackerConfig = {
+        domainKey: 'abc123xyz', // Thay đổi thành domain key của bạn
+        debug: true
+      };
+    </script>
+    
+    <!-- ============================================ -->
+    <!-- BƯỚC 2: Load SDK -->
+    <!-- ============================================ -->
+    <script src="../dist/recsys-tracker.iife.js"></script>
+    
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 50px auto;
+            padding: 20px;
+            line-height: 1.6;
+        }
+        .demo-section {
+            margin: 30px 0;
+            padding: 20px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            background: #f9f9f9;
+        }
+        button {
+            padding: 10px 20px;
+            margin: 5px;
+            background: #007bff;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 14px;
+        }
+        button:hover {
+            background: #0056b3;
+        }
+        .product-card {
+            border: 1px solid #ccc;
+            padding: 15px;
+            margin: 10px 0;
+            border-radius: 5px;
+            cursor: pointer;
+            transition: box-shadow 0.3s;
+        }
+        .product-card:hover {
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+        #console-output {
+            background: #000;
+            color: #0f0;
+            padding: 15px;
+            border-radius: 5px;
+            font-family: 'Courier New', monospace;
+            font-size: 12px;
+            max-height: 300px;
+            overflow-y: auto;
+            margin-top: 20px;
+        }
+        .log-entry {
+            margin: 5px 0;
+            padding: 5px;
+            border-left: 3px solid #0f0;
+            padding-left: 10px;
+        }
+        h1 {
+            color: #333;
+            border-bottom: 3px solid #007bff;
+            padding-bottom: 10px;
+        }
+        h2 {
+            color: #555;
+            margin-top: 30px;
+        }
+        .info {
+            background: #e7f3ff;
+            padding: 15px;
+            border-left: 4px solid #007bff;
+            margin: 20px 0;
+        }
+        code {
+            background: #f4f4f4;
+            padding: 2px 6px;
+            border-radius: 3px;
+            font-family: 'Courier New', monospace;
+        }
+    </style>
+</head>
+<body>
+    <h1>🎯 RecSys Tracker SDK - Demo Page</h1>
+    
+    <div class="info">
+        <strong>ℹ️ Hướng dẫn:</strong><br>
+        1. SDK đã được tự động khởi tạo khi trang load<br>
+        2. Mở Console (F12) để xem các logs chi tiết<br>
+        3. Click vào các button và element bên dưới để test tracking<br>
+        4. Domain Key hiện tại: <code id="current-key">Đang tải...</code>
+    </div>
+
+    <!-- ============================================ -->
+    <!-- Demo Section 1: Button Tracking -->
+    <!-- ============================================ -->
+    <div class="demo-section">
+        <h2>📌 Demo 1: Button Click Tracking</h2>
+        <p>Click vào các button này để test tracking events:</p>
+        
+        <button id="btn-add-cart" data-product-id="prod-001" data-product-name="Laptop Dell XPS 13">
+            🛒 Add to Cart
+        </button>
+        
+        <button id="btn-buy-now" data-product-id="prod-002" data-product-name="iPhone 15 Pro">
+            💳 Buy Now
+        </button>
+        
+        <button id="btn-wishlist" data-product-id="prod-003" data-product-name="Sony WH-1000XM5">
+            ❤️ Add to Wishlist
+        </button>
+    </div>
+
+    <!-- ============================================ -->
+    <!-- Demo Section 2: Product Cards -->
+    <!-- ============================================ -->
+    <div class="demo-section">
+        <h2>📦 Demo 2: Product View Tracking</h2>
+        <p>Click vào product cards để track view events:</p>
+        
+        <div class="product-card" data-product-id="prod-101" data-product-name="MacBook Pro 16">
+            <h3>💻 MacBook Pro 16"</h3>
+            <p>Price: $2,499</p>
+            <p>Click để xem chi tiết</p>
+        </div>
+        
+        <div class="product-card" data-product-id="prod-102" data-product-name="Samsung Galaxy S24">
+            <h3>📱 Samsung Galaxy S24</h3>
+            <p>Price: $899</p>
+            <p>Click để xem chi tiết</p>
+        </div>
+    </div>
+
+    <!-- ============================================ -->
+    <!-- Demo Section 3: Link Tracking -->
+    <!-- ============================================ -->
+    <div class="demo-section">
+        <h2>🔗 Demo 3: Link Click Tracking</h2>
+        <p>Click vào các links này (sẽ không chuyển trang):</p>
+        
+        <a href="#product-1" data-category="electronics" onclick="event.preventDefault()">
+            View Electronics Category
+        </a><br><br>
+        
+        <a href="#product-2" data-category="fashion" onclick="event.preventDefault()">
+            View Fashion Category
+        </a><br><br>
+        
+        <a href="#product-3" data-category="home" onclick="event.preventDefault()">
+            View Home & Living Category
+        </a>
+    </div>
+
+    <!-- ============================================ -->
+    <!-- Console Output -->
+    <!-- ============================================ -->
+    <div class="demo-section">
+        <h2>📊 Tracking Events Log</h2>
+        <div id="console-output">
+            <div class="log-entry">Waiting for events...</div>
+        </div>
+        <button onclick="clearLog()">Clear Log</button>
+        <button onclick="showConfig()">Show Config</button>
+    </div>
+
+    <!-- ============================================ -->
+    <!-- Demo Scripts -->
+    <!-- ============================================ -->
+    <script>
+        // Hiển thị domain key
+        setTimeout(() => {
+            const keyElement = document.getElementById('current-key');
+            if (window.RecSysTrackerConfig) {
+                keyElement.textContent = window.RecSysTrackerConfig.domainKey;
+            }
+        }, 100);
+
+        // Custom console log để hiển thị trong page
+        const originalConsoleLog = console.log;
+        const consoleOutput = document.getElementById('console-output');
+        
+        function addLog(message, type = 'log') {
+            const entry = document.createElement('div');
+            entry.className = 'log-entry';
+            const time = new Date().toLocaleTimeString();
+            entry.textContent = `[${time}] ${message}`;
+            
+            if (type === 'error') {
+                entry.style.borderLeftColor = '#f00';
+                entry.style.color = '#f00';
+            } else if (type === 'warn') {
+                entry.style.borderLeftColor = '#ff0';
+                entry.style.color = '#ff0';
+            }
+            
+            consoleOutput.appendChild(entry);
+            consoleOutput.scrollTop = consoleOutput.scrollHeight;
+        }
+
+        // Override console.log để capture SDK logs
+        console.log = function(...args) {
+            originalConsoleLog.apply(console, args);
+            const message = args.join(' ');
+            if (message.includes('[RecSysTracker]')) {
+                addLog(message);
+            }
+        };
+
+        // Log button clicks
+        document.querySelectorAll('button[id^="btn-"]').forEach(button => {
+            button.addEventListener('click', (e) => {
+                const productId = e.target.dataset.productId;
+                const productName = e.target.dataset.productName;
+                addLog(`Button clicked: ${e.target.textContent.trim()} | Product: ${productName} (${productId})`, 'log');
+            });
+        });
+
+        // Log product card clicks
+        document.querySelectorAll('.product-card').forEach(card => {
+            card.addEventListener('click', (e) => {
+                const productId = e.currentTarget.dataset.productId;
+                const productName = e.currentTarget.dataset.productName;
+                addLog(`Product viewed: ${productName} (${productId})`, 'log');
+            });
+        });
+
+        // Log link clicks
+        document.querySelectorAll('a[data-category]').forEach(link => {
+            link.addEventListener('click', (e) => {
+                const category = e.target.dataset.category;
+                addLog(`Category link clicked: ${category}`, 'log');
+            });
+        });
+
+        function clearLog() {
+            consoleOutput.innerHTML = '<div class="log-entry">Log cleared. Waiting for new events...</div>';
+        }
+
+        function showConfig() {
+            if (window.RecSysTracker) {
+                addLog('Config: ' + JSON.stringify(window.RecSysTrackerConfig, null, 2), 'log');
+            } else {
+                addLog('SDK not loaded!', 'error');
+            }
+        }
+
+        // Initial load message
+        window.addEventListener('load', () => {
+            addLog('Page loaded. SDK initializing...', 'log');
+            setTimeout(() => {
+                addLog('Ready to track events! Try clicking elements above.', 'log');
+            }, 1000);
+        });
+    </script>
+</body>
+</html>

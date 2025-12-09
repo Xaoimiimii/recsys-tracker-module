@@ -1,0 +1,271 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
+// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
+
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+  moduleFormat = "cjs"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+model Ternant {
+  Id                Int      @id @default(autoincrement())
+  Name              String   
+  Username          String   @unique
+  Password          String
+
+  Domains           Domain[]
+  Items             Item[]
+  Users             User[]
+  Ratings           Rating[]
+}
+
+model Domain {
+  Id                Int      @id @default(autoincrement())
+  Key               String   @unique
+  Url               String
+  Type              Int?
+  CreatedAt         DateTime @default(now())
+
+  TernantID         Int
+  Ternant           Ternant  @relation(fields: [TernantID], references: [Id])
+  Rules             Rule[]
+  DomainReturns     DomainReturn[]
+}
+
+model DomainReturn {
+  DomainID          Int
+  SlotName          String
+  Value             String?
+  TargetUrl         String?
+
+  Domain            Domain       @relation(fields: [DomainID], references: [Id])
+  
+  ReturnMethodID    Int
+  ReturnMethod      ReturnMethod @relation(fields: [ReturnMethodID], references: [Id])
+
+  @@id([DomainID, SlotName])
+}
+
+model ReturnMethod {
+  Id                Int     @id @default(autoincrement())
+  Name              String
+
+  DomainReturns     DomainReturn[]
+}
+
+model Rule {
+  Id                Int    @id @default(autoincrement())
+  Name              String
+
+  DomainID          Int
+  Domain            Domain @relation(fields: [DomainID], references: [Id])
+
+  TriggerEventID    Int
+  TriggerEvent      TriggerEvent @relation(fields: [TriggerEventID], references: [Id])
+
+  TargetElementID   Int
+  TargetElement     TargetElement @relation(fields: [TargetElementID], references: [Id])
+
+  Conditions        Condition[]
+  PayloadConfigs    PayloadConfig[]
+}
+
+model TriggerEvent {
+  Id                Int    @id @default(autoincrement())
+  Name              String
+
+  Rules Rule[]
+}
+
+model TargetElement {
+  Id                Int    @id @default(autoincrement())
+  Value             String
+
+  EventPatternID    Int
+  EventPattern      EventPattern @relation(fields: [EventPatternID], references: [Id])
+
+  OperatorID        Int
+  Operator          Operator @relation(fields: [OperatorID], references: [Id])
+
+  Rules Rule[]
+}
+
+model Condition {
+  Id                Int    @id @default(autoincrement())
+  Value             String
+
+  RuleID            Int
+  Rule              Rule @relation(fields: [RuleID], references: [Id])  
+
+  EventPatternID    Int
+  EventPattern      EventPattern @relation(fields: [EventPatternID], references: [Id])
+
+  OperatorID        Int
+  Operator          Operator @relation(fields: [OperatorID], references: [Id])
+}
+
+model PayloadConfig {
+  PayloadPatternID  Int
+  RuleID            Int
+  
+  Value String?
+  Type  String?
+
+  PayloadPattern    PayloadPattern @relation(fields: [PayloadPatternID], references: [Id])
+  Rule              Rule           @relation(fields: [RuleID], references: [Id])
+
+  OperatorID        Int
+  Operator          Operator @relation(fields: [OperatorID], references: [Id])
+
+  @@id([PayloadPatternID, RuleID])
+}
+
+model PayloadPattern {
+  Id                Int     @id @default(autoincrement())
+  Name              String
+  Type              String?
+
+  PayloadConfigs    PayloadConfig[]
+}
+
+
+model EventPattern {
+  Id                Int    @id @default(autoincrement())
+  Name              String
+
+  TargetElements    TargetElement[]
+  Conditions        Condition[]
+}
+
+model Operator {
+  Id                Int    @id @default(autoincrement())
+  Name              String
+
+  Conditions        Condition[]
+  TargetElements    TargetElement[]
+  PayloadConfigs    PayloadConfig[]
+}
+
+model Category {
+  Id                Int     @id @default(autoincrement())
+  Name              String
+
+  ItemCategories    ItemCategory[]
+}
+
+model ItemCategory {
+  CategoryId        Int
+  ItemId            Int
+  Category          Category @relation(fields: [CategoryId], references: [Id])
+  Item              Item     @relation(fields: [ItemId], references: [Id])
+  @@id([CategoryId, ItemId])
+}
+
+model Item {
+  Id                Int     @id @default(autoincrement())
+  TernantId         Int
+  Ternant           Ternant @relation(fields: [TernantId], references: [Id])
+  Title             String
+  EmbeddingVector   Float[]
+  ModifiedAt        DateTime
+
+  ItemCategories    ItemCategory[]
+  ItemFactors       ItemFactor[]
+  Predicts          Predict[]
+  Ratings           Rating[]
+  Interactions      Interaction[]
+}
+
+model Model {
+  Id                Int     @id @default(autoincrement())
+  Name              String
+  Description       String?
+  AverageRating     Float
+  LearnableParameters   Float[]
+  ModifiedAt        DateTime
+
+  ItemFactors       ItemFactor[]
+  UserFactors       UserFactor[]
+}
+
+model ItemFactor {
+  Id              Int     @id @default(autoincrement())
+  ItemId            Int
+  ModelId           Int
+  ItemBias          Float
+  ItemFactors       Float[]
+
+  Item              Item    @relation(fields: [ItemId], references: [Id])
+  Model             Model   @relation(fields: [ModelId], references: [Id])
+}
+
+model User {
+  Id                Int     @id @default(autoincrement())
+  TernantId         Int
+  Ternant           Ternant @relation(fields: [TernantId], references: [Id])
+  UserEmbeddingVector Float[]
+  CreatedAt         DateTime @default(now())
+  ModifiedAt        DateTime @updatedAt
+
+  UserFactors       UserFactor[]
+  Predicts          Predict[]
+  Ratings           Rating[]
+  Interactions      Interaction[]
+}
+
+model UserFactor {
+  Id                Int     @id @default(autoincrement())
+  UserId            Int
+  ModelId           Int
+  UserBias          Float
+  UserFactors       Float[]
+
+  User              User    @relation(fields: [UserId], references: [Id])
+  Model             Model   @relation(fields: [ModelId], references: [Id])
+}
+
+model Predict {
+  UserId            Int
+  User              User    @relation(fields: [UserId], references: [Id])
+  ItemId            Int
+  Item              Item    @relation(fields: [ItemId], references: [Id])
+  Value             Float
+
+  @@id([UserId, ItemId])
+}
+
+model Rating {
+  Id                Int     @id @default(autoincrement())
+  UserId            Int
+  User              User    @relation(fields: [UserId], references: [Id])
+  ItemId            Int
+  Item              Item    @relation(fields: [ItemId], references: [Id])
+  TernantId         Int
+  Ternant           Ternant @relation(fields: [TernantId], references: [Id])
+  Value             Float
+  ReviewText        String?
+  ConvertedScore    Float    @default(3)
+  CreatedAt         DateTime @default(now())
+
+  @@unique([UserId, ItemId])
+}
+
+model Interaction {
+  Id                Int     @id @default(autoincrement())
+  UserId            Int
+  User              User    @relation(fields: [UserId], references: [Id])
+  ItemId            Int
+  Item              Item    @relation(fields: [ItemId], references: [Id])
+  InteractionType   String
+  CreatedAt         DateTime @default(now())
+
+  @@index([UserId])
+  @@index([ItemId])
+}

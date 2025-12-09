@@ -1,0 +1,35 @@
+{
+  "name": "@recsys-tracker/sdk",
+  "version": "1.0.0",
+  "type": "module",
+  "description": "Core SDK for RecSys Tracker",
+  "main": "dist/recsys-tracker.cjs.js",
+  "module": "dist/recsys-tracker.esm.js",
+  "browser": "dist/recsys-tracker.umd.js",
+  "types": "dist/index.d.ts",
+  "exports": {
+    ".": {
+      "import": "./dist/recsys-tracker.esm.js",
+      "require": "./dist/recsys-tracker.cjs.js",
+      "browser": "./dist/recsys-tracker.umd.js"
+    },
+    "./iife": "./dist/recsys-tracker.iife.js"
+  },
+  "scripts": {
+    "build": "tsc && rollup -c",
+    "dev": "tsc --watch",
+    "test": "jest"
+  },
+  "keywords": [
+    "tracking",
+    "sdk"
+  ],
+  "license": "MIT",
+  "devDependencies": {
+    "@rollup/plugin-replace": "^6.0.3",
+    "@rollup/plugin-typescript": "^11.1.0",
+    "dotenv": "^17.2.3",
+    "rollup": "^4.9.0",
+    "tslib": "^2.6.0"
+  }
+}
