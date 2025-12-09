@@ -8,19 +8,10 @@ Event tracking system with plugin architecture for recommendation systems.
 recsys-tracker-module/
 ├── packages/
 │   ├── sdk/                 # Core SDK
-│   ├── plugins/             # Built-in plugins
+│   ├── tracking-plugins/    # Built-in plugins
 │   └── server/              # Collector server
-└── docs/                   # Documentation
+└── docs/                    # Documentation
 ```
-
-## Implemented Features:
-
-1. **ConfigLoader** - Load and validate configuration
-2. **ErrorBoundary** - Safe execution wrapper with silent fail
-3. **EventBuffer** - Queue management with offline support
-4. **EventDispatcher** - Multi-strategy event sending (sendBeacon → fetch → XHR → Image)
-5. **MetadataNormalizer** - Session & device metadata extraction
-6. **Main SDK** - Auto-initialization and public API
 
 ## Getting Started
 
@@ -47,6 +38,7 @@ npm run build
 ```
 
 This will create:
+- `dist/loader.js` (Loader file)
 - `dist/recsys-tracker.iife.js`(IIFE)
 - `dist/recsys-tracker.umd.js` (UMD)
 - `dist/recsys-tracker.esm.js` (ESM)
@@ -82,7 +74,7 @@ SDK auto-initializes on page load:
 - Sets up event buffer and dispatcher
 - Starts batch sending interval
 
-### 3. Manual Tracking
+### 3. Track Events
 
 ```javascript
 window.RecSysTracker.track({
@@ -90,99 +82,7 @@ window.RecSysTracker.track({
   category: 'purchase_intent',
   data: {
     itemId: 'prod-001',
-    price: 999
+    userId: ''
   }
 });
 ```
-
-## Key Features
-
-### Error Isolation
-- All operations wrapped in try-catch
-- Silent fail - never breaks host website
-- Optional error reporting
-
-### Offline Queue
-- Events stored in LocalStorage
-- Automatic retry on reconnect
-- Max retry limit
-- Queue size limit
-
-### Smart Dispatching
-1. **sendBeacon** (best for page unload)
-2. **fetch with keepalive** (modern browsers)
-3. **XMLHttpRequest** (legacy support)
-4. **Image pixel** (last resort)
-
-### Batch Sending
-- Configurable batch size (default: 10)
-- Configurable delay (default: 2000ms)
-- Reduces server requests
-- Better performance
-
-### Session Management
-- Auto session generation
-- 30min timeout
-- Stored in sessionStorage
-- Session continuity across page loads
-
-### Metadata Collection
-- User agent, screen size, viewport
-- Page URL, title, referrer
-- Device type detection
-- Timestamp and session info
-
-## Configuration Schema
-
-```typescript
-interface TrackerConfig {
-  domainKey: string;
-  trackEndpoint?: string;
-  configEndpoint?: string;
-  trackingRules?: TrackingRule[];
-  returnMethods?: ReturnMethod[];
-}
-
-interface TrackingRule {
-  id: string;
-  name: string;
-  domainId: number;
-  triggerEventId: number; // (click, scroll, ...)
-  targetEventPatternId: number;
-  targetOperatorId: number;
-  targetElementValue: string;
-  conditions: Condition[];
-  payload: PayloadConfig[];
-  options?: TrackerOptions;
-}
-
-interface PayloadConfig {
-  payloadPatternId: number;
-  operatorId: number;
-  value?: string;
-  type?: string;
-}
-
-interface Condition {
-  payloadPatternId: number;
-  operatorId: number;
-  value?: string;
-}
-
-interface ReturnMethod {
-  id: string;
-  name: string;
-  endpoint: string;
-  enabled: boolean;
-}
-
-interface TrackerOptions {
-  debug?: boolean;
-  maxRetries?: number;
-  batchSize?: number;
-  batchDelay?: number; // ms
-  offlineStorage?: boolean;
-}
-```
-
----
