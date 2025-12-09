@@ -47,8 +47,10 @@ npm run build
 ```
 
 This will create:
-- `dist/recsys-tracker.js` (UMD for browser)
+- `dist/recsys-tracker.iife.js`(IIFE)
+- `dist/recsys-tracker.umd.js` (UMD)
 - `dist/recsys-tracker.esm.js` (ESM)
+- `dist/recsys-tracker.cjs.js` (CJS) 
 
 ### 3. Start Server
 
@@ -67,13 +69,9 @@ Server will run on `http://localhost:3000`
 Add to your website's `<head>`:
 
 ```html
-<script>
-  window.RecSysTrackerConfig = {
-    domainKey: "shop-abc",
-    debug: true
-  };
-</script>
-<script src="http://localhost:8080/packages/sdk/dist/recsys-tracker.js"></script>
+<!-- Simple CDN Loader (Recommended) -->
+<script>window.__RECSYS_DOMAIN_KEY__ = "your-domain-key";</script>
+<script src="https://cdn.jsdelivr.net/gh/Xaoimiimii/recsys-tracker-module/packages/sdk/dist/loader.js"></script>
 ```
 
 ### 2. Automatic Initialization

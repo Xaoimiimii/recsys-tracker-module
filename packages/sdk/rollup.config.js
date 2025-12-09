@@ -2,9 +2,46 @@ import typescript from '@rollup/plugin-typescript';
 import replace from '@rollup/plugin-replace';
 import { defineConfig } from 'rollup';
 import dotenv from 'dotenv';
+import fs from 'fs';
+import path from 'path';
 
 // Load environment variables
 dotenv.config();
+
+// Plugin to generate loader.js after build
+function generateLoader() {
+  return {
+    name: 'generate-loader',
+    writeBundle() {
+      const loaderContent = `(function(d,w){
+  // Create stub to queue calls before SDK loads
+  w.RecSysTracker = w.RecSysTracker || function(){
+    (w.RecSysTracker.q = w.RecSysTracker.q || []).push(arguments);
+  };
+  
+  // Store domain key from global variable
+  w.RecSysTracker.domainKey = w.__RECSYS_DOMAIN_KEY__;
+
+  // Load the IIFE bundle
+  var s = d.createElement("script");
+  s.async = true;
+  s.src = (d.currentScript && d.currentScript.src) 
+    ? d.currentScript.src.replace('loader.js', 'recsys-tracker.iife.js')
+    : "recsys-tracker.iife.js";
+  d.head.appendChild(s);
+})(document, window);
+
+// Example loader script
+// <script>window.__RECSYS_DOMAIN_KEY__ = "your-domain-key";</script>
+// <script src="https://cdn.jsdelivr.net/gh/Xaoimiimii/recsys-tracker-module/packages/sdk/dist/loader.js"></script>
+`;
+      
+      const distPath = path.resolve('dist', 'loader.js');
+      fs.writeFileSync(distPath, loaderContent, 'utf8');
+      console.log('Generated loader.js');
+    }
+  };
+}
 
 export default defineConfig({
   input: 'src/index.ts',
@@ -51,6 +88,7 @@ export default defineConfig({
       declarationDir: './dist',
       exclude: ['**/*.test.ts', 'node_modules/**'],
     }),
+    generateLoader(),
   ],
   external: [],
 });
