@@ -15,21 +15,13 @@ export class RecSysTracker {
     // Khởi tạo SDK - tự động gọi khi tải script
     async init() {
         return this.errorBoundary.executeAsync(async () => {
-            var _a;
             if (this.isInitialized) {
-                console.warn('[RecSysTracker] Already initialized');
                 return;
             }
-            console.log('[RecSysTracker] Initializing...');
             // Load config từ window
             this.config = this.configLoader.loadFromWindow();
             if (!this.config) {
-                console.error('[RecSysTracker] Failed to load config, aborting');
                 return;
-            }
-            // Enable debug mode
-            if ((_a = this.config.options) === null || _a === void 0 ? void 0 : _a.debug) {
-                this.errorBoundary.setDebug(true);
             }
             // Khởi tạo EventDispatcher
             this.eventDispatcher = new EventDispatcher({
@@ -39,7 +31,6 @@ export class RecSysTracker {
             this.configLoader.fetchRemoteConfig().then(remoteConfig => {
                 if (remoteConfig) {
                     this.config = remoteConfig;
-                    console.log('[RecSysTracker] Remote config loaded');
                 }
             });
             // Setup batch sending
@@ -47,15 +38,13 @@ export class RecSysTracker {
             // Setup page unload handler
             this.setupUnloadHandler();
             this.isInitialized = true;
-            console.log('[RecSysTracker] Initialized successfully');
         }, 'init');
     }
     // Track custom event
     track(eventData) {
         this.errorBoundary.execute(() => {
-            var _a, _b;
             if (!this.isInitialized || !this.config) {
-                console.warn('[RecSysTracker] Not initialized, queueing event');
+                return;
             }
             const metadata = this.metadataNormalizer.getMetadata();
             this.metadataNormalizer.updateSessionActivity();
@@ -72,9 +61,6 @@ export class RecSysTracker {
                 },
             };
             this.eventBuffer.add(trackedEvent);
-            if ((_b = (_a = this.config) === null || _a === void 0 ? void 0 : _a.options) === null || _b === void 0 ? void 0 : _b.debug) {
-                console.log('[RecSysTracker] Event tracked:', trackedEvent);
-            }
         }, 'track');
     }
     // Setup batch sending of events
@@ -109,7 +95,6 @@ export class RecSysTracker {
             }
         }
         catch (error) {
-            console.warn('[RecSysTracker] Failed to send batch:', error);
             const eventIds = events.map(e => e.id);
             this.eventBuffer.markFailed(eventIds);
         }
@@ -151,11 +136,7 @@ export class RecSysTracker {
     }
     // Set user ID
     setUserId(userId) {
-        var _a, _b;
         this.userId = userId;
-        if ((_b = (_a = this.config) === null || _a === void 0 ? void 0 : _a.options) === null || _b === void 0 ? void 0 : _b.debug) {
-            console.log('[RecSysTracker] User ID set:', userId);
-        }
     }
     // Get current user ID
     getUserId() {
@@ -174,7 +155,6 @@ export class RecSysTracker {
                 (_a = this.eventDispatcher) === null || _a === void 0 ? void 0 : _a.sendBatch(allEvents);
             }
             this.isInitialized = false;
-            console.log('[RecSysTracker] Destroyed');
         }, 'destroy');
     }
 }
@@ -195,6 +175,10 @@ if (typeof window !== 'undefined') {
     }
     // Gán vào window để truy cập toàn cục
     window.RecSysTracker = globalTracker;
+    // Expose classes for testing
+    if (globalTracker) {
+        window.RecSysTracker.ConfigLoader = ConfigLoader;
+    }
 }
 // Default export for convenience
 export default RecSysTracker;

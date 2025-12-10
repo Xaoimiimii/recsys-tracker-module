@@ -34,7 +34,7 @@ export class MetadataNormalizer {
             }
         }
         catch (error) {
-            console.warn('[RecSysTracker] Failed to restore session:', error);
+            // Session restore failed
         }
         // Tạo session mới
         this.createNewSession();
@@ -71,7 +71,7 @@ export class MetadataNormalizer {
                 sessionStorage.setItem(this.sessionStorageKey, JSON.stringify(this.sessionData));
             }
             catch (error) {
-                console.warn('[RecSysTracker] Failed to save session:', error);
+                // Save session failed
             }
         }
     }
@@ -126,7 +126,6 @@ export class MetadataNormalizer {
             return match ? match[group] : null;
         }
         catch (error) {
-            console.warn('[RecSysTracker] Invalid URL pattern:', error);
             return null;
         }
     }
@@ -145,7 +144,7 @@ export class MetadataNormalizer {
             sessionStorage.removeItem(this.sessionStorageKey);
         }
         catch (error) {
-            console.warn('[RecSysTracker] Failed to reset session:', error);
+            // Reset session failed
         }
         this.createNewSession();
     }

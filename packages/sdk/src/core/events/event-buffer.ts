@@ -30,7 +30,7 @@ class LocalStorageAdapter implements StorageAdapter {
     try {
       localStorage.setItem(key, JSON.stringify(data));
     } catch (error) {
-      console.warn('[RecSysTracker] LocalStorage save failed:', error);
+      // Storage save failed
     }
   }
 
@@ -39,7 +39,6 @@ class LocalStorageAdapter implements StorageAdapter {
       const data = localStorage.getItem(key);
       return data ? JSON.parse(data) : null;
     } catch (error) {
-      console.warn('[RecSysTracker] LocalStorage load failed:', error);
       return null;
     }
   }
@@ -48,7 +47,7 @@ class LocalStorageAdapter implements StorageAdapter {
     try {
       localStorage.removeItem(key);
     } catch (error) {
-      console.warn('[RecSysTracker] LocalStorage remove failed:', error);
+      // Storage remove failed
     }
   }
 }
@@ -84,7 +83,6 @@ export class EventBuffer {
   add(event: TrackedEvent): void {
     // Check queue size limit
     if (this.queue.length >= this.maxQueueSize) {
-      console.warn('[RecSysTracker] Queue full, dropping oldest event');
       this.queue.shift();
     }
 
@@ -108,11 +106,6 @@ export class EventBuffer {
     this.queue.forEach(event => {
       if (eventIds.includes(event.id)) {
         event.retryCount = (event.retryCount || 0) + 1;
-        
-        // Xóa các sự kiện vượt quá số lần thử lại tối đa
-        if (event.retryCount > this.maxRetries) {
-          console.warn(`[RecSysTracker] Event ${event.id} exceeded max retries, dropping`);
-        }
       }
     });
 
@@ -151,7 +144,7 @@ export class EventBuffer {
     try {
       this.storage.save(this.storageKey, this.queue);
     } catch (error) {
-      console.warn('[RecSysTracker] Failed to persist queue:', error);
+      // Persist failed
     }
   }
 
@@ -165,10 +158,9 @@ export class EventBuffer {
       const stored = this.storage.load(this.storageKey);
       if (Array.isArray(stored)) {
         this.queue = stored;
-        console.log(`[RecSysTracker] Loaded ${this.queue.length} events from storage`);
       }
     } catch (error) {
-      console.warn('[RecSysTracker] Failed to load queue from storage:', error);
+      // Load from storage failed
     }
   }
 }

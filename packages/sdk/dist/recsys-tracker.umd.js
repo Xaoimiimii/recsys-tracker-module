@@ -24,30 +24,27 @@
             //   }
             // }
         }
-        // Load config từ window.RecSysTrackerConfig
+        // Load config từ window.__RECSYS_DOMAIN_KEY__
         loadFromWindow() {
             try {
-                if (typeof window === 'undefined' || !window.RecSysTrackerConfig) {
-                    console.warn('[RecSysTracker] No window.RecSysTrackerConfig found');
+                if (typeof window === 'undefined' || !window.__RECSYS_DOMAIN_KEY__) {
+                    console.error('[RecSysTracker] window.__RECSYS_DOMAIN_KEY__ not found');
                     return null;
                 }
-                const windowConfig = window.RecSysTrackerConfig;
-                // Kiểm tra tính hợp lệ của cấu hình từ window
-                if (!this.validateWindowConfig(windowConfig)) {
-                    console.error('[RecSysTracker] Invalid window configuration');
+                const domainKey = window.__RECSYS_DOMAIN_KEY__;
+                if (!domainKey || typeof domainKey !== 'string') {
+                    console.error('[RecSysTracker] Invalid domain key');
                     return null;
                 }
-                // Lưu domainKey để fetch data
-                this.domainKey = windowConfig.domainKey;
+                this.domainKey = domainKey;
                 // Default config
                 this.config = {
-                    domainKey: windowConfig.domainKey,
+                    domainKey: domainKey,
                     trackEndpoint: `${this.BASE_API_URL}/track`,
-                    configEndpoint: `${this.BASE_API_URL}/domain/${windowConfig.domainKey}`,
+                    configEndpoint: `${this.BASE_API_URL}/domain/${domainKey}`,
                     trackingRules: [],
                     returnMethods: [],
                     options: {
-                        debug: windowConfig.debug || false,
                         maxRetries: 3,
                         batchSize: 10,
                         batchDelay: 2000,
@@ -57,14 +54,13 @@
                 return this.config;
             }
             catch (error) {
-                console.error('[RecSysTracker] Error loading window config:', error);
+                console.error('[RecSysTracker] Error loading config:', error);
                 return null;
             }
         }
         // Lấy cấu hình từ server (remote)
         async fetchRemoteConfig() {
             if (!this.domainKey) {
-                console.warn('[RecSysTracker] No domain key set');
                 return this.config;
             }
             try {
@@ -76,7 +72,6 @@
                 ]);
                 // Kiểm tra response
                 if (!domainResponse.ok) {
-                    console.warn(`[RecSysTracker] Failed to fetch domain config: ${domainResponse.status}`);
                     return this.config;
                 }
                 // Parse responses
@@ -94,8 +89,7 @@
                 return this.config;
             }
             catch (error) {
-                console.warn('[RecSysTracker] Error fetching remote config:', error);
-                return this.config; // Return local config as fallback
+                return this.config;
             }
         }
         // Transform rules từ server format sang SDK format
@@ -127,17 +121,6 @@
                 returnMethodId: method.ReturnMethodID || method.returnMethodId,
                 value: method.Value || method.value || '',
             }));
-        }
-        // Kiểm tra tính hợp lệ của cấu hình từ window
-        validateWindowConfig(config) {
-            if (!config || typeof config !== 'object') {
-                return false;
-            }
-            if (!config.domainKey || typeof config.domainKey !== 'string') {
-                console.error('[RecSysTracker] Missing or invalid domainKey');
-                return false;
-            }
-            return true;
         }
         // Lấy cấu hình hiện tại
         getConfig() {
@@ -252,7 +235,7 @@
                 localStorage.setItem(key, JSON.stringify(data));
             }
             catch (error) {
-                console.warn('[RecSysTracker] LocalStorage save failed:', error);
+                // Storage save failed
             }
         }
         load(key) {
@@ -261,7 +244,6 @@
                 return data ? JSON.parse(data) : null;
             }
             catch (error) {
-                console.warn('[RecSysTracker] LocalStorage load failed:', error);
                 return null;
             }
         }
@@ -270,7 +252,7 @@
                 localStorage.removeItem(key);
             }
             catch (error) {
-                console.warn('[RecSysTracker] LocalStorage remove failed:', error);
+                // Storage remove failed
             }
         }
     }
@@ -297,7 +279,6 @@
         add(event) {
             // Check queue size limit
             if (this.queue.length >= this.maxQueueSize) {
-                console.warn('[RecSysTracker] Queue full, dropping oldest event');
                 this.queue.shift();
             }
             this.queue.push(event);
@@ -317,10 +298,6 @@
             this.queue.forEach(event => {
                 if (eventIds.includes(event.id)) {
                     event.retryCount = (event.retryCount || 0) + 1;
-                    // Xóa các sự kiện vượt quá số lần thử lại tối đa
-                    if (event.retryCount > this.maxRetries) {
-                        console.warn(`[RecSysTracker] Event ${event.id} exceeded max retries, dropping`);
-                    }
                 }
             });
             // Xóa các sự kiện vượt quá số lần thử lại tối đa
@@ -353,7 +330,7 @@
                 this.storage.save(this.storageKey, this.queue);
             }
             catch (error) {
-                console.warn('[RecSysTracker] Failed to persist queue:', error);
+                // Persist failed
             }
         }
         // Load/khôi phục queue từ storage khi khởi động
@@ -365,11 +342,10 @@
                 const stored = this.storage.load(this.storageKey);
                 if (Array.isArray(stored)) {
                     this.queue = stored;
-                    console.log(`[RecSysTracker] Loaded ${this.queue.length} events from storage`);
                 }
             }
             catch (error) {
-                console.warn('[RecSysTracker] Failed to load queue from storage:', error);
+                // Load from storage failed
             }
         }
     }
@@ -399,17 +375,13 @@
                 try {
                     const success = await this.sendWithStrategy(payload, strategy);
                     if (success) {
-                        // Trả về true nếu gửi thành công
-                        console.log(`[RecSysTracker] Sent ${events.length} events via ${strategy}`);
                         return true;
                     }
                 }
                 catch (error) {
-                    console.warn(`[RecSysTracker] ${strategy} failed:`, error);
                     // Thử phương thức tiếp theo
                 }
             }
-            console.error('[RecSysTracker] All send strategies failed');
             // Trả về false nếu tất cả phương thức gửi đều thất bại
             return false;
         }
@@ -516,7 +488,7 @@
                 }
             }
             catch (error) {
-                console.warn('[RecSysTracker] Failed to restore session:', error);
+                // Session restore failed
             }
             // Tạo session mới
             this.createNewSession();
@@ -553,7 +525,7 @@
                     sessionStorage.setItem(this.sessionStorageKey, JSON.stringify(this.sessionData));
                 }
                 catch (error) {
-                    console.warn('[RecSysTracker] Failed to save session:', error);
+                    // Save session failed
                 }
             }
         }
@@ -608,7 +580,6 @@
                 return match ? match[group] : null;
             }
             catch (error) {
-                console.warn('[RecSysTracker] Invalid URL pattern:', error);
                 return null;
             }
         }
@@ -627,7 +598,7 @@
                 sessionStorage.removeItem(this.sessionStorageKey);
             }
             catch (error) {
-                console.warn('[RecSysTracker] Failed to reset session:', error);
+                // Reset session failed
             }
             this.createNewSession();
         }
@@ -649,21 +620,13 @@
         // Khởi tạo SDK - tự động gọi khi tải script
         async init() {
             return this.errorBoundary.executeAsync(async () => {
-                var _a;
                 if (this.isInitialized) {
-                    console.warn('[RecSysTracker] Already initialized');
                     return;
                 }
-                console.log('[RecSysTracker] Initializing...');
                 // Load config từ window
                 this.config = this.configLoader.loadFromWindow();
                 if (!this.config) {
-                    console.error('[RecSysTracker] Failed to load config, aborting');
                     return;
-                }
-                // Enable debug mode
-                if ((_a = this.config.options) === null || _a === void 0 ? void 0 : _a.debug) {
-                    this.errorBoundary.setDebug(true);
                 }
                 // Khởi tạo EventDispatcher
                 this.eventDispatcher = new EventDispatcher({
@@ -673,7 +636,6 @@
                 this.configLoader.fetchRemoteConfig().then(remoteConfig => {
                     if (remoteConfig) {
                         this.config = remoteConfig;
-                        console.log('[RecSysTracker] Remote config loaded');
                     }
                 });
                 // Setup batch sending
@@ -681,15 +643,13 @@
                 // Setup page unload handler
                 this.setupUnloadHandler();
                 this.isInitialized = true;
-                console.log('[RecSysTracker] Initialized successfully');
             }, 'init');
         }
         // Track custom event
         track(eventData) {
             this.errorBoundary.execute(() => {
-                var _a, _b;
                 if (!this.isInitialized || !this.config) {
-                    console.warn('[RecSysTracker] Not initialized, queueing event');
+                    return;
                 }
                 const metadata = this.metadataNormalizer.getMetadata();
                 this.metadataNormalizer.updateSessionActivity();
@@ -706,9 +666,6 @@
                     },
                 };
                 this.eventBuffer.add(trackedEvent);
-                if ((_b = (_a = this.config) === null || _a === void 0 ? void 0 : _a.options) === null || _b === void 0 ? void 0 : _b.debug) {
-                    console.log('[RecSysTracker] Event tracked:', trackedEvent);
-                }
             }, 'track');
         }
         // Setup batch sending of events
@@ -743,7 +700,6 @@
                 }
             }
             catch (error) {
-                console.warn('[RecSysTracker] Failed to send batch:', error);
                 const eventIds = events.map(e => e.id);
                 this.eventBuffer.markFailed(eventIds);
             }
@@ -785,11 +741,7 @@
         }
         // Set user ID
         setUserId(userId) {
-            var _a, _b;
             this.userId = userId;
-            if ((_b = (_a = this.config) === null || _a === void 0 ? void 0 : _a.options) === null || _b === void 0 ? void 0 : _b.debug) {
-                console.log('[RecSysTracker] User ID set:', userId);
-            }
         }
         // Get current user ID
         getUserId() {
@@ -808,7 +760,6 @@
                     (_a = this.eventDispatcher) === null || _a === void 0 ? void 0 : _a.sendBatch(allEvents);
                 }
                 this.isInitialized = false;
-                console.log('[RecSysTracker] Destroyed');
             }, 'destroy');
         }
     }
@@ -829,6 +780,10 @@
         }
         // Gán vào window để truy cập toàn cục
         window.RecSysTracker = globalTracker;
+        // Expose classes for testing
+        if (globalTracker) {
+            window.RecSysTracker.ConfigLoader = ConfigLoader;
+        }
     }
 
     exports.ConfigLoader = ConfigLoader;

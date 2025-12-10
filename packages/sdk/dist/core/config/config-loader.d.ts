@@ -7,7 +7,6 @@ export declare class ConfigLoader {
     fetchRemoteConfig(): Promise<TrackerConfig | null>;
     private transformRules;
     private transformReturnMethods;
-    private validateWindowConfig;
     getConfig(): TrackerConfig | null;
 }
 //# sourceMappingURL=config-loader.d.ts.map

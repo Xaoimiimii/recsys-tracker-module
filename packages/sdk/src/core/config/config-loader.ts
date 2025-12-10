@@ -1,4 +1,4 @@
-import { TrackerConfig, WindowConfig } from '../../types';
+import { TrackerConfig } from '../../types';
 
 // Luồng hoạt động
 // 1. SDK khởi tạo
@@ -15,34 +15,31 @@ export class ConfigLoader {
   private config: TrackerConfig | null = null;
   private domainKey: string | null = null;
 
-  // Load config từ window.RecSysTrackerConfig
+  // Load config từ window.__RECSYS_DOMAIN_KEY__
   loadFromWindow(): TrackerConfig | null {
     try {
-      if (typeof window === 'undefined' || !window.RecSysTrackerConfig) {
-        console.warn('[RecSysTracker] No window.RecSysTrackerConfig found');
+      if (typeof window === 'undefined' || !window.__RECSYS_DOMAIN_KEY__) {
+        console.error('[RecSysTracker] window.__RECSYS_DOMAIN_KEY__ not found');
         return null;
       }
 
-      const windowConfig = window.RecSysTrackerConfig;
+      const domainKey = window.__RECSYS_DOMAIN_KEY__;
       
-      // Kiểm tra tính hợp lệ của cấu hình từ window
-      if (!this.validateWindowConfig(windowConfig)) {
-        console.error('[RecSysTracker] Invalid window configuration');
+      if (!domainKey || typeof domainKey !== 'string') {
+        console.error('[RecSysTracker] Invalid domain key');
         return null;
       }
 
-      // Lưu domainKey để fetch data
-      this.domainKey = windowConfig.domainKey;
+      this.domainKey = domainKey;
 
       // Default config
       this.config = {
-        domainKey: windowConfig.domainKey,
+        domainKey: domainKey,
         trackEndpoint: `${this.BASE_API_URL}/track`,
-        configEndpoint: `${this.BASE_API_URL}/domain/${windowConfig.domainKey}`,
+        configEndpoint: `${this.BASE_API_URL}/domain/${domainKey}`,
         trackingRules: [],
         returnMethods: [],
         options: {
-          debug: windowConfig.debug || false,
           maxRetries: 3,
           batchSize: 10,
           batchDelay: 2000,
@@ -52,7 +49,7 @@ export class ConfigLoader {
 
       return this.config;
     } catch (error) {
-      console.error('[RecSysTracker] Error loading window config:', error);
+      console.error('[RecSysTracker] Error loading config:', error);
       return null;
     }
   }
@@ -60,7 +57,6 @@ export class ConfigLoader {
   // Lấy cấu hình từ server (remote)
   async fetchRemoteConfig(): Promise<TrackerConfig | null> {
     if (!this.domainKey) {
-      console.warn('[RecSysTracker] No domain key set');
       return this.config;
     }
 
@@ -74,7 +70,6 @@ export class ConfigLoader {
 
       // Kiểm tra response
       if (!domainResponse.ok) {
-        console.warn(`[RecSysTracker] Failed to fetch domain config: ${domainResponse.status}`);
         return this.config;
       }
 
@@ -94,8 +89,7 @@ export class ConfigLoader {
 
       return this.config;
     } catch (error) {
-      console.warn('[RecSysTracker] Error fetching remote config:', error);
-      return this.config; // Return local config as fallback
+      return this.config;
     }
   }
 
@@ -126,20 +120,6 @@ export class ConfigLoader {
       returnMethodId: method.ReturnMethodID || method.returnMethodId,
       value: method.Value || method.value || '',
     }));
-  }
-
-  // Kiểm tra tính hợp lệ của cấu hình từ window
-  private validateWindowConfig(config: any): config is WindowConfig {
-    if (!config || typeof config !== 'object') {
-      return false;
-    }
-
-    if (!config.domainKey || typeof config.domainKey !== 'string') {
-      console.error('[RecSysTracker] Missing or invalid domainKey');
-      return false;
-    }
-
-    return true;
   }
 
   // Lấy cấu hình hiện tại

@@ -51,17 +51,13 @@ export class EventDispatcher {
       try {
         const success = await this.sendWithStrategy(payload, strategy);
         if (success) {
-          // Trả về true nếu gửi thành công
-          console.log(`[RecSysTracker] Sent ${events.length} events via ${strategy}`);
           return true;
         }
       } catch (error) {
-        console.warn(`[RecSysTracker] ${strategy} failed:`, error);
         // Thử phương thức tiếp theo
       }
     }
 
-    console.error('[RecSysTracker] All send strategies failed');
     // Trả về false nếu tất cả phương thức gửi đều thất bại
     return false;
   }

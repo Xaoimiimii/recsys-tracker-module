@@ -35,19 +35,14 @@ export interface ReturnMethod {
     value: string;
 }
 export interface TrackerOptions {
-    debug?: boolean;
     maxRetries?: number;
     batchSize?: number;
     batchDelay?: number;
     offlineStorage?: boolean;
 }
-export interface WindowConfig {
-    domainKey: string;
-    debug?: boolean;
-}
 declare global {
     interface Window {
-        RecSysTrackerConfig?: WindowConfig;
+        __RECSYS_DOMAIN_KEY__?: string;
     }
 }
 //# sourceMappingURL=index.d.ts.map

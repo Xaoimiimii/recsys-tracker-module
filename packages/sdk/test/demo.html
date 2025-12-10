@@ -6,19 +6,16 @@
     <title>RecSys Tracker Demo Page</title>
     
     <!-- ============================================ -->
-    <!-- BƯỚC 1: Cấu hình SDK trước khi load -->
+    <!-- BƯỚC 1: Thiết lập Domain Key -->
     <!-- ============================================ -->
     <script>
-      window.RecSysTrackerConfig = {
-        domainKey: 'abc123xyz', // Thay đổi thành domain key của bạn
-        debug: true
-      };
+      window.__RECSYS_DOMAIN_KEY__ = '079251187f351b700844164bf0ac5fddebaa305af8732fe06ae631b921eaf9e7';
     </script>
     
     <!-- ============================================ -->
     <!-- BƯỚC 2: Load SDK -->
     <!-- ============================================ -->
-    <script src="../dist/recsys-tracker.iife.js"></script>
+    <script src="https://cdn.jsdelivr.net/gh/Xaoimiimii/recsys-tracker-module/packages/sdk/dist/loader.js"></script>
     
     <style>
         body {

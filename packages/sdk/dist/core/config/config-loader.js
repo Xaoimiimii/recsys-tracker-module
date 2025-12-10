@@ -18,30 +18,27 @@ export class ConfigLoader {
         //   }
         // }
     }
-    // Load config từ window.RecSysTrackerConfig
+    // Load config từ window.__RECSYS_DOMAIN_KEY__
     loadFromWindow() {
         try {
-            if (typeof window === 'undefined' || !window.RecSysTrackerConfig) {
-                console.warn('[RecSysTracker] No window.RecSysTrackerConfig found');
+            if (typeof window === 'undefined' || !window.__RECSYS_DOMAIN_KEY__) {
+                console.error('[RecSysTracker] window.__RECSYS_DOMAIN_KEY__ not found');
                 return null;
             }
-            const windowConfig = window.RecSysTrackerConfig;
-            // Kiểm tra tính hợp lệ của cấu hình từ window
-            if (!this.validateWindowConfig(windowConfig)) {
-                console.error('[RecSysTracker] Invalid window configuration');
+            const domainKey = window.__RECSYS_DOMAIN_KEY__;
+            if (!domainKey || typeof domainKey !== 'string') {
+                console.error('[RecSysTracker] Invalid domain key');
                 return null;
             }
-            // Lưu domainKey để fetch data
-            this.domainKey = windowConfig.domainKey;
+            this.domainKey = domainKey;
             // Default config
             this.config = {
-                domainKey: windowConfig.domainKey,
+                domainKey: domainKey,
                 trackEndpoint: `${this.BASE_API_URL}/track`,
-                configEndpoint: `${this.BASE_API_URL}/domain/${windowConfig.domainKey}`,
+                configEndpoint: `${this.BASE_API_URL}/domain/${domainKey}`,
                 trackingRules: [],
                 returnMethods: [],
                 options: {
-                    debug: windowConfig.debug || false,
                     maxRetries: 3,
                     batchSize: 10,
                     batchDelay: 2000,
@@ -51,14 +48,13 @@ export class ConfigLoader {
             return this.config;
         }
         catch (error) {
-            console.error('[RecSysTracker] Error loading window config:', error);
+            console.error('[RecSysTracker] Error loading config:', error);
             return null;
         }
     }
     // Lấy cấu hình từ server (remote)
     async fetchRemoteConfig() {
         if (!this.domainKey) {
-            console.warn('[RecSysTracker] No domain key set');
             return this.config;
         }
         try {
@@ -70,7 +66,6 @@ export class ConfigLoader {
             ]);
             // Kiểm tra response
             if (!domainResponse.ok) {
-                console.warn(`[RecSysTracker] Failed to fetch domain config: ${domainResponse.status}`);
                 return this.config;
             }
             // Parse responses
@@ -88,8 +83,7 @@ export class ConfigLoader {
             return this.config;
         }
         catch (error) {
-            console.warn('[RecSysTracker] Error fetching remote config:', error);
-            return this.config; // Return local config as fallback
+            return this.config;
         }
     }
     // Transform rules từ server format sang SDK format
@@ -121,17 +115,6 @@ export class ConfigLoader {
             returnMethodId: method.ReturnMethodID || method.returnMethodId,
             value: method.Value || method.value || '',
         }));
-    }
-    // Kiểm tra tính hợp lệ của cấu hình từ window
-    validateWindowConfig(config) {
-        if (!config || typeof config !== 'object') {
-            return false;
-        }
-        if (!config.domainKey || typeof config.domainKey !== 'string') {
-            console.error('[RecSysTracker] Missing or invalid domainKey');
-            return false;
-        }
-        return true;
     }
     // Lấy cấu hình hiện tại
     getConfig() {

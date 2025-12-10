@@ -2,14 +2,11 @@
 <!-- Copy và paste đoạn code này vào <head> của trang web -->
 
 <script>
-  // Cấu hình SDK
-  window.RecSysTrackerConfig = {
-    domainKey: 'YOUR_DOMAIN_KEY_HERE', // Thay bằng domain key thực tế từ server
-    debug: true // Bật debug mode để xem logs
-  };
+  // Thiết lập Domain Key
+  window.__RECSYS_DOMAIN_KEY__ = '079251187f351b700844164bf0ac5fddebaa305af8732fe06ae631b921eaf9e7';
 </script>
 
 <!-- Load SDK -->
-<script src="http://localhost:8080/recsys-tracker.iife.js"></script>
+<script src="https://cdn.jsdelivr.net/gh/Xaoimiimii/recsys-tracker-module/packages/sdk/dist/loader.js"></script>
 
 <!-- SDK sẽ tự động khởi tạo và bắt đầu tracking -->

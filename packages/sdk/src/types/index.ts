@@ -40,21 +40,15 @@ export interface ReturnMethod {
 }
 
 export interface TrackerOptions {
-  debug?: boolean;
   maxRetries?: number;
   batchSize?: number;
   batchDelay?: number; // ms
   offlineStorage?: boolean;
 }
 
-// Window configuration interface
-export interface WindowConfig {
-  domainKey: string;
-  debug?: boolean;
-}
-
+// Window declaration for domain key
 declare global {
   interface Window {
-    RecSysTrackerConfig?: WindowConfig;
+    __RECSYS_DOMAIN_KEY__?: string;
   }
 }

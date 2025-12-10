@@ -31,22 +31,13 @@ export class RecSysTracker {
   async init(): Promise<void> {
     return this.errorBoundary.executeAsync(async () => {
       if (this.isInitialized) {
-        console.warn('[RecSysTracker] Already initialized');
         return;
       }
-
-      console.log('[RecSysTracker] Initializing...');
 
       // Load config từ window
       this.config = this.configLoader.loadFromWindow();
       if (!this.config) {
-        console.error('[RecSysTracker] Failed to load config, aborting');
         return;
-      }
-
-      // Enable debug mode
-      if (this.config.options?.debug) {
-        this.errorBoundary.setDebug(true);
       }
 
       // Khởi tạo EventDispatcher
@@ -58,7 +49,6 @@ export class RecSysTracker {
       this.configLoader.fetchRemoteConfig().then(remoteConfig => {
         if (remoteConfig) {
           this.config = remoteConfig;
-          console.log('[RecSysTracker] Remote config loaded');
         }
       });
 
@@ -69,7 +59,6 @@ export class RecSysTracker {
       this.setupUnloadHandler();
 
       this.isInitialized = true;
-      console.log('[RecSysTracker] Initialized successfully');
     }, 'init');
   }
 
@@ -81,7 +70,7 @@ export class RecSysTracker {
   }): void {
     this.errorBoundary.execute(() => {
       if (!this.isInitialized || !this.config) {
-        console.warn('[RecSysTracker] Not initialized, queueing event');
+        return;
       }
 
       const metadata = this.metadataNormalizer.getMetadata();
@@ -101,10 +90,6 @@ export class RecSysTracker {
       };
 
       this.eventBuffer.add(trackedEvent);
-
-      if (this.config?.options?.debug) {
-        console.log('[RecSysTracker] Event tracked:', trackedEvent);
-      }
     }, 'track');
   }
 
@@ -150,7 +135,6 @@ export class RecSysTracker {
         this.eventBuffer.markFailed(eventIds);
       }
     } catch (error) {
-      console.warn('[RecSysTracker] Failed to send batch:', error);
       const eventIds = events.map(e => e.id);
       this.eventBuffer.markFailed(eventIds);
     }
@@ -202,9 +186,6 @@ export class RecSysTracker {
   // Set user ID
   setUserId(userId: string | null): void {
     this.userId = userId;
-    if (this.config?.options?.debug) {
-      console.log('[RecSysTracker] User ID set:', userId);
-    }
   }
 
   // Get current user ID
@@ -226,7 +207,6 @@ export class RecSysTracker {
       }
 
       this.isInitialized = false;
-      console.log('[RecSysTracker] Destroyed');
     }, 'destroy');
   }
 }
@@ -250,6 +230,11 @@ if (typeof window !== 'undefined') {
 
   // Gán vào window để truy cập toàn cục
   (window as any).RecSysTracker = globalTracker;
+  
+  // Expose classes for testing
+  if (globalTracker) {
+    (window as any).RecSysTracker.ConfigLoader = ConfigLoader;
+  }
 }
 
 // Default export for convenience
