@@ -67,6 +67,12 @@
         <button onclick="initSDK()">Initialize SDK</button>
         <div id="initStatus"></div>
     </div>
+    
+    <div class="section">
+        <h2>Full Config</h2>
+        <button onclick="showFullConfig()">Show Full Config</button>
+        <pre id="fullConfig"></pre>
+    </div>
 
     <div class="section">
         <h2>Domain Info - GET /domain/:key</h2>
@@ -89,14 +95,10 @@
         <pre id="returnMethodsData"></pre>
     </div>
 
-    <div class="section">
-        <h2>Full Config</h2>
-        <button onclick="showFullConfig()">Show Full Config</button>
-        <pre id="fullConfig"></pre>
-    </div>
-
     <!-- Load the SDK -->
-    <script src="https://cdn.jsdelivr.net/gh/Xaoimiimii/recsys-tracker-module/packages/sdk/dist/loader.js"></script>
+    <script>window.__RECSYS_DOMAIN_KEY__ = "079251187f351b700844164bf0ac5fddebaa305af8732fe06ae631b921eaf9e7";</script>
+    <script src="https://cdn.jsdelivr.net/gh/Xaoimiimii/recsys-tracker-module/packages/sdk/dist/loader.js?v=2"></script>
+    <!-- <script src="../dist/loader.js"></script> -->
     
     <script>
         let configLoader = null;
