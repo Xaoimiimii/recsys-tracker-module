@@ -46,6 +46,19 @@ export interface TrackerOptions {
   offlineStorage?: boolean;
 }
 
+export interface PluginContext {
+  config: TrackerConfig | null;
+  track: (eventName: string, payload: Record<string, any>) => void;
+}
+
+export interface Plugin {
+  name: string;
+  version?: string;
+  init(context: PluginContext): void;
+  start(): void;
+  stop(): void;
+}
+
 // Window declaration for domain key
 declare global {
   interface Window {

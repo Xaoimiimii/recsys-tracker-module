@@ -6,7 +6,8 @@ import {
   EventDispatcher,
   MetadataNormalizer
 } from './core';
-import { TrackerConfig } from './types';
+import { TrackerConfig, Plugin, PluginContext } from './types';
+import { FormPlugin } from './plugins/FormPlugin';
 
 // RecSysTracker - Main SDK class
 export class RecSysTracker {
@@ -19,6 +20,51 @@ export class RecSysTracker {
   private userId: string | null = null;
   private isInitialized: boolean = false;
   private sendInterval: number | null = null;
+  private plugins: Plugin[] = [];
+
+  public registerPlugin(plugin: Plugin) {
+    // Tạo Context kết nối Plugin -> SDK Core
+    const context: PluginContext = {
+      config: this.config, 
+      // Adapter: Chuyển đổi hàm track của Plugin sang hàm track của SDK
+      track: (eventName, payload) => this.track({
+        event: eventName,
+        category: 'interaction',
+        data: payload
+      })
+    };
+
+    // Khởi tạo Plugin an toàn (bọc trong ErrorBoundary)
+    this.errorBoundary.execute(() => {
+        plugin.init(context);
+        this.plugins.push(plugin);
+    }, `registerPlugin:${plugin.name}`);
+  }
+
+  // Hàm khởi chạy tất cả plugin (gọi trong init)
+  private startPlugins() {
+      this.plugins.forEach(p => p.start());
+  }
+
+  // Hàm khởi động lại tất cả plugin
+  private restartPlugins() {
+      this.plugins.forEach(plugin => {
+          plugin.stop(); 
+          
+          // Cập nhật context mới 
+          const newContext: PluginContext = {
+              config: this.config,
+              track: (eventName, payload) => this.track({
+                  event: eventName,
+                  category: 'interaction',
+                  data: payload
+              })
+          };
+          
+          plugin.init(newContext);
+          plugin.start(); 
+      });
+  }
 
   constructor() {
     this.configLoader = new ConfigLoader();
@@ -45,10 +91,15 @@ export class RecSysTracker {
         endpoint: this.config.trackEndpoint || '/track',
       });
 
+      //Đăng ký FormPlugin mặc định
+      this.registerPlugin(new FormPlugin());
+      this.startPlugins();
+
       // Fetch remote config
       this.configLoader.fetchRemoteConfig().then(remoteConfig => {
         if (remoteConfig) {
           this.config = remoteConfig;
+          this.restartPlugins();
         }
       });
 
@@ -199,6 +250,9 @@ export class RecSysTracker {
       if (this.sendInterval) {
         clearInterval(this.sendInterval);
       }
+
+      // Stop all plugins
+      this.plugins.forEach(p => p.stop());
 
       // Flush remaining events
       if (!this.eventBuffer.isEmpty()) {
