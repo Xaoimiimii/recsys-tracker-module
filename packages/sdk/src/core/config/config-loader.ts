@@ -35,7 +35,9 @@ export class ConfigLoader {
       // Default config
       this.config = {
         domainKey: domainKey,
-        trackEndpoint: `${this.BASE_API_URL}/track`,
+        domainUrl: '',
+        domainType: 0,
+        trackEndpoint: `${this.BASE_API_URL}/event`,
         configEndpoint: `${this.BASE_API_URL}/domain/${domainKey}`,
         trackingRules: [],
         returnMethods: [],
@@ -74,7 +76,7 @@ export class ConfigLoader {
       }
 
       // Parse responses
-      await domainResponse.json(); // Parse domain data (for future use)
+      const domainData = domainResponse.ok ? await domainResponse.json() : null;
       const rulesData = rulesResponse.ok ? await rulesResponse.json() : [];
       const returnMethodsData = returnMethodsResponse.ok ? await returnMethodsResponse.json() : [];
 
@@ -82,6 +84,8 @@ export class ConfigLoader {
       if (this.config) {
         this.config = {
           ...this.config,
+          domainUrl: domainData?.Url || this.config.domainUrl,
+          domainType: domainData?.Type || this.config.domainType,
           trackingRules: this.transformRules(rulesData),
           returnMethods: this.transformReturnMethods(returnMethodsData),
         };

@@ -64,29 +64,29 @@ export class RecSysTracker {
 
   // Track custom event
   track(eventData: {
-    event: string;
-    category: string;
-    data?: Record<string, any>;
+    triggerTypeId: number;
+    userId: number;
+    itemId: number;
+    rate?: {
+      Value: number;
+      Review: string;
+    };
   }): void {
     this.errorBoundary.execute(() => {
       if (!this.isInitialized || !this.config) {
         return;
       }
 
-      const metadata = this.metadataNormalizer.getMetadata();
-      this.metadataNormalizer.updateSessionActivity();
-
       const trackedEvent: TrackedEvent = {
         id: this.metadataNormalizer.generateEventId(),
-        timestamp: Date.now(),
-        event: eventData.event,
-        category: eventData.category,
-        userId: this.userId,
-        sessionId: metadata.session.sessionId,
-        metadata: {
-          ...metadata,
-          ...eventData.data,
+        timestamp: new Date(),
+        triggerTypeId: eventData.triggerTypeId,
+        domainKey: this.config.domainKey,
+        payload: {
+          UserId: eventData.userId,
+          ItemId: eventData.itemId,
         },
+        ...(eventData.rate && { rate: eventData.rate }),
       };
 
       this.eventBuffer.add(trackedEvent);

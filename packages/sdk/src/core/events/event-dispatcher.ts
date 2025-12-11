@@ -33,16 +33,26 @@ export class EventDispatcher {
 
   // Gửi 1 event đơn lẻ
   async send(event: TrackedEvent): Promise<boolean> {
-    return this.sendBatch([event]);
-  }
-
-  // Gửi nhiều events cùng lúc
-  async sendBatch(events: TrackedEvent[]): Promise<boolean> {
-    if (events.length === 0) {
-      return true;
+    if (!event) {
+      return false;
     }
 
-    const payload = JSON.stringify({ events });
+    // Chuyển đổi TrackedEvent sang định dạng CreateEventDto
+    const payload = JSON.stringify({
+      TriggerTypeId: event.triggerTypeId,
+      DomainKey: event.domainKey,
+      Timestamp: event.timestamp,
+      Payload: {
+        UserId: event.payload?.UserId,
+        ItemId: event.payload?.ItemId,
+      },
+      ...(event.rate && {
+        Rate: {
+          Value: event.rate.Value,
+          Review: event.rate.Review,
+        }
+      })
+    });
 
     // Thử từng phương thức gửi theo thứ tự ưu tiên
     const strategies: SendStrategy[] = ['beacon', 'fetch'];
@@ -60,6 +70,21 @@ export class EventDispatcher {
 
     // Trả về false nếu tất cả phương thức gửi đều thất bại
     return false;
+  }
+
+  // Gửi nhiều events cùng lúc (gọi send cho từng event)
+  async sendBatch(events: TrackedEvent[]): Promise<boolean> {
+    if (events.length === 0) {
+      return true;
+    }
+
+    // Gửi từng event riêng lẻ
+    const results = await Promise.all(
+      events.map(event => this.send(event))
+    );
+
+    // Trả về true nếu tất cả events gửi thành công
+    return results.every(result => result === true);
   }
 
   // Gửi payload với phương thức cụ thể

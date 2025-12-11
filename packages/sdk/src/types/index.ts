@@ -1,5 +1,7 @@
 export interface TrackerConfig {
   domainKey: string;
+  domainUrl?: string;
+  domainType?: number;
   trackEndpoint?: string;
   configEndpoint?: string;
   trackingRules?: TrackingRule[];
