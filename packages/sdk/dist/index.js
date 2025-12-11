@@ -1,8 +1,9 @@
-import { ConfigLoader, ErrorBoundary, EventBuffer, EventDispatcher, MetadataNormalizer } from './core';
+import { ConfigLoader, ErrorBoundary, EventBuffer, EventDispatcher, MetadataNormalizer, DisplayManager } from './core';
 // RecSysTracker - Main SDK class
 export class RecSysTracker {
     constructor() {
         this.eventDispatcher = null;
+        this.displayManager = null;
         this.config = null;
         this.userId = null;
         this.isInitialized = false;
@@ -34,6 +35,13 @@ export class RecSysTracker {
                 // Cập nhật domainUrl cho EventDispatcher để verify origin khi gửi event
                 if (this.eventDispatcher && this.config.domainUrl) {
                     this.eventDispatcher.setDomainUrl(this.config.domainUrl);
+                }
+                // Khởi tạo Display Manager nếu có returnMethods
+                if (this.config.returnMethods && this.config.returnMethods.length > 0) {
+                    const apiBaseUrl = process.env.API_URL || 'http://localhost:3000';
+                    this.displayManager = new DisplayManager(this.config.domainKey, apiBaseUrl);
+                    this.displayManager.initialize(this.config.returnMethods);
+                    console.log('[RecSysTracker] Display methods initialized');
                 }
             }
             else {
@@ -160,6 +168,11 @@ export class RecSysTracker {
             if (!this.eventBuffer.isEmpty()) {
                 const allEvents = this.eventBuffer.getAll();
                 (_a = this.eventDispatcher) === null || _a === void 0 ? void 0 : _a.sendBatch(allEvents);
+            }
+            // Destroy display manager
+            if (this.displayManager) {
+                this.displayManager.destroy();
+                this.displayManager = null;
             }
             this.isInitialized = false;
         }, 'destroy');

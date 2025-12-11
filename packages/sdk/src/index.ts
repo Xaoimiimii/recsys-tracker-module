@@ -4,7 +4,8 @@ import {
   EventBuffer,
   TrackedEvent,
   EventDispatcher,
-  MetadataNormalizer
+  MetadataNormalizer,
+  DisplayManager
 } from './core';
 import { TrackerConfig } from './types';
 
@@ -15,6 +16,7 @@ export class RecSysTracker {
   private eventBuffer: EventBuffer;
   private eventDispatcher: EventDispatcher | null = null;
   private metadataNormalizer: MetadataNormalizer;
+  private displayManager: DisplayManager | null = null;
   private config: TrackerConfig | null = null;
   private userId: string | null = null;
   private isInitialized: boolean = false;
@@ -53,6 +55,14 @@ export class RecSysTracker {
         // Cập nhật domainUrl cho EventDispatcher để verify origin khi gửi event
         if (this.eventDispatcher && this.config.domainUrl) {
           this.eventDispatcher.setDomainUrl(this.config.domainUrl);
+        }
+
+        // Khởi tạo Display Manager nếu có returnMethods
+        if (this.config.returnMethods && this.config.returnMethods.length > 0) {
+          const apiBaseUrl = process.env.API_URL || 'http://localhost:3000';
+          this.displayManager = new DisplayManager(this.config.domainKey, apiBaseUrl);
+          this.displayManager.initialize(this.config.returnMethods);
+          console.log('[RecSysTracker] Display methods initialized');
         }
       } else {
         // Nếu origin verification thất bại, không khởi tạo SDK
@@ -204,6 +214,12 @@ export class RecSysTracker {
       if (!this.eventBuffer.isEmpty()) {
         const allEvents = this.eventBuffer.getAll();
         this.eventDispatcher?.sendBatch(allEvents);
+      }
+
+      // Destroy display manager
+      if (this.displayManager) {
+        this.displayManager.destroy();
+        this.displayManager = null;
       }
 
       this.isInitialized = false;
