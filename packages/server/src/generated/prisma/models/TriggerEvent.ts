@@ -193,12 +193,14 @@ export type TriggerEventWhereInput = {
   Id?: Prisma.IntFilter<"TriggerEvent"> | number
   Name?: Prisma.StringFilter<"TriggerEvent"> | string
   Rules?: Prisma.RuleListRelationFilter
+  Interactions?: Prisma.InteractionListRelationFilter
 }
 
 export type TriggerEventOrderByWithRelationInput = {
   Id?: Prisma.SortOrder
   Name?: Prisma.SortOrder
   Rules?: Prisma.RuleOrderByRelationAggregateInput
+  Interactions?: Prisma.InteractionOrderByRelationAggregateInput
 }
 
 export type TriggerEventWhereUniqueInput = Prisma.AtLeast<{
@@ -208,6 +210,7 @@ export type TriggerEventWhereUniqueInput = Prisma.AtLeast<{
   NOT?: Prisma.TriggerEventWhereInput | Prisma.TriggerEventWhereInput[]
   Name?: Prisma.StringFilter<"TriggerEvent"> | string
   Rules?: Prisma.RuleListRelationFilter
+  Interactions?: Prisma.InteractionListRelationFilter
 }, "Id">
 
 export type TriggerEventOrderByWithAggregationInput = {
@@ -231,23 +234,27 @@ export type TriggerEventScalarWhereWithAggregatesInput = {
 export type TriggerEventCreateInput = {
   Name: string
   Rules?: Prisma.RuleCreateNestedManyWithoutTriggerEventInput
+  Interactions?: Prisma.InteractionCreateNestedManyWithoutInteractionTypeInput
 }
 
 export type TriggerEventUncheckedCreateInput = {
   Id?: number
   Name: string
   Rules?: Prisma.RuleUncheckedCreateNestedManyWithoutTriggerEventInput
+  Interactions?: Prisma.InteractionUncheckedCreateNestedManyWithoutInteractionTypeInput
 }
 
 export type TriggerEventUpdateInput = {
   Name?: Prisma.StringFieldUpdateOperationsInput | string
   Rules?: Prisma.RuleUpdateManyWithoutTriggerEventNestedInput
+  Interactions?: Prisma.InteractionUpdateManyWithoutInteractionTypeNestedInput
 }
 
 export type TriggerEventUncheckedUpdateInput = {
   Id?: Prisma.IntFieldUpdateOperationsInput | number
   Name?: Prisma.StringFieldUpdateOperationsInput | string
   Rules?: Prisma.RuleUncheckedUpdateManyWithoutTriggerEventNestedInput
+  Interactions?: Prisma.InteractionUncheckedUpdateManyWithoutInteractionTypeNestedInput
 }
 
 export type TriggerEventCreateManyInput = {
@@ -306,13 +313,29 @@ export type TriggerEventUpdateOneRequiredWithoutRulesNestedInput = {
   update?: Prisma.XOR<Prisma.XOR<Prisma.TriggerEventUpdateToOneWithWhereWithoutRulesInput, Prisma.TriggerEventUpdateWithoutRulesInput>, Prisma.TriggerEventUncheckedUpdateWithoutRulesInput>
 }
 
+export type TriggerEventCreateNestedOneWithoutInteractionsInput = {
+  create?: Prisma.XOR<Prisma.TriggerEventCreateWithoutInteractionsInput, Prisma.TriggerEventUncheckedCreateWithoutInteractionsInput>
+  connectOrCreate?: Prisma.TriggerEventCreateOrConnectWithoutInteractionsInput
+  connect?: Prisma.TriggerEventWhereUniqueInput
+}
+
+export type TriggerEventUpdateOneRequiredWithoutInteractionsNestedInput = {
+  create?: Prisma.XOR<Prisma.TriggerEventCreateWithoutInteractionsInput, Prisma.TriggerEventUncheckedCreateWithoutInteractionsInput>
+  connectOrCreate?: Prisma.TriggerEventCreateOrConnectWithoutInteractionsInput
+  upsert?: Prisma.TriggerEventUpsertWithoutInteractionsInput
+  connect?: Prisma.TriggerEventWhereUniqueInput
+  update?: Prisma.XOR<Prisma.XOR<Prisma.TriggerEventUpdateToOneWithWhereWithoutInteractionsInput, Prisma.TriggerEventUpdateWithoutInteractionsInput>, Prisma.TriggerEventUncheckedUpdateWithoutInteractionsInput>
+}
+
 export type TriggerEventCreateWithoutRulesInput = {
   Name: string
+  Interactions?: Prisma.InteractionCreateNestedManyWithoutInteractionTypeInput
 }
 
 export type TriggerEventUncheckedCreateWithoutRulesInput = {
   Id?: number
   Name: string
+  Interactions?: Prisma.InteractionUncheckedCreateNestedManyWithoutInteractionTypeInput
 }
 
 export type TriggerEventCreateOrConnectWithoutRulesInput = {
@@ -333,11 +356,51 @@ export type TriggerEventUpdateToOneWithWhereWithoutRulesInput = {
 
 export type TriggerEventUpdateWithoutRulesInput = {
   Name?: Prisma.StringFieldUpdateOperationsInput | string
+  Interactions?: Prisma.InteractionUpdateManyWithoutInteractionTypeNestedInput
 }
 
 export type TriggerEventUncheckedUpdateWithoutRulesInput = {
   Id?: Prisma.IntFieldUpdateOperationsInput | number
   Name?: Prisma.StringFieldUpdateOperationsInput | string
+  Interactions?: Prisma.InteractionUncheckedUpdateManyWithoutInteractionTypeNestedInput
+}
+
+export type TriggerEventCreateWithoutInteractionsInput = {
+  Name: string
+  Rules?: Prisma.RuleCreateNestedManyWithoutTriggerEventInput
+}
+
+export type TriggerEventUncheckedCreateWithoutInteractionsInput = {
+  Id?: number
+  Name: string
+  Rules?: Prisma.RuleUncheckedCreateNestedManyWithoutTriggerEventInput
+}
+
+export type TriggerEventCreateOrConnectWithoutInteractionsInput = {
+  where: Prisma.TriggerEventWhereUniqueInput
+  create: Prisma.XOR<Prisma.TriggerEventCreateWithoutInteractionsInput, Prisma.TriggerEventUncheckedCreateWithoutInteractionsInput>
+}
+
+export type TriggerEventUpsertWithoutInteractionsInput = {
+  update: Prisma.XOR<Prisma.TriggerEventUpdateWithoutInteractionsInput, Prisma.TriggerEventUncheckedUpdateWithoutInteractionsInput>
+  create: Prisma.XOR<Prisma.TriggerEventCreateWithoutInteractionsInput, Prisma.TriggerEventUncheckedCreateWithoutInteractionsInput>
+  where?: Prisma.TriggerEventWhereInput
+}
+
+export type TriggerEventUpdateToOneWithWhereWithoutInteractionsInput = {
+  where?: Prisma.TriggerEventWhereInput
+  data: Prisma.XOR<Prisma.TriggerEventUpdateWithoutInteractionsInput, Prisma.TriggerEventUncheckedUpdateWithoutInteractionsInput>
+}
+
+export type TriggerEventUpdateWithoutInteractionsInput = {
+  Name?: Prisma.StringFieldUpdateOperationsInput | string
+  Rules?: Prisma.RuleUpdateManyWithoutTriggerEventNestedInput
+}
+
+export type TriggerEventUncheckedUpdateWithoutInteractionsInput = {
+  Id?: Prisma.IntFieldUpdateOperationsInput | number
+  Name?: Prisma.StringFieldUpdateOperationsInput | string
+  Rules?: Prisma.RuleUncheckedUpdateManyWithoutTriggerEventNestedInput
 }
 
 
@@ -347,10 +410,12 @@ export type TriggerEventUncheckedUpdateWithoutRulesInput = {
 
 export type TriggerEventCountOutputType = {
   Rules: number
+  Interactions: number
 }
 
 export type TriggerEventCountOutputTypeSelect<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   Rules?: boolean | TriggerEventCountOutputTypeCountRulesArgs
+  Interactions?: boolean | TriggerEventCountOutputTypeCountInteractionsArgs
 }
 
 /**
@@ -370,11 +435,19 @@ export type TriggerEventCountOutputTypeCountRulesArgs<ExtArgs extends runtime.Ty
   where?: Prisma.RuleWhereInput
 }
 
+/**
+ * TriggerEventCountOutputType without action
+ */
+export type TriggerEventCountOutputTypeCountInteractionsArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  where?: Prisma.InteractionWhereInput
+}
+
 
 export type TriggerEventSelect<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetSelect<{
   Id?: boolean
   Name?: boolean
   Rules?: boolean | Prisma.TriggerEvent$RulesArgs<ExtArgs>
+  Interactions?: boolean | Prisma.TriggerEvent$InteractionsArgs<ExtArgs>
   _count?: boolean | Prisma.TriggerEventCountOutputTypeDefaultArgs<ExtArgs>
 }, ExtArgs["result"]["triggerEvent"]>
 
@@ -396,6 +469,7 @@ export type TriggerEventSelectScalar = {
 export type TriggerEventOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"Id" | "Name", ExtArgs["result"]["triggerEvent"]>
 export type TriggerEventInclude<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   Rules?: boolean | Prisma.TriggerEvent$RulesArgs<ExtArgs>
+  Interactions?: boolean | Prisma.TriggerEvent$InteractionsArgs<ExtArgs>
   _count?: boolean | Prisma.TriggerEventCountOutputTypeDefaultArgs<ExtArgs>
 }
 export type TriggerEventIncludeCreateManyAndReturn<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {}
@@ -405,6 +479,7 @@ export type $TriggerEventPayload<ExtArgs extends runtime.Types.Extensions.Intern
   name: "TriggerEvent"
   objects: {
     Rules: Prisma.$RulePayload<ExtArgs>[]
+    Interactions: Prisma.$InteractionPayload<ExtArgs>[]
   }
   scalars: runtime.Types.Extensions.GetPayloadResult<{
     Id: number
@@ -804,6 +879,7 @@ readonly fields: TriggerEventFieldRefs;
 export interface Prisma__TriggerEventClient<T, Null = never, ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs, GlobalOmitOptions = {}> extends Prisma.PrismaPromise<T> {
   readonly [Symbol.toStringTag]: "PrismaPromise"
   Rules<T extends Prisma.TriggerEvent$RulesArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.TriggerEvent$RulesArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$RulePayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
+  Interactions<T extends Prisma.TriggerEvent$InteractionsArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.TriggerEvent$InteractionsArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$InteractionPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
   /**
    * Attaches callbacks for the resolution and/or rejection of the Promise.
    * @param onfulfilled The callback to execute when the Promise is resolved.
@@ -1244,6 +1320,30 @@ export type TriggerEvent$RulesArgs<ExtArgs extends runtime.Types.Extensions.Inte
   take?: number
   skip?: number
   distinct?: Prisma.RuleScalarFieldEnum | Prisma.RuleScalarFieldEnum[]
+}
+
+/**
+ * TriggerEvent.Interactions
+ */
+export type TriggerEvent$InteractionsArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  /**
+   * Select specific fields to fetch from the Interaction
+   */
+  select?: Prisma.InteractionSelect<ExtArgs> | null
+  /**
+   * Omit specific fields from the Interaction
+   */
+  omit?: Prisma.InteractionOmit<ExtArgs> | null
+  /**
+   * Choose, which related nodes to fetch as well
+   */
+  include?: Prisma.InteractionInclude<ExtArgs> | null
+  where?: Prisma.InteractionWhereInput
+  orderBy?: Prisma.InteractionOrderByWithRelationInput | Prisma.InteractionOrderByWithRelationInput[]
+  cursor?: Prisma.InteractionWhereUniqueInput
+  take?: number
+  skip?: number
+  distinct?: Prisma.InteractionScalarFieldEnum | Prisma.InteractionScalarFieldEnum[]
 }
 
 /**

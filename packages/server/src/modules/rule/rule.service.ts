@@ -149,6 +149,7 @@ export class RuleService {
                 PayloadConfigs: true,
                 Conditions: true,
                 TargetElement: true,
+                TriggerEvent: true
             },
         });
         return rules;

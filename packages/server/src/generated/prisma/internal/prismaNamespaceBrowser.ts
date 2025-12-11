@@ -62,7 +62,17 @@ export const ModelName = {
   PayloadConfig: 'PayloadConfig',
   PayloadPattern: 'PayloadPattern',
   EventPattern: 'EventPattern',
-  Operator: 'Operator'
+  Operator: 'Operator',
+  Category: 'Category',
+  ItemCategory: 'ItemCategory',
+  Item: 'Item',
+  Model: 'Model',
+  ItemFactor: 'ItemFactor',
+  User: 'User',
+  UserFactor: 'UserFactor',
+  Predict: 'Predict',
+  Rating: 'Rating',
+  Interaction: 'Interaction'
 } as const
 
 export type ModelName = (typeof ModelName)[keyof typeof ModelName]
@@ -196,6 +206,113 @@ export const OperatorScalarFieldEnum = {
 } as const
 
 export type OperatorScalarFieldEnum = (typeof OperatorScalarFieldEnum)[keyof typeof OperatorScalarFieldEnum]
+
+
+export const CategoryScalarFieldEnum = {
+  Id: 'Id',
+  Name: 'Name'
+} as const
+
+export type CategoryScalarFieldEnum = (typeof CategoryScalarFieldEnum)[keyof typeof CategoryScalarFieldEnum]
+
+
+export const ItemCategoryScalarFieldEnum = {
+  CategoryId: 'CategoryId',
+  ItemId: 'ItemId'
+} as const
+
+export type ItemCategoryScalarFieldEnum = (typeof ItemCategoryScalarFieldEnum)[keyof typeof ItemCategoryScalarFieldEnum]
+
+
+export const ItemScalarFieldEnum = {
+  Id: 'Id',
+  DomainId: 'DomainId',
+  Description: 'Description',
+  EmbeddingVector: 'EmbeddingVector',
+  ModifiedAt: 'ModifiedAt'
+} as const
+
+export type ItemScalarFieldEnum = (typeof ItemScalarFieldEnum)[keyof typeof ItemScalarFieldEnum]
+
+
+export const ModelScalarFieldEnum = {
+  Id: 'Id',
+  Name: 'Name',
+  Description: 'Description',
+  AverageRating: 'AverageRating',
+  LearnableParameters: 'LearnableParameters',
+  ModifiedAt: 'ModifiedAt'
+} as const
+
+export type ModelScalarFieldEnum = (typeof ModelScalarFieldEnum)[keyof typeof ModelScalarFieldEnum]
+
+
+export const ItemFactorScalarFieldEnum = {
+  Id: 'Id',
+  ItemId: 'ItemId',
+  ModelId: 'ModelId',
+  ItemBias: 'ItemBias',
+  ItemFactors: 'ItemFactors'
+} as const
+
+export type ItemFactorScalarFieldEnum = (typeof ItemFactorScalarFieldEnum)[keyof typeof ItemFactorScalarFieldEnum]
+
+
+export const UserScalarFieldEnum = {
+  Id: 'Id',
+  DomainId: 'DomainId',
+  UserEmbeddingVector: 'UserEmbeddingVector',
+  CreatedAt: 'CreatedAt',
+  ModifiedAt: 'ModifiedAt'
+} as const
+
+export type UserScalarFieldEnum = (typeof UserScalarFieldEnum)[keyof typeof UserScalarFieldEnum]
+
+
+export const UserFactorScalarFieldEnum = {
+  Id: 'Id',
+  UserId: 'UserId',
+  ModelId: 'ModelId',
+  UserBias: 'UserBias',
+  UserFactors: 'UserFactors'
+} as const
+
+export type UserFactorScalarFieldEnum = (typeof UserFactorScalarFieldEnum)[keyof typeof UserFactorScalarFieldEnum]
+
+
+export const PredictScalarFieldEnum = {
+  UserId: 'UserId',
+  ItemId: 'ItemId',
+  Value: 'Value'
+} as const
+
+export type PredictScalarFieldEnum = (typeof PredictScalarFieldEnum)[keyof typeof PredictScalarFieldEnum]
+
+
+export const RatingScalarFieldEnum = {
+  Id: 'Id',
+  UserId: 'UserId',
+  ItemId: 'ItemId',
+  DomainId: 'DomainId',
+  Value: 'Value',
+  ReviewText: 'ReviewText',
+  ConvertedScore: 'ConvertedScore',
+  CreatedAt: 'CreatedAt'
+} as const
+
+export type RatingScalarFieldEnum = (typeof RatingScalarFieldEnum)[keyof typeof RatingScalarFieldEnum]
+
+
+export const InteractionScalarFieldEnum = {
+  Id: 'Id',
+  UserId: 'UserId',
+  ItemId: 'ItemId',
+  InteractionTypeId: 'InteractionTypeId',
+  DomainId: 'DomainId',
+  CreatedAt: 'CreatedAt'
+} as const
+
+export type InteractionScalarFieldEnum = (typeof InteractionScalarFieldEnum)[keyof typeof InteractionScalarFieldEnum]
 
 
 export const SortOrder = {
