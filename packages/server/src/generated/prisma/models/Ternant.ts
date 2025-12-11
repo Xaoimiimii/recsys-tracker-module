@@ -221,14 +221,14 @@ export type TernantOrderByWithRelationInput = {
 
 export type TernantWhereUniqueInput = Prisma.AtLeast<{
   Id?: number
-  Name?: string
   Username?: string
   AND?: Prisma.TernantWhereInput | Prisma.TernantWhereInput[]
   OR?: Prisma.TernantWhereInput[]
   NOT?: Prisma.TernantWhereInput | Prisma.TernantWhereInput[]
+  Name?: Prisma.StringFilter<"Ternant"> | string
   Password?: Prisma.StringFilter<"Ternant"> | string
   Domains?: Prisma.DomainListRelationFilter
-}, "Id" | "Name" | "Username">
+}, "Id" | "Username">
 
 export type TernantOrderByWithAggregationInput = {
   Id?: Prisma.SortOrder

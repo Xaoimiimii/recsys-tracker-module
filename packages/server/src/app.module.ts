@@ -3,6 +3,7 @@ import { DomainModule } from './modules/domain/domain.module';
 import { RuleModule } from './modules/rule/rule.module';
 import { PrismaModule } from './modules/prisma/prisma.module';
 import { ConfigModule } from '@nestjs/config';
+import { EventModule } from './modules/event/event.module';
 
 @Module({
   imports: [
@@ -11,7 +12,8 @@ import { ConfigModule } from '@nestjs/config';
     }),
     DomainModule,
     RuleModule,
-    PrismaModule
+    PrismaModule,
+    EventModule
   ],
   controllers: [],
 })
