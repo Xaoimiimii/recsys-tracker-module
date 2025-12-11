@@ -1,3 +1,4 @@
+import { OriginVerifier } from '../utils/origin-verifier';
 // Luồng hoạt động
 // 1. SDK khởi tạo
 // 2. Gọi loadFromWindow() để lấy domainKey từ window
@@ -34,7 +35,9 @@ export class ConfigLoader {
             // Default config
             this.config = {
                 domainKey: domainKey,
-                trackEndpoint: `${this.BASE_API_URL}/track`,
+                domainUrl: '',
+                domainType: 0,
+                trackEndpoint: `${this.BASE_API_URL}/event`,
                 configEndpoint: `${this.BASE_API_URL}/domain/${domainKey}`,
                 trackingRules: [],
                 returnMethods: [],
@@ -69,16 +72,27 @@ export class ConfigLoader {
                 return this.config;
             }
             // Parse responses
-            await domainResponse.json(); // Parse domain data (for future use)
+            const domainData = domainResponse.ok ? await domainResponse.json() : null;
             const rulesData = rulesResponse.ok ? await rulesResponse.json() : [];
             const returnMethodsData = returnMethodsResponse.ok ? await returnMethodsResponse.json() : [];
             // Cập nhật config với data từ server
             if (this.config) {
                 this.config = {
                     ...this.config,
+                    domainUrl: (domainData === null || domainData === void 0 ? void 0 : domainData.Url) || this.config.domainUrl,
+                    domainType: (domainData === null || domainData === void 0 ? void 0 : domainData.Type) || this.config.domainType,
                     trackingRules: this.transformRules(rulesData),
                     returnMethods: this.transformReturnMethods(returnMethodsData),
                 };
+                // Verify origin sau khi có domainUrl từ server
+                if (this.config.domainUrl) {
+                    const isOriginValid = OriginVerifier.verify(this.config.domainUrl);
+                    if (!isOriginValid) {
+                        console.error('[RecSysTracker] Origin verification failed. SDK will not function.');
+                        this.config = null;
+                        return null;
+                    }
+                }
             }
             return this.config;
         }
@@ -95,7 +109,7 @@ export class ConfigLoader {
             return ({
                 id: ((_a = rule.Id) === null || _a === void 0 ? void 0 : _a.toString()) || rule.id,
                 name: rule.Name || rule.name,
-                domainId: rule.DomainID || rule.domainId,
+                // domainId: rule.DomainID || rule.domainId,
                 triggerEventId: rule.TriggerEventID || rule.triggerEventId,
                 targetEventPatternId: ((_b = rule.TargetElement) === null || _b === void 0 ? void 0 : _b.EventPatternID) || rule.targetEventPatternId,
                 targetOperatorId: ((_c = rule.TargetElement) === null || _c === void 0 ? void 0 : _c.OperatorID) || rule.targetOperatorId,
@@ -110,7 +124,6 @@ export class ConfigLoader {
         if (!returnMethodsData || !Array.isArray(returnMethodsData))
             return [];
         return returnMethodsData.map(method => ({
-            key: this.domainKey || '',
             slotName: method.SlotName || method.slotName,
             returnMethodId: method.ReturnMethodID || method.returnMethodId,
             value: method.Value || method.value || '',

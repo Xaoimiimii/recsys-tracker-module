@@ -16,3 +16,6 @@ export {
   DeviceMetadata,
   Metadata
 } from './metadata/metadata-normalizer';
+
+// Utils
+export { OriginVerifier } from './utils/origin-verifier';

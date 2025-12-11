@@ -4,6 +4,129 @@
     (global = typeof globalThis !== 'undefined' ? globalThis : global || self, factory(global.RecSysTracker = {}));
 })(this, (function (exports) { 'use strict';
 
+    class OriginVerifier {
+        /**
+         * Kiểm tra xem origin hiện tại có khớp với domainUrl đã đăng ký không
+         * Thứ tự ưu tiên: 1. origin, 2. referrer
+         * @param domainUrl - URL domain đã đăng ký (từ config)
+         * @returns true nếu origin hoặc referrer khớp, false nếu không khớp
+         */
+        static verify(domainUrl) {
+            try {
+                if (!domainUrl) {
+                    console.warn('[RecSysTracker] Cannot verify: domainUrl is missing');
+                    return false;
+                }
+                // 1. Thử verify bằng origin trước
+                const originValid = this.verifyByOrigin(domainUrl);
+                if (originValid) {
+                    return true;
+                }
+                // 2. Fallback: verify bằng referrer
+                const referrerValid = this.verifyByReferrer(domainUrl);
+                if (referrerValid) {
+                    return true;
+                }
+                // Không có origin hoặc referrer, hoặc cả 2 đều không khớp
+                console.warn('[RecSysTracker] Origin verification failed: no valid origin or referrer');
+                return false;
+            }
+            catch (error) {
+                console.error('[RecSysTracker] Error during origin verification:', error);
+                return false;
+            }
+        }
+        // Verify bằng window.location.origin
+        static verifyByOrigin(domainUrl) {
+            if (typeof window === 'undefined' || !window.location || !window.location.origin) {
+                return false;
+            }
+            const currentOrigin = window.location.origin;
+            const normalizedCurrent = this.normalizeUrl(currentOrigin);
+            const normalizedDomain = this.normalizeUrl(domainUrl);
+            const isValid = normalizedCurrent === normalizedDomain;
+            if (!isValid) {
+                console.warn('[RecSysTracker] Origin mismatch:', {
+                    current: normalizedCurrent,
+                    expected: normalizedDomain
+                });
+            }
+            return isValid;
+        }
+        // Verify bằng document.referrer
+        // Hỗ trợ so khớp host chính xác hoặc nhiều path (referrer.startsWith(domainUrl))
+        static verifyByReferrer(domainUrl) {
+            if (typeof document === 'undefined' || !document.referrer) {
+                return false;
+            }
+            try {
+                const referrerUrl = new URL(document.referrer);
+                const domainUrlObj = new URL(domainUrl);
+                // So khớp origin (protocol + host + port)
+                const referrerOrigin = this.normalizeUrl(referrerUrl.origin);
+                const domainOrigin = this.normalizeUrl(domainUrlObj.origin);
+                if (referrerOrigin === domainOrigin) {
+                    return true;
+                }
+                // Fallback: Hỗ trợ nhiều path - kiểm tra referrer có bắt đầu với domainUrl không
+                const normalizedReferrer = this.normalizeUrl(document.referrer);
+                const normalizedDomain = this.normalizeUrl(domainUrl);
+                if (normalizedReferrer.startsWith(normalizedDomain)) {
+                    return true;
+                }
+                console.warn('[RecSysTracker] Referrer mismatch:', {
+                    referrer: normalizedReferrer,
+                    expected: normalizedDomain
+                });
+                return false;
+            }
+            catch (error) {
+                console.warn('[RecSysTracker] Failed to parse referrer:', error);
+                return false;
+            }
+        }
+        // Normalize URL để so sánh (loại bỏ trailing slash, lowercase)
+        // Giữ nguyên path nếu có
+        static normalizeUrl(url) {
+            try {
+                const urlObj = new URL(url);
+                // Tạo URL chuẩn: protocol + hostname + port (nếu có) + pathname
+                let normalized = `${urlObj.protocol}//${urlObj.hostname}`;
+                // Thêm port nếu không phải port mặc định
+                if (urlObj.port &&
+                    !((urlObj.protocol === 'http:' && urlObj.port === '80') ||
+                        (urlObj.protocol === 'https:' && urlObj.port === '443'))) {
+                    normalized += `:${urlObj.port}`;
+                }
+                // Thêm pathname (loại bỏ trailing slash)
+                if (urlObj.pathname && urlObj.pathname !== '/') {
+                    normalized += urlObj.pathname.replace(/\/$/, '');
+                }
+                return normalized.toLowerCase();
+            }
+            catch {
+                // Nếu không parse được URL, trả về chuỗi gốc lowercase, loại bỏ trailing slash
+                return url.toLowerCase().replace(/\/$/, '');
+            }
+        }
+        /**
+         * Kiểm tra xem có đang ở môi trường development không
+         * (localhost, 127.0.0.1, etc.)
+         */
+        static isDevelopment() {
+            var _a;
+            if (typeof window === 'undefined') {
+                return false;
+            }
+            const hostname = ((_a = window.location) === null || _a === void 0 ? void 0 : _a.hostname) || '';
+            return (hostname === 'localhost' ||
+                hostname === '127.0.0.1' ||
+                hostname.startsWith('192.168.') ||
+                hostname.startsWith('10.') ||
+                hostname.endsWith('.local'));
+        }
+    }
+
     // Luồng hoạt động
     // 1. SDK khởi tạo
     // 2. Gọi loadFromWindow() để lấy domainKey từ window
@@ -40,7 +163,9 @@
                 // Default config
                 this.config = {
                     domainKey: domainKey,
-                    trackEndpoint: `${this.BASE_API_URL}/track`,
+                    domainUrl: '',
+                    domainType: 0,
+                    trackEndpoint: `${this.BASE_API_URL}/event`,
                     configEndpoint: `${this.BASE_API_URL}/domain/${domainKey}`,
                     trackingRules: [],
                     returnMethods: [],
@@ -75,16 +200,27 @@
                     return this.config;
                 }
                 // Parse responses
-                await domainResponse.json(); // Parse domain data (for future use)
+                const domainData = domainResponse.ok ? await domainResponse.json() : null;
                 const rulesData = rulesResponse.ok ? await rulesResponse.json() : [];
                 const returnMethodsData = returnMethodsResponse.ok ? await returnMethodsResponse.json() : [];
                 // Cập nhật config với data từ server
                 if (this.config) {
                     this.config = {
                         ...this.config,
+                        domainUrl: (domainData === null || domainData === void 0 ? void 0 : domainData.Url) || this.config.domainUrl,
+                        domainType: (domainData === null || domainData === void 0 ? void 0 : domainData.Type) || this.config.domainType,
                         trackingRules: this.transformRules(rulesData),
                         returnMethods: this.transformReturnMethods(returnMethodsData),
                     };
+                    // Verify origin sau khi có domainUrl từ server
+                    if (this.config.domainUrl) {
+                        const isOriginValid = OriginVerifier.verify(this.config.domainUrl);
+                        if (!isOriginValid) {
+                            console.error('[RecSysTracker] Origin verification failed. SDK will not function.');
+                            this.config = null;
+                            return null;
+                        }
+                    }
                 }
                 return this.config;
             }
@@ -101,7 +237,7 @@
                 return ({
                     id: ((_a = rule.Id) === null || _a === void 0 ? void 0 : _a.toString()) || rule.id,
                     name: rule.Name || rule.name,
-                    domainId: rule.DomainID || rule.domainId,
+                    // domainId: rule.DomainID || rule.domainId,
                     triggerEventId: rule.TriggerEventID || rule.triggerEventId,
                     targetEventPatternId: ((_b = rule.TargetElement) === null || _b === void 0 ? void 0 : _b.EventPatternID) || rule.targetEventPatternId,
                     targetOperatorId: ((_c = rule.TargetElement) === null || _c === void 0 ? void 0 : _c.OperatorID) || rule.targetOperatorId,
@@ -116,7 +252,6 @@
             if (!returnMethodsData || !Array.isArray(returnMethodsData))
                 return [];
             return returnMethodsData.map(method => ({
-                key: this.domainKey || '',
                 slotName: method.SlotName || method.slotName,
                 returnMethodId: method.ReturnMethodID || method.returnMethodId,
                 value: method.Value || method.value || '',
@@ -353,22 +488,44 @@
     // Lớp EventDispatcher chịu trách nhiệm gửi events
     class EventDispatcher {
         constructor(options) {
+            this.domainUrl = null;
             this.timeout = 5000;
             this.headers = {};
             this.endpoint = options.endpoint;
+            this.domainUrl = options.domainUrl || null;
             this.timeout = options.timeout || 5000;
             this.headers = options.headers || {};
         }
         // Gửi 1 event đơn lẻ
         async send(event) {
-            return this.sendBatch([event]);
-        }
-        // Gửi nhiều events cùng lúc
-        async sendBatch(events) {
-            if (events.length === 0) {
-                return true;
+            var _a, _b;
+            if (!event) {
+                return false;
             }
-            const payload = JSON.stringify({ events });
+            // Verify origin trước khi gửi event
+            if (this.domainUrl) {
+                const isOriginValid = OriginVerifier.verify(this.domainUrl);
+                if (!isOriginValid) {
+                    console.warn('[RecSysTracker] Origin verification failed. Event not sent.');
+                    return false;
+                }
+            }
+            // Chuyển đổi TrackedEvent sang định dạng CreateEventDto
+            const payload = JSON.stringify({
+                TriggerTypeId: event.triggerTypeId,
+                DomainKey: event.domainKey,
+                Timestamp: event.timestamp,
+                Payload: {
+                    UserId: (_a = event.payload) === null || _a === void 0 ? void 0 : _a.UserId,
+                    ItemId: (_b = event.payload) === null || _b === void 0 ? void 0 : _b.ItemId,
+                },
+                ...(event.rate && {
+                    Rate: {
+                        Value: event.rate.Value,
+                        Review: event.rate.Review,
+                    }
+                })
+            });
             // Thử từng phương thức gửi theo thứ tự ưu tiên
             const strategies = ['beacon', 'fetch'];
             for (const strategy of strategies) {
@@ -384,6 +541,16 @@
             }
             // Trả về false nếu tất cả phương thức gửi đều thất bại
             return false;
+        }
+        // Gửi nhiều events cùng lúc (gọi send cho từng event)
+        async sendBatch(events) {
+            if (events.length === 0) {
+                return true;
+            }
+            // Gửi từng event riêng lẻ
+            const results = await Promise.all(events.map(event => this.send(event)));
+            // Trả về true nếu tất cả events gửi thành công
+            return results.every(result => result === true);
         }
         // Gửi payload với phương thức cụ thể
         async sendWithStrategy(payload, strategy) {
@@ -441,6 +608,10 @@
         // Cập nhật URL endpoint động
         setEndpoint(endpoint) {
             this.endpoint = endpoint;
+        }
+        // Cập nhật domainUrl để verify origin
+        setDomainUrl(domainUrl) {
+            this.domainUrl = domainUrl;
         }
         // Cập nhật timeout cho requests
         setTimeout(timeout) {
@@ -632,12 +803,22 @@
                 this.eventDispatcher = new EventDispatcher({
                     endpoint: this.config.trackEndpoint || '/track',
                 });
-                // Fetch remote config
-                this.configLoader.fetchRemoteConfig().then(remoteConfig => {
-                    if (remoteConfig) {
-                        this.config = remoteConfig;
+                // Fetch remote config và verify origin
+                const remoteConfig = await this.configLoader.fetchRemoteConfig();
+                if (remoteConfig) {
+                    this.config = remoteConfig;
+                    // Cập nhật domainUrl cho EventDispatcher để verify origin khi gửi event
+                    if (this.eventDispatcher && this.config.domainUrl) {
+                        this.eventDispatcher.setDomainUrl(this.config.domainUrl);
                     }
-                });
+                }
+                else {
+                    // Nếu origin verification thất bại, không khởi tạo SDK
+                    console.error('[RecSysTracker] Failed to initialize SDK: origin verification failed');
+                    this.config = null;
+                    this.eventDispatcher = null;
+                    return;
+                }
                 // Setup batch sending
                 this.setupBatchSending();
                 // Setup page unload handler
@@ -651,19 +832,16 @@
                 if (!this.isInitialized || !this.config) {
                     return;
                 }
-                const metadata = this.metadataNormalizer.getMetadata();
-                this.metadataNormalizer.updateSessionActivity();
                 const trackedEvent = {
                     id: this.metadataNormalizer.generateEventId(),
-                    timestamp: Date.now(),
-                    event: eventData.event,
-                    category: eventData.category,
-                    userId: this.userId,
-                    sessionId: metadata.session.sessionId,
-                    metadata: {
-                        ...metadata,
-                        ...eventData.data,
+                    timestamp: new Date(),
+                    triggerTypeId: eventData.triggerTypeId,
+                    domainKey: this.config.domainKey,
+                    payload: {
+                        UserId: eventData.userId,
+                        ItemId: eventData.itemId,
                     },
+                    ...(eventData.rate && { rate: eventData.rate }),
                 };
                 this.eventBuffer.add(trackedEvent);
             }, 'track');

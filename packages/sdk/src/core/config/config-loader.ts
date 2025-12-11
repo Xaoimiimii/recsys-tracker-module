@@ -1,4 +1,5 @@
-import { TrackerConfig } from '../../types';
+import { TrackerConfig, TrackingRule, ReturnMethod } from '../../types';
+import { OriginVerifier } from '../utils/origin-verifier';
 
 // Luồng hoạt động
 // 1. SDK khởi tạo
@@ -35,7 +36,9 @@ export class ConfigLoader {
       // Default config
       this.config = {
         domainKey: domainKey,
-        trackEndpoint: `${this.BASE_API_URL}/track`,
+        domainUrl: '',
+        domainType: 0,
+        trackEndpoint: `${this.BASE_API_URL}/event`,
         configEndpoint: `${this.BASE_API_URL}/domain/${domainKey}`,
         trackingRules: [],
         returnMethods: [],
@@ -74,7 +77,7 @@ export class ConfigLoader {
       }
 
       // Parse responses
-      await domainResponse.json(); // Parse domain data (for future use)
+      const domainData = domainResponse.ok ? await domainResponse.json() : null;
       const rulesData = rulesResponse.ok ? await rulesResponse.json() : [];
       const returnMethodsData = returnMethodsResponse.ok ? await returnMethodsResponse.json() : [];
 
@@ -82,9 +85,21 @@ export class ConfigLoader {
       if (this.config) {
         this.config = {
           ...this.config,
+          domainUrl: domainData?.Url || this.config.domainUrl,
+          domainType: domainData?.Type || this.config.domainType,
           trackingRules: this.transformRules(rulesData),
           returnMethods: this.transformReturnMethods(returnMethodsData),
         };
+
+        // Verify origin sau khi có domainUrl từ server
+        if (this.config.domainUrl) {
+          const isOriginValid = OriginVerifier.verify(this.config.domainUrl);
+          if (!isOriginValid) {
+            console.error('[RecSysTracker] Origin verification failed. SDK will not function.');
+            this.config = null;
+            return null;
+          }
+        }
       }
 
       return this.config;
@@ -94,13 +109,13 @@ export class ConfigLoader {
   }
 
   // Transform rules từ server format sang SDK format
-  private transformRules(rulesData: any[]): any[] {
+  private transformRules(rulesData: any[]): TrackingRule[] {
     if (!Array.isArray(rulesData)) return [];
     
     return rulesData.map(rule => ({
       id: rule.Id?.toString() || rule.id,
       name: rule.Name || rule.name,
-      domainId: rule.DomainID || rule.domainId,
+      // domainId: rule.DomainID || rule.domainId,
       triggerEventId: rule.TriggerEventID || rule.triggerEventId,
       targetEventPatternId: rule.TargetElement?.EventPatternID || rule.targetEventPatternId,
       targetOperatorId: rule.TargetElement?.OperatorID || rule.targetOperatorId,
@@ -111,11 +126,10 @@ export class ConfigLoader {
   }
 
   // Transform return methods từ server format sang SDK format
-  private transformReturnMethods(returnMethodsData: any): any[] {
+  private transformReturnMethods(returnMethodsData: any): ReturnMethod[] {
     if (!returnMethodsData || !Array.isArray(returnMethodsData)) return [];
     
     return returnMethodsData.map(method => ({
-      key: this.domainKey || '',
       slotName: method.SlotName || method.slotName,
       returnMethodId: method.ReturnMethodID || method.returnMethodId,
       value: method.Value || method.value || '',

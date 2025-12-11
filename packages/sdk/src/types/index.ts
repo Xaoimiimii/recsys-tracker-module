@@ -1,5 +1,7 @@
 export interface TrackerConfig {
   domainKey: string;
+  domainUrl?: string;
+  domainType?: number;
   trackEndpoint?: string;
   configEndpoint?: string;
   trackingRules?: TrackingRule[];
@@ -10,7 +12,7 @@ export interface TrackerConfig {
 export interface TrackingRule {
   id: string;
   name: string;
-  domainId: number;
+  // domainId: number;
   triggerEventId: number; // (click, scroll, ...)
   targetEventPatternId: number;
   targetOperatorId: number;
@@ -33,7 +35,6 @@ export interface Condition {
 }
 
 export interface ReturnMethod {
-  key: string;
   slotName: string;
   returnMethodId: number;
   value: string;

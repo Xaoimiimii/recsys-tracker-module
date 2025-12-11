@@ -21,9 +21,6 @@ model Ternant {
   Password          String
 
   Domains           Domain[]
-  Items             Item[]
-  Users             User[]
-  Ratings           Rating[]
 }
 
 model Domain {
@@ -37,6 +34,10 @@ model Domain {
   Ternant           Ternant  @relation(fields: [TernantID], references: [Id])
   Rules             Rule[]
   DomainReturns     DomainReturn[]
+  Interactions      Interaction[]
+  Items             Item[]
+  Users             User[]
+  Ratings           Rating[]
 }
 
 model DomainReturn {
@@ -81,7 +82,8 @@ model TriggerEvent {
   Id                Int    @id @default(autoincrement())
   Name              String
 
-  Rules Rule[]
+  Rules             Rule[]
+  Interactions      Interaction[]
 }
 
 model TargetElement {
@@ -170,9 +172,9 @@ model ItemCategory {
 
 model Item {
   Id                Int     @id @default(autoincrement())
-  TernantId         Int
-  Ternant           Ternant @relation(fields: [TernantId], references: [Id])
-  Title             String
+  DomainId          Int
+  Domain            Domain @relation(fields: [DomainId], references: [Id])
+  Description       String
   EmbeddingVector   Float[]
   ModifiedAt        DateTime
 
@@ -208,8 +210,8 @@ model ItemFactor {
 
 model User {
   Id                Int     @id @default(autoincrement())
-  TernantId         Int
-  Ternant           Ternant @relation(fields: [TernantId], references: [Id])
+  DomainId          Int
+  Domain            Domain @relation(fields: [DomainId], references: [Id])
   UserEmbeddingVector Float[]
   CreatedAt         DateTime @default(now())
   ModifiedAt        DateTime @updatedAt
@@ -247,8 +249,8 @@ model Rating {
   User              User    @relation(fields: [UserId], references: [Id])
   ItemId            Int
   Item              Item    @relation(fields: [ItemId], references: [Id])
-  TernantId         Int
-  Ternant           Ternant @relation(fields: [TernantId], references: [Id])
+  DomainId          Int
+  Domain            Domain @relation(fields: [DomainId], references: [Id])
   Value             Float
   ReviewText        String?
   ConvertedScore    Float    @default(3)
@@ -263,7 +265,10 @@ model Interaction {
   User              User    @relation(fields: [UserId], references: [Id])
   ItemId            Int
   Item              Item    @relation(fields: [ItemId], references: [Id])
-  InteractionType   String
+  InteractionTypeId Int
+  InteractionType   TriggerEvent @relation(fields: [InteractionTypeId], references: [Id])
+  DomainId          Int
+  Domain            Domain  @relation(fields: [DomainId], references: [Id])
   CreatedAt         DateTime @default(now())
 
   @@index([UserId])
