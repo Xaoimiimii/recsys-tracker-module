@@ -46,19 +46,16 @@ export class RecSysTracker {
             if (!this.isInitialized || !this.config) {
                 return;
             }
-            const metadata = this.metadataNormalizer.getMetadata();
-            this.metadataNormalizer.updateSessionActivity();
             const trackedEvent = {
                 id: this.metadataNormalizer.generateEventId(),
-                timestamp: Date.now(),
-                event: eventData.event,
-                category: eventData.category,
-                userId: this.userId,
-                sessionId: metadata.session.sessionId,
-                metadata: {
-                    ...metadata,
-                    ...eventData.data,
+                timestamp: new Date(),
+                triggerTypeId: eventData.triggerTypeId,
+                domainKey: this.config.domainKey,
+                payload: {
+                    UserId: eventData.userId,
+                    ItemId: eventData.itemId,
                 },
+                ...(eventData.rate && { rate: eventData.rate }),
             };
             this.eventBuffer.add(trackedEvent);
         }, 'track');

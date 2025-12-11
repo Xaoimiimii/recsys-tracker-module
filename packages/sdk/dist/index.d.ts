@@ -12,9 +12,13 @@ export declare class RecSysTracker {
     constructor();
     init(): Promise<void>;
     track(eventData: {
-        event: string;
-        category: string;
-        data?: Record<string, any>;
+        triggerTypeId: number;
+        userId: number;
+        itemId: number;
+        rate?: {
+            Value: number;
+            Review: string;
+        };
     }): void;
     private setupBatchSending;
     private sendBatch;

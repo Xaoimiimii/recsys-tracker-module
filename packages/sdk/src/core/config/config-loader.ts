@@ -1,4 +1,4 @@
-import { TrackerConfig } from '../../types';
+import { TrackerConfig, TrackingRule, ReturnMethod } from '../../types';
 
 // Luồng hoạt động
 // 1. SDK khởi tạo
@@ -98,13 +98,13 @@ export class ConfigLoader {
   }
 
   // Transform rules từ server format sang SDK format
-  private transformRules(rulesData: any[]): any[] {
+  private transformRules(rulesData: any[]): TrackingRule[] {
     if (!Array.isArray(rulesData)) return [];
     
     return rulesData.map(rule => ({
       id: rule.Id?.toString() || rule.id,
       name: rule.Name || rule.name,
-      domainId: rule.DomainID || rule.domainId,
+      // domainId: rule.DomainID || rule.domainId,
       triggerEventId: rule.TriggerEventID || rule.triggerEventId,
       targetEventPatternId: rule.TargetElement?.EventPatternID || rule.targetEventPatternId,
       targetOperatorId: rule.TargetElement?.OperatorID || rule.targetOperatorId,
@@ -115,11 +115,10 @@ export class ConfigLoader {
   }
 
   // Transform return methods từ server format sang SDK format
-  private transformReturnMethods(returnMethodsData: any): any[] {
+  private transformReturnMethods(returnMethodsData: any): ReturnMethod[] {
     if (!returnMethodsData || !Array.isArray(returnMethodsData)) return [];
     
     return returnMethodsData.map(method => ({
-      key: this.domainKey || '',
       slotName: method.SlotName || method.slotName,
       returnMethodId: method.ReturnMethodID || method.returnMethodId,
       value: method.Value || method.value || '',

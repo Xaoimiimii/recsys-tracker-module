@@ -38,7 +38,9 @@ class ConfigLoader {
             // Default config
             this.config = {
                 domainKey: domainKey,
-                trackEndpoint: `${this.BASE_API_URL}/track`,
+                domainUrl: '',
+                domainType: 0,
+                trackEndpoint: `${this.BASE_API_URL}/event`,
                 configEndpoint: `${this.BASE_API_URL}/domain/${domainKey}`,
                 trackingRules: [],
                 returnMethods: [],
@@ -73,13 +75,15 @@ class ConfigLoader {
                 return this.config;
             }
             // Parse responses
-            await domainResponse.json(); // Parse domain data (for future use)
+            const domainData = domainResponse.ok ? await domainResponse.json() : null;
             const rulesData = rulesResponse.ok ? await rulesResponse.json() : [];
             const returnMethodsData = returnMethodsResponse.ok ? await returnMethodsResponse.json() : [];
             // Cập nhật config với data từ server
             if (this.config) {
                 this.config = {
                     ...this.config,
+                    domainUrl: (domainData === null || domainData === void 0 ? void 0 : domainData.Url) || this.config.domainUrl,
+                    domainType: (domainData === null || domainData === void 0 ? void 0 : domainData.Type) || this.config.domainType,
                     trackingRules: this.transformRules(rulesData),
                     returnMethods: this.transformReturnMethods(returnMethodsData),
                 };
@@ -99,7 +103,7 @@ class ConfigLoader {
             return ({
                 id: ((_a = rule.Id) === null || _a === void 0 ? void 0 : _a.toString()) || rule.id,
                 name: rule.Name || rule.name,
-                domainId: rule.DomainID || rule.domainId,
+                // domainId: rule.DomainID || rule.domainId,
                 triggerEventId: rule.TriggerEventID || rule.triggerEventId,
                 targetEventPatternId: ((_b = rule.TargetElement) === null || _b === void 0 ? void 0 : _b.EventPatternID) || rule.targetEventPatternId,
                 targetOperatorId: ((_c = rule.TargetElement) === null || _c === void 0 ? void 0 : _c.OperatorID) || rule.targetOperatorId,
@@ -114,7 +118,6 @@ class ConfigLoader {
         if (!returnMethodsData || !Array.isArray(returnMethodsData))
             return [];
         return returnMethodsData.map(method => ({
-            key: this.domainKey || '',
             slotName: method.SlotName || method.slotName,
             returnMethodId: method.ReturnMethodID || method.returnMethodId,
             value: method.Value || method.value || '',
@@ -359,14 +362,26 @@ class EventDispatcher {
     }
     // Gửi 1 event đơn lẻ
     async send(event) {
-        return this.sendBatch([event]);
-    }
-    // Gửi nhiều events cùng lúc
-    async sendBatch(events) {
-        if (events.length === 0) {
-            return true;
+        var _a, _b;
+        if (!event) {
+            return false;
         }
-        const payload = JSON.stringify({ events });
+        // Chuyển đổi TrackedEvent sang định dạng CreateEventDto
+        const payload = JSON.stringify({
+            TriggerTypeId: event.triggerTypeId,
+            DomainKey: event.domainKey,
+            Timestamp: event.timestamp,
+            Payload: {
+                UserId: (_a = event.payload) === null || _a === void 0 ? void 0 : _a.UserId,
+                ItemId: (_b = event.payload) === null || _b === void 0 ? void 0 : _b.ItemId,
+            },
+            ...(event.rate && {
+                Rate: {
+                    Value: event.rate.Value,
+                    Review: event.rate.Review,
+                }
+            })
+        });
         // Thử từng phương thức gửi theo thứ tự ưu tiên
         const strategies = ['beacon', 'fetch'];
         for (const strategy of strategies) {
@@ -382,6 +397,16 @@ class EventDispatcher {
         }
         // Trả về false nếu tất cả phương thức gửi đều thất bại
         return false;
+    }
+    // Gửi nhiều events cùng lúc (gọi send cho từng event)
+    async sendBatch(events) {
+        if (events.length === 0) {
+            return true;
+        }
+        // Gửi từng event riêng lẻ
+        const results = await Promise.all(events.map(event => this.send(event)));
+        // Trả về true nếu tất cả events gửi thành công
+        return results.every(result => result === true);
     }
     // Gửi payload với phương thức cụ thể
     async sendWithStrategy(payload, strategy) {
@@ -649,19 +674,16 @@ class RecSysTracker {
             if (!this.isInitialized || !this.config) {
                 return;
             }
-            const metadata = this.metadataNormalizer.getMetadata();
-            this.metadataNormalizer.updateSessionActivity();
             const trackedEvent = {
                 id: this.metadataNormalizer.generateEventId(),
-                timestamp: Date.now(),
-                event: eventData.event,
-                category: eventData.category,
-                userId: this.userId,
-                sessionId: metadata.session.sessionId,
-                metadata: {
-                    ...metadata,
-                    ...eventData.data,
+                timestamp: new Date(),
+                triggerTypeId: eventData.triggerTypeId,
+                domainKey: this.config.domainKey,
+                payload: {
+                    UserId: eventData.userId,
+                    ItemId: eventData.itemId,
                 },
+                ...(eventData.rate && { rate: eventData.rate }),
             };
             this.eventBuffer.add(trackedEvent);
         }, 'track');

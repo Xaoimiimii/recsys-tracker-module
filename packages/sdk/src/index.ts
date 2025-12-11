@@ -93,14 +93,6 @@ export class RecSysTracker {
     }, 'track');
   }
 
-
-
-
-
-
-
-
-
   // Setup batch sending of events
   private setupBatchSending(): void {
     const batchDelay = this.config?.options?.batchDelay || 2000;
@@ -180,8 +172,6 @@ export class RecSysTracker {
   getConfig(): TrackerConfig | null {
     return this.config;
   }
-
-
 
   // Set user ID
   setUserId(userId: string | null): void {
