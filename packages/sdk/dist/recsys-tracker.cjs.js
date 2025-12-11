@@ -2,6 +2,129 @@
 
 Object.defineProperty(exports, '__esModule', { value: true });
 
+class OriginVerifier {
+    /**
+     * Kiểm tra xem origin hiện tại có khớp với domainUrl đã đăng ký không
+     * Thứ tự ưu tiên: 1. origin, 2. referrer
+     * @param domainUrl - URL domain đã đăng ký (từ config)
+     * @returns true nếu origin hoặc referrer khớp, false nếu không khớp
+     */
+    static verify(domainUrl) {
+        try {
+            if (!domainUrl) {
+                console.warn('[RecSysTracker] Cannot verify: domainUrl is missing');
+                return false;
+            }
+            // 1. Thử verify bằng origin trước
+            const originValid = this.verifyByOrigin(domainUrl);
+            if (originValid) {
+                return true;
+            }
+            // 2. Fallback: verify bằng referrer
+            const referrerValid = this.verifyByReferrer(domainUrl);
+            if (referrerValid) {
+                return true;
+            }
+            // Không có origin hoặc referrer, hoặc cả 2 đều không khớp
+            console.warn('[RecSysTracker] Origin verification failed: no valid origin or referrer');
+            return false;
+        }
+        catch (error) {
+            console.error('[RecSysTracker] Error during origin verification:', error);
+            return false;
+        }
+    }
+    // Verify bằng window.location.origin
+    static verifyByOrigin(domainUrl) {
+        if (typeof window === 'undefined' || !window.location || !window.location.origin) {
+            return false;
+        }
+        const currentOrigin = window.location.origin;
+        const normalizedCurrent = this.normalizeUrl(currentOrigin);
+        const normalizedDomain = this.normalizeUrl(domainUrl);
+        const isValid = normalizedCurrent === normalizedDomain;
+        if (!isValid) {
+            console.warn('[RecSysTracker] Origin mismatch:', {
+                current: normalizedCurrent,
+                expected: normalizedDomain
+            });
+        }
+        return isValid;
+    }
+    // Verify bằng document.referrer
+    // Hỗ trợ so khớp host chính xác hoặc nhiều path (referrer.startsWith(domainUrl))
+    static verifyByReferrer(domainUrl) {
+        if (typeof document === 'undefined' || !document.referrer) {
+            return false;
+        }
+        try {
+            const referrerUrl = new URL(document.referrer);
+            const domainUrlObj = new URL(domainUrl);
+            // So khớp origin (protocol + host + port)
+            const referrerOrigin = this.normalizeUrl(referrerUrl.origin);
+            const domainOrigin = this.normalizeUrl(domainUrlObj.origin);
+            if (referrerOrigin === domainOrigin) {
+                return true;
+            }
+            // Fallback: Hỗ trợ nhiều path - kiểm tra referrer có bắt đầu với domainUrl không
+            const normalizedReferrer = this.normalizeUrl(document.referrer);
+            const normalizedDomain = this.normalizeUrl(domainUrl);
+            if (normalizedReferrer.startsWith(normalizedDomain)) {
+                return true;
+            }
+            console.warn('[RecSysTracker] Referrer mismatch:', {
+                referrer: normalizedReferrer,
+                expected: normalizedDomain
+            });
+            return false;
+        }
+        catch (error) {
+            console.warn('[RecSysTracker] Failed to parse referrer:', error);
+            return false;
+        }
+    }
+    // Normalize URL để so sánh (loại bỏ trailing slash, lowercase)
+    // Giữ nguyên path nếu có
+    static normalizeUrl(url) {
+        try {
+            const urlObj = new URL(url);
+            // Tạo URL chuẩn: protocol + hostname + port (nếu có) + pathname
+            let normalized = `${urlObj.protocol}//${urlObj.hostname}`;
+            // Thêm port nếu không phải port mặc định
+            if (urlObj.port &&
+                !((urlObj.protocol === 'http:' && urlObj.port === '80') ||
+                    (urlObj.protocol === 'https:' && urlObj.port === '443'))) {
+                normalized += `:${urlObj.port}`;
+            }
+            // Thêm pathname (loại bỏ trailing slash)
+            if (urlObj.pathname && urlObj.pathname !== '/') {
+                normalized += urlObj.pathname.replace(/\/$/, '');
+            }
+            return normalized.toLowerCase();
+        }
+        catch {
+            // Nếu không parse được URL, trả về chuỗi gốc lowercase, loại bỏ trailing slash
+            return url.toLowerCase().replace(/\/$/, '');
+        }
+    }
+    /**
+     * Kiểm tra xem có đang ở môi trường development không
+     * (localhost, 127.0.0.1, etc.)
+     */
+    static isDevelopment() {
+        var _a;
+        if (typeof window === 'undefined') {
+            return false;
+        }
+        const hostname = ((_a = window.location) === null || _a === void 0 ? void 0 : _a.hostname) || '';
+        return (hostname === 'localhost' ||
+            hostname === '127.0.0.1' ||
+            hostname.startsWith('192.168.') ||
+            hostname.startsWith('10.') ||
+            hostname.endsWith('.local'));
+    }
+}
+
 // Luồng hoạt động
 // 1. SDK khởi tạo
 // 2. Gọi loadFromWindow() để lấy domainKey từ window
@@ -87,6 +210,15 @@ class ConfigLoader {
                     trackingRules: this.transformRules(rulesData),
                     returnMethods: this.transformReturnMethods(returnMethodsData),
                 };
+                // Verify origin sau khi có domainUrl từ server
+                if (this.config.domainUrl) {
+                    const isOriginValid = OriginVerifier.verify(this.config.domainUrl);
+                    if (!isOriginValid) {
+                        console.error('[RecSysTracker] Origin verification failed. SDK will not function.');
+                        this.config = null;
+                        return null;
+                    }
+                }
             }
             return this.config;
         }
@@ -354,9 +486,11 @@ class EventBuffer {
 // Lớp EventDispatcher chịu trách nhiệm gửi events
 class EventDispatcher {
     constructor(options) {
+        this.domainUrl = null;
         this.timeout = 5000;
         this.headers = {};
         this.endpoint = options.endpoint;
+        this.domainUrl = options.domainUrl || null;
         this.timeout = options.timeout || 5000;
         this.headers = options.headers || {};
     }
@@ -365,6 +499,14 @@ class EventDispatcher {
         var _a, _b;
         if (!event) {
             return false;
+        }
+        // Verify origin trước khi gửi event
+        if (this.domainUrl) {
+            const isOriginValid = OriginVerifier.verify(this.domainUrl);
+            if (!isOriginValid) {
+                console.warn('[RecSysTracker] Origin verification failed. Event not sent.');
+                return false;
+            }
         }
         // Chuyển đổi TrackedEvent sang định dạng CreateEventDto
         const payload = JSON.stringify({
@@ -464,6 +606,10 @@ class EventDispatcher {
     // Cập nhật URL endpoint động
     setEndpoint(endpoint) {
         this.endpoint = endpoint;
+    }
+    // Cập nhật domainUrl để verify origin
+    setDomainUrl(domainUrl) {
+        this.domainUrl = domainUrl;
     }
     // Cập nhật timeout cho requests
     setTimeout(timeout) {
@@ -655,12 +801,22 @@ class RecSysTracker {
             this.eventDispatcher = new EventDispatcher({
                 endpoint: this.config.trackEndpoint || '/track',
             });
-            // Fetch remote config
-            this.configLoader.fetchRemoteConfig().then(remoteConfig => {
-                if (remoteConfig) {
-                    this.config = remoteConfig;
+            // Fetch remote config và verify origin
+            const remoteConfig = await this.configLoader.fetchRemoteConfig();
+            if (remoteConfig) {
+                this.config = remoteConfig;
+                // Cập nhật domainUrl cho EventDispatcher để verify origin khi gửi event
+                if (this.eventDispatcher && this.config.domainUrl) {
+                    this.eventDispatcher.setDomainUrl(this.config.domainUrl);
                 }
-            });
+            }
+            else {
+                // Nếu origin verification thất bại, không khởi tạo SDK
+                console.error('[RecSysTracker] Failed to initialize SDK: origin verification failed');
+                this.config = null;
+                this.eventDispatcher = null;
+                return;
+            }
             // Setup batch sending
             this.setupBatchSending();
             // Setup page unload handler

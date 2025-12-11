@@ -7,4 +7,6 @@ export { EventBuffer } from './events/event-buffer';
 export { EventDispatcher } from './events/event-dispatcher';
 // Metadata
 export { MetadataNormalizer } from './metadata/metadata-normalizer';
+// Utils
+export { OriginVerifier } from './utils/origin-verifier';
 //# sourceMappingURL=index.js.map

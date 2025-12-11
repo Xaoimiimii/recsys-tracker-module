@@ -45,12 +45,22 @@ export class RecSysTracker {
         endpoint: this.config.trackEndpoint || '/track',
       });
 
-      // Fetch remote config
-      this.configLoader.fetchRemoteConfig().then(remoteConfig => {
-        if (remoteConfig) {
-          this.config = remoteConfig;
+      // Fetch remote config và verify origin
+      const remoteConfig = await this.configLoader.fetchRemoteConfig();
+      if (remoteConfig) {
+        this.config = remoteConfig;
+        
+        // Cập nhật domainUrl cho EventDispatcher để verify origin khi gửi event
+        if (this.eventDispatcher && this.config.domainUrl) {
+          this.eventDispatcher.setDomainUrl(this.config.domainUrl);
         }
-      });
+      } else {
+        // Nếu origin verification thất bại, không khởi tạo SDK
+        console.error('[RecSysTracker] Failed to initialize SDK: origin verification failed');
+        this.config = null;
+        this.eventDispatcher = null;
+        return;
+      }
 
       // Setup batch sending
       this.setupBatchSending();

@@ -2,11 +2,13 @@ import { TrackedEvent } from './event-buffer';
 export type SendStrategy = 'beacon' | 'fetch';
 export interface DispatchOptions {
     endpoint: string;
+    domainUrl?: string;
     timeout?: number;
     headers?: Record<string, string>;
 }
 export declare class EventDispatcher {
     private endpoint;
+    private domainUrl;
     private timeout;
     private headers;
     constructor(options: DispatchOptions);
@@ -16,6 +18,7 @@ export declare class EventDispatcher {
     private sendBeacon;
     private sendFetch;
     setEndpoint(endpoint: string): void;
+    setDomainUrl(domainUrl: string): void;
     setTimeout(timeout: number): void;
     setHeaders(headers: Record<string, string>): void;
 }

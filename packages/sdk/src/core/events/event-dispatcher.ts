@@ -1,4 +1,5 @@
 import { TrackedEvent } from './event-buffer';
+import { OriginVerifier } from '../utils/origin-verifier';
 
 // Luồng hoạt động
 // 1. Nhận events cần gửi
@@ -15,6 +16,7 @@ export type SendStrategy = 'beacon' | 'fetch';
 // Tùy chọn cấu hình dispatcher
 export interface DispatchOptions {
   endpoint: string;
+  domainUrl?: string; // Thêm domainUrl để verify origin
   timeout?: number;
   headers?: Record<string, string>;
 }
@@ -22,11 +24,13 @@ export interface DispatchOptions {
 // Lớp EventDispatcher chịu trách nhiệm gửi events
 export class EventDispatcher {
   private endpoint: string;
+  private domainUrl: string | null = null;
   private timeout: number = 5000;
   private headers: Record<string, string> = {};
 
   constructor(options: DispatchOptions) {
     this.endpoint = options.endpoint;
+    this.domainUrl = options.domainUrl || null;
     this.timeout = options.timeout || 5000;
     this.headers = options.headers || {};
   }
@@ -35,6 +39,15 @@ export class EventDispatcher {
   async send(event: TrackedEvent): Promise<boolean> {
     if (!event) {
       return false;
+    }
+
+    // Verify origin trước khi gửi event
+    if (this.domainUrl) {
+      const isOriginValid = OriginVerifier.verify(this.domainUrl);
+      if (!isOriginValid) {
+        console.warn('[RecSysTracker] Origin verification failed. Event not sent.');
+        return false;
+      }
     }
 
     // Chuyển đổi TrackedEvent sang định dạng CreateEventDto
@@ -153,6 +166,11 @@ export class EventDispatcher {
   // Cập nhật URL endpoint động
   setEndpoint(endpoint: string): void {
     this.endpoint = endpoint;
+  }
+
+  // Cập nhật domainUrl để verify origin
+  setDomainUrl(domainUrl: string): void {
+    this.domainUrl = domainUrl;
   }
 
   // Cập nhật timeout cho requests

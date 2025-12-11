@@ -1,9 +1,12 @@
+import { OriginVerifier } from '../utils/origin-verifier';
 // Lớp EventDispatcher chịu trách nhiệm gửi events
 export class EventDispatcher {
     constructor(options) {
+        this.domainUrl = null;
         this.timeout = 5000;
         this.headers = {};
         this.endpoint = options.endpoint;
+        this.domainUrl = options.domainUrl || null;
         this.timeout = options.timeout || 5000;
         this.headers = options.headers || {};
     }
@@ -12,6 +15,14 @@ export class EventDispatcher {
         var _a, _b;
         if (!event) {
             return false;
+        }
+        // Verify origin trước khi gửi event
+        if (this.domainUrl) {
+            const isOriginValid = OriginVerifier.verify(this.domainUrl);
+            if (!isOriginValid) {
+                console.warn('[RecSysTracker] Origin verification failed. Event not sent.');
+                return false;
+            }
         }
         // Chuyển đổi TrackedEvent sang định dạng CreateEventDto
         const payload = JSON.stringify({
@@ -111,6 +122,10 @@ export class EventDispatcher {
     // Cập nhật URL endpoint động
     setEndpoint(endpoint) {
         this.endpoint = endpoint;
+    }
+    // Cập nhật domainUrl để verify origin
+    setDomainUrl(domainUrl) {
+        this.domainUrl = domainUrl;
     }
     // Cập nhật timeout cho requests
     setTimeout(timeout) {
