@@ -12,9 +12,10 @@ export interface TrackingRule {
     id: string;
     name: string;
     triggerEventId: number;
-    targetEventPatternId: number;
-    targetOperatorId: number;
-    targetElementValue: string;
+    targetElementId?: number;
+    targetEventPatternId?: number;
+    targetOperatorId?: number;
+    targetElementValue?: string;
     conditions: Condition[];
     payload: PayloadConfig[];
 }
@@ -25,7 +26,8 @@ export interface PayloadConfig {
     type?: string;
 }
 export interface Condition {
-    payloadPatternId: number;
+    id?: number;
+    eventPatternId: number;
     operatorId: number;
     value?: string;
 }

@@ -11,6 +11,15 @@ class OriginVerifier {
                 console.warn('[RecSysTracker] Cannot verify: domainUrl is missing');
                 return false;
             }
+            // Bỏ qua verification khi test với file:// protocol
+            if (typeof window !== 'undefined' && window.location) {
+                const protocol = window.location.protocol;
+                const origin = window.location.origin;
+                if (protocol === 'file:' || origin === 'null' || origin === 'file://') {
+                    console.warn('[RecSysTracker] Skipping origin verification for file:// protocol (testing mode)');
+                    return true;
+                }
+            }
             // 1. Thử verify bằng origin trước
             const originValid = this.verifyByOrigin(domainUrl);
             if (originValid) {
@@ -183,8 +192,8 @@ class ConfigLoader {
             return this.config;
         }
         try {
-            // Gọi 3 API song song
-            const [domainResponse, rulesResponse, returnMethodsResponse] = await Promise.all([
+            // Bước 1: Gọi 3 API song song để lấy domain, list rules cơ bản, và return methods
+            const [domainResponse, rulesListResponse, returnMethodsResponse] = await Promise.all([
                 fetch(`${this.BASE_API_URL}/domain/${this.domainKey}`),
                 fetch(`${this.BASE_API_URL}/rule/domain/${this.domainKey}`),
                 fetch(`${this.BASE_API_URL}/domain/return-method/${this.domainKey}`)
@@ -195,8 +204,17 @@ class ConfigLoader {
             }
             // Parse responses
             const domainData = domainResponse.ok ? await domainResponse.json() : null;
-            const rulesData = rulesResponse.ok ? await rulesResponse.json() : [];
+            const rulesListData = rulesListResponse.ok ? await rulesListResponse.json() : [];
             const returnMethodsData = returnMethodsResponse.ok ? await returnMethodsResponse.json() : [];
+            // Bước 2: Lấy chi tiết từng rule
+            let rulesData = [];
+            if (Array.isArray(rulesListData) && rulesListData.length > 0) {
+                const ruleDetailsPromises = rulesListData.map(rule => fetch(`${this.BASE_API_URL}/rule/${rule.id}`)
+                    .then(res => res.ok ? res.json() : null)
+                    .catch(() => null));
+                const ruleDetails = await Promise.all(ruleDetailsPromises);
+                rulesData = ruleDetails.filter(rule => rule !== null);
+            }
             // Cập nhật config với data từ server
             if (this.config) {
                 this.config = {
@@ -227,19 +245,44 @@ class ConfigLoader {
         if (!Array.isArray(rulesData))
             return [];
         return rulesData.map(rule => {
-            var _a, _b, _c, _d;
+            var _a, _b, _c, _d, _e;
             return ({
-                id: ((_a = rule.Id) === null || _a === void 0 ? void 0 : _a.toString()) || rule.id,
+                id: ((_a = rule.Id) === null || _a === void 0 ? void 0 : _a.toString()) || ((_b = rule.id) === null || _b === void 0 ? void 0 : _b.toString()),
                 name: rule.Name || rule.name,
                 // domainId: rule.DomainID || rule.domainId,
                 triggerEventId: rule.TriggerEventID || rule.triggerEventId,
-                targetEventPatternId: ((_b = rule.TargetElement) === null || _b === void 0 ? void 0 : _b.EventPatternID) || rule.targetEventPatternId,
-                targetOperatorId: ((_c = rule.TargetElement) === null || _c === void 0 ? void 0 : _c.OperatorID) || rule.targetOperatorId,
-                targetElementValue: ((_d = rule.TargetElement) === null || _d === void 0 ? void 0 : _d.Value) || rule.targetElementValue,
-                conditions: rule.Conditions || rule.conditions || [],
-                payload: rule.PayloadConfigs || rule.payload || [],
+                targetElementId: rule.TargetElementID || rule.targetElementId,
+                targetEventPatternId: ((_c = rule.TargetElement) === null || _c === void 0 ? void 0 : _c.EventPatternID) || rule.targetEventPatternId,
+                targetOperatorId: ((_d = rule.TargetElement) === null || _d === void 0 ? void 0 : _d.OperatorID) || rule.targetOperatorId,
+                targetElementValue: ((_e = rule.TargetElement) === null || _e === void 0 ? void 0 : _e.Value) || rule.targetElementValue,
+                conditions: this.transformConditions(rule.Conditions || rule.conditions || []),
+                payload: this.transformPayloadConfigs(rule.PayloadConfigs || rule.payload || []),
             });
         });
+    }
+    // Transform conditions từ server format sang SDK format
+    transformConditions(conditionsData) {
+        if (!Array.isArray(conditionsData))
+            return [];
+        return conditionsData.map(condition => ({
+            id: condition.Id || condition.id,
+            eventPatternId: condition.EventPatternID || condition.eventPatternId,
+            ruleId: condition.RuleID || condition.ruleId,
+            operatorId: condition.OperatorID || condition.operatorId,
+            value: condition.Value || condition.value,
+        }));
+    }
+    // Transform payload configs từ server format sang SDK format
+    transformPayloadConfigs(payloadData) {
+        if (!Array.isArray(payloadData))
+            return [];
+        return payloadData.map(payload => ({
+            payloadPatternId: payload.PayloadPatternID || payload.payloadPatternId,
+            ruleId: payload.RuleID || payload.ruleId,
+            operatorId: payload.OperatorID || payload.operatorId,
+            value: payload.Value || payload.value,
+            type: payload.Type || payload.type,
+        }));
     }
     // Transform return methods từ server format sang SDK format
     transformReturnMethods(returnMethodsData) {

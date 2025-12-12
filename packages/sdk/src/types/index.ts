@@ -14,9 +14,10 @@ export interface TrackingRule {
   name: string;
   // domainId: number;
   triggerEventId: number; // (click, scroll, ...)
-  targetEventPatternId: number;
-  targetOperatorId: number;
-  targetElementValue: string;
+  targetElementId?: number;
+  targetEventPatternId?: number;
+  targetOperatorId?: number;
+  targetElementValue?: string;
   conditions: Condition[];
   payload: PayloadConfig[];
 }
@@ -29,7 +30,8 @@ export interface PayloadConfig {
 }
 
 export interface Condition {
-  payloadPatternId: number;
+  id?: number;
+  eventPatternId: number;
   operatorId: number;
   value?: string;
 }
