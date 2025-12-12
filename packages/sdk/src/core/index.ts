@@ -19,3 +19,9 @@ export {
 
 // Utils
 export { OriginVerifier } from './utils/origin-verifier';
+
+// Display
+export { DisplayManager } from './display/display-manager';
+export { PopupDisplay } from './display/popup-display';
+export { InlineDisplay } from './display/inline-display';
+export * from './display/types';

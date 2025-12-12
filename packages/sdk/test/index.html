@@ -97,8 +97,8 @@
 
     <!-- Load the SDK -->
     <script>window.__RECSYS_DOMAIN_KEY__ = "079251187f351b700844164bf0ac5fddebaa305af8732fe06ae631b921eaf9e7";</script>
-    <script src="https://cdn.jsdelivr.net/gh/Xaoimiimii/recsys-tracker-module/packages/sdk/dist/loader.js?v=3"></script>
-    <!-- <script src="../dist/loader.js"></script> -->
+    <!-- <script src="https://cdn.jsdelivr.net/gh/Xaoimiimii/recsys-tracker-module/packages/sdk/dist/loader.js?v=3"></script> -->
+    <script src="../dist/loader.js"></script>
     
     <script>
         let configLoader = null;
@@ -252,10 +252,52 @@
             showData('fullConfig', config);
         }
 
-        // Auto-fill domain key if available
-        window.addEventListener('load', () => {
+        // Auto-init SDK when page loads
+        window.addEventListener('load', async () => {
             console.log('Test page loaded');
             console.log('SDK available:', typeof RecSysTracker !== 'undefined');
+            
+            // Auto-fill domain key from window
+            const domainKey = window.__RECSYS_DOMAIN_KEY__;
+            if (domainKey) {
+                document.getElementById('domainKey').value = domainKey;
+                
+                // Auto-initialize SDK
+                try {
+                    showStatus('initStatus', 'Auto-initializing SDK...', 'info');
+                    
+                    if (!window.RecSysTracker || !window.RecSysTracker.ConfigLoader) {
+                        showStatus('initStatus', 'RecSysTracker.ConfigLoader not found. Please reload the page.', 'error');
+                        return;
+                    }
+                    
+                    configLoader = new window.RecSysTracker.ConfigLoader();
+                    
+                    // Load from window
+                    const localConfig = configLoader.loadFromWindow();
+                    
+                    if (!localConfig) {
+                        showStatus('initStatus', 'Failed to load config from window', 'error');
+                        return;
+                    }
+
+                    showStatus('initStatus', 'SDK initialized. Fetching remote config...', 'info');
+
+                    // Fetch remote config
+                    const remoteConfig = await configLoader.fetchRemoteConfig();
+                    
+                    if (remoteConfig) {
+                        showStatus('initStatus', '✅ SDK initialized and remote config loaded successfully!', 'success');
+                        showData('fullConfig', remoteConfig);
+                    } else {
+                        showStatus('initStatus', '⚠️ SDK initialized but failed to fetch remote config (using local config)', 'error');
+                        showData('fullConfig', localConfig);
+                    }
+                } catch (error) {
+                    showStatus('initStatus', `❌ Auto-init error: ${error.message}`, 'error');
+                    console.error('Auto-init error:', error);
+                }
+            }
         });
     </script>
 </body>

@@ -5,6 +5,7 @@ export declare class RecSysTracker {
     private eventBuffer;
     private eventDispatcher;
     private metadataNormalizer;
+    private displayManager;
     private config;
     private userId;
     private isInitialized;

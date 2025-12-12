@@ -12,6 +12,17 @@ export class OriginVerifier {
         return false;
       }
 
+      // Bỏ qua verification khi test với file:// protocol
+      if (typeof window !== 'undefined' && window.location) {
+        const protocol = window.location.protocol;
+        const origin = window.location.origin;
+        
+        if (protocol === 'file:' || origin === 'null' || origin === 'file://') {
+          console.warn('[RecSysTracker] Skipping origin verification for file:// protocol (testing mode)');
+          return true;
+        }
+      }
+
       // 1. Thử verify bằng origin trước
       const originValid = this.verifyByOrigin(domainUrl);
       if (originValid) {
