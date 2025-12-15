@@ -1,5 +1,7 @@
 export interface TrackerConfig {
   domainKey: string;
+  domainUrl?: string;
+  domainType?: number;
   trackEndpoint?: string;
   configEndpoint?: string;
   trackingRules?: TrackingRule[];
@@ -10,11 +12,12 @@ export interface TrackerConfig {
 export interface TrackingRule {
   id: string;
   name: string;
-  domainId: number;
+  // domainId: number;
   triggerEventId: number; // (click, scroll, ...)
-  targetEventPatternId: number;
-  targetOperatorId: number;
-  targetElementValue: string;
+  targetElementId?: number;
+  targetEventPatternId?: number;
+  targetOperatorId?: number;
+  targetElementValue?: string;
   conditions: Condition[];
   payload: PayloadConfig[];
 }
@@ -27,13 +30,13 @@ export interface PayloadConfig {
 }
 
 export interface Condition {
-  payloadPatternId: number;
+  id?: number;
+  eventPatternId: number;
   operatorId: number;
   value?: string;
 }
 
 export interface ReturnMethod {
-  key: string;
   slotName: string;
   returnMethodId: number;
   value: string;

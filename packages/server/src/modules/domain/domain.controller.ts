@@ -1,4 +1,4 @@
-import { Body, Controller, Get, Param, Post } from '@nestjs/common';
+import { Body, Controller, Get, Param, ParseIntPipe, Post } from '@nestjs/common';
 import { DomainService } from './domain.service';
 import { CreateDomainDto } from './dto/create-domain.dto';
 
@@ -15,5 +15,10 @@ export class DomainController {
     async createDomain(@Body() body: CreateDomainDto) {
         const { ternantId, url, type } = body;
         return this.domainService.createDomain(ternantId, url, type);
+    }
+
+    @Get('/ternant/:id')
+    async getDomainsByTernantId(@Param('id', ParseIntPipe) id: number) {
+        return this.domainService.getDomainsByTernantId(id);
     }
 }

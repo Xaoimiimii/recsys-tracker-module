@@ -1,11 +1,16 @@
 export interface TrackedEvent {
     id: string;
-    timestamp: number;
-    event: string;
-    category: string;
-    userId?: string | null;
-    sessionId: string;
-    metadata: Record<string, any>;
+    timestamp: string | Date;
+    triggerTypeId: number;
+    domainKey: string;
+    payload: {
+        UserId: number;
+        ItemId: number;
+    };
+    rate?: {
+        Value: number;
+        Review: string;
+    };
     retryCount?: number;
 }
 export declare class EventBuffer {

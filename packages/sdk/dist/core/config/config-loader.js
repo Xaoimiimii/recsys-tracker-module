@@ -1,3 +1,4 @@
+import { OriginVerifier } from '../utils/origin-verifier';
 // Luồng hoạt động
 // 1. SDK khởi tạo
 // 2. Gọi loadFromWindow() để lấy domainKey từ window
@@ -34,7 +35,9 @@ export class ConfigLoader {
             // Default config
             this.config = {
                 domainKey: domainKey,
-                trackEndpoint: `${this.BASE_API_URL}/track`,
+                domainUrl: '',
+                domainType: 0,
+                trackEndpoint: `${this.BASE_API_URL}/event`,
                 configEndpoint: `${this.BASE_API_URL}/domain/${domainKey}`,
                 trackingRules: [],
                 returnMethods: [],
@@ -58,8 +61,8 @@ export class ConfigLoader {
             return this.config;
         }
         try {
-            // Gọi 3 API song song
-            const [domainResponse, rulesResponse, returnMethodsResponse] = await Promise.all([
+            // Bước 1: Gọi 3 API song song để lấy domain, list rules cơ bản, và return methods
+            const [domainResponse, rulesListResponse, returnMethodsResponse] = await Promise.all([
                 fetch(`${this.BASE_API_URL}/domain/${this.domainKey}`),
                 fetch(`${this.BASE_API_URL}/rule/domain/${this.domainKey}`),
                 fetch(`${this.BASE_API_URL}/domain/return-method/${this.domainKey}`)
@@ -69,16 +72,36 @@ export class ConfigLoader {
                 return this.config;
             }
             // Parse responses
-            await domainResponse.json(); // Parse domain data (for future use)
-            const rulesData = rulesResponse.ok ? await rulesResponse.json() : [];
+            const domainData = domainResponse.ok ? await domainResponse.json() : null;
+            const rulesListData = rulesListResponse.ok ? await rulesListResponse.json() : [];
             const returnMethodsData = returnMethodsResponse.ok ? await returnMethodsResponse.json() : [];
+            // Bước 2: Lấy chi tiết từng rule
+            let rulesData = [];
+            if (Array.isArray(rulesListData) && rulesListData.length > 0) {
+                const ruleDetailsPromises = rulesListData.map(rule => fetch(`${this.BASE_API_URL}/rule/${rule.id}`)
+                    .then(res => res.ok ? res.json() : null)
+                    .catch(() => null));
+                const ruleDetails = await Promise.all(ruleDetailsPromises);
+                rulesData = ruleDetails.filter(rule => rule !== null);
+            }
             // Cập nhật config với data từ server
             if (this.config) {
                 this.config = {
                     ...this.config,
+                    domainUrl: (domainData === null || domainData === void 0 ? void 0 : domainData.Url) || this.config.domainUrl,
+                    domainType: (domainData === null || domainData === void 0 ? void 0 : domainData.Type) || this.config.domainType,
                     trackingRules: this.transformRules(rulesData),
                     returnMethods: this.transformReturnMethods(returnMethodsData),
                 };
+                // Verify origin sau khi có domainUrl từ server
+                if (this.config.domainUrl) {
+                    const isOriginValid = OriginVerifier.verify(this.config.domainUrl);
+                    if (!isOriginValid) {
+                        console.error('[RecSysTracker] Origin verification failed. SDK will not function.');
+                        this.config = null;
+                        return null;
+                    }
+                }
             }
             return this.config;
         }
@@ -91,26 +114,50 @@ export class ConfigLoader {
         if (!Array.isArray(rulesData))
             return [];
         return rulesData.map(rule => {
-            var _a, _b, _c, _d;
+            var _a, _b, _c, _d, _e;
             return ({
-                id: ((_a = rule.Id) === null || _a === void 0 ? void 0 : _a.toString()) || rule.id,
+                id: ((_a = rule.Id) === null || _a === void 0 ? void 0 : _a.toString()) || ((_b = rule.id) === null || _b === void 0 ? void 0 : _b.toString()),
                 name: rule.Name || rule.name,
-                domainId: rule.DomainID || rule.domainId,
+                // domainId: rule.DomainID || rule.domainId,
                 triggerEventId: rule.TriggerEventID || rule.triggerEventId,
-                targetEventPatternId: ((_b = rule.TargetElement) === null || _b === void 0 ? void 0 : _b.EventPatternID) || rule.targetEventPatternId,
-                targetOperatorId: ((_c = rule.TargetElement) === null || _c === void 0 ? void 0 : _c.OperatorID) || rule.targetOperatorId,
-                targetElementValue: ((_d = rule.TargetElement) === null || _d === void 0 ? void 0 : _d.Value) || rule.targetElementValue,
-                conditions: rule.Conditions || rule.conditions || [],
-                payload: rule.PayloadConfigs || rule.payload || [],
+                targetElementId: rule.TargetElementID || rule.targetElementId,
+                targetEventPatternId: ((_c = rule.TargetElement) === null || _c === void 0 ? void 0 : _c.EventPatternID) || rule.targetEventPatternId,
+                targetOperatorId: ((_d = rule.TargetElement) === null || _d === void 0 ? void 0 : _d.OperatorID) || rule.targetOperatorId,
+                targetElementValue: ((_e = rule.TargetElement) === null || _e === void 0 ? void 0 : _e.Value) || rule.targetElementValue,
+                conditions: this.transformConditions(rule.Conditions || rule.conditions || []),
+                payload: this.transformPayloadConfigs(rule.PayloadConfigs || rule.payload || []),
             });
         });
+    }
+    // Transform conditions từ server format sang SDK format
+    transformConditions(conditionsData) {
+        if (!Array.isArray(conditionsData))
+            return [];
+        return conditionsData.map(condition => ({
+            id: condition.Id || condition.id,
+            eventPatternId: condition.EventPatternID || condition.eventPatternId,
+            ruleId: condition.RuleID || condition.ruleId,
+            operatorId: condition.OperatorID || condition.operatorId,
+            value: condition.Value || condition.value,
+        }));
+    }
+    // Transform payload configs từ server format sang SDK format
+    transformPayloadConfigs(payloadData) {
+        if (!Array.isArray(payloadData))
+            return [];
+        return payloadData.map(payload => ({
+            payloadPatternId: payload.PayloadPatternID || payload.payloadPatternId,
+            ruleId: payload.RuleID || payload.ruleId,
+            operatorId: payload.OperatorID || payload.operatorId,
+            value: payload.Value || payload.value,
+            type: payload.Type || payload.type,
+        }));
     }
     // Transform return methods từ server format sang SDK format
     transformReturnMethods(returnMethodsData) {
         if (!returnMethodsData || !Array.isArray(returnMethodsData))
             return [];
         return returnMethodsData.map(method => ({
-            key: this.domainKey || '',
             slotName: method.SlotName || method.slotName,
             returnMethodId: method.ReturnMethodID || method.returnMethodId,
             value: method.Value || method.value || '',

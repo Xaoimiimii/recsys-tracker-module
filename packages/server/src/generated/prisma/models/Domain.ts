@@ -235,6 +235,10 @@ export type DomainWhereInput = {
   Ternant?: Prisma.XOR<Prisma.TernantScalarRelationFilter, Prisma.TernantWhereInput>
   Rules?: Prisma.RuleListRelationFilter
   DomainReturns?: Prisma.DomainReturnListRelationFilter
+  Interactions?: Prisma.InteractionListRelationFilter
+  Items?: Prisma.ItemListRelationFilter
+  Users?: Prisma.UserListRelationFilter
+  Ratings?: Prisma.RatingListRelationFilter
 }
 
 export type DomainOrderByWithRelationInput = {
@@ -247,6 +251,10 @@ export type DomainOrderByWithRelationInput = {
   Ternant?: Prisma.TernantOrderByWithRelationInput
   Rules?: Prisma.RuleOrderByRelationAggregateInput
   DomainReturns?: Prisma.DomainReturnOrderByRelationAggregateInput
+  Interactions?: Prisma.InteractionOrderByRelationAggregateInput
+  Items?: Prisma.ItemOrderByRelationAggregateInput
+  Users?: Prisma.UserOrderByRelationAggregateInput
+  Ratings?: Prisma.RatingOrderByRelationAggregateInput
 }
 
 export type DomainWhereUniqueInput = Prisma.AtLeast<{
@@ -262,6 +270,10 @@ export type DomainWhereUniqueInput = Prisma.AtLeast<{
   Ternant?: Prisma.XOR<Prisma.TernantScalarRelationFilter, Prisma.TernantWhereInput>
   Rules?: Prisma.RuleListRelationFilter
   DomainReturns?: Prisma.DomainReturnListRelationFilter
+  Interactions?: Prisma.InteractionListRelationFilter
+  Items?: Prisma.ItemListRelationFilter
+  Users?: Prisma.UserListRelationFilter
+  Ratings?: Prisma.RatingListRelationFilter
 }, "Id" | "Key">
 
 export type DomainOrderByWithAggregationInput = {
@@ -298,6 +310,10 @@ export type DomainCreateInput = {
   Ternant: Prisma.TernantCreateNestedOneWithoutDomainsInput
   Rules?: Prisma.RuleCreateNestedManyWithoutDomainInput
   DomainReturns?: Prisma.DomainReturnCreateNestedManyWithoutDomainInput
+  Interactions?: Prisma.InteractionCreateNestedManyWithoutDomainInput
+  Items?: Prisma.ItemCreateNestedManyWithoutDomainInput
+  Users?: Prisma.UserCreateNestedManyWithoutDomainInput
+  Ratings?: Prisma.RatingCreateNestedManyWithoutDomainInput
 }
 
 export type DomainUncheckedCreateInput = {
@@ -309,6 +325,10 @@ export type DomainUncheckedCreateInput = {
   TernantID: number
   Rules?: Prisma.RuleUncheckedCreateNestedManyWithoutDomainInput
   DomainReturns?: Prisma.DomainReturnUncheckedCreateNestedManyWithoutDomainInput
+  Interactions?: Prisma.InteractionUncheckedCreateNestedManyWithoutDomainInput
+  Items?: Prisma.ItemUncheckedCreateNestedManyWithoutDomainInput
+  Users?: Prisma.UserUncheckedCreateNestedManyWithoutDomainInput
+  Ratings?: Prisma.RatingUncheckedCreateNestedManyWithoutDomainInput
 }
 
 export type DomainUpdateInput = {
@@ -319,6 +339,10 @@ export type DomainUpdateInput = {
   Ternant?: Prisma.TernantUpdateOneRequiredWithoutDomainsNestedInput
   Rules?: Prisma.RuleUpdateManyWithoutDomainNestedInput
   DomainReturns?: Prisma.DomainReturnUpdateManyWithoutDomainNestedInput
+  Interactions?: Prisma.InteractionUpdateManyWithoutDomainNestedInput
+  Items?: Prisma.ItemUpdateManyWithoutDomainNestedInput
+  Users?: Prisma.UserUpdateManyWithoutDomainNestedInput
+  Ratings?: Prisma.RatingUpdateManyWithoutDomainNestedInput
 }
 
 export type DomainUncheckedUpdateInput = {
@@ -330,6 +354,10 @@ export type DomainUncheckedUpdateInput = {
   TernantID?: Prisma.IntFieldUpdateOperationsInput | number
   Rules?: Prisma.RuleUncheckedUpdateManyWithoutDomainNestedInput
   DomainReturns?: Prisma.DomainReturnUncheckedUpdateManyWithoutDomainNestedInput
+  Interactions?: Prisma.InteractionUncheckedUpdateManyWithoutDomainNestedInput
+  Items?: Prisma.ItemUncheckedUpdateManyWithoutDomainNestedInput
+  Users?: Prisma.UserUncheckedUpdateManyWithoutDomainNestedInput
+  Ratings?: Prisma.RatingUncheckedUpdateManyWithoutDomainNestedInput
 }
 
 export type DomainCreateManyInput = {
@@ -493,6 +521,62 @@ export type DomainUpdateOneRequiredWithoutRulesNestedInput = {
   update?: Prisma.XOR<Prisma.XOR<Prisma.DomainUpdateToOneWithWhereWithoutRulesInput, Prisma.DomainUpdateWithoutRulesInput>, Prisma.DomainUncheckedUpdateWithoutRulesInput>
 }
 
+export type DomainCreateNestedOneWithoutItemsInput = {
+  create?: Prisma.XOR<Prisma.DomainCreateWithoutItemsInput, Prisma.DomainUncheckedCreateWithoutItemsInput>
+  connectOrCreate?: Prisma.DomainCreateOrConnectWithoutItemsInput
+  connect?: Prisma.DomainWhereUniqueInput
+}
+
+export type DomainUpdateOneRequiredWithoutItemsNestedInput = {
+  create?: Prisma.XOR<Prisma.DomainCreateWithoutItemsInput, Prisma.DomainUncheckedCreateWithoutItemsInput>
+  connectOrCreate?: Prisma.DomainCreateOrConnectWithoutItemsInput
+  upsert?: Prisma.DomainUpsertWithoutItemsInput
+  connect?: Prisma.DomainWhereUniqueInput
+  update?: Prisma.XOR<Prisma.XOR<Prisma.DomainUpdateToOneWithWhereWithoutItemsInput, Prisma.DomainUpdateWithoutItemsInput>, Prisma.DomainUncheckedUpdateWithoutItemsInput>
+}
+
+export type DomainCreateNestedOneWithoutUsersInput = {
+  create?: Prisma.XOR<Prisma.DomainCreateWithoutUsersInput, Prisma.DomainUncheckedCreateWithoutUsersInput>
+  connectOrCreate?: Prisma.DomainCreateOrConnectWithoutUsersInput
+  connect?: Prisma.DomainWhereUniqueInput
+}
+
+export type DomainUpdateOneRequiredWithoutUsersNestedInput = {
+  create?: Prisma.XOR<Prisma.DomainCreateWithoutUsersInput, Prisma.DomainUncheckedCreateWithoutUsersInput>
+  connectOrCreate?: Prisma.DomainCreateOrConnectWithoutUsersInput
+  upsert?: Prisma.DomainUpsertWithoutUsersInput
+  connect?: Prisma.DomainWhereUniqueInput
+  update?: Prisma.XOR<Prisma.XOR<Prisma.DomainUpdateToOneWithWhereWithoutUsersInput, Prisma.DomainUpdateWithoutUsersInput>, Prisma.DomainUncheckedUpdateWithoutUsersInput>
+}
+
+export type DomainCreateNestedOneWithoutRatingsInput = {
+  create?: Prisma.XOR<Prisma.DomainCreateWithoutRatingsInput, Prisma.DomainUncheckedCreateWithoutRatingsInput>
+  connectOrCreate?: Prisma.DomainCreateOrConnectWithoutRatingsInput
+  connect?: Prisma.DomainWhereUniqueInput
+}
+
+export type DomainUpdateOneRequiredWithoutRatingsNestedInput = {
+  create?: Prisma.XOR<Prisma.DomainCreateWithoutRatingsInput, Prisma.DomainUncheckedCreateWithoutRatingsInput>
+  connectOrCreate?: Prisma.DomainCreateOrConnectWithoutRatingsInput
+  upsert?: Prisma.DomainUpsertWithoutRatingsInput
+  connect?: Prisma.DomainWhereUniqueInput
+  update?: Prisma.XOR<Prisma.XOR<Prisma.DomainUpdateToOneWithWhereWithoutRatingsInput, Prisma.DomainUpdateWithoutRatingsInput>, Prisma.DomainUncheckedUpdateWithoutRatingsInput>
+}
+
+export type DomainCreateNestedOneWithoutInteractionsInput = {
+  create?: Prisma.XOR<Prisma.DomainCreateWithoutInteractionsInput, Prisma.DomainUncheckedCreateWithoutInteractionsInput>
+  connectOrCreate?: Prisma.DomainCreateOrConnectWithoutInteractionsInput
+  connect?: Prisma.DomainWhereUniqueInput
+}
+
+export type DomainUpdateOneRequiredWithoutInteractionsNestedInput = {
+  create?: Prisma.XOR<Prisma.DomainCreateWithoutInteractionsInput, Prisma.DomainUncheckedCreateWithoutInteractionsInput>
+  connectOrCreate?: Prisma.DomainCreateOrConnectWithoutInteractionsInput
+  upsert?: Prisma.DomainUpsertWithoutInteractionsInput
+  connect?: Prisma.DomainWhereUniqueInput
+  update?: Prisma.XOR<Prisma.XOR<Prisma.DomainUpdateToOneWithWhereWithoutInteractionsInput, Prisma.DomainUpdateWithoutInteractionsInput>, Prisma.DomainUncheckedUpdateWithoutInteractionsInput>
+}
+
 export type DomainCreateWithoutTernantInput = {
   Key: string
   Url: string
@@ -500,6 +584,10 @@ export type DomainCreateWithoutTernantInput = {
   CreatedAt?: Date | string
   Rules?: Prisma.RuleCreateNestedManyWithoutDomainInput
   DomainReturns?: Prisma.DomainReturnCreateNestedManyWithoutDomainInput
+  Interactions?: Prisma.InteractionCreateNestedManyWithoutDomainInput
+  Items?: Prisma.ItemCreateNestedManyWithoutDomainInput
+  Users?: Prisma.UserCreateNestedManyWithoutDomainInput
+  Ratings?: Prisma.RatingCreateNestedManyWithoutDomainInput
 }
 
 export type DomainUncheckedCreateWithoutTernantInput = {
@@ -510,6 +598,10 @@ export type DomainUncheckedCreateWithoutTernantInput = {
   CreatedAt?: Date | string
   Rules?: Prisma.RuleUncheckedCreateNestedManyWithoutDomainInput
   DomainReturns?: Prisma.DomainReturnUncheckedCreateNestedManyWithoutDomainInput
+  Interactions?: Prisma.InteractionUncheckedCreateNestedManyWithoutDomainInput
+  Items?: Prisma.ItemUncheckedCreateNestedManyWithoutDomainInput
+  Users?: Prisma.UserUncheckedCreateNestedManyWithoutDomainInput
+  Ratings?: Prisma.RatingUncheckedCreateNestedManyWithoutDomainInput
 }
 
 export type DomainCreateOrConnectWithoutTernantInput = {
@@ -557,6 +649,10 @@ export type DomainCreateWithoutDomainReturnsInput = {
   CreatedAt?: Date | string
   Ternant: Prisma.TernantCreateNestedOneWithoutDomainsInput
   Rules?: Prisma.RuleCreateNestedManyWithoutDomainInput
+  Interactions?: Prisma.InteractionCreateNestedManyWithoutDomainInput
+  Items?: Prisma.ItemCreateNestedManyWithoutDomainInput
+  Users?: Prisma.UserCreateNestedManyWithoutDomainInput
+  Ratings?: Prisma.RatingCreateNestedManyWithoutDomainInput
 }
 
 export type DomainUncheckedCreateWithoutDomainReturnsInput = {
@@ -567,6 +663,10 @@ export type DomainUncheckedCreateWithoutDomainReturnsInput = {
   CreatedAt?: Date | string
   TernantID: number
   Rules?: Prisma.RuleUncheckedCreateNestedManyWithoutDomainInput
+  Interactions?: Prisma.InteractionUncheckedCreateNestedManyWithoutDomainInput
+  Items?: Prisma.ItemUncheckedCreateNestedManyWithoutDomainInput
+  Users?: Prisma.UserUncheckedCreateNestedManyWithoutDomainInput
+  Ratings?: Prisma.RatingUncheckedCreateNestedManyWithoutDomainInput
 }
 
 export type DomainCreateOrConnectWithoutDomainReturnsInput = {
@@ -592,6 +692,10 @@ export type DomainUpdateWithoutDomainReturnsInput = {
   CreatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   Ternant?: Prisma.TernantUpdateOneRequiredWithoutDomainsNestedInput
   Rules?: Prisma.RuleUpdateManyWithoutDomainNestedInput
+  Interactions?: Prisma.InteractionUpdateManyWithoutDomainNestedInput
+  Items?: Prisma.ItemUpdateManyWithoutDomainNestedInput
+  Users?: Prisma.UserUpdateManyWithoutDomainNestedInput
+  Ratings?: Prisma.RatingUpdateManyWithoutDomainNestedInput
 }
 
 export type DomainUncheckedUpdateWithoutDomainReturnsInput = {
@@ -602,6 +706,10 @@ export type DomainUncheckedUpdateWithoutDomainReturnsInput = {
   CreatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   TernantID?: Prisma.IntFieldUpdateOperationsInput | number
   Rules?: Prisma.RuleUncheckedUpdateManyWithoutDomainNestedInput
+  Interactions?: Prisma.InteractionUncheckedUpdateManyWithoutDomainNestedInput
+  Items?: Prisma.ItemUncheckedUpdateManyWithoutDomainNestedInput
+  Users?: Prisma.UserUncheckedUpdateManyWithoutDomainNestedInput
+  Ratings?: Prisma.RatingUncheckedUpdateManyWithoutDomainNestedInput
 }
 
 export type DomainCreateWithoutRulesInput = {
@@ -611,6 +719,10 @@ export type DomainCreateWithoutRulesInput = {
   CreatedAt?: Date | string
   Ternant: Prisma.TernantCreateNestedOneWithoutDomainsInput
   DomainReturns?: Prisma.DomainReturnCreateNestedManyWithoutDomainInput
+  Interactions?: Prisma.InteractionCreateNestedManyWithoutDomainInput
+  Items?: Prisma.ItemCreateNestedManyWithoutDomainInput
+  Users?: Prisma.UserCreateNestedManyWithoutDomainInput
+  Ratings?: Prisma.RatingCreateNestedManyWithoutDomainInput
 }
 
 export type DomainUncheckedCreateWithoutRulesInput = {
@@ -621,6 +733,10 @@ export type DomainUncheckedCreateWithoutRulesInput = {
   CreatedAt?: Date | string
   TernantID: number
   DomainReturns?: Prisma.DomainReturnUncheckedCreateNestedManyWithoutDomainInput
+  Interactions?: Prisma.InteractionUncheckedCreateNestedManyWithoutDomainInput
+  Items?: Prisma.ItemUncheckedCreateNestedManyWithoutDomainInput
+  Users?: Prisma.UserUncheckedCreateNestedManyWithoutDomainInput
+  Ratings?: Prisma.RatingUncheckedCreateNestedManyWithoutDomainInput
 }
 
 export type DomainCreateOrConnectWithoutRulesInput = {
@@ -646,6 +762,10 @@ export type DomainUpdateWithoutRulesInput = {
   CreatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   Ternant?: Prisma.TernantUpdateOneRequiredWithoutDomainsNestedInput
   DomainReturns?: Prisma.DomainReturnUpdateManyWithoutDomainNestedInput
+  Interactions?: Prisma.InteractionUpdateManyWithoutDomainNestedInput
+  Items?: Prisma.ItemUpdateManyWithoutDomainNestedInput
+  Users?: Prisma.UserUpdateManyWithoutDomainNestedInput
+  Ratings?: Prisma.RatingUpdateManyWithoutDomainNestedInput
 }
 
 export type DomainUncheckedUpdateWithoutRulesInput = {
@@ -656,6 +776,290 @@ export type DomainUncheckedUpdateWithoutRulesInput = {
   CreatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   TernantID?: Prisma.IntFieldUpdateOperationsInput | number
   DomainReturns?: Prisma.DomainReturnUncheckedUpdateManyWithoutDomainNestedInput
+  Interactions?: Prisma.InteractionUncheckedUpdateManyWithoutDomainNestedInput
+  Items?: Prisma.ItemUncheckedUpdateManyWithoutDomainNestedInput
+  Users?: Prisma.UserUncheckedUpdateManyWithoutDomainNestedInput
+  Ratings?: Prisma.RatingUncheckedUpdateManyWithoutDomainNestedInput
+}
+
+export type DomainCreateWithoutItemsInput = {
+  Key: string
+  Url: string
+  Type?: number | null
+  CreatedAt?: Date | string
+  Ternant: Prisma.TernantCreateNestedOneWithoutDomainsInput
+  Rules?: Prisma.RuleCreateNestedManyWithoutDomainInput
+  DomainReturns?: Prisma.DomainReturnCreateNestedManyWithoutDomainInput
+  Interactions?: Prisma.InteractionCreateNestedManyWithoutDomainInput
+  Users?: Prisma.UserCreateNestedManyWithoutDomainInput
+  Ratings?: Prisma.RatingCreateNestedManyWithoutDomainInput
+}
+
+export type DomainUncheckedCreateWithoutItemsInput = {
+  Id?: number
+  Key: string
+  Url: string
+  Type?: number | null
+  CreatedAt?: Date | string
+  TernantID: number
+  Rules?: Prisma.RuleUncheckedCreateNestedManyWithoutDomainInput
+  DomainReturns?: Prisma.DomainReturnUncheckedCreateNestedManyWithoutDomainInput
+  Interactions?: Prisma.InteractionUncheckedCreateNestedManyWithoutDomainInput
+  Users?: Prisma.UserUncheckedCreateNestedManyWithoutDomainInput
+  Ratings?: Prisma.RatingUncheckedCreateNestedManyWithoutDomainInput
+}
+
+export type DomainCreateOrConnectWithoutItemsInput = {
+  where: Prisma.DomainWhereUniqueInput
+  create: Prisma.XOR<Prisma.DomainCreateWithoutItemsInput, Prisma.DomainUncheckedCreateWithoutItemsInput>
+}
+
+export type DomainUpsertWithoutItemsInput = {
+  update: Prisma.XOR<Prisma.DomainUpdateWithoutItemsInput, Prisma.DomainUncheckedUpdateWithoutItemsInput>
+  create: Prisma.XOR<Prisma.DomainCreateWithoutItemsInput, Prisma.DomainUncheckedCreateWithoutItemsInput>
+  where?: Prisma.DomainWhereInput
+}
+
+export type DomainUpdateToOneWithWhereWithoutItemsInput = {
+  where?: Prisma.DomainWhereInput
+  data: Prisma.XOR<Prisma.DomainUpdateWithoutItemsInput, Prisma.DomainUncheckedUpdateWithoutItemsInput>
+}
+
+export type DomainUpdateWithoutItemsInput = {
+  Key?: Prisma.StringFieldUpdateOperationsInput | string
+  Url?: Prisma.StringFieldUpdateOperationsInput | string
+  Type?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
+  CreatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  Ternant?: Prisma.TernantUpdateOneRequiredWithoutDomainsNestedInput
+  Rules?: Prisma.RuleUpdateManyWithoutDomainNestedInput
+  DomainReturns?: Prisma.DomainReturnUpdateManyWithoutDomainNestedInput
+  Interactions?: Prisma.InteractionUpdateManyWithoutDomainNestedInput
+  Users?: Prisma.UserUpdateManyWithoutDomainNestedInput
+  Ratings?: Prisma.RatingUpdateManyWithoutDomainNestedInput
+}
+
+export type DomainUncheckedUpdateWithoutItemsInput = {
+  Id?: Prisma.IntFieldUpdateOperationsInput | number
+  Key?: Prisma.StringFieldUpdateOperationsInput | string
+  Url?: Prisma.StringFieldUpdateOperationsInput | string
+  Type?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
+  CreatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  TernantID?: Prisma.IntFieldUpdateOperationsInput | number
+  Rules?: Prisma.RuleUncheckedUpdateManyWithoutDomainNestedInput
+  DomainReturns?: Prisma.DomainReturnUncheckedUpdateManyWithoutDomainNestedInput
+  Interactions?: Prisma.InteractionUncheckedUpdateManyWithoutDomainNestedInput
+  Users?: Prisma.UserUncheckedUpdateManyWithoutDomainNestedInput
+  Ratings?: Prisma.RatingUncheckedUpdateManyWithoutDomainNestedInput
+}
+
+export type DomainCreateWithoutUsersInput = {
+  Key: string
+  Url: string
+  Type?: number | null
+  CreatedAt?: Date | string
+  Ternant: Prisma.TernantCreateNestedOneWithoutDomainsInput
+  Rules?: Prisma.RuleCreateNestedManyWithoutDomainInput
+  DomainReturns?: Prisma.DomainReturnCreateNestedManyWithoutDomainInput
+  Interactions?: Prisma.InteractionCreateNestedManyWithoutDomainInput
+  Items?: Prisma.ItemCreateNestedManyWithoutDomainInput
+  Ratings?: Prisma.RatingCreateNestedManyWithoutDomainInput
+}
+
+export type DomainUncheckedCreateWithoutUsersInput = {
+  Id?: number
+  Key: string
+  Url: string
+  Type?: number | null
+  CreatedAt?: Date | string
+  TernantID: number
+  Rules?: Prisma.RuleUncheckedCreateNestedManyWithoutDomainInput
+  DomainReturns?: Prisma.DomainReturnUncheckedCreateNestedManyWithoutDomainInput
+  Interactions?: Prisma.InteractionUncheckedCreateNestedManyWithoutDomainInput
+  Items?: Prisma.ItemUncheckedCreateNestedManyWithoutDomainInput
+  Ratings?: Prisma.RatingUncheckedCreateNestedManyWithoutDomainInput
+}
+
+export type DomainCreateOrConnectWithoutUsersInput = {
+  where: Prisma.DomainWhereUniqueInput
+  create: Prisma.XOR<Prisma.DomainCreateWithoutUsersInput, Prisma.DomainUncheckedCreateWithoutUsersInput>
+}
+
+export type DomainUpsertWithoutUsersInput = {
+  update: Prisma.XOR<Prisma.DomainUpdateWithoutUsersInput, Prisma.DomainUncheckedUpdateWithoutUsersInput>
+  create: Prisma.XOR<Prisma.DomainCreateWithoutUsersInput, Prisma.DomainUncheckedCreateWithoutUsersInput>
+  where?: Prisma.DomainWhereInput
+}
+
+export type DomainUpdateToOneWithWhereWithoutUsersInput = {
+  where?: Prisma.DomainWhereInput
+  data: Prisma.XOR<Prisma.DomainUpdateWithoutUsersInput, Prisma.DomainUncheckedUpdateWithoutUsersInput>
+}
+
+export type DomainUpdateWithoutUsersInput = {
+  Key?: Prisma.StringFieldUpdateOperationsInput | string
+  Url?: Prisma.StringFieldUpdateOperationsInput | string
+  Type?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
+  CreatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  Ternant?: Prisma.TernantUpdateOneRequiredWithoutDomainsNestedInput
+  Rules?: Prisma.RuleUpdateManyWithoutDomainNestedInput
+  DomainReturns?: Prisma.DomainReturnUpdateManyWithoutDomainNestedInput
+  Interactions?: Prisma.InteractionUpdateManyWithoutDomainNestedInput
+  Items?: Prisma.ItemUpdateManyWithoutDomainNestedInput
+  Ratings?: Prisma.RatingUpdateManyWithoutDomainNestedInput
+}
+
+export type DomainUncheckedUpdateWithoutUsersInput = {
+  Id?: Prisma.IntFieldUpdateOperationsInput | number
+  Key?: Prisma.StringFieldUpdateOperationsInput | string
+  Url?: Prisma.StringFieldUpdateOperationsInput | string
+  Type?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
+  CreatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  TernantID?: Prisma.IntFieldUpdateOperationsInput | number
+  Rules?: Prisma.RuleUncheckedUpdateManyWithoutDomainNestedInput
+  DomainReturns?: Prisma.DomainReturnUncheckedUpdateManyWithoutDomainNestedInput
+  Interactions?: Prisma.InteractionUncheckedUpdateManyWithoutDomainNestedInput
+  Items?: Prisma.ItemUncheckedUpdateManyWithoutDomainNestedInput
+  Ratings?: Prisma.RatingUncheckedUpdateManyWithoutDomainNestedInput
+}
+
+export type DomainCreateWithoutRatingsInput = {
+  Key: string
+  Url: string
+  Type?: number | null
+  CreatedAt?: Date | string
+  Ternant: Prisma.TernantCreateNestedOneWithoutDomainsInput
+  Rules?: Prisma.RuleCreateNestedManyWithoutDomainInput
+  DomainReturns?: Prisma.DomainReturnCreateNestedManyWithoutDomainInput
+  Interactions?: Prisma.InteractionCreateNestedManyWithoutDomainInput
+  Items?: Prisma.ItemCreateNestedManyWithoutDomainInput
+  Users?: Prisma.UserCreateNestedManyWithoutDomainInput
+}
+
+export type DomainUncheckedCreateWithoutRatingsInput = {
+  Id?: number
+  Key: string
+  Url: string
+  Type?: number | null
+  CreatedAt?: Date | string
+  TernantID: number
+  Rules?: Prisma.RuleUncheckedCreateNestedManyWithoutDomainInput
+  DomainReturns?: Prisma.DomainReturnUncheckedCreateNestedManyWithoutDomainInput
+  Interactions?: Prisma.InteractionUncheckedCreateNestedManyWithoutDomainInput
+  Items?: Prisma.ItemUncheckedCreateNestedManyWithoutDomainInput
+  Users?: Prisma.UserUncheckedCreateNestedManyWithoutDomainInput
+}
+
+export type DomainCreateOrConnectWithoutRatingsInput = {
+  where: Prisma.DomainWhereUniqueInput
+  create: Prisma.XOR<Prisma.DomainCreateWithoutRatingsInput, Prisma.DomainUncheckedCreateWithoutRatingsInput>
+}
+
+export type DomainUpsertWithoutRatingsInput = {
+  update: Prisma.XOR<Prisma.DomainUpdateWithoutRatingsInput, Prisma.DomainUncheckedUpdateWithoutRatingsInput>
+  create: Prisma.XOR<Prisma.DomainCreateWithoutRatingsInput, Prisma.DomainUncheckedCreateWithoutRatingsInput>
+  where?: Prisma.DomainWhereInput
+}
+
+export type DomainUpdateToOneWithWhereWithoutRatingsInput = {
+  where?: Prisma.DomainWhereInput
+  data: Prisma.XOR<Prisma.DomainUpdateWithoutRatingsInput, Prisma.DomainUncheckedUpdateWithoutRatingsInput>
+}
+
+export type DomainUpdateWithoutRatingsInput = {
+  Key?: Prisma.StringFieldUpdateOperationsInput | string
+  Url?: Prisma.StringFieldUpdateOperationsInput | string
+  Type?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
+  CreatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  Ternant?: Prisma.TernantUpdateOneRequiredWithoutDomainsNestedInput
+  Rules?: Prisma.RuleUpdateManyWithoutDomainNestedInput
+  DomainReturns?: Prisma.DomainReturnUpdateManyWithoutDomainNestedInput
+  Interactions?: Prisma.InteractionUpdateManyWithoutDomainNestedInput
+  Items?: Prisma.ItemUpdateManyWithoutDomainNestedInput
+  Users?: Prisma.UserUpdateManyWithoutDomainNestedInput
+}
+
+export type DomainUncheckedUpdateWithoutRatingsInput = {
+  Id?: Prisma.IntFieldUpdateOperationsInput | number
+  Key?: Prisma.StringFieldUpdateOperationsInput | string
+  Url?: Prisma.StringFieldUpdateOperationsInput | string
+  Type?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
+  CreatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  TernantID?: Prisma.IntFieldUpdateOperationsInput | number
+  Rules?: Prisma.RuleUncheckedUpdateManyWithoutDomainNestedInput
+  DomainReturns?: Prisma.DomainReturnUncheckedUpdateManyWithoutDomainNestedInput
+  Interactions?: Prisma.InteractionUncheckedUpdateManyWithoutDomainNestedInput
+  Items?: Prisma.ItemUncheckedUpdateManyWithoutDomainNestedInput
+  Users?: Prisma.UserUncheckedUpdateManyWithoutDomainNestedInput
+}
+
+export type DomainCreateWithoutInteractionsInput = {
+  Key: string
+  Url: string
+  Type?: number | null
+  CreatedAt?: Date | string
+  Ternant: Prisma.TernantCreateNestedOneWithoutDomainsInput
+  Rules?: Prisma.RuleCreateNestedManyWithoutDomainInput
+  DomainReturns?: Prisma.DomainReturnCreateNestedManyWithoutDomainInput
+  Items?: Prisma.ItemCreateNestedManyWithoutDomainInput
+  Users?: Prisma.UserCreateNestedManyWithoutDomainInput
+  Ratings?: Prisma.RatingCreateNestedManyWithoutDomainInput
+}
+
+export type DomainUncheckedCreateWithoutInteractionsInput = {
+  Id?: number
+  Key: string
+  Url: string
+  Type?: number | null
+  CreatedAt?: Date | string
+  TernantID: number
+  Rules?: Prisma.RuleUncheckedCreateNestedManyWithoutDomainInput
+  DomainReturns?: Prisma.DomainReturnUncheckedCreateNestedManyWithoutDomainInput
+  Items?: Prisma.ItemUncheckedCreateNestedManyWithoutDomainInput
+  Users?: Prisma.UserUncheckedCreateNestedManyWithoutDomainInput
+  Ratings?: Prisma.RatingUncheckedCreateNestedManyWithoutDomainInput
+}
+
+export type DomainCreateOrConnectWithoutInteractionsInput = {
+  where: Prisma.DomainWhereUniqueInput
+  create: Prisma.XOR<Prisma.DomainCreateWithoutInteractionsInput, Prisma.DomainUncheckedCreateWithoutInteractionsInput>
+}
+
+export type DomainUpsertWithoutInteractionsInput = {
+  update: Prisma.XOR<Prisma.DomainUpdateWithoutInteractionsInput, Prisma.DomainUncheckedUpdateWithoutInteractionsInput>
+  create: Prisma.XOR<Prisma.DomainCreateWithoutInteractionsInput, Prisma.DomainUncheckedCreateWithoutInteractionsInput>
+  where?: Prisma.DomainWhereInput
+}
+
+export type DomainUpdateToOneWithWhereWithoutInteractionsInput = {
+  where?: Prisma.DomainWhereInput
+  data: Prisma.XOR<Prisma.DomainUpdateWithoutInteractionsInput, Prisma.DomainUncheckedUpdateWithoutInteractionsInput>
+}
+
+export type DomainUpdateWithoutInteractionsInput = {
+  Key?: Prisma.StringFieldUpdateOperationsInput | string
+  Url?: Prisma.StringFieldUpdateOperationsInput | string
+  Type?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
+  CreatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  Ternant?: Prisma.TernantUpdateOneRequiredWithoutDomainsNestedInput
+  Rules?: Prisma.RuleUpdateManyWithoutDomainNestedInput
+  DomainReturns?: Prisma.DomainReturnUpdateManyWithoutDomainNestedInput
+  Items?: Prisma.ItemUpdateManyWithoutDomainNestedInput
+  Users?: Prisma.UserUpdateManyWithoutDomainNestedInput
+  Ratings?: Prisma.RatingUpdateManyWithoutDomainNestedInput
+}
+
+export type DomainUncheckedUpdateWithoutInteractionsInput = {
+  Id?: Prisma.IntFieldUpdateOperationsInput | number
+  Key?: Prisma.StringFieldUpdateOperationsInput | string
+  Url?: Prisma.StringFieldUpdateOperationsInput | string
+  Type?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
+  CreatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  TernantID?: Prisma.IntFieldUpdateOperationsInput | number
+  Rules?: Prisma.RuleUncheckedUpdateManyWithoutDomainNestedInput
+  DomainReturns?: Prisma.DomainReturnUncheckedUpdateManyWithoutDomainNestedInput
+  Items?: Prisma.ItemUncheckedUpdateManyWithoutDomainNestedInput
+  Users?: Prisma.UserUncheckedUpdateManyWithoutDomainNestedInput
+  Ratings?: Prisma.RatingUncheckedUpdateManyWithoutDomainNestedInput
 }
 
 export type DomainCreateManyTernantInput = {
@@ -673,6 +1077,10 @@ export type DomainUpdateWithoutTernantInput = {
   CreatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   Rules?: Prisma.RuleUpdateManyWithoutDomainNestedInput
   DomainReturns?: Prisma.DomainReturnUpdateManyWithoutDomainNestedInput
+  Interactions?: Prisma.InteractionUpdateManyWithoutDomainNestedInput
+  Items?: Prisma.ItemUpdateManyWithoutDomainNestedInput
+  Users?: Prisma.UserUpdateManyWithoutDomainNestedInput
+  Ratings?: Prisma.RatingUpdateManyWithoutDomainNestedInput
 }
 
 export type DomainUncheckedUpdateWithoutTernantInput = {
@@ -683,6 +1091,10 @@ export type DomainUncheckedUpdateWithoutTernantInput = {
   CreatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   Rules?: Prisma.RuleUncheckedUpdateManyWithoutDomainNestedInput
   DomainReturns?: Prisma.DomainReturnUncheckedUpdateManyWithoutDomainNestedInput
+  Interactions?: Prisma.InteractionUncheckedUpdateManyWithoutDomainNestedInput
+  Items?: Prisma.ItemUncheckedUpdateManyWithoutDomainNestedInput
+  Users?: Prisma.UserUncheckedUpdateManyWithoutDomainNestedInput
+  Ratings?: Prisma.RatingUncheckedUpdateManyWithoutDomainNestedInput
 }
 
 export type DomainUncheckedUpdateManyWithoutTernantInput = {
@@ -701,11 +1113,19 @@ export type DomainUncheckedUpdateManyWithoutTernantInput = {
 export type DomainCountOutputType = {
   Rules: number
   DomainReturns: number
+  Interactions: number
+  Items: number
+  Users: number
+  Ratings: number
 }
 
 export type DomainCountOutputTypeSelect<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   Rules?: boolean | DomainCountOutputTypeCountRulesArgs
   DomainReturns?: boolean | DomainCountOutputTypeCountDomainReturnsArgs
+  Interactions?: boolean | DomainCountOutputTypeCountInteractionsArgs
+  Items?: boolean | DomainCountOutputTypeCountItemsArgs
+  Users?: boolean | DomainCountOutputTypeCountUsersArgs
+  Ratings?: boolean | DomainCountOutputTypeCountRatingsArgs
 }
 
 /**
@@ -732,6 +1152,34 @@ export type DomainCountOutputTypeCountDomainReturnsArgs<ExtArgs extends runtime.
   where?: Prisma.DomainReturnWhereInput
 }
 
+/**
+ * DomainCountOutputType without action
+ */
+export type DomainCountOutputTypeCountInteractionsArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  where?: Prisma.InteractionWhereInput
+}
+
+/**
+ * DomainCountOutputType without action
+ */
+export type DomainCountOutputTypeCountItemsArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  where?: Prisma.ItemWhereInput
+}
+
+/**
+ * DomainCountOutputType without action
+ */
+export type DomainCountOutputTypeCountUsersArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  where?: Prisma.UserWhereInput
+}
+
+/**
+ * DomainCountOutputType without action
+ */
+export type DomainCountOutputTypeCountRatingsArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  where?: Prisma.RatingWhereInput
+}
+
 
 export type DomainSelect<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetSelect<{
   Id?: boolean
@@ -743,6 +1191,10 @@ export type DomainSelect<ExtArgs extends runtime.Types.Extensions.InternalArgs =
   Ternant?: boolean | Prisma.TernantDefaultArgs<ExtArgs>
   Rules?: boolean | Prisma.Domain$RulesArgs<ExtArgs>
   DomainReturns?: boolean | Prisma.Domain$DomainReturnsArgs<ExtArgs>
+  Interactions?: boolean | Prisma.Domain$InteractionsArgs<ExtArgs>
+  Items?: boolean | Prisma.Domain$ItemsArgs<ExtArgs>
+  Users?: boolean | Prisma.Domain$UsersArgs<ExtArgs>
+  Ratings?: boolean | Prisma.Domain$RatingsArgs<ExtArgs>
   _count?: boolean | Prisma.DomainCountOutputTypeDefaultArgs<ExtArgs>
 }, ExtArgs["result"]["domain"]>
 
@@ -780,6 +1232,10 @@ export type DomainInclude<ExtArgs extends runtime.Types.Extensions.InternalArgs 
   Ternant?: boolean | Prisma.TernantDefaultArgs<ExtArgs>
   Rules?: boolean | Prisma.Domain$RulesArgs<ExtArgs>
   DomainReturns?: boolean | Prisma.Domain$DomainReturnsArgs<ExtArgs>
+  Interactions?: boolean | Prisma.Domain$InteractionsArgs<ExtArgs>
+  Items?: boolean | Prisma.Domain$ItemsArgs<ExtArgs>
+  Users?: boolean | Prisma.Domain$UsersArgs<ExtArgs>
+  Ratings?: boolean | Prisma.Domain$RatingsArgs<ExtArgs>
   _count?: boolean | Prisma.DomainCountOutputTypeDefaultArgs<ExtArgs>
 }
 export type DomainIncludeCreateManyAndReturn<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
@@ -795,6 +1251,10 @@ export type $DomainPayload<ExtArgs extends runtime.Types.Extensions.InternalArgs
     Ternant: Prisma.$TernantPayload<ExtArgs>
     Rules: Prisma.$RulePayload<ExtArgs>[]
     DomainReturns: Prisma.$DomainReturnPayload<ExtArgs>[]
+    Interactions: Prisma.$InteractionPayload<ExtArgs>[]
+    Items: Prisma.$ItemPayload<ExtArgs>[]
+    Users: Prisma.$UserPayload<ExtArgs>[]
+    Ratings: Prisma.$RatingPayload<ExtArgs>[]
   }
   scalars: runtime.Types.Extensions.GetPayloadResult<{
     Id: number
@@ -1200,6 +1660,10 @@ export interface Prisma__DomainClient<T, Null = never, ExtArgs extends runtime.T
   Ternant<T extends Prisma.TernantDefaultArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.TernantDefaultArgs<ExtArgs>>): Prisma.Prisma__TernantClient<runtime.Types.Result.GetResult<Prisma.$TernantPayload<ExtArgs>, T, "findUniqueOrThrow", GlobalOmitOptions> | Null, Null, ExtArgs, GlobalOmitOptions>
   Rules<T extends Prisma.Domain$RulesArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.Domain$RulesArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$RulePayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
   DomainReturns<T extends Prisma.Domain$DomainReturnsArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.Domain$DomainReturnsArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$DomainReturnPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
+  Interactions<T extends Prisma.Domain$InteractionsArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.Domain$InteractionsArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$InteractionPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
+  Items<T extends Prisma.Domain$ItemsArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.Domain$ItemsArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$ItemPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
+  Users<T extends Prisma.Domain$UsersArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.Domain$UsersArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$UserPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
+  Ratings<T extends Prisma.Domain$RatingsArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.Domain$RatingsArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$RatingPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
   /**
    * Attaches callbacks for the resolution and/or rejection of the Promise.
    * @param onfulfilled The callback to execute when the Promise is resolved.
@@ -1676,6 +2140,102 @@ export type Domain$DomainReturnsArgs<ExtArgs extends runtime.Types.Extensions.In
   take?: number
   skip?: number
   distinct?: Prisma.DomainReturnScalarFieldEnum | Prisma.DomainReturnScalarFieldEnum[]
+}
+
+/**
+ * Domain.Interactions
+ */
+export type Domain$InteractionsArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  /**
+   * Select specific fields to fetch from the Interaction
+   */
+  select?: Prisma.InteractionSelect<ExtArgs> | null
+  /**
+   * Omit specific fields from the Interaction
+   */
+  omit?: Prisma.InteractionOmit<ExtArgs> | null
+  /**
+   * Choose, which related nodes to fetch as well
+   */
+  include?: Prisma.InteractionInclude<ExtArgs> | null
+  where?: Prisma.InteractionWhereInput
+  orderBy?: Prisma.InteractionOrderByWithRelationInput | Prisma.InteractionOrderByWithRelationInput[]
+  cursor?: Prisma.InteractionWhereUniqueInput
+  take?: number
+  skip?: number
+  distinct?: Prisma.InteractionScalarFieldEnum | Prisma.InteractionScalarFieldEnum[]
+}
+
+/**
+ * Domain.Items
+ */
+export type Domain$ItemsArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  /**
+   * Select specific fields to fetch from the Item
+   */
+  select?: Prisma.ItemSelect<ExtArgs> | null
+  /**
+   * Omit specific fields from the Item
+   */
+  omit?: Prisma.ItemOmit<ExtArgs> | null
+  /**
+   * Choose, which related nodes to fetch as well
+   */
+  include?: Prisma.ItemInclude<ExtArgs> | null
+  where?: Prisma.ItemWhereInput
+  orderBy?: Prisma.ItemOrderByWithRelationInput | Prisma.ItemOrderByWithRelationInput[]
+  cursor?: Prisma.ItemWhereUniqueInput
+  take?: number
+  skip?: number
+  distinct?: Prisma.ItemScalarFieldEnum | Prisma.ItemScalarFieldEnum[]
+}
+
+/**
+ * Domain.Users
+ */
+export type Domain$UsersArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  /**
+   * Select specific fields to fetch from the User
+   */
+  select?: Prisma.UserSelect<ExtArgs> | null
+  /**
+   * Omit specific fields from the User
+   */
+  omit?: Prisma.UserOmit<ExtArgs> | null
+  /**
+   * Choose, which related nodes to fetch as well
+   */
+  include?: Prisma.UserInclude<ExtArgs> | null
+  where?: Prisma.UserWhereInput
+  orderBy?: Prisma.UserOrderByWithRelationInput | Prisma.UserOrderByWithRelationInput[]
+  cursor?: Prisma.UserWhereUniqueInput
+  take?: number
+  skip?: number
+  distinct?: Prisma.UserScalarFieldEnum | Prisma.UserScalarFieldEnum[]
+}
+
+/**
+ * Domain.Ratings
+ */
+export type Domain$RatingsArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  /**
+   * Select specific fields to fetch from the Rating
+   */
+  select?: Prisma.RatingSelect<ExtArgs> | null
+  /**
+   * Omit specific fields from the Rating
+   */
+  omit?: Prisma.RatingOmit<ExtArgs> | null
+  /**
+   * Choose, which related nodes to fetch as well
+   */
+  include?: Prisma.RatingInclude<ExtArgs> | null
+  where?: Prisma.RatingWhereInput
+  orderBy?: Prisma.RatingOrderByWithRelationInput | Prisma.RatingOrderByWithRelationInput[]
+  cursor?: Prisma.RatingWhereUniqueInput
+  take?: number
+  skip?: number
+  distinct?: Prisma.RatingScalarFieldEnum | Prisma.RatingScalarFieldEnum[]
 }
 
 /**

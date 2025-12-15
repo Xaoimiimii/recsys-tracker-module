@@ -77,3 +77,53 @@ export type EventPattern = Prisma.EventPatternModel
  * 
  */
 export type Operator = Prisma.OperatorModel
+/**
+ * Model Category
+ * 
+ */
+export type Category = Prisma.CategoryModel
+/**
+ * Model ItemCategory
+ * 
+ */
+export type ItemCategory = Prisma.ItemCategoryModel
+/**
+ * Model Item
+ * 
+ */
+export type Item = Prisma.ItemModel
+/**
+ * Model Model
+ * 
+ */
+export type Model = Prisma.ModelModel
+/**
+ * Model ItemFactor
+ * 
+ */
+export type ItemFactor = Prisma.ItemFactorModel
+/**
+ * Model User
+ * 
+ */
+export type User = Prisma.UserModel
+/**
+ * Model UserFactor
+ * 
+ */
+export type UserFactor = Prisma.UserFactorModel
+/**
+ * Model Predict
+ * 
+ */
+export type Predict = Prisma.PredictModel
+/**
+ * Model Rating
+ * 
+ */
+export type Rating = Prisma.RatingModel
+/**
+ * Model Interaction
+ * 
+ */
+export type Interaction = Prisma.InteractionModel

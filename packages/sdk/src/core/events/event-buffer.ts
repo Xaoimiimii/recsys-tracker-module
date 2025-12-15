@@ -8,13 +8,18 @@
 // Định nghĩa cấu trúc dữ liệu TrackedEvent
 export interface TrackedEvent {
   id: string;
-  timestamp: number;
-  event: string;
-  category: string;
-  userId?: string | null;
-  sessionId: string;
-  metadata: Record<string, any>;
-  retryCount?: number;
+  timestamp: string | Date;
+  triggerTypeId: number;
+  domainKey: string;
+  payload: {
+    UserId: number;
+    ItemId: number;
+  };
+  rate?: {
+    Value: number;
+    Review: string;
+  };
+  retryCount?: number; // Cho logic SDK retry
 }
 
 // Interface lưu trữ để trừu tượng hóa localStorage/IndexedDB

@@ -5,6 +5,7 @@ export declare class RecSysTracker {
     private eventBuffer;
     private eventDispatcher;
     private metadataNormalizer;
+    private displayManager;
     private config;
     private userId;
     private isInitialized;
@@ -12,9 +13,13 @@ export declare class RecSysTracker {
     constructor();
     init(): Promise<void>;
     track(eventData: {
-        event: string;
-        category: string;
-        data?: Record<string, any>;
+        triggerTypeId: number;
+        userId: number;
+        itemId: number;
+        rate?: {
+            Value: number;
+            Review: string;
+        };
     }): void;
     private setupBatchSending;
     private sendBatch;

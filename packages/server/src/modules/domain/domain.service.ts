@@ -55,9 +55,18 @@ export class DomainService {
                 Type: Type,
                 Url: url,
                 CreatedAt: new Date()
-            }
+            } 
         });
 
         return domain;
+    }
+
+    async getDomainsByTernantId(ternantId: number) {
+        const domains = await this.prisma.domain.findMany({
+            where: {
+                TernantID: ternantId
+            }
+        });
+        return domains;
     }
 }

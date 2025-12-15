@@ -1,8 +1,9 @@
-import { ConfigLoader, ErrorBoundary, EventBuffer, EventDispatcher, MetadataNormalizer } from './core';
+import { ConfigLoader, ErrorBoundary, EventBuffer, EventDispatcher, MetadataNormalizer, DisplayManager } from './core';
 // RecSysTracker - Main SDK class
 export class RecSysTracker {
     constructor() {
         this.eventDispatcher = null;
+        this.displayManager = null;
         this.config = null;
         this.userId = null;
         this.isInitialized = false;
@@ -27,12 +28,29 @@ export class RecSysTracker {
             this.eventDispatcher = new EventDispatcher({
                 endpoint: this.config.trackEndpoint || '/track',
             });
-            // Fetch remote config
-            this.configLoader.fetchRemoteConfig().then(remoteConfig => {
-                if (remoteConfig) {
-                    this.config = remoteConfig;
+            // Fetch remote config và verify origin
+            const remoteConfig = await this.configLoader.fetchRemoteConfig();
+            if (remoteConfig) {
+                this.config = remoteConfig;
+                // Cập nhật domainUrl cho EventDispatcher để verify origin khi gửi event
+                if (this.eventDispatcher && this.config.domainUrl) {
+                    this.eventDispatcher.setDomainUrl(this.config.domainUrl);
                 }
-            });
+                // Khởi tạo Display Manager nếu có returnMethods
+                if (this.config.returnMethods && this.config.returnMethods.length > 0) {
+                    const apiBaseUrl = process.env.API_URL || 'http://localhost:3000';
+                    this.displayManager = new DisplayManager(this.config.domainKey, apiBaseUrl);
+                    this.displayManager.initialize(this.config.returnMethods);
+                    console.log('[RecSysTracker] Display methods initialized');
+                }
+            }
+            else {
+                // Nếu origin verification thất bại, không khởi tạo SDK
+                console.error('[RecSysTracker] Failed to initialize SDK: origin verification failed');
+                this.config = null;
+                this.eventDispatcher = null;
+                return;
+            }
             // Setup batch sending
             this.setupBatchSending();
             // Setup page unload handler
@@ -46,19 +64,16 @@ export class RecSysTracker {
             if (!this.isInitialized || !this.config) {
                 return;
             }
-            const metadata = this.metadataNormalizer.getMetadata();
-            this.metadataNormalizer.updateSessionActivity();
             const trackedEvent = {
                 id: this.metadataNormalizer.generateEventId(),
-                timestamp: Date.now(),
-                event: eventData.event,
-                category: eventData.category,
-                userId: this.userId,
-                sessionId: metadata.session.sessionId,
-                metadata: {
-                    ...metadata,
-                    ...eventData.data,
+                timestamp: new Date(),
+                triggerTypeId: eventData.triggerTypeId,
+                domainKey: this.config.domainKey,
+                payload: {
+                    UserId: eventData.userId,
+                    ItemId: eventData.itemId,
                 },
+                ...(eventData.rate && { rate: eventData.rate }),
             };
             this.eventBuffer.add(trackedEvent);
         }, 'track');
@@ -153,6 +168,11 @@ export class RecSysTracker {
             if (!this.eventBuffer.isEmpty()) {
                 const allEvents = this.eventBuffer.getAll();
                 (_a = this.eventDispatcher) === null || _a === void 0 ? void 0 : _a.sendBatch(allEvents);
+            }
+            // Destroy display manager
+            if (this.displayManager) {
+                this.displayManager.destroy();
+                this.displayManager = null;
             }
             this.isInitialized = false;
         }, 'destroy');

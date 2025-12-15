@@ -4,7 +4,8 @@ import {
   EventBuffer,
   TrackedEvent,
   EventDispatcher,
-  MetadataNormalizer
+  MetadataNormalizer,
+  DisplayManager
 } from './core';
 import { TrackerConfig, Plugin, PluginContext } from './types';
 import { FormPlugin } from './plugins/FormPlugin';
@@ -16,6 +17,7 @@ export class RecSysTracker {
   private eventBuffer: EventBuffer;
   private eventDispatcher: EventDispatcher | null = null;
   private metadataNormalizer: MetadataNormalizer;
+  private displayManager: DisplayManager | null = null;
   private config: TrackerConfig | null = null;
   private userId: string | null = null;
   private isInitialized: boolean = false;
@@ -95,13 +97,31 @@ export class RecSysTracker {
       this.registerPlugin(new FormPlugin());
       this.startPlugins();
 
-      // Fetch remote config
-      this.configLoader.fetchRemoteConfig().then(remoteConfig => {
-        if (remoteConfig) {
-          this.config = remoteConfig;
-          this.restartPlugins();
+      // Fetch remote config và verify origin
+      const remoteConfig = await this.configLoader.fetchRemoteConfig();
+      if (remoteConfig) {
+        this.config = remoteConfig;
+        this.restartPlugins();
+        
+        // Cập nhật domainUrl cho EventDispatcher để verify origin khi gửi event
+        if (this.eventDispatcher && this.config.domainUrl) {
+          this.eventDispatcher.setDomainUrl(this.config.domainUrl);
         }
-      });
+
+        // Khởi tạo Display Manager nếu có returnMethods
+        if (this.config.returnMethods && this.config.returnMethods.length > 0) {
+          const apiBaseUrl = process.env.API_URL || 'http://localhost:3000';
+          this.displayManager = new DisplayManager(this.config.domainKey, apiBaseUrl);
+          this.displayManager.initialize(this.config.returnMethods);
+          console.log('[RecSysTracker] Display methods initialized');
+        }
+      } else {
+        // Nếu origin verification thất bại, không khởi tạo SDK
+        console.error('[RecSysTracker] Failed to initialize SDK: origin verification failed');
+        this.config = null;
+        this.eventDispatcher = null;
+        return;
+      }
 
       // Setup batch sending
       this.setupBatchSending();
@@ -115,42 +135,34 @@ export class RecSysTracker {
 
   // Track custom event
   track(eventData: {
-    event: string;
-    category: string;
-    data?: Record<string, any>;
+    triggerTypeId: number;
+    userId: number;
+    itemId: number;
+    rate?: {
+      Value: number;
+      Review: string;
+    };
   }): void {
     this.errorBoundary.execute(() => {
       if (!this.isInitialized || !this.config) {
         return;
       }
 
-      const metadata = this.metadataNormalizer.getMetadata();
-      this.metadataNormalizer.updateSessionActivity();
-
       const trackedEvent: TrackedEvent = {
         id: this.metadataNormalizer.generateEventId(),
-        timestamp: Date.now(),
-        event: eventData.event,
-        category: eventData.category,
-        userId: this.userId,
-        sessionId: metadata.session.sessionId,
-        metadata: {
-          ...metadata,
-          ...eventData.data,
+        timestamp: new Date(),
+        triggerTypeId: eventData.triggerTypeId,
+        domainKey: this.config.domainKey,
+        payload: {
+          UserId: eventData.userId,
+          ItemId: eventData.itemId,
         },
+        ...(eventData.rate && { rate: eventData.rate }),
       };
 
       this.eventBuffer.add(trackedEvent);
     }, 'track');
   }
-
-
-
-
-
-
-
-
 
   // Setup batch sending of events
   private setupBatchSending(): void {
@@ -232,8 +244,6 @@ export class RecSysTracker {
     return this.config;
   }
 
-
-
   // Set user ID
   setUserId(userId: string | null): void {
     this.userId = userId;
@@ -258,6 +268,12 @@ export class RecSysTracker {
       if (!this.eventBuffer.isEmpty()) {
         const allEvents = this.eventBuffer.getAll();
         this.eventDispatcher?.sendBatch(allEvents);
+      }
+
+      // Destroy display manager
+      if (this.displayManager) {
+        this.displayManager.destroy();
+        this.displayManager = null;
       }
 
       this.isInitialized = false;
