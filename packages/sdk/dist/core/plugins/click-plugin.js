@@ -1,4 +1,3 @@
-// Click Plugin - 100% Original Logic with BasePlugin wrapper
 import { BasePlugin } from './base-plugin';
 import { TrackerContextAdapter } from './adapters/tracker-context-adapter';
 import { getAIItemDetector } from './utils/ai-item-detector';
@@ -7,54 +6,57 @@ export class ClickPlugin extends BasePlugin {
     constructor() {
         super();
         this.name = 'ClickPlugin';
-        this.version = '1.0.0';
-        // Original plugin state
         this.context = null;
         this.detector = null;
         this.THROTTLE_DELAY = 300;
-        this.throttledHandler = throttle(this.handleDocumentClick.bind(this), this.THROTTLE_DELAY);
+        // Wrap handler với error boundary ngay trong constructor
+        this.throttledHandler = throttle(this.wrapHandler(this.handleDocumentClick.bind(this), 'handleDocumentClick'), this.THROTTLE_DELAY);
     }
-    // BasePlugin integration
     init(tracker) {
-        super.init(tracker);
-        // Original init logic
-        this.context = new TrackerContextAdapter(tracker);
-        this.detector = getAIItemDetector();
-        console.log(`[ClickPlugin] initialized for Rule + AI-based tracking.`);
+        this.errorBoundary.execute(() => {
+            super.init(tracker);
+            this.context = new TrackerContextAdapter(tracker);
+            this.detector = getAIItemDetector();
+            console.log(`[ClickPlugin] initialized for Rule + AI-based tracking.`);
+        }, 'ClickPlugin.init');
     }
     start() {
-        if (!this.ensureInitialized())
-            return;
-        // Original start logic
-        if (this.context && this.detector) {
-            document.addEventListener("click", this.throttledHandler, false);
-            console.log("[ClickPlugin] started Rule + AI-based listening (Throttled).");
-            this.active = true;
-        }
+        this.errorBoundary.execute(() => {
+            if (!this.ensureInitialized())
+                return;
+            if (this.context && this.detector) {
+                document.addEventListener("click", this.throttledHandler, false);
+                console.log("[ClickPlugin] started Rule + AI-based listening (Throttled).");
+                this.active = true;
+            }
+        }, 'ClickPlugin.start');
     }
     stop() {
-        document.removeEventListener("click", this.throttledHandler, false);
-        super.stop();
+        this.errorBoundary.execute(() => {
+            document.removeEventListener("click", this.throttledHandler, false);
+            super.stop();
+        }, 'ClickPlugin.stop');
     }
-    // Original logic - 100% preserved
     handleDocumentClick(event) {
         if (!this.context || !this.detector)
             return;
-        try {
-            const clickRules = this.context.config.getRules('click');
-            if (clickRules.length === 0) {
-                return;
-            }
-            const rule = clickRules[0];
-            const selector = rule.targetSelector;
+        const clickRules = this.context.config.getRules(1); // triggerEventId = 1 for click
+        if (clickRules.length === 0) {
+            return;
+        }
+        // Loop qua tất cả click rules và check match
+        for (const rule of clickRules) {
+            const selector = rule.targetElement.targetElementValue;
+            if (!selector)
+                continue;
             const matchedElement = event.target.closest(selector);
             if (matchedElement) {
+                console.log(`[ClickPlugin] Matched rule: ${rule.name}`);
                 const payload = this.context.payloadBuilder.build(matchedElement, rule);
                 this.context.eventBuffer.enqueue(payload);
+                // Stop after first match (hoặc có thể tiếp tục nếu muốn track nhiều rules)
+                break;
             }
-        }
-        catch (error) {
-            console.error(`[ClickPlugin Error] Error during Rule processing or Payload building:`, error);
         }
     }
 }

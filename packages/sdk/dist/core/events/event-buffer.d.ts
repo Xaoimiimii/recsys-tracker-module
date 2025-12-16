@@ -12,6 +12,8 @@ export interface TrackedEvent {
         Review: string;
     };
     retryCount?: number;
+    lastRetryAt?: number;
+    nextRetryAt?: number;
 }
 export declare class EventBuffer {
     private queue;

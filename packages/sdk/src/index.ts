@@ -68,8 +68,9 @@ export class RecSysTracker {
           console.log('[RecSysTracker] Display methods initialized');
         }
 
-        // Auto-register and start plugins based on tracking rules
+        // Tự động khởi tạo plugins dựa trên rules
         this.autoInitializePlugins();
+
       } else {
         // Nếu origin verification thất bại, không khởi tạo SDK
         console.error('[RecSysTracker] Failed to initialize SDK: origin verification failed');
@@ -88,42 +89,45 @@ export class RecSysTracker {
     }, 'init');
   }
 
-  // Auto-initialize plugins based on tracking rules
-  private autoInitializePlugins(): void {
+  // Tự động khởi tạo plugins dựa trên tracking rules
+  private async autoInitializePlugins(): Promise<void> {
     if (!this.config?.trackingRules || this.config.trackingRules.length === 0) {
       return;
     }
 
-    // Check if we need ClickPlugin (triggerEventId === 1)
+    // Kiểm tra nếu có rule nào cần ClickPlugin (triggerEventId === 1)
     const hasClickRules = this.config.trackingRules.some(rule => rule.triggerEventId === 1);
     
-    // Check if we need PageViewPlugin (triggerEventId === 3)
+    // Kiểm tra nếu có rule nào cần PageViewPlugin (triggerEventId === 3)
     const hasPageViewRules = this.config.trackingRules.some(rule => rule.triggerEventId === 3);
 
-    // Only auto-initialize if no plugins are registered yet
+    // Chỉ tự động đăng ký nếu chưa có plugin nào được đăng ký
     if (this.pluginManager.getPluginNames().length === 0) {
+      const pluginPromises: Promise<void>[] = [];
+
       if (hasClickRules) {
-        // Dynamic import to avoid circular dependency
-        import('./core/plugins/click-plugin').then(({ ClickPlugin }) => {
+        // Import động để tránh circular dependency
+        const clickPromise = import('./core/plugins/click-plugin').then(({ ClickPlugin }) => {
           this.use(new ClickPlugin());
           console.log('[RecSysTracker] Auto-registered ClickPlugin based on tracking rules');
         });
+        pluginPromises.push(clickPromise);
       }
 
       if (hasPageViewRules) {
-        // Dynamic import to avoid circular dependency
-        import('./core/plugins/page-view-plugin').then(({ PageViewPlugin }) => {
+        // Import động để tránh circular dependency
+        const pageViewPromise = import('./core/plugins/page-view-plugin').then(({ PageViewPlugin }) => {
           this.use(new PageViewPlugin());
           console.log('[RecSysTracker] Auto-registered PageViewPlugin based on tracking rules');
         });
+        pluginPromises.push(pageViewPromise);
       }
 
-      // Auto-start plugins after a small delay to ensure all are registered
-      if (hasClickRules || hasPageViewRules) {
-        setTimeout(() => {
-          this.startPlugins();
-          console.log('[RecSysTracker] Auto-started plugins');
-        }, 100);
+      // Chờ tất cả plugin được đăng ký trước khi khởi động
+      if (pluginPromises.length > 0) {
+        await Promise.all(pluginPromises);
+        this.startPlugins();
+        console.log('[RecSysTracker] Auto-started plugins');
       }
     }
   }
@@ -276,28 +280,28 @@ export class RecSysTracker {
   }
   
   // Plugin Management Methods
-  // Get the plugin manager instance
+  // Lấy plugin manager instance
   getPluginManager(): PluginManager {
     return this.pluginManager;
   }
   
-  // Get the display manager instance
+  // Lấy display manager instance
   getDisplayManager(): DisplayManager | null {
     return this.displayManager;
   }
   
-  // Register a plugin (convenience method)
+  // Register 1 plugin
   use(plugin: any): this {
     this.pluginManager.register(plugin);
     return this;
   }
   
-  // Start all registered plugins
+  // Start tất cả plugins đã register
   startPlugins(): void {
     this.pluginManager.startAll();
   }
   
-  // Stop all registered plugins
+  // Stop tất cả plugins đã register
   stopPlugins(): void {
     this.pluginManager.stopAll();
   }

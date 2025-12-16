@@ -251,10 +251,17 @@ class ConfigLoader {
                 name: rule.Name || rule.name,
                 // domainId: rule.DomainID || rule.domainId,
                 triggerEventId: rule.TriggerEventID || rule.triggerEventId,
-                targetElementId: rule.TargetElementID || rule.targetElementId,
-                targetEventPatternId: ((_c = rule.TargetElement) === null || _c === void 0 ? void 0 : _c.EventPatternID) || rule.targetEventPatternId,
-                targetOperatorId: ((_d = rule.TargetElement) === null || _d === void 0 ? void 0 : _d.OperatorID) || rule.targetOperatorId,
-                targetElementValue: ((_e = rule.TargetElement) === null || _e === void 0 ? void 0 : _e.Value) || rule.targetElementValue,
+                // targetElementId: rule.TargetElementID || rule.targetElementId,
+                // targetElement: {
+                //   targetEventPatternId?: number,
+                //   targetOperatorId?: number,
+                //   targetElementValue?: string
+                // };
+                targetElement: {
+                    targetEventPatternId: ((_c = rule.TargetElement) === null || _c === void 0 ? void 0 : _c.EventPatternID) || rule.targetEventPatternId,
+                    targetOperatorId: ((_d = rule.TargetElement) === null || _d === void 0 ? void 0 : _d.OperatorID) || rule.targetOperatorId,
+                    targetElementValue: ((_e = rule.TargetElement) === null || _e === void 0 ? void 0 : _e.Value) || rule.targetElementValue,
+                },
                 conditions: this.transformConditions(rule.Conditions || rule.conditions || []),
                 payload: this.transformPayloadConfigs(rule.PayloadConfigs || rule.payload || []),
             });
@@ -265,9 +272,9 @@ class ConfigLoader {
         if (!Array.isArray(conditionsData))
             return [];
         return conditionsData.map(condition => ({
-            id: condition.Id || condition.id,
+            // id: condition.Id || condition.id,
             eventPatternId: condition.EventPatternID || condition.eventPatternId,
-            ruleId: condition.RuleID || condition.ruleId,
+            // ruleId: condition.RuleID || condition.ruleId,
             operatorId: condition.OperatorID || condition.operatorId,
             value: condition.Value || condition.value,
         }));
@@ -278,7 +285,7 @@ class ConfigLoader {
             return [];
         return payloadData.map(payload => ({
             payloadPatternId: payload.PayloadPatternID || payload.payloadPatternId,
-            ruleId: payload.RuleID || payload.ruleId,
+            // ruleId: payload.RuleID || payload.ruleId,
             operatorId: payload.OperatorID || payload.operatorId,
             value: payload.Value || payload.value,
             type: payload.Type || payload.type,
@@ -456,20 +463,33 @@ class EventBuffer {
         this.queue.push(event);
         this.persistToStorage();
     }
-    // Lấy các sự kiện để gửi theo batch
+    // Lấy các sự kiện để gửi theo batch (chỉ lấy những event đã đến thời gian retry)
     getBatch(size) {
-        return this.queue.slice(0, size);
+        const now = Date.now();
+        const readyEvents = this.queue.filter(event => {
+            // Nếu chưa từng retry hoặc đã đến thời gian retry tiếp theo
+            return !event.nextRetryAt || event.nextRetryAt <= now;
+        });
+        return readyEvents.slice(0, size);
     }
     // Xóa các sự kiện khỏi buffer sau khi gửi thành công
     removeBatch(eventIds) {
         this.queue = this.queue.filter(event => !eventIds.includes(event.id));
         this.persistToStorage();
     }
-    // Đánh dấu các sự kiện thất bại và tăng số lần thử lại
+    // Đánh dấu các sự kiện thất bại và tăng số lần thử lại với exponential backoff
     markFailed(eventIds) {
+        const now = Date.now();
         this.queue.forEach(event => {
             if (eventIds.includes(event.id)) {
                 event.retryCount = (event.retryCount || 0) + 1;
+                event.lastRetryAt = now;
+                // Exponential backoff: 1s → 2s → 4s → 8s → 16s
+                const backoffDelay = Math.min(Math.pow(2, event.retryCount) * 1000, // 2^n seconds
+                32000 // Max 32 seconds
+                );
+                event.nextRetryAt = now + backoffDelay;
+                console.log(`[EventBuffer] Event ${event.id} will retry in ${backoffDelay / 1000}s (attempt ${event.retryCount}/${this.maxRetries})`);
             }
         });
         // Xóa các sự kiện vượt quá số lần thử lại tối đa
@@ -1541,23 +1561,30 @@ class BasePlugin {
     constructor() {
         this.tracker = null;
         this.active = false;
+        this.errorBoundary = new ErrorBoundary(true); // Enable debug mode
     }
     init(tracker) {
-        if (this.tracker) {
-            console.warn(`[${this.name}] Plugin already initialized`);
-            return;
-        }
-        this.tracker = tracker;
-        console.log(`[${this.name}] Plugin v${this.version} initialized`);
+        this.errorBoundary.execute(() => {
+            if (this.tracker) {
+                console.warn(`[${this.name}] Plugin already initialized`);
+                return;
+            }
+            this.tracker = tracker;
+            console.log(`[${this.name}] Plugin initialized`);
+        }, `${this.name}.init`);
     }
     stop() {
-        this.active = false;
-        console.log(`[${this.name}] Plugin stopped`);
+        this.errorBoundary.execute(() => {
+            this.active = false;
+            console.log(`[${this.name}] Plugin stopped`);
+        }, `${this.name}.stop`);
     }
     destroy() {
-        this.stop();
-        this.tracker = null;
-        console.log(`[${this.name}] Plugin destroyed`);
+        this.errorBoundary.execute(() => {
+            this.stop();
+            this.tracker = null;
+            console.log(`[${this.name}] Plugin destroyed`);
+        }, `${this.name}.destroy`);
     }
     isActive() {
         return this.active;
@@ -1569,158 +1596,125 @@ class BasePlugin {
         }
         return true;
     }
+    // Wrap event handlers with error boundary
+    wrapHandler(handler, handlerName = 'handler') {
+        return this.errorBoundary.wrap(handler, `${this.name}.${handlerName}`);
+    }
+    // Wrap async event handlers with error boundary
+    wrapAsyncHandler(handler, handlerName = 'asyncHandler') {
+        return this.errorBoundary.wrapAsync(handler, `${this.name}.${handlerName}`);
+    }
 }
 
 class PluginManager {
     constructor(tracker) {
         this.plugins = new Map();
         this.tracker = tracker;
+        this.errorBoundary = new ErrorBoundary(true); // Enable debug mode
     }
     // Register a plugin
     register(plugin) {
-        if (this.plugins.has(plugin.name)) {
-            console.warn(`[PluginManager] Plugin "${plugin.name}" already registered`);
-            return;
-        }
-        try {
+        this.errorBoundary.execute(() => {
+            if (this.plugins.has(plugin.name)) {
+                console.warn(`[PluginManager] Plugin "${plugin.name}" already registered`);
+                return;
+            }
             plugin.init(this.tracker);
             this.plugins.set(plugin.name, plugin);
-            console.log(`[PluginManager] Registered plugin: ${plugin.name} v${plugin.version}`);
-        }
-        catch (error) {
-            console.error(`[PluginManager] Failed to register plugin "${plugin.name}":`, error);
-        }
+            console.log(`[PluginManager] Registered plugin: ${plugin.name}`);
+        }, 'PluginManager.register');
     }
-    /**
-     * Unregister a plugin
-     */
+    // Unregister a plugin
     unregister(pluginName) {
-        const plugin = this.plugins.get(pluginName);
-        if (!plugin) {
-            console.warn(`[PluginManager] Plugin "${pluginName}" not found`);
-            return false;
-        }
-        try {
+        var _a;
+        return (_a = this.errorBoundary.execute(() => {
+            const plugin = this.plugins.get(pluginName);
+            if (!plugin) {
+                console.warn(`[PluginManager] Plugin "${pluginName}" not found`);
+                return false;
+            }
             plugin.destroy();
             this.plugins.delete(pluginName);
             console.log(`[PluginManager] Unregistered plugin: ${pluginName}`);
             return true;
-        }
-        catch (error) {
-            console.error(`[PluginManager] Failed to unregister plugin "${pluginName}":`, error);
-            return false;
-        }
+        }, 'PluginManager.unregister')) !== null && _a !== void 0 ? _a : false;
     }
-    /**
-     * Start a specific plugin
-     */
+    // Start a specific plugin
     start(pluginName) {
-        const plugin = this.plugins.get(pluginName);
-        if (!plugin) {
-            console.warn(`[PluginManager] Plugin "${pluginName}" not found`);
-            return false;
-        }
-        try {
+        var _a;
+        return (_a = this.errorBoundary.execute(() => {
+            const plugin = this.plugins.get(pluginName);
+            if (!plugin) {
+                console.warn(`[PluginManager] Plugin "${pluginName}" not found`);
+                return false;
+            }
             plugin.start();
             return true;
-        }
-        catch (error) {
-            console.error(`[PluginManager] Failed to start plugin "${pluginName}":`, error);
-            return false;
-        }
+        }, 'PluginManager.start')) !== null && _a !== void 0 ? _a : false;
     }
-    /**
-     * Stop a specific plugin
-     */
+    // Stop a specific plugin
     stop(pluginName) {
-        const plugin = this.plugins.get(pluginName);
-        if (!plugin) {
-            console.warn(`[PluginManager] Plugin "${pluginName}" not found`);
-            return false;
-        }
-        try {
+        var _a;
+        return (_a = this.errorBoundary.execute(() => {
+            const plugin = this.plugins.get(pluginName);
+            if (!plugin) {
+                console.warn(`[PluginManager] Plugin "${pluginName}" not found`);
+                return false;
+            }
             plugin.stop();
             return true;
-        }
-        catch (error) {
-            console.error(`[PluginManager] Failed to stop plugin "${pluginName}":`, error);
-            return false;
-        }
+        }, 'PluginManager.stop')) !== null && _a !== void 0 ? _a : false;
     }
-    /**
-     * Start all registered plugins
-     */
+    // Start all registered plugins
     startAll() {
-        console.log(`[PluginManager] Starting ${this.plugins.size} plugin(s)...`);
-        this.plugins.forEach((plugin, name) => {
-            try {
+        this.errorBoundary.execute(() => {
+            console.log(`[PluginManager] Starting ${this.plugins.size} plugin(s)...`);
+            this.plugins.forEach((plugin) => {
                 if (!plugin.isActive()) {
                     plugin.start();
                 }
-            }
-            catch (error) {
-                console.error(`[PluginManager] Failed to start plugin "${name}":`, error);
-            }
-        });
+            });
+        }, 'PluginManager.startAll');
     }
-    /**
-     * Stop all registered plugins
-     */
+    // Stop all registered plugins
     stopAll() {
-        console.log(`[PluginManager] Stopping ${this.plugins.size} plugin(s)...`);
-        this.plugins.forEach((plugin, name) => {
-            try {
+        this.errorBoundary.execute(() => {
+            console.log(`[PluginManager] Stopping ${this.plugins.size} plugin(s)...`);
+            this.plugins.forEach((plugin) => {
                 if (plugin.isActive()) {
                     plugin.stop();
                 }
-            }
-            catch (error) {
-                console.error(`[PluginManager] Failed to stop plugin "${name}":`, error);
-            }
-        });
+            });
+        }, 'PluginManager.stopAll');
     }
-    /**
-     * Get a plugin by name
-     */
+    // Get a plugin by name
     get(pluginName) {
         return this.plugins.get(pluginName);
     }
-    /**
-     * Check if a plugin is registered
-     */
+    // Check if a plugin is registered
     has(pluginName) {
         return this.plugins.has(pluginName);
     }
-    /**
-     * Get all registered plugin names
-     */
+    // Get all registered plugin names
     getPluginNames() {
         return Array.from(this.plugins.keys());
     }
-    /**
-     * Get plugin status
-     */
+    // Get plugin status
     getStatus() {
         return Array.from(this.plugins.values()).map(plugin => ({
             name: plugin.name,
-            version: plugin.version,
             active: plugin.isActive(),
         }));
     }
-    /**
-     * Destroy all plugins and cleanup
-     */
+    // Destroy all plugins and cleanup
     destroy() {
-        console.log(`[PluginManager] Destroying ${this.plugins.size} plugin(s)...`);
-        this.plugins.forEach((plugin, name) => {
-            try {
+        this.errorBoundary.execute(() => {
+            console.log(`[PluginManager] Destroying ${this.plugins.size} plugin(s)...`);
+            this.plugins.forEach((plugin) => {
                 plugin.destroy();
-            }
-            catch (error) {
-                console.error(`[PluginManager] Failed to destroy plugin "${name}":`, error);
-            }
-        });
-        this.plugins.clear();
+            });
+            this.plugins.clear();
+        }, 'PluginManager.destroy');
     }
 }
 
@@ -2924,60 +2918,38 @@ function getAIItemDetector() {
     return aiItemDetectorInstance;
 }
 
-// Adapter to convert TrackingRule to IRecsysRule
-function convertToRecsysRule(trackingRule) {
-    // Map triggerEventId to event type
-    const triggerEvent = trackingRule.triggerEventId === 1 ? 'click' :
-        trackingRule.triggerEventId === 2 ? 'page_view' : 'click';
-    // Determine payload extractor source from tracking rule
-    const targetValue = trackingRule.targetElementValue || '';
-    const isRegex = targetValue.startsWith('^');
-    return {
-        ruleName: trackingRule.name,
-        triggerEvent,
-        targetSelector: targetValue,
-        condition: { type: "NONE", operator: "NONE", value: null },
-        payloadExtractor: {
-            source: isRegex ? 'regex_group' : 'ai_detect',
-            pattern: isRegex ? targetValue : undefined,
-            groupIndex: isRegex ? 1 : undefined,
-            eventKey: "itemId",
-        },
-    };
-}
-/**
- * TrackerContextAdapter - Bridge between RecSysTracker and legacy IRecsysContext
- * Keeps 100% original logic, only adapts data from new SDK config
- */
 class TrackerContextAdapter {
     constructor(tracker) {
         this.config = {
-            getRules: (eventType) => {
+            getRules: (triggerEventId) => {
                 const config = this.tracker.getConfig();
                 if (!(config === null || config === void 0 ? void 0 : config.trackingRules))
                     return [];
-                const triggerEventId = eventType === 'click' ? 1 : 2;
                 return config.trackingRules
-                    .filter(rule => rule.triggerEventId === triggerEventId)
-                    .map(convertToRecsysRule)
-                    .filter((rule) => rule !== null);
+                    .filter(rule => rule.triggerEventId === triggerEventId);
             },
         };
         this.payloadBuilder = {
             build: (element, rule, extraData = {}) => {
                 const userIdentityManager = getUserIdentityManager();
                 const payload = {
-                    event: rule.triggerEvent === "click" ? "item_click" : "page_view",
+                    event: rule.triggerEventId === 1 ? "item_click" : "page_view",
                     url: window.location.href,
                     timestamp: Date.now(),
-                    ruleName: rule.ruleName,
+                    ruleName: rule.name,
                     userId: userIdentityManager.getRealUserId(),
                     itemId: 'N/A'
                 };
+                // Build payload extractor from rule data
+                const targetValue = rule.targetElement.targetElementValue || '';
+                const isRegex = targetValue.startsWith('^');
+                const extractor = {
+                    source: isRegex ? 'regex_group' : 'ai_detect',
+                    groupIndex: isRegex ? 1 : undefined,
+                };
                 let detectionResult = null;
-                const extractor = rule.payloadExtractor;
                 if (!extractor || typeof extractor.source === 'undefined') {
-                    console.error(`[PayloadBuilder Error] Rule '${rule.ruleName}' is missing a valid payloadExtractor or source.`);
+                    console.error(`[PayloadBuilder Error] Rule '${rule.name}' is missing a valid payloadExtractor or source.`);
                     return {
                         ...payload,
                         itemId: 'N/A (Invalid Rule Config)',
@@ -3003,7 +2975,7 @@ class TrackerContextAdapter {
                 }
                 if (extractor.source === 'ai_detect') {
                     const detector = getAIItemDetector();
-                    if (rule.triggerEvent === 'page_view' && element && element.id) {
+                    if (rule.triggerEventId === 3 && element && element.id) {
                         detectionResult = element;
                     }
                     else if (detector && element instanceof Element) {
@@ -3035,6 +3007,7 @@ class TrackerContextAdapter {
         };
         this.eventBuffer = {
             enqueue: (payload) => {
+                // Log for debugging
                 console.groupCollapsed(`✅ [RECSYS TRACK] - ${payload.event.toUpperCase()} (UserID: ${payload.userId.substring(0, Math.min(15, payload.userId.length))}... | Confidence: ${(payload.confidence !== undefined ? payload.confidence * 100 : 0).toFixed(0)}%)`);
                 console.log("Payload:", payload);
                 if (payload.itemId && payload.itemId !== 'N/A (Failed)') {
@@ -3044,10 +3017,17 @@ class TrackerContextAdapter {
                 else {
                     console.warn('⚠️ ITEM ID EXTRACTION FAILED. Check AIItemDetector logs.');
                 }
-                console.log(`--- Mock Sending to /track endpoint ---`);
                 console.groupEnd();
-                // Also send to real SDK event buffer if needed
-                // TODO: Integrate with SDK's actual event tracking
+                // Convert IRecsysPayload to TrackedEvent format and send to real EventBuffer
+                const triggerTypeId = payload.event === 'item_click' ? 1 : 2;
+                // Only track if itemId is valid
+                if (payload.itemId && !payload.itemId.startsWith('N/A')) {
+                    this.tracker.track({
+                        triggerTypeId,
+                        userId: parseInt(payload.userId) || 0,
+                        itemId: parseInt(payload.itemId) || 0,
+                    });
+                }
             },
         };
         this.tracker = tracker;
@@ -3058,59 +3038,61 @@ class TrackerContextAdapter {
     }
 }
 
-// Click Plugin - 100% Original Logic with BasePlugin wrapper
 class ClickPlugin extends BasePlugin {
     constructor() {
         super();
         this.name = 'ClickPlugin';
-        this.version = '1.0.0';
-        // Original plugin state
         this.context = null;
         this.detector = null;
         this.THROTTLE_DELAY = 300;
-        this.throttledHandler = throttle(this.handleDocumentClick.bind(this), this.THROTTLE_DELAY);
+        // Wrap handler với error boundary ngay trong constructor
+        this.throttledHandler = throttle(this.wrapHandler(this.handleDocumentClick.bind(this), 'handleDocumentClick'), this.THROTTLE_DELAY);
     }
-    // BasePlugin integration
     init(tracker) {
-        super.init(tracker);
-        // Original init logic
-        this.context = new TrackerContextAdapter(tracker);
-        this.detector = getAIItemDetector();
-        console.log(`[ClickPlugin] initialized for Rule + AI-based tracking.`);
+        this.errorBoundary.execute(() => {
+            super.init(tracker);
+            this.context = new TrackerContextAdapter(tracker);
+            this.detector = getAIItemDetector();
+            console.log(`[ClickPlugin] initialized for Rule + AI-based tracking.`);
+        }, 'ClickPlugin.init');
     }
     start() {
-        if (!this.ensureInitialized())
-            return;
-        // Original start logic
-        if (this.context && this.detector) {
-            document.addEventListener("click", this.throttledHandler, false);
-            console.log("[ClickPlugin] started Rule + AI-based listening (Throttled).");
-            this.active = true;
-        }
+        this.errorBoundary.execute(() => {
+            if (!this.ensureInitialized())
+                return;
+            if (this.context && this.detector) {
+                document.addEventListener("click", this.throttledHandler, false);
+                console.log("[ClickPlugin] started Rule + AI-based listening (Throttled).");
+                this.active = true;
+            }
+        }, 'ClickPlugin.start');
     }
     stop() {
-        document.removeEventListener("click", this.throttledHandler, false);
-        super.stop();
+        this.errorBoundary.execute(() => {
+            document.removeEventListener("click", this.throttledHandler, false);
+            super.stop();
+        }, 'ClickPlugin.stop');
     }
-    // Original logic - 100% preserved
     handleDocumentClick(event) {
         if (!this.context || !this.detector)
             return;
-        try {
-            const clickRules = this.context.config.getRules('click');
-            if (clickRules.length === 0) {
-                return;
-            }
-            const rule = clickRules[0];
-            const selector = rule.targetSelector;
+        const clickRules = this.context.config.getRules(1); // triggerEventId = 1 for click
+        if (clickRules.length === 0) {
+            return;
+        }
+        // Loop qua tất cả click rules và check match
+        for (const rule of clickRules) {
+            const selector = rule.targetElement.targetElementValue;
+            if (!selector)
+                continue;
             const matchedElement = event.target.closest(selector);
             if (matchedElement) {
+                console.log(`[ClickPlugin] Matched rule: ${rule.name}`);
                 const payload = this.context.payloadBuilder.build(matchedElement, rule);
                 this.context.eventBuffer.enqueue(payload);
+                // Stop after first match (hoặc có thể tiếp tục nếu muốn track nhiều rules)
+                break;
             }
-        }
-        catch (error) {
-            console.error(`[ClickPlugin Error] Error during Rule processing or Payload building:`, error);
         }
     }
 }
@@ -3120,46 +3102,47 @@ var clickPlugin = /*#__PURE__*/Object.freeze({
     ClickPlugin: ClickPlugin
 });
 
-// Page View Plugin - 100% Original Logic with BasePlugin wrapper
 class PageViewPlugin extends BasePlugin {
     constructor() {
         super(...arguments);
         this.name = 'PageViewPlugin';
-        this.version = '1.0.0';
-        // Original plugin state
         this.context = null;
         this.detector = null;
     }
-    // BasePlugin integration
     init(tracker) {
-        super.init(tracker);
-        // Original init logic
-        this.context = new TrackerContextAdapter(tracker);
-        this.detector = getAIItemDetector();
-        console.log(`[PageViewPlugin] initialized for Rule + AI tracking.`);
+        this.errorBoundary.execute(() => {
+            super.init(tracker);
+            this.context = new TrackerContextAdapter(tracker);
+            this.detector = getAIItemDetector();
+            console.log(`[PageViewPlugin] initialized for Rule + AI tracking.`);
+        }, 'PageViewPlugin.init');
     }
     start() {
-        if (!this.ensureInitialized())
-            return;
-        // Original start logic
-        if (!this.context || !this.detector)
-            return;
-        window.addEventListener("popstate", this.handlePageChange.bind(this));
-        {
-            window.addEventListener(CUSTOM_ROUTE_EVENT, this.handlePageChange.bind(this));
-        }
-        this.trackCurrentPage(window.location.href);
-        console.log("[PageViewPlugin] started listening and tracked initial load.");
-        this.active = true;
+        this.errorBoundary.execute(() => {
+            if (!this.ensureInitialized())
+                return;
+            if (!this.context || !this.detector)
+                return;
+            const wrappedHandler = this.wrapHandler(this.handlePageChange.bind(this), 'handlePageChange');
+            window.addEventListener("popstate", wrappedHandler);
+            {
+                window.addEventListener(CUSTOM_ROUTE_EVENT, wrappedHandler);
+            }
+            this.trackCurrentPage(window.location.href);
+            console.log("[PageViewPlugin] started listening and tracked initial load.");
+            this.active = true;
+        }, 'PageViewPlugin.start');
     }
     stop() {
-        window.removeEventListener("popstate", this.handlePageChange.bind(this));
-        {
-            window.removeEventListener(CUSTOM_ROUTE_EVENT, this.handlePageChange.bind(this));
-        }
-        super.stop();
+        this.errorBoundary.execute(() => {
+            const wrappedHandler = this.wrapHandler(this.handlePageChange.bind(this), 'handlePageChange');
+            window.removeEventListener("popstate", wrappedHandler);
+            {
+                window.removeEventListener(CUSTOM_ROUTE_EVENT, wrappedHandler);
+            }
+            super.stop();
+        }, 'PageViewPlugin.stop');
     }
-    // Original logic - 100% preserved
     handlePageChange() {
         setTimeout(() => {
             this.trackCurrentPage(window.location.href);
@@ -3170,50 +3153,55 @@ class PageViewPlugin extends BasePlugin {
             return;
         const urlObject = new URL(currentUrl);
         const pathname = urlObject.pathname;
-        try {
-            const pageViewRules = this.context.config.getRules('page_view');
-            const defaultAiRule = pageViewRules.find(r => r.payloadExtractor.source === 'ai_detect' && r.targetSelector === 'body');
-            let matchFoundInSpecificRule = false;
-            for (const rule of pageViewRules) {
-                if (rule === defaultAiRule)
-                    continue;
-                let matchFound = false;
-                let matchData = null;
-                const selector = rule.targetSelector;
-                if (rule.payloadExtractor.source === 'regex_group' && selector && selector.startsWith('^')) {
-                    const pattern = new RegExp(selector);
-                    const match = pathname.match(pattern);
-                    if (match) {
-                        matchFound = true;
-                        matchData = { regexMatch: match };
-                    }
-                }
-                else if (selector) {
-                    if (document.querySelector(selector)) {
-                        matchFound = true;
-                    }
-                }
-                if (matchFound) {
-                    console.log(`[Recsys Tracker] ✅ Match Specific PageView Rule: ${rule.ruleName}`);
-                    let structuredItem = null;
-                    if (rule.payloadExtractor.source === 'ai_detect') {
-                        structuredItem = this.detector.detectItemFromStructuredData(document.body) ||
-                            this.detector.extractOpenGraphData();
-                    }
-                    const payload = this.context.payloadBuilder.build(structuredItem, rule, matchData || undefined);
-                    this.context.eventBuffer.enqueue(payload);
-                    matchFoundInSpecificRule = true;
-                    return;
+        const pageViewRules = this.context.config.getRules(3); // triggerEventId = 3 for page_view
+        if (pageViewRules.length === 0) {
+            console.log('[PageViewPlugin] No page view rules configured.');
+            return;
+        }
+        // Loop qua tất cả rules và tìm rule phù hợp
+        for (const rule of pageViewRules) {
+            let matchFound = false;
+            let matchData = null;
+            const selector = rule.targetElement.targetElementValue || '';
+            // Determine payload extractor from rule data
+            const isRegex = selector.startsWith('^');
+            const extractorSource = isRegex ? 'regex_group' : 'ai_detect';
+            // Regex-based matching (URL pattern)
+            if (extractorSource === 'regex_group' && selector && selector.startsWith('^')) {
+                const pattern = new RegExp(selector);
+                const match = pathname.match(pattern);
+                if (match) {
+                    matchFound = true;
+                    matchData = { regexMatch: match };
+                    console.log(`[PageViewPlugin] ✅ Matched regex rule: ${rule.name}`);
                 }
             }
-            if (!matchFoundInSpecificRule) {
-                console.log('[Recsys Tracker] ⏸️ Pageview skipped. No specific rule matched the current URL/DOM.');
+            // DOM selector matching
+            else if (selector && selector !== 'body') {
+                if (document.querySelector(selector)) {
+                    matchFound = true;
+                    console.log(`[PageViewPlugin] ✅ Matched DOM selector rule: ${rule.name}`);
+                }
+            }
+            // Default body matching with AI
+            else if (selector === 'body' && extractorSource === 'ai_detect') {
+                matchFound = true;
+                console.log(`[PageViewPlugin] ✅ Matched default AI rule: ${rule.name}`);
+            }
+            if (matchFound) {
+                let structuredItem = null;
+                // AI detection if needed
+                if (extractorSource === 'ai_detect') {
+                    structuredItem = this.detector.detectItemFromStructuredData(document.body) ||
+                        this.detector.extractOpenGraphData();
+                }
+                const payload = this.context.payloadBuilder.build(structuredItem, rule, matchData || undefined);
+                this.context.eventBuffer.enqueue(payload);
+                // Stop after first match (hoặc tiếp tục nếu muốn track nhiều rules)
                 return;
             }
         }
-        catch (error) {
-            console.error(`[PageViewPlugin Error] Error during tracking:`, error);
-        }
+        console.log('[PageViewPlugin] ⏸️ No matching rule found for current URL/DOM.');
     }
 }
 
@@ -3267,7 +3255,7 @@ class RecSysTracker {
                     this.displayManager.initialize(this.config.returnMethods);
                     console.log('[RecSysTracker] Display methods initialized');
                 }
-                // Auto-register and start plugins based on tracking rules
+                // Tự động khởi tạo plugins dựa trên rules
                 this.autoInitializePlugins();
             }
             else {
@@ -3284,38 +3272,40 @@ class RecSysTracker {
             this.isInitialized = true;
         }, 'init');
     }
-    // Auto-initialize plugins based on tracking rules
-    autoInitializePlugins() {
+    // Tự động khởi tạo plugins dựa trên tracking rules
+    async autoInitializePlugins() {
         var _a;
         if (!((_a = this.config) === null || _a === void 0 ? void 0 : _a.trackingRules) || this.config.trackingRules.length === 0) {
             return;
         }
-        // Check if we need ClickPlugin (triggerEventId === 1)
+        // Kiểm tra nếu có rule nào cần ClickPlugin (triggerEventId === 1)
         const hasClickRules = this.config.trackingRules.some(rule => rule.triggerEventId === 1);
-        // Check if we need PageViewPlugin (triggerEventId === 2)
-        const hasPageViewRules = this.config.trackingRules.some(rule => rule.triggerEventId === 2);
-        // Only auto-initialize if no plugins are registered yet
+        // Kiểm tra nếu có rule nào cần PageViewPlugin (triggerEventId === 3)
+        const hasPageViewRules = this.config.trackingRules.some(rule => rule.triggerEventId === 3);
+        // Chỉ tự động đăng ký nếu chưa có plugin nào được đăng ký
         if (this.pluginManager.getPluginNames().length === 0) {
+            const pluginPromises = [];
             if (hasClickRules) {
-                // Dynamic import to avoid circular dependency
-                Promise.resolve().then(function () { return clickPlugin; }).then(({ ClickPlugin }) => {
+                // Import động để tránh circular dependency
+                const clickPromise = Promise.resolve().then(function () { return clickPlugin; }).then(({ ClickPlugin }) => {
                     this.use(new ClickPlugin());
                     console.log('[RecSysTracker] Auto-registered ClickPlugin based on tracking rules');
                 });
+                pluginPromises.push(clickPromise);
             }
             if (hasPageViewRules) {
-                // Dynamic import to avoid circular dependency
-                Promise.resolve().then(function () { return pageViewPlugin; }).then(({ PageViewPlugin }) => {
+                // Import động để tránh circular dependency
+                const pageViewPromise = Promise.resolve().then(function () { return pageViewPlugin; }).then(({ PageViewPlugin }) => {
                     this.use(new PageViewPlugin());
                     console.log('[RecSysTracker] Auto-registered PageViewPlugin based on tracking rules');
                 });
+                pluginPromises.push(pageViewPromise);
             }
-            // Auto-start plugins after a small delay to ensure all are registered
-            if (hasClickRules || hasPageViewRules) {
-                setTimeout(() => {
-                    this.startPlugins();
-                    console.log('[RecSysTracker] Auto-started plugins');
-                }, 100);
+            // Chờ tất cả plugin được đăng ký trước khi khởi động
+            if (pluginPromises.length > 0) {
+                await Promise.all(pluginPromises);
+                this.startPlugins();
+                console.log('[RecSysTracker] Auto-started plugins');
             }
         }
     }
@@ -3441,34 +3431,24 @@ class RecSysTracker {
         }, 'destroy');
     }
     // Plugin Management Methods
-    /**
-     * Get the plugin manager instance
-     */
+    // Lấy plugin manager instance
     getPluginManager() {
         return this.pluginManager;
     }
-    /**
-     * Get the display manager instance
-     */
+    // Lấy display manager instance
     getDisplayManager() {
         return this.displayManager;
     }
-    /**
-     * Register a plugin (convenience method)
-     */
+    // Register 1 plugin
     use(plugin) {
         this.pluginManager.register(plugin);
         return this;
     }
-    /**
-     * Start all registered plugins
-     */
+    // Start tất cả plugins đã register
     startPlugins() {
         this.pluginManager.startAll();
     }
-    /**
-     * Stop all registered plugins
-     */
+    // Stop tất cả plugins đã register
     stopPlugins() {
         this.pluginManager.stopAll();
     }

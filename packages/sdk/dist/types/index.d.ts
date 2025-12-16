@@ -12,10 +12,11 @@ export interface TrackingRule {
     id: string;
     name: string;
     triggerEventId: number;
-    targetElementId?: number;
-    targetEventPatternId?: number;
-    targetOperatorId?: number;
-    targetElementValue?: string;
+    targetElement: {
+        targetEventPatternId?: number;
+        targetOperatorId?: number;
+        targetElementValue?: string;
+    };
     conditions: Condition[];
     payload: PayloadConfig[];
 }
@@ -26,7 +27,6 @@ export interface PayloadConfig {
     type?: string;
 }
 export interface Condition {
-    id?: number;
     eventPatternId: number;
     operatorId: number;
     value?: string;
@@ -41,6 +41,13 @@ export interface TrackerOptions {
     batchSize?: number;
     batchDelay?: number;
     offlineStorage?: boolean;
+}
+export type RuleSource = 'ai_detect' | 'regex_group';
+export interface PayloadExtractor {
+    source: RuleSource;
+    eventKey: string;
+    pattern?: string;
+    groupIndex?: number;
 }
 declare global {
     interface Window {

@@ -60,20 +60,33 @@ export class EventBuffer {
         this.queue.push(event);
         this.persistToStorage();
     }
-    // Lấy các sự kiện để gửi theo batch
+    // Lấy các sự kiện để gửi theo batch (chỉ lấy những event đã đến thời gian retry)
     getBatch(size) {
-        return this.queue.slice(0, size);
+        const now = Date.now();
+        const readyEvents = this.queue.filter(event => {
+            // Nếu chưa từng retry hoặc đã đến thời gian retry tiếp theo
+            return !event.nextRetryAt || event.nextRetryAt <= now;
+        });
+        return readyEvents.slice(0, size);
     }
     // Xóa các sự kiện khỏi buffer sau khi gửi thành công
     removeBatch(eventIds) {
         this.queue = this.queue.filter(event => !eventIds.includes(event.id));
         this.persistToStorage();
     }
-    // Đánh dấu các sự kiện thất bại và tăng số lần thử lại
+    // Đánh dấu các sự kiện thất bại và tăng số lần thử lại với exponential backoff
     markFailed(eventIds) {
+        const now = Date.now();
         this.queue.forEach(event => {
             if (eventIds.includes(event.id)) {
                 event.retryCount = (event.retryCount || 0) + 1;
+                event.lastRetryAt = now;
+                // Exponential backoff: 1s → 2s → 4s → 8s → 16s
+                const backoffDelay = Math.min(Math.pow(2, event.retryCount) * 1000, // 2^n seconds
+                32000 // Max 32 seconds
+                );
+                event.nextRetryAt = now + backoffDelay;
+                console.log(`[EventBuffer] Event ${event.id} will retry in ${backoffDelay / 1000}s (attempt ${event.retryCount}/${this.maxRetries})`);
             }
         });
         // Xóa các sự kiện vượt quá số lần thử lại tối đa

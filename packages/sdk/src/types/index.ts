@@ -13,11 +13,13 @@ export interface TrackingRule {
   id: string;
   name: string;
   // domainId: number;
-  triggerEventId: number; // (click, scroll, ...)
-  targetElementId?: number;
-  targetEventPatternId?: number;
-  targetOperatorId?: number;
-  targetElementValue?: string;
+  triggerEventId: number; // (click, rate, page view, ...)
+  // targetElementId?: number;
+  targetElement: {
+    targetEventPatternId?: number,
+    targetOperatorId?: number,
+    targetElementValue?: string
+  };
   conditions: Condition[];
   payload: PayloadConfig[];
 }
@@ -30,7 +32,7 @@ export interface PayloadConfig {
 }
 
 export interface Condition {
-  id?: number;
+  // id?: number;
   eventPatternId: number;
   operatorId: number;
   value?: string;
@@ -47,6 +49,16 @@ export interface TrackerOptions {
   batchSize?: number;
   batchDelay?: number; // ms
   offlineStorage?: boolean;
+}
+
+// Plugin-related types (đồng bộ với plugin interfaces)
+export type RuleSource = 'ai_detect' | 'regex_group';
+
+export interface PayloadExtractor {
+  source: RuleSource;
+  eventKey: string;
+  pattern?: string;
+  groupIndex?: number;
 }
 
 // Window declaration for domain key

@@ -15,59 +15,66 @@ export class ClickPlugin extends BasePlugin {
 
     constructor() {
         super();
+        // Wrap handler với error boundary ngay trong constructor
         this.throttledHandler = throttle(
-            this.handleDocumentClick.bind(this),
+            this.wrapHandler(this.handleDocumentClick.bind(this), 'handleDocumentClick'),
             this.THROTTLE_DELAY
         );
     }
 
     public init(tracker: RecSysTracker): void {
-        super.init(tracker);
-        
-        this.context = new TrackerContextAdapter(tracker);
-        this.detector = getAIItemDetector(); 
-        console.log(`[ClickPlugin] initialized for Rule + AI-based tracking.`);
+        this.errorBoundary.execute(() => {
+            super.init(tracker);
+            
+            this.context = new TrackerContextAdapter(tracker);
+            this.detector = getAIItemDetector(); 
+            console.log(`[ClickPlugin] initialized for Rule + AI-based tracking.`);
+        }, 'ClickPlugin.init');
     }
 
     public start(): void {
-        if (!this.ensureInitialized()) return;
-        
-        if (this.context && this.detector) {
-            document.addEventListener("click", this.throttledHandler as any, false); 
-            console.log("[ClickPlugin] started Rule + AI-based listening (Throttled).");
-            this.active = true;
-        }
+        this.errorBoundary.execute(() => {
+            if (!this.ensureInitialized()) return;
+            
+            if (this.context && this.detector) {
+                document.addEventListener("click", this.throttledHandler as any, false); 
+                console.log("[ClickPlugin] started Rule + AI-based listening (Throttled).");
+                this.active = true;
+            }
+        }, 'ClickPlugin.start');
     }
 
     public stop(): void {
-        document.removeEventListener("click", this.throttledHandler as any, false);
-        super.stop();
+        this.errorBoundary.execute(() => {
+            document.removeEventListener("click", this.throttledHandler as any, false);
+            super.stop();
+        }, 'ClickPlugin.stop');
     }
 
     private handleDocumentClick(event: MouseEvent): void {
         if (!this.context || !this.detector) return;
 
-        try {
-            const clickRules = this.context.config.getRules('click');
-            if (clickRules.length === 0) {
-                return;
-            }
+        const clickRules = this.context.config.getRules(1); // triggerEventId = 1 for click
+        if (clickRules.length === 0) {
+            return;
+        }
 
-            const rule = clickRules[0]; 
-            const selector = rule.targetSelector; 
+        // Loop qua tất cả click rules và check match
+        for (const rule of clickRules) {
+            const selector = rule.targetElement.targetElementValue;
+            if (!selector) continue;
 
             const matchedElement = (event.target as Element).closest(selector);
 
             if (matchedElement) {
-                const payload = this.context.payloadBuilder.build(matchedElement, rule); 
+                console.log(`[ClickPlugin] Matched rule: ${rule.name}`);
+                
+                const payload = this.context.payloadBuilder.build(matchedElement, rule);
                 this.context.eventBuffer.enqueue(payload);
+                
+                // Stop after first match (hoặc có thể tiếp tục nếu muốn track nhiều rules)
+                break;
             }
-
-        } catch (error) {
-            console.error(
-                `[ClickPlugin Error] Error during Rule processing or Payload building:`,
-                error
-            );
         }
     }
 }

@@ -1,4 +1,3 @@
-// Page View Plugin - 100% Original Logic with BasePlugin wrapper
 import { BasePlugin } from './base-plugin';
 import { TrackerContextAdapter } from './adapters/tracker-context-adapter';
 import { getAIItemDetector } from './utils/ai-item-detector';
@@ -7,41 +6,43 @@ export class PageViewPlugin extends BasePlugin {
     constructor() {
         super(...arguments);
         this.name = 'PageViewPlugin';
-        this.version = '1.0.0';
-        // Original plugin state
         this.context = null;
         this.detector = null;
     }
-    // BasePlugin integration
     init(tracker) {
-        super.init(tracker);
-        // Original init logic
-        this.context = new TrackerContextAdapter(tracker);
-        this.detector = getAIItemDetector();
-        console.log(`[PageViewPlugin] initialized for Rule + AI tracking.`);
+        this.errorBoundary.execute(() => {
+            super.init(tracker);
+            this.context = new TrackerContextAdapter(tracker);
+            this.detector = getAIItemDetector();
+            console.log(`[PageViewPlugin] initialized for Rule + AI tracking.`);
+        }, 'PageViewPlugin.init');
     }
     start() {
-        if (!this.ensureInitialized())
-            return;
-        // Original start logic
-        if (!this.context || !this.detector)
-            return;
-        window.addEventListener("popstate", this.handlePageChange.bind(this));
-        if (typeof CUSTOM_ROUTE_EVENT !== 'undefined') {
-            window.addEventListener(CUSTOM_ROUTE_EVENT, this.handlePageChange.bind(this));
-        }
-        this.trackCurrentPage(window.location.href);
-        console.log("[PageViewPlugin] started listening and tracked initial load.");
-        this.active = true;
+        this.errorBoundary.execute(() => {
+            if (!this.ensureInitialized())
+                return;
+            if (!this.context || !this.detector)
+                return;
+            const wrappedHandler = this.wrapHandler(this.handlePageChange.bind(this), 'handlePageChange');
+            window.addEventListener("popstate", wrappedHandler);
+            if (typeof CUSTOM_ROUTE_EVENT !== 'undefined') {
+                window.addEventListener(CUSTOM_ROUTE_EVENT, wrappedHandler);
+            }
+            this.trackCurrentPage(window.location.href);
+            console.log("[PageViewPlugin] started listening and tracked initial load.");
+            this.active = true;
+        }, 'PageViewPlugin.start');
     }
     stop() {
-        window.removeEventListener("popstate", this.handlePageChange.bind(this));
-        if (typeof CUSTOM_ROUTE_EVENT !== 'undefined') {
-            window.removeEventListener(CUSTOM_ROUTE_EVENT, this.handlePageChange.bind(this));
-        }
-        super.stop();
+        this.errorBoundary.execute(() => {
+            const wrappedHandler = this.wrapHandler(this.handlePageChange.bind(this), 'handlePageChange');
+            window.removeEventListener("popstate", wrappedHandler);
+            if (typeof CUSTOM_ROUTE_EVENT !== 'undefined') {
+                window.removeEventListener(CUSTOM_ROUTE_EVENT, wrappedHandler);
+            }
+            super.stop();
+        }, 'PageViewPlugin.stop');
     }
-    // Original logic - 100% preserved
     handlePageChange() {
         setTimeout(() => {
             this.trackCurrentPage(window.location.href);
@@ -52,50 +53,55 @@ export class PageViewPlugin extends BasePlugin {
             return;
         const urlObject = new URL(currentUrl);
         const pathname = urlObject.pathname;
-        try {
-            const pageViewRules = this.context.config.getRules('page_view');
-            const defaultAiRule = pageViewRules.find(r => r.payloadExtractor.source === 'ai_detect' && r.targetSelector === 'body');
-            let matchFoundInSpecificRule = false;
-            for (const rule of pageViewRules) {
-                if (rule === defaultAiRule)
-                    continue;
-                let matchFound = false;
-                let matchData = null;
-                const selector = rule.targetSelector;
-                if (rule.payloadExtractor.source === 'regex_group' && selector && selector.startsWith('^')) {
-                    const pattern = new RegExp(selector);
-                    const match = pathname.match(pattern);
-                    if (match) {
-                        matchFound = true;
-                        matchData = { regexMatch: match };
-                    }
-                }
-                else if (selector) {
-                    if (document.querySelector(selector)) {
-                        matchFound = true;
-                    }
-                }
-                if (matchFound) {
-                    console.log(`[Recsys Tracker] ✅ Match Specific PageView Rule: ${rule.ruleName}`);
-                    let structuredItem = null;
-                    if (rule.payloadExtractor.source === 'ai_detect') {
-                        structuredItem = this.detector.detectItemFromStructuredData(document.body) ||
-                            this.detector.extractOpenGraphData();
-                    }
-                    const payload = this.context.payloadBuilder.build(structuredItem, rule, matchData || undefined);
-                    this.context.eventBuffer.enqueue(payload);
-                    matchFoundInSpecificRule = true;
-                    return;
+        const pageViewRules = this.context.config.getRules(3); // triggerEventId = 3 for page_view
+        if (pageViewRules.length === 0) {
+            console.log('[PageViewPlugin] No page view rules configured.');
+            return;
+        }
+        // Loop qua tất cả rules và tìm rule phù hợp
+        for (const rule of pageViewRules) {
+            let matchFound = false;
+            let matchData = null;
+            const selector = rule.targetElement.targetElementValue || '';
+            // Determine payload extractor from rule data
+            const isRegex = selector.startsWith('^');
+            const extractorSource = isRegex ? 'regex_group' : 'ai_detect';
+            // Regex-based matching (URL pattern)
+            if (extractorSource === 'regex_group' && selector && selector.startsWith('^')) {
+                const pattern = new RegExp(selector);
+                const match = pathname.match(pattern);
+                if (match) {
+                    matchFound = true;
+                    matchData = { regexMatch: match };
+                    console.log(`[PageViewPlugin] ✅ Matched regex rule: ${rule.name}`);
                 }
             }
-            if (!matchFoundInSpecificRule) {
-                console.log('[Recsys Tracker] ⏸️ Pageview skipped. No specific rule matched the current URL/DOM.');
+            // DOM selector matching
+            else if (selector && selector !== 'body') {
+                if (document.querySelector(selector)) {
+                    matchFound = true;
+                    console.log(`[PageViewPlugin] ✅ Matched DOM selector rule: ${rule.name}`);
+                }
+            }
+            // Default body matching with AI
+            else if (selector === 'body' && extractorSource === 'ai_detect') {
+                matchFound = true;
+                console.log(`[PageViewPlugin] ✅ Matched default AI rule: ${rule.name}`);
+            }
+            if (matchFound) {
+                let structuredItem = null;
+                // AI detection if needed
+                if (extractorSource === 'ai_detect') {
+                    structuredItem = this.detector.detectItemFromStructuredData(document.body) ||
+                        this.detector.extractOpenGraphData();
+                }
+                const payload = this.context.payloadBuilder.build(structuredItem, rule, matchData || undefined);
+                this.context.eventBuffer.enqueue(payload);
+                // Stop after first match (hoặc tiếp tục nếu muốn track nhiều rules)
                 return;
             }
         }
-        catch (error) {
-            console.error(`[PageViewPlugin Error] Error during tracking:`, error);
-        }
+        console.log('[PageViewPlugin] ⏸️ No matching rule found for current URL/DOM.');
     }
 }
 //# sourceMappingURL=page-view-plugin.js.map

@@ -32,25 +32,10 @@ export declare class RecSysTracker {
     setUserId(userId: string | null): void;
     getUserId(): string | null;
     destroy(): void;
-    /**
-     * Get the plugin manager instance
-     */
     getPluginManager(): PluginManager;
-    /**
-     * Get the display manager instance
-     */
     getDisplayManager(): DisplayManager | null;
-    /**
-     * Register a plugin (convenience method)
-     */
     use(plugin: any): this;
-    /**
-     * Start all registered plugins
-     */
     startPlugins(): void;
-    /**
-     * Stop all registered plugins
-     */
     stopPlugins(): void;
 }
 export default RecSysTracker;

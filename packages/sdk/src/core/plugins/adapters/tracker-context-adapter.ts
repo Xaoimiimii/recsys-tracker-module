@@ -1,32 +1,8 @@
-import { IRecsysContext, IRecsysRule, RuleEvent, IRecsysPayload, IAIItemDetectionResult, IPayloadExtraData } from '../interfaces/recsys-context.interface';
+import { IRecsysContext, TrackingRule, IRecsysPayload, IAIItemDetectionResult, IPayloadExtraData } from '../interfaces/recsys-context.interface';
 import { getUserIdentityManager } from '../utils/user-identity-manager';
 import { getAIItemDetector } from '../utils/ai-item-detector';
 import { RecSysTracker } from '../../..';
-import { TrackingRule } from '../../../types';
-
-// Adapter to convert TrackingRule to IRecsysRule
-function convertToRecsysRule(trackingRule: TrackingRule): IRecsysRule | null {
-    // Map triggerEventId to event type
-    const triggerEvent: RuleEvent = trackingRule.triggerEventId === 1 ? 'click' : 
-                                     trackingRule.triggerEventId === 2 ? 'page_view' : 'click';
-    
-    // Determine payload extractor source from tracking rule
-    const targetValue = trackingRule.targetElementValue || '';
-    const isRegex = targetValue.startsWith('^');
-    
-    return {
-        ruleName: trackingRule.name,
-        triggerEvent,
-        targetSelector: targetValue,
-        condition: { type: "NONE", operator: "NONE", value: null },
-        payloadExtractor: {
-            source: isRegex ? 'regex_group' : 'ai_detect',
-            pattern: isRegex ? targetValue : undefined,
-            groupIndex: isRegex ? 1 : undefined,
-            eventKey: "itemId",
-        },
-    };
-}
+import { PayloadExtractor } from '../../../types';
 
 export class TrackerContextAdapter implements IRecsysContext {
     private tracker: RecSysTracker;
@@ -36,37 +12,42 @@ export class TrackerContextAdapter implements IRecsysContext {
     }
 
     public config = {
-        getRules: (eventType: RuleEvent): IRecsysRule[] => {
+        getRules: (triggerEventId: number): TrackingRule[] => {
             const config = this.tracker.getConfig();
             if (!config?.trackingRules) return [];
-
-            const triggerEventId = eventType === 'click' ? 1 : 2;
             
             return config.trackingRules
-                .filter(rule => rule.triggerEventId === triggerEventId)
-                .map(convertToRecsysRule)
-                .filter((rule): rule is IRecsysRule => rule !== null);
+                .filter(rule => rule.triggerEventId === triggerEventId);
         },
     };
 
     public payloadBuilder = {
-        build: (element: Element | IAIItemDetectionResult | null, rule: IRecsysRule, extraData: IPayloadExtraData = {}): IRecsysPayload => {
+        build: (element: Element | IAIItemDetectionResult | null, rule: TrackingRule, extraData: IPayloadExtraData = {}): IRecsysPayload => {
             const userIdentityManager = getUserIdentityManager();
             
             const payload: IRecsysPayload = {
-                event: rule.triggerEvent === "click" ? "item_click" : "page_view",
+                event: rule.triggerEventId === 1 ? "item_click" : "page_view",
                 url: window.location.href,
                 timestamp: Date.now(),
-                ruleName: rule.ruleName,
+                ruleName: rule.name,
                 userId: userIdentityManager.getRealUserId(),
                 itemId: 'N/A' 
             };
             
+            // Build payload extractor from rule data
+            const targetValue = rule.targetElement.targetElementValue || '';
+            const isRegex = targetValue.startsWith('^');
+            const extractor: PayloadExtractor = {
+                source: isRegex ? 'regex_group' : 'ai_detect',
+                eventKey: 'itemId',
+                pattern: isRegex ? targetValue : undefined,
+                groupIndex: isRegex ? 1 : undefined,
+            };
+            
             let detectionResult: IAIItemDetectionResult | null = null;
-            const extractor = rule.payloadExtractor;
 
             if (!extractor || typeof extractor.source === 'undefined') {
-                console.error(`[PayloadBuilder Error] Rule '${rule.ruleName}' is missing a valid payloadExtractor or source.`);
+                console.error(`[PayloadBuilder Error] Rule '${rule.name}' is missing a valid payloadExtractor or source.`);
                 return {
                     ...payload,
                     itemId: 'N/A (Invalid Rule Config)',
@@ -97,7 +78,7 @@ export class TrackerContextAdapter implements IRecsysContext {
             if (extractor.source === 'ai_detect') {
                 const detector = getAIItemDetector();
                 
-                if (rule.triggerEvent === 'page_view' && element && (element as IAIItemDetectionResult).id) {
+                if (rule.triggerEventId === 3 && element && (element as IAIItemDetectionResult).id) {
                     detectionResult = element as IAIItemDetectionResult;
                 } else if (detector && element instanceof Element) {
                     detectionResult = detector.detectItem(element); 

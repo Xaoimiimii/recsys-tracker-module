@@ -32,4 +32,4 @@ export { PluginManager } from './plugins/plugin-manager';
 export { ClickPlugin } from './plugins/click-plugin';
 export { PageViewPlugin } from './plugins/page-view-plugin';
 export { TrackerContextAdapter } from './plugins/adapters/tracker-context-adapter';
-export { IRecsysContext, IRecsysRule, RuleEvent } from './plugins/interfaces/recsys-context.interface';
+export { IRecsysContext } from './plugins/interfaces/recsys-context.interface';

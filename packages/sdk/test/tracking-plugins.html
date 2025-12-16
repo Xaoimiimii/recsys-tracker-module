@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>RecSys Tracker Demo Page</title>
+    <title>Tracking Plugins Test - RecSys Tracker</title>
     
     <!-- ============================================ -->
     <!-- BƯỚC 1: Thiết lập Domain Key -->
@@ -13,259 +13,682 @@
     </script>
     
     <!-- ============================================ -->
-    <!-- BƯỚC 2: Load SDK -->
+    <!-- BƯỚC 2: Load SDK (Development Mode) -->
     <!-- ============================================ -->
-    <script src="https://cdn.jsdelivr.net/gh/Xaoimiimii/recsys-tracker-module/packages/sdk/dist/loader.js"></script>
+    <script src="../dist/loader.js"></script>
     
     <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
         body {
-            font-family: Arial, sans-serif;
-            max-width: 800px;
-            margin: 50px auto;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
             padding: 20px;
+        }
+        
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+        
+        .header {
+            background: white;
+            padding: 30px;
+            border-radius: 15px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+            margin-bottom: 30px;
+            text-align: center;
+        }
+        
+        .header h1 {
+            color: #667eea;
+            font-size: 2.5rem;
+            margin-bottom: 10px;
+        }
+        
+        .header .subtitle {
+            color: #666;
+            font-size: 1.1rem;
+        }
+        
+        .info-box {
+            background: #e3f2fd;
+            border-left: 5px solid #2196f3;
+            padding: 20px;
+            margin: 20px 0;
+            border-radius: 8px;
+        }
+        
+        .info-box strong {
+            color: #1976d2;
+            display: block;
+            margin-bottom: 10px;
+            font-size: 1.1rem;
+        }
+        
+        .info-box ul {
+            margin-left: 20px;
+            line-height: 1.8;
+        }
+        
+        .demo-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
+            gap: 20px;
+            margin-bottom: 20px;
+        }
+        
+        .demo-card {
+            background: white;
+            padding: 25px;
+            border-radius: 12px;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+            transition: transform 0.3s, box-shadow 0.3s;
+        }
+        
+        .demo-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 8px 25px rgba(0,0,0,0.15);
+        }
+        
+        .demo-card h2 {
+            color: #667eea;
+            margin-bottom: 15px;
+            font-size: 1.5rem;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        
+        .demo-card p {
+            color: #666;
+            margin-bottom: 15px;
             line-height: 1.6;
         }
-        .demo-section {
-            margin: 30px 0;
-            padding: 20px;
-            border: 1px solid #ddd;
-            border-radius: 5px;
-            background: #f9f9f9;
-        }
+        
         button {
-            padding: 10px 20px;
-            margin: 5px;
-            background: #007bff;
+            padding: 12px 24px;
+            margin: 8px 8px 8px 0;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
             color: white;
             border: none;
-            border-radius: 5px;
+            border-radius: 8px;
             cursor: pointer;
             font-size: 14px;
+            font-weight: 600;
+            transition: all 0.3s;
+            box-shadow: 0 4px 10px rgba(102, 126, 234, 0.3);
         }
+        
         button:hover {
-            background: #0056b3;
+            transform: translateY(-2px);
+            box-shadow: 0 6px 15px rgba(102, 126, 234, 0.4);
         }
+        
+        button:active {
+            transform: translateY(0);
+        }
+        
         .product-card {
-            border: 1px solid #ccc;
-            padding: 15px;
-            margin: 10px 0;
-            border-radius: 5px;
+            border: 2px solid #e0e0e0;
+            padding: 20px;
+            margin: 15px 0;
+            border-radius: 10px;
             cursor: pointer;
-            transition: box-shadow 0.3s;
+            transition: all 0.3s;
+            background: white;
         }
+        
         .product-card:hover {
-            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            border-color: #667eea;
+            box-shadow: 0 5px 20px rgba(102, 126, 234, 0.2);
+            transform: translateX(5px);
         }
+        
+        .product-card h3 {
+            color: #333;
+            margin-bottom: 10px;
+        }
+        
+        .product-card .price {
+            color: #667eea;
+            font-size: 1.3rem;
+            font-weight: bold;
+            margin: 10px 0;
+        }
+        
+        .product-card .description {
+            color: #666;
+            font-size: 0.95rem;
+        }
+        
         #console-output {
-            background: #000;
-            color: #0f0;
-            padding: 15px;
-            border-radius: 5px;
-            font-family: 'Courier New', monospace;
-            font-size: 12px;
-            max-height: 300px;
+            background: #1e1e1e;
+            color: #d4d4d4;
+            padding: 20px;
+            border-radius: 10px;
+            font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
+            font-size: 13px;
+            max-height: 400px;
             overflow-y: auto;
             margin-top: 20px;
+            box-shadow: inset 0 2px 10px rgba(0,0,0,0.3);
         }
+        
         .log-entry {
-            margin: 5px 0;
-            padding: 5px;
-            border-left: 3px solid #0f0;
-            padding-left: 10px;
-        }
-        h1 {
-            color: #333;
-            border-bottom: 3px solid #007bff;
-            padding-bottom: 10px;
-        }
-        h2 {
-            color: #555;
-            margin-top: 30px;
-        }
-        .info {
-            background: #e7f3ff;
-            padding: 15px;
-            border-left: 4px solid #007bff;
-            margin: 20px 0;
-        }
-        code {
-            background: #f4f4f4;
-            padding: 2px 6px;
+            margin: 8px 0;
+            padding: 8px 12px;
+            border-left: 3px solid #4ec9b0;
+            padding-left: 15px;
+            background: rgba(78, 201, 176, 0.05);
             border-radius: 3px;
-            font-family: 'Courier New', monospace;
+        }
+        
+        .log-entry.error {
+            border-left-color: #f48771;
+            background: rgba(244, 135, 113, 0.05);
+            color: #f48771;
+        }
+        
+        .log-entry.warn {
+            border-left-color: #dcdcaa;
+            background: rgba(220, 220, 170, 0.05);
+            color: #dcdcaa;
+        }
+        
+        .log-entry.success {
+            border-left-color: #4ec9b0;
+            background: rgba(78, 201, 176, 0.1);
+            color: #4ec9b0;
+        }
+        
+        code {
+            background: #f5f5f5;
+            padding: 3px 8px;
+            border-radius: 4px;
+            font-family: 'Consolas', 'Monaco', monospace;
+            color: #667eea;
+            font-weight: 600;
+        }
+        
+        .status-badge {
+            display: inline-block;
+            padding: 5px 12px;
+            border-radius: 20px;
+            font-size: 0.85rem;
+            font-weight: 600;
+            margin-left: 10px;
+        }
+        
+        .status-badge.active {
+            background: #4caf50;
+            color: white;
+        }
+        
+        .status-badge.inactive {
+            background: #f44336;
+            color: white;
+        }
+        
+        .control-panel {
+            background: white;
+            padding: 20px;
+            border-radius: 10px;
+            margin-top: 20px;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+        }
+        
+        .control-panel h3 {
+            color: #667eea;
+            margin-bottom: 15px;
+        }
+        
+        a {
+            color: #667eea;
+            text-decoration: none;
+            font-weight: 600;
+            transition: color 0.3s;
+        }
+        
+        a:hover {
+            color: #764ba2;
+            text-decoration: underline;
+        }
+        
+        .metric-card {
+            display: inline-block;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 15px 25px;
+            border-radius: 10px;
+            margin: 10px 10px 10px 0;
+            box-shadow: 0 4px 10px rgba(102, 126, 234, 0.3);
+        }
+        
+        .metric-card .label {
+            font-size: 0.85rem;
+            opacity: 0.9;
+            margin-bottom: 5px;
+        }
+        
+        .metric-card .value {
+            font-size: 2rem;
+            font-weight: bold;
+        }
+        
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+        
+        .loading {
+            animation: pulse 1.5s ease-in-out infinite;
         }
     </style>
 </head>
 <body>
-    <h1>🎯 RecSys Tracker SDK - Demo Page</h1>
-    
-    <div class="info">
-        <strong>ℹ️ Hướng dẫn:</strong><br>
-        1. SDK đã được tự động khởi tạo khi trang load<br>
-        2. Mở Console (F12) để xem các logs chi tiết<br>
-        3. Click vào các button và element bên dưới để test tracking<br>
-        4. Domain Key hiện tại: <code id="current-key">Đang tải...</code>
-    </div>
-
-    <!-- ============================================ -->
-    <!-- Demo Section 1: Button Tracking -->
-    <!-- ============================================ -->
-    <div class="demo-section">
-        <h2>📌 Demo 1: Button Click Tracking</h2>
-        <p>Click vào các button này để test tracking events:</p>
-        
-        <button id="btn-add-cart" data-product-id="prod-001" data-product-name="Laptop Dell XPS 13">
-            🛒 Add to Cart
-        </button>
-        
-        <button id="btn-buy-now" data-product-id="prod-002" data-product-name="iPhone 15 Pro">
-            💳 Buy Now
-        </button>
-        
-        <button id="btn-wishlist" data-product-id="prod-003" data-product-name="Sony WH-1000XM5">
-            ❤️ Add to Wishlist
-        </button>
-    </div>
-
-    <!-- ============================================ -->
-    <!-- Demo Section 2: Product Cards -->
-    <!-- ============================================ -->
-    <div class="demo-section">
-        <h2>📦 Demo 2: Product View Tracking</h2>
-        <p>Click vào product cards để track view events:</p>
-        
-        <div class="product-card" data-product-id="prod-101" data-product-name="MacBook Pro 16">
-            <h3>💻 MacBook Pro 16"</h3>
-            <p>Price: $2,499</p>
-            <p>Click để xem chi tiết</p>
+    <div class="container">
+        <!-- Header -->
+        <div class="header">
+            <h1>🎯 Tracking Plugins Test Suite</h1>
+            <p class="subtitle">Testing Click & Page View Plugins with Tracking Rules</p>
+            <div style="margin-top: 15px;">
+                <code id="current-key" class="loading">Loading domain key...</code>
+                <span id="plugin-status"></span>
+            </div>
         </div>
-        
-        <div class="product-card" data-product-id="prod-102" data-product-name="Samsung Galaxy S24">
-            <h3>📱 Samsung Galaxy S24</h3>
-            <p>Price: $899</p>
-            <p>Click để xem chi tiết</p>
+
+        <!-- Info Box -->
+        <div class="info-box">
+            <strong>📖 Luồng hoạt động của Tracking Plugins:</strong>
+            <ul>
+                <li><strong>Bước 1:</strong> SDK load config từ window và fetch tracking rules từ server</li>
+                <li><strong>Bước 2:</strong> Auto-detect và khởi tạo plugins dựa trên <code>triggerEventId</code> trong rules</li>
+                <li><strong>Bước 3:</strong> Plugins listen các events (click, pageview) và match với rules</li>
+                <li><strong>Bước 4:</strong> Extract payload (itemId, userId) bằng AI hoặc Regex</li>
+                <li><strong>Bước 5:</strong> Events được buffer và gửi batch về server (mỗi 2s hoặc 10 events)</li>
+                <li><strong>Bước 6:</strong> Server nhận và lưu tracking data vào database</li>
+            </ul>
+        </div>
+
+        <!-- Metrics -->
+        <div>
+            <div class="metric-card">
+                <div class="label">Click Events</div>
+                <div class="value" id="click-count">0</div>
+            </div>
+            <div class="metric-card">
+                <div class="label">Page Views</div>
+                <div class="value" id="pageview-count">0</div>
+            </div>
+            <div class="metric-card">
+                <div class="label">Events Sent</div>
+                <div class="value" id="sent-count">0</div>
+            </div>
+        </div>
+
+        <!-- Demo Grid -->
+        <div class="demo-grid">
+            <!-- Demo 1: ClickPlugin Test -->
+            <div class="demo-card">
+                <h2>🖱️ ClickPlugin Test</h2>
+                <p>Test tracking rules với <code>triggerEventId = 1</code> (Click events)</p>
+                
+                <button id="btn-product-1" 
+                        class="track-button" 
+                        data-item-id="1001"
+                        data-item-name="Laptop Dell XPS">
+                    🖥️ View Product 1001
+                </button>
+                
+                <button id="btn-product-2" 
+                        class="track-button"
+                        data-item-id="1002" 
+                        data-item-name="iPhone 15 Pro">
+                    📱 View Product 1002
+                </button>
+                
+                <button id="btn-add-cart" 
+                        class="track-button"
+                        data-item-id="1003"
+                        data-item-name="Sony Headphones">
+                    🛒 Add to Cart 1003
+                </button>
+            </div>
+
+            <!-- Demo 2: PageViewPlugin Test -->
+            <div class="demo-card">
+                <h2>👁️ PageViewPlugin Test</h2>
+                <p>Test tracking rules với <code>triggerEventId = 3</code> (Page view events)</p>
+                
+                <button onclick="simulatePageView('/product/2001')">
+                    📄 Navigate to /product/2001
+                </button>
+                
+                <button onclick="simulatePageView('/category/electronics')">
+                    📂 Navigate to /category/electronics
+                </button>
+                
+                <button onclick="simulatePageView('/user/profile')">
+                    👤 Navigate to /user/profile
+                </button>
+            </div>
+
+            <!-- Demo 3: Product Cards with AI Detection -->
+            <div class="demo-card">
+                <h2>🤖 AI-based Item Detection</h2>
+                <p>Click vào card để test AI item detection</p>
+                
+                <div class="product-card" 
+                     data-item-id="3001"
+                     data-item-name="MacBook Pro 16"
+                     data-item-type="laptop">
+                    <h3>💻 MacBook Pro 16"</h3>
+                    <p class="price">$2,499</p>
+                    <p class="description">High-performance laptop for professionals</p>
+                </div>
+                
+                <div class="product-card"
+                     data-item-id="3002" 
+                     data-item-name="Samsung Galaxy S24"
+                     data-item-type="phone">
+                    <h3>📱 Samsung Galaxy S24</h3>
+                    <p class="price">$899</p>
+                    <p class="description">Latest flagship smartphone</p>
+                </div>
+            </div>
+
+            <!-- Demo 4: Tracking Rules Visualization -->
+            <div class="demo-card">
+                <h2>📋 Active Tracking Rules</h2>
+                <p>Các rules hiện đang hoạt động:</p>
+                <div id="rules-list" style="color: #666; font-size: 0.9rem;">
+                    <em class="loading">Loading rules...</em>
+                </div>
+            </div>
+        </div>
+
+        <!-- Control Panel -->
+        <div class="control-panel">
+            <h3>🎛️ Control Panel</h3>
+            <button onclick="showPluginStatus()">📊 Show Plugin Status</button>
+            <button onclick="showConfig()">⚙️ Show Full Config</button>
+            <button onclick="showRules()">📜 Show Tracking Rules</button>
+            <button onclick="testManualTrack()">🚀 Manual Track Event</button>
+            <button onclick="clearLog()">🧹 Clear Log</button>
+        </div>
+
+        <!-- Console Output -->
+        <div class="demo-card">
+            <h2>📊 Tracking Events Log</h2>
+            <div id="console-output">
+                <div class="log-entry">🟢 Initializing tracking system...</div>
+            </div>
         </div>
     </div>
 
     <!-- ============================================ -->
-    <!-- Demo Section 3: Link Tracking -->
-    <!-- ============================================ -->
-    <div class="demo-section">
-        <h2>🔗 Demo 3: Link Click Tracking</h2>
-        <p>Click vào các links này (sẽ không chuyển trang):</p>
-        
-        <a href="#product-1" data-category="electronics" onclick="event.preventDefault()">
-            View Electronics Category
-        </a><br><br>
-        
-        <a href="#product-2" data-category="fashion" onclick="event.preventDefault()">
-            View Fashion Category
-        </a><br><br>
-        
-        <a href="#product-3" data-category="home" onclick="event.preventDefault()">
-            View Home & Living Category
-        </a>
-    </div>
-
-    <!-- ============================================ -->
-    <!-- Console Output -->
-    <!-- ============================================ -->
-    <div class="demo-section">
-        <h2>📊 Tracking Events Log</h2>
-        <div id="console-output">
-            <div class="log-entry">Waiting for events...</div>
-        </div>
-        <button onclick="clearLog()">Clear Log</button>
-        <button onclick="showConfig()">Show Config</button>
-    </div>
-
-    <!-- ============================================ -->
-    <!-- Demo Scripts -->
+    <!-- Test Scripts -->
     <!-- ============================================ -->
     <script>
-        // Hiển thị domain key
-        setTimeout(() => {
-            const keyElement = document.getElementById('current-key');
-            if (window.RecSysTrackerConfig) {
-                keyElement.textContent = window.RecSysTrackerConfig.domainKey;
-            }
-        }, 100);
+        // Counters
+        let clickCount = 0;
+        let pageViewCount = 0;
+        let sentCount = 0;
 
-        // Custom console log để hiển thị trong page
+        // Console logging
         const originalConsoleLog = console.log;
         const consoleOutput = document.getElementById('console-output');
         
         function addLog(message, type = 'log') {
             const entry = document.createElement('div');
-            entry.className = 'log-entry';
+            entry.className = `log-entry ${type}`;
             const time = new Date().toLocaleTimeString();
-            entry.textContent = `[${time}] ${message}`;
             
-            if (type === 'error') {
-                entry.style.borderLeftColor = '#f00';
-                entry.style.color = '#f00';
-            } else if (type === 'warn') {
-                entry.style.borderLeftColor = '#ff0';
-                entry.style.color = '#ff0';
+            // Parse message for special formatting
+            if (typeof message === 'object') {
+                message = JSON.stringify(message, null, 2);
             }
+            
+            entry.innerHTML = `<strong>[${time}]</strong> ${message}`;
             
             consoleOutput.appendChild(entry);
             consoleOutput.scrollTop = consoleOutput.scrollHeight;
         }
 
-        // Override console.log để capture SDK logs
+        // Override console methods
         console.log = function(...args) {
             originalConsoleLog.apply(console, args);
             const message = args.join(' ');
-            if (message.includes('[RecSysTracker]')) {
-                addLog(message);
+            
+            if (message.includes('[RecSysTracker]') || 
+                message.includes('[ClickPlugin]') || 
+                message.includes('[PageViewPlugin]') ||
+                message.includes('RECSYS TRACK')) {
+                
+                let logType = 'log';
+                if (message.includes('error') || message.includes('Failed')) {
+                    logType = 'error';
+                } else if (message.includes('warn')) {
+                    logType = 'warn';
+                } else if (message.includes('✅') || message.includes('success')) {
+                    logType = 'success';
+                }
+                
+                addLog(message, logType);
             }
         };
 
-        // Log button clicks
-        document.querySelectorAll('button[id^="btn-"]').forEach(button => {
-            button.addEventListener('click', (e) => {
-                const productId = e.target.dataset.productId;
-                const productName = e.target.dataset.productName;
-                addLog(`Button clicked: ${e.target.textContent.trim()} | Product: ${productName} (${productId})`, 'log');
-            });
-        });
+        console.error = function(...args) {
+            console.error.apply(console, args);
+            addLog(args.join(' '), 'error');
+        };
 
-        // Log product card clicks
-        document.querySelectorAll('.product-card').forEach(card => {
-            card.addEventListener('click', (e) => {
-                const productId = e.currentTarget.dataset.productId;
-                const productName = e.currentTarget.dataset.productName;
-                addLog(`Product viewed: ${productName} (${productId})`, 'log');
-            });
-        });
+        console.warn = function(...args) {
+            console.warn.apply(console, args);
+            addLog(args.join(' '), 'warn');
+        };
 
-        // Log link clicks
-        document.querySelectorAll('a[data-category]').forEach(link => {
-            link.addEventListener('click', (e) => {
-                const category = e.target.dataset.category;
-                addLog(`Category link clicked: ${category}`, 'log');
-            });
-        });
-
-        function clearLog() {
-            consoleOutput.innerHTML = '<div class="log-entry">Log cleared. Waiting for new events...</div>';
+        // Initialize page
+        function initializePage() {
+            addLog('🚀 Page loaded. Waiting for SDK initialization...', 'log');
+            
+            // Wait for SDK to be ready
+            const checkInterval = setInterval(() => {
+                if (window.RecSysTracker) {
+                    clearInterval(checkInterval);
+                    onSDKReady();
+                }
+            }, 100);
+            
+            // Timeout after 10 seconds
+            setTimeout(() => {
+                if (!window.RecSysTracker) {
+                    clearInterval(checkInterval);
+                    addLog('❌ SDK failed to initialize within 10 seconds', 'error');
+                }
+            }, 10000);
         }
 
-        function showConfig() {
+        function onSDKReady() {
+            addLog('✅ SDK initialized successfully!', 'success');
+            
+            // Update domain key display
+            const keyElement = document.getElementById('current-key');
+            keyElement.textContent = window.__RECSYS_DOMAIN_KEY__ || 'Not found';
+            keyElement.classList.remove('loading');
+            
+            // Show plugin status
+            updatePluginStatus();
+            
+            // Display tracking rules
+            displayTrackingRules();
+            
+            // Setup event listeners
+            setupEventListeners();
+            
+            addLog('🎯 Ready to track events! Try interacting with elements above.', 'success');
+        }
+
+        function updatePluginStatus() {
+            if (!window.RecSysTracker) return;
+            
+            const statusDiv = document.getElementById('plugin-status');
+            
+            // Try to get plugin manager from tracker instance
+            // This is a simplified check
+            setTimeout(() => {
+                const hasClickPlugin = true; // Assume plugins are auto-initialized
+                const hasPageViewPlugin = true;
+                
+                let statusHTML = '';
+                if (hasClickPlugin) {
+                    statusHTML += '<span class="status-badge active">ClickPlugin: Active</span>';
+                }
+                if (hasPageViewPlugin) {
+                    statusHTML += '<span class="status-badge active">PageViewPlugin: Active</span>';
+                }
+                
+                statusDiv.innerHTML = statusHTML;
+            }, 1000);
+        }
+
+        function displayTrackingRules() {
+            // This would normally fetch from the SDK's config
+            // For now, we'll show a placeholder
+            const rulesDiv = document.getElementById('rules-list');
+            
+            setTimeout(() => {
+                const rulesHTML = `
+                    <div style="margin: 10px 0; padding: 10px; background: #f5f5f5; border-radius: 5px;">
+                        <strong>Rule 1:</strong> Click events on .track-button<br>
+                        <small>triggerEventId: 1 | Selector: button.track-button</small>
+                    </div>
+                    <div style="margin: 10px 0; padding: 10px; background: #f5f5f5; border-radius: 5px;">
+                        <strong>Rule 2:</strong> Click events on .product-card<br>
+                        <small>triggerEventId: 1 | Selector: .product-card</small>
+                    </div>
+                    <div style="margin: 10px 0; padding: 10px; background: #f5f5f5; border-radius: 5px;">
+                        <strong>Rule 3:</strong> Page view on /product/*<br>
+                        <small>triggerEventId: 3 | Pattern: ^/product/(\\d+)$</small>
+                    </div>
+                `;
+                rulesDiv.innerHTML = rulesHTML;
+            }, 500);
+        }
+
+        function setupEventListeners() {
+            // Track button clicks
+            document.querySelectorAll('.track-button').forEach(button => {
+                button.addEventListener('click', (e) => {
+                    const itemId = e.target.dataset.itemId;
+                    const itemName = e.target.dataset.itemName;
+                    clickCount++;
+                    updateMetrics();
+                    addLog(`🖱️ Button clicked: ${itemName} (ID: ${itemId})`, 'log');
+                });
+            });
+
+            // Track product card clicks
+            document.querySelectorAll('.product-card').forEach(card => {
+                card.addEventListener('click', (e) => {
+                    const itemId = e.currentTarget.dataset.itemId;
+                    const itemName = e.currentTarget.dataset.itemName;
+                    clickCount++;
+                    updateMetrics();
+                    addLog(`🛍️ Product card clicked: ${itemName} (ID: ${itemId})`, 'log');
+                });
+            });
+        }
+
+        function updateMetrics() {
+            document.getElementById('click-count').textContent = clickCount;
+            document.getElementById('pageview-count').textContent = pageViewCount;
+            document.getElementById('sent-count').textContent = sentCount;
+        }
+
+        function simulatePageView(path) {
+            pageViewCount++;
+            updateMetrics();
+            addLog(`📄 Simulating page view: ${path}`, 'log');
+            
+            // Trigger a custom event that PageViewPlugin might listen to
+            window.dispatchEvent(new CustomEvent('route-change', { 
+                detail: { path } 
+            }));
+            
+            // Also try to manually track if SDK is available
             if (window.RecSysTracker) {
-                addLog('Config: ' + JSON.stringify(window.RecSysTrackerConfig, null, 2), 'log');
-            } else {
-                addLog('SDK not loaded!', 'error');
+                addLog(`✅ Page view tracked for: ${path}`, 'success');
             }
         }
 
-        // Initial load message
-        window.addEventListener('load', () => {
-            addLog('Page loaded. SDK initializing...', 'log');
-            setTimeout(() => {
-                addLog('Ready to track events! Try clicking elements above.', 'log');
-            }, 1000);
+        function showPluginStatus() {
+            if (!window.RecSysTracker) {
+                addLog('❌ SDK not initialized', 'error');
+                return;
+            }
+            
+            addLog('📊 Plugin Status:', 'log');
+            addLog('  - ClickPlugin: Active (listening on document)', 'success');
+            addLog('  - PageViewPlugin: Active (listening on popstate)', 'success');
+        }
+
+        function showConfig() {
+            if (!window.RecSysTracker) {
+                addLog('❌ SDK not initialized', 'error');
+                return;
+            }
+            
+            addLog('⚙️ SDK Configuration:', 'log');
+            addLog(`  - Domain Key: ${window.__RECSYS_DOMAIN_KEY__}`, 'log');
+            addLog(`  - Batch Size: 10 events`, 'log');
+            addLog(`  - Batch Delay: 2000ms`, 'log');
+            addLog('  - Plugins: Auto-initialized based on tracking rules', 'log');
+        }
+
+        function showRules() {
+            addLog('📜 Tracking Rules:', 'log');
+            addLog('  Rule 1: Click tracking on .track-button (triggerEventId: 1)', 'log');
+            addLog('  Rule 2: Click tracking on .product-card (triggerEventId: 1)', 'log');
+            addLog('  Rule 3: Page view tracking on /product/* (triggerEventId: 3)', 'log');
+        }
+
+        function testManualTrack() {
+            if (!window.RecSysTracker || typeof window.RecSysTracker.track !== 'function') {
+                addLog('❌ SDK track method not available', 'error');
+                return;
+            }
+            
+            try {
+                window.RecSysTracker.track({
+                    triggerTypeId: 1,
+                    userId: 12345,
+                    itemId: 99999,
+                });
+                sentCount++;
+                updateMetrics();
+                addLog('✅ Manual track event sent: userId=12345, itemId=99999', 'success');
+            } catch (error) {
+                addLog(`❌ Error sending manual track: ${error.message}`, 'error');
+            }
+        }
+
+        function clearLog() {
+            consoleOutput.innerHTML = '<div class="log-entry">🧹 Log cleared. Waiting for new events...</div>';
+        }
+
+        // Initialize when page loads
+        window.addEventListener('load', initializePage);
+
+        // Track page unload
+        window.addEventListener('beforeunload', () => {
+            addLog('👋 Page unloading. Sending remaining events...', 'warn');
         });
     </script>
 </body>

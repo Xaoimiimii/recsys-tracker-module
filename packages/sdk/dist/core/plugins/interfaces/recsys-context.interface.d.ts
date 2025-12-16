@@ -1,5 +1,5 @@
-import { IRecsysRule, RuleEvent } from './recsys-rule.interface';
-export { IRecsysRule, RuleEvent };
+import type { TrackingRule } from '../../../types';
+export type { TrackingRule };
 export interface IRecsysPayload {
     event: string;
     url: string;
@@ -26,14 +26,14 @@ export interface IPayloadExtraData {
     regexMatch?: RegExpMatchArray;
 }
 export interface IPayloadBuilder {
-    build: (element: Element | IAIItemDetectionResult | null, rule: IRecsysRule, extraData?: IPayloadExtraData) => IRecsysPayload;
+    build: (element: Element | IAIItemDetectionResult | null, rule: TrackingRule, extraData?: IPayloadExtraData) => IRecsysPayload;
 }
 export interface IEventBuffer {
     enqueue: (payload: IRecsysPayload) => void;
 }
 export interface IRecsysContext {
     config: {
-        getRules: (eventType: RuleEvent) => IRecsysRule[];
+        getRules: (triggerEventId: number) => TrackingRule[];
     };
     payloadBuilder: IPayloadBuilder;
     eventBuffer: IEventBuffer;

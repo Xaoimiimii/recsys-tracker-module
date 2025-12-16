@@ -2,7 +2,6 @@ import { BasePlugin } from './base-plugin';
 import { RecSysTracker } from '../..';
 export declare class ClickPlugin extends BasePlugin {
     readonly name = "ClickPlugin";
-    readonly version = "1.0.0";
     private context;
     private detector;
     private throttledHandler;

@@ -1,4 +1,4 @@
-import { ICondition } from '../interfaces/recsys-rule.interface';
+import { Condition } from '../../../types';
 
 export const STORAGE_KEYS = {
     ANON_USER_ID: 'recsys_anon_id',
@@ -42,8 +42,8 @@ export function throttle<T extends (...args: any[]) => void>(fn: T, delay: numbe
     };
 }
 
-export function checkRuleCondition(url: string, condition: ICondition): boolean {
-    if (condition.type === "NONE") { return true; }
+export function checkRuleCondition(url: string, condition: Condition): boolean {
+    if (condition.eventPatternId === 0) { return true; }
     let urlPath: string;
     try {
         urlPath = new URL(url).pathname;
@@ -51,8 +51,8 @@ export function checkRuleCondition(url: string, condition: ICondition): boolean 
         urlPath = "";
     }
     if (
-        condition.type === "URL_PATH" &&
-        condition.operator === "equals" &&
+        condition.eventPatternId === 2 &&
+        condition.operatorId === 5 &&
         condition.value
     ) {
         return urlPath === condition.value;
