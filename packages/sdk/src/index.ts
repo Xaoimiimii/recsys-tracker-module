@@ -5,10 +5,10 @@ import {
   TrackedEvent,
   EventDispatcher,
   MetadataNormalizer,
-  DisplayManager
+  DisplayManager,
+  PluginManager
 } from './core';
-import { TrackerConfig, Plugin, PluginContext } from './types';
-import { FormPlugin } from './core/plugins/FormPlugin';
+import { TrackerConfig } from './types';
 
 // RecSysTracker - Main SDK class
 export class RecSysTracker {
@@ -18,107 +18,18 @@ export class RecSysTracker {
   private eventDispatcher: EventDispatcher | null = null;
   private metadataNormalizer: MetadataNormalizer;
   private displayManager: DisplayManager | null = null;
+  private pluginManager: PluginManager;
   private config: TrackerConfig | null = null;
   private userId: string | null = null;
   private isInitialized: boolean = false;
   private sendInterval: number | null = null;
-  private plugins: Plugin[] = [];
-
-  public registerPlugin(plugin: Plugin) {
-    // Tạo Context kết nối Plugin -> SDK Core
-    const context: PluginContext = {
-      config: this.config, 
-      // Adapter: Chuyển đổi hàm track của Plugin sang hàm track của SDK
-      track: (eventName, payload) => {
-        this.trackGeneric(eventName, payload);
-      }
-    };
-
-    // Khởi tạo Plugin an toàn (bọc trong ErrorBoundary)
-    this.errorBoundary.execute(() => {
-        plugin.init(context);
-        this.plugins.push(plugin);
-    }, `registerPlugin:${plugin.name}`);
-  }
-
-  // Hàm khởi chạy tất cả plugin (gọi trong init)
-  private startPlugins() {
-      this.plugins.forEach(p => p.start());
-  }
-
-  // Hàm khởi động lại tất cả plugin
-  private restartPlugins() {
-      this.plugins.forEach(plugin => {
-          plugin.stop(); 
-          
-          // Cập nhật context mới 
-          const newContext: PluginContext = {
-              config: this.config,
-              track: (eventName, payload) => this.trackGeneric(eventName, payload)
-          };
-          
-          plugin.init(newContext);
-          plugin.start(); 
-      });
-  }
-
-  private syncPluginsWithConfig() {
-    if (!this.config || !this.config.trackingRules) return;
-
-    const rules = this.config.trackingRules;
-
-    // Lấy danh sách các Trigger ID duy nhất từ config server trả về
-    // Ví dụ server trả về: [ {id:1, triggerEventId: 2}, {id:2, triggerEventId: 4} ]
-    // -> requiredIds = [2, 4]
-    const requiredTriggerIds = new Set(rules.map(r => r.triggerEventId));
-
-    requiredTriggerIds.forEach(triggerId => {
-      // 2. Mapping ID -> Class Plugin ngay tại đây (Dùng switch-case hoặc if)
-      let PluginClass: new () => Plugin
-
-      switch (triggerId) {
-        case 2: // Form Submit
-        case 3: // Change
-        case 4: // Keydown
-          // Các ID này đều do FormPlugin xử lý
-          PluginClass = FormPlugin; 
-          break;
-          
-        // case 1:
-        //   PluginClass = ClickPlugin;
-        //   break;
-          
-        // case 5: 
-        //   PluginClass = ScrollPlugin;
-        //   break;
-          
-        default:
-          console.warn(`[RecSysTracker] No plugin found for TriggerID: ${triggerId}`);
-          return;
-      }
-
-      // 3. Khởi tạo Plugin (nếu chưa có)
-      // Kiểm tra xem trong list this.plugins đã có instance của class này chưa
-      // Tránh trường hợp ID 2 và 4 cùng trỏ về FormPlugin mà lại new 2 lần
-      if (PluginClass) {
-        const alreadyExists = this.plugins.some(p => p instanceof PluginClass!);
-        
-        if (!alreadyExists) {
-          const newPlugin = new PluginClass();
-          this.registerPlugin(newPlugin); // Đăng ký và push vào mảng this.plugins
-        }
-      }
-    });
-
-    // 4. Restart lại các plugin vừa tạo để chúng nhận context & config mới
-    this.restartPlugins();
-  }
 
   constructor() {
     this.configLoader = new ConfigLoader();
     this.errorBoundary = new ErrorBoundary();
     this.eventBuffer = new EventBuffer();
     this.metadataNormalizer = new MetadataNormalizer();
+    this.pluginManager = new PluginManager(this);
   }
 
   // Khởi tạo SDK - tự động gọi khi tải script
@@ -143,7 +54,6 @@ export class RecSysTracker {
       const remoteConfig = await this.configLoader.fetchRemoteConfig();
       if (remoteConfig) {
         this.config = remoteConfig;
-        this.syncPluginsWithConfig();
         
         // Cập nhật domainUrl cho EventDispatcher để verify origin khi gửi event
         if (this.eventDispatcher && this.config.domainUrl) {
@@ -157,6 +67,10 @@ export class RecSysTracker {
           this.displayManager.initialize(this.config.returnMethods);
           console.log('[RecSysTracker] Display methods initialized');
         }
+
+        // Tự động khởi tạo plugins dựa trên rules
+        this.autoInitializePlugins();
+
       } else {
         // Nếu origin verification thất bại, không khởi tạo SDK
         console.error('[RecSysTracker] Failed to initialize SDK: origin verification failed');
@@ -175,32 +89,74 @@ export class RecSysTracker {
     }, 'init');
   }
 
+  // Tự động khởi tạo plugins dựa trên tracking rules
+  private async autoInitializePlugins(): Promise<void> {
+    if (!this.config?.trackingRules || this.config.trackingRules.length === 0) {
+      return;
+    }
+
+    // Kiểm tra nếu có rule nào cần ClickPlugin (triggerEventId === 1)
+    const hasClickRules = this.config.trackingRules.some(rule => rule.triggerEventId === 1);
+    
+    // Kiểm tra nếu có rule nào cần PageViewPlugin (triggerEventId === 3)
+    const hasPageViewRules = this.config.trackingRules.some(rule => rule.triggerEventId === 3);
+
+    // Chỉ tự động đăng ký nếu chưa có plugin nào được đăng ký
+    if (this.pluginManager.getPluginNames().length === 0) {
+      const pluginPromises: Promise<void>[] = [];
+
+      if (hasClickRules) {
+        // Import động để tránh circular dependency
+        const clickPromise = import('./core/plugins/click-plugin').then(({ ClickPlugin }) => {
+          this.use(new ClickPlugin());
+          console.log('[RecSysTracker] Auto-registered ClickPlugin based on tracking rules');
+        });
+        pluginPromises.push(clickPromise);
+      }
+
+      if (hasPageViewRules) {
+        // Import động để tránh circular dependency
+        const pageViewPromise = import('./core/plugins/page-view-plugin').then(({ PageViewPlugin }) => {
+          this.use(new PageViewPlugin());
+          console.log('[RecSysTracker] Auto-registered PageViewPlugin based on tracking rules');
+        });
+        pluginPromises.push(pageViewPromise);
+      }
+
+      // Chờ tất cả plugin được đăng ký trước khi khởi động
+      if (pluginPromises.length > 0) {
+        await Promise.all(pluginPromises);
+        this.startPlugins();
+        console.log('[RecSysTracker] Auto-started plugins');
+      }
+    }
+  }
+
   // Track custom event
-  trackGeneric(eventName: string, payload: Record<string, any>): void {
+  track(eventData: {
+    triggerTypeId: number;
+    userId: number;
+    itemId: number;
+    rate?: {
+      Value: number;
+      Review: string;
+    };
+  }): void {
     this.errorBoundary.execute(() => {
-      if (!this.isInitialized || !this.config) return;
+      if (!this.isInitialized || !this.config) {
+        return;
+      }
 
-      // 1. Lấy metadata tự động (Url, Device, Session...)
-      const metadata = this.metadataNormalizer.getMetadata();
-      this.metadataNormalizer.updateSessionActivity();
-
-      // 2. Tạo Event Object
       const trackedEvent: TrackedEvent = {
         id: this.metadataNormalizer.generateEventId(),
-        timestamp: new Date(), // Hoặc Date.now() tùy type TrackedEvent
+        timestamp: new Date(),
+        triggerTypeId: eventData.triggerTypeId,
         domainKey: this.config.domainKey,
-        
-        // Nếu Server cần triggerTypeId (số), ta phải map từ eventName (chuỗi)
-        // Hoặc tốt nhất: Server nên nhận eventName là String để linh hoạt
-        // Ở đây mình tạm để payload chứa toàn bộ data
-        triggerTypeId: payload.triggerTypeId || 0, // Fallback nếu plugin không gửi ID
-        
         payload: {
-          eventName: eventName,
-          userId: this.userId, // Gắn userId nếu đã setGlobal
-          ...payload,          // Merge dữ liệu từ form (content, formId...)
-          ...metadata.page,    // Gắn thông tin URL
-        }
+          UserId: eventData.userId,
+          ItemId: eventData.itemId,
+        },
+        ...(eventData.rate && { rate: eventData.rate }),
       };
 
       this.eventBuffer.add(trackedEvent);
@@ -305,7 +261,7 @@ export class RecSysTracker {
       }
 
       // Stop all plugins
-      this.plugins.forEach(p => p.stop());
+      this.pluginManager.destroy();
 
       // Flush remaining events
       if (!this.eventBuffer.isEmpty()) {
@@ -321,6 +277,33 @@ export class RecSysTracker {
 
       this.isInitialized = false;
     }, 'destroy');
+  }
+  
+  // Plugin Management Methods
+  // Lấy plugin manager instance
+  getPluginManager(): PluginManager {
+    return this.pluginManager;
+  }
+  
+  // Lấy display manager instance
+  getDisplayManager(): DisplayManager | null {
+    return this.displayManager;
+  }
+  
+  // Register 1 plugin
+  use(plugin: any): this {
+    this.pluginManager.register(plugin);
+    return this;
+  }
+  
+  // Start tất cả plugins đã register
+  startPlugins(): void {
+    this.pluginManager.startAll();
+  }
+  
+  // Stop tất cả plugins đã register
+  stopPlugins(): void {
+    this.pluginManager.stopAll();
   }
 }
 
@@ -353,8 +336,15 @@ if (typeof window !== 'undefined') {
 // Default export for convenience
 export default RecSysTracker;
 
-// Export core classes for testing
-export { ConfigLoader } from './core';
+// Export core classes for testing and advanced usage
+export { ConfigLoader, PluginManager, DisplayManager } from './core';
+
+// Export plugin base classes
+export { IPlugin, BasePlugin } from './core/plugins/base-plugin';
+
+// Export built-in plugins
+export { ClickPlugin } from './core/plugins/click-plugin';
+export { PageViewPlugin } from './core/plugins/page-view-plugin';
 
 // Export types for TypeScript users
 export type * from './types';

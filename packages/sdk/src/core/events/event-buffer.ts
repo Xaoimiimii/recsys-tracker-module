@@ -11,16 +11,17 @@ export interface TrackedEvent {
   timestamp: string | Date;
   triggerTypeId: number;
   domainKey: string;
-  // payload: {
-  //   UserId: number;
-  //   ItemId: number;
-  // };
-  payload: Record<string, any>;
+  payload: {
+    UserId: number;
+    ItemId: number;
+  };
   rate?: {
     Value: number;
     Review: string;
   };
   retryCount?: number; // Cho logic SDK retry
+  lastRetryAt?: number; // Timestamp của lần retry cuối cùng
+  nextRetryAt?: number; // Timestamp của lần retry tiếp theo (exponential backoff)
 }
 
 // Interface lưu trữ để trừu tượng hóa localStorage/IndexedDB
@@ -96,9 +97,14 @@ export class EventBuffer {
     this.persistToStorage();
   }
 
-  // Lấy các sự kiện để gửi theo batch
+  // Lấy các sự kiện để gửi theo batch (chỉ lấy những event đã đến thời gian retry)
   getBatch(size: number): TrackedEvent[] {
-    return this.queue.slice(0, size);
+    const now = Date.now();
+    const readyEvents = this.queue.filter(event => {
+      // Nếu chưa từng retry hoặc đã đến thời gian retry tiếp theo
+      return !event.nextRetryAt || event.nextRetryAt <= now;
+    });
+    return readyEvents.slice(0, size);
   }
 
   // Xóa các sự kiện khỏi buffer sau khi gửi thành công
@@ -107,11 +113,24 @@ export class EventBuffer {
     this.persistToStorage();
   }
 
-  // Đánh dấu các sự kiện thất bại và tăng số lần thử lại
+  // Đánh dấu các sự kiện thất bại và tăng số lần thử lại với exponential backoff
   markFailed(eventIds: string[]): void {
+    const now = Date.now();
     this.queue.forEach(event => {
       if (eventIds.includes(event.id)) {
         event.retryCount = (event.retryCount || 0) + 1;
+        event.lastRetryAt = now;
+        
+        // Exponential backoff: 1s → 2s → 4s → 8s → 16s
+        const backoffDelay = Math.min(
+          Math.pow(2, event.retryCount) * 1000, // 2^n seconds
+          32000 // Max 32 seconds
+        );
+        event.nextRetryAt = now + backoffDelay;
+        
+        console.log(
+          `[EventBuffer] Event ${event.id} will retry in ${backoffDelay / 1000}s (attempt ${event.retryCount}/${this.maxRetries})`
+        );
       }
     });
 
