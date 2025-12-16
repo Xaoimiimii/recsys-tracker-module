@@ -11,10 +11,11 @@ export interface TrackedEvent {
   timestamp: string | Date;
   triggerTypeId: number;
   domainKey: string;
-  payload: {
-    UserId: number;
-    ItemId: number;
-  };
+  // payload: {
+  //   UserId: number;
+  //   ItemId: number;
+  // };
+  payload: Record<string, any>;
   rate?: {
     Value: number;
     Review: string;

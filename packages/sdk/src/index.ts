@@ -8,7 +8,7 @@ import {
   DisplayManager
 } from './core';
 import { TrackerConfig, Plugin, PluginContext } from './types';
-import { FormPlugin } from './plugins/FormPlugin';
+import { FormPlugin } from './core/plugins/FormPlugin';
 
 // RecSysTracker - Main SDK class
 export class RecSysTracker {
@@ -29,11 +29,9 @@ export class RecSysTracker {
     const context: PluginContext = {
       config: this.config, 
       // Adapter: Chuyển đổi hàm track của Plugin sang hàm track của SDK
-      track: (eventName, payload) => this.track({
-        event: eventName,
-        category: 'interaction',
-        data: payload
-      })
+      track: (eventName, payload) => {
+        this.trackGeneric(eventName, payload);
+      }
     };
 
     // Khởi tạo Plugin an toàn (bọc trong ErrorBoundary)
@@ -56,16 +54,64 @@ export class RecSysTracker {
           // Cập nhật context mới 
           const newContext: PluginContext = {
               config: this.config,
-              track: (eventName, payload) => this.track({
-                  event: eventName,
-                  category: 'interaction',
-                  data: payload
-              })
+              track: (eventName, payload) => this.trackGeneric(eventName, payload)
           };
           
           plugin.init(newContext);
           plugin.start(); 
       });
+  }
+
+  private syncPluginsWithConfig() {
+    if (!this.config || !this.config.trackingRules) return;
+
+    const rules = this.config.trackingRules;
+
+    // Lấy danh sách các Trigger ID duy nhất từ config server trả về
+    // Ví dụ server trả về: [ {id:1, triggerEventId: 2}, {id:2, triggerEventId: 4} ]
+    // -> requiredIds = [2, 4]
+    const requiredTriggerIds = new Set(rules.map(r => r.triggerEventId));
+
+    requiredTriggerIds.forEach(triggerId => {
+      // 2. Mapping ID -> Class Plugin ngay tại đây (Dùng switch-case hoặc if)
+      let PluginClass: new () => Plugin
+
+      switch (triggerId) {
+        case 2: // Form Submit
+        case 3: // Change
+        case 4: // Keydown
+          // Các ID này đều do FormPlugin xử lý
+          PluginClass = FormPlugin; 
+          break;
+          
+        // case 1:
+        //   PluginClass = ClickPlugin;
+        //   break;
+          
+        // case 5: 
+        //   PluginClass = ScrollPlugin;
+        //   break;
+          
+        default:
+          console.warn(`[RecSysTracker] No plugin found for TriggerID: ${triggerId}`);
+          return;
+      }
+
+      // 3. Khởi tạo Plugin (nếu chưa có)
+      // Kiểm tra xem trong list this.plugins đã có instance của class này chưa
+      // Tránh trường hợp ID 2 và 4 cùng trỏ về FormPlugin mà lại new 2 lần
+      if (PluginClass) {
+        const alreadyExists = this.plugins.some(p => p instanceof PluginClass!);
+        
+        if (!alreadyExists) {
+          const newPlugin = new PluginClass();
+          this.registerPlugin(newPlugin); // Đăng ký và push vào mảng this.plugins
+        }
+      }
+    });
+
+    // 4. Restart lại các plugin vừa tạo để chúng nhận context & config mới
+    this.restartPlugins();
   }
 
   constructor() {
@@ -93,15 +139,11 @@ export class RecSysTracker {
         endpoint: this.config.trackEndpoint || '/track',
       });
 
-      //Đăng ký FormPlugin mặc định
-      this.registerPlugin(new FormPlugin());
-      this.startPlugins();
-
       // Fetch remote config và verify origin
       const remoteConfig = await this.configLoader.fetchRemoteConfig();
       if (remoteConfig) {
         this.config = remoteConfig;
-        this.restartPlugins();
+        this.syncPluginsWithConfig();
         
         // Cập nhật domainUrl cho EventDispatcher để verify origin khi gửi event
         if (this.eventDispatcher && this.config.domainUrl) {
@@ -134,30 +176,31 @@ export class RecSysTracker {
   }
 
   // Track custom event
-  track(eventData: {
-    triggerTypeId: number;
-    userId: number;
-    itemId: number;
-    rate?: {
-      Value: number;
-      Review: string;
-    };
-  }): void {
+  trackGeneric(eventName: string, payload: Record<string, any>): void {
     this.errorBoundary.execute(() => {
-      if (!this.isInitialized || !this.config) {
-        return;
-      }
+      if (!this.isInitialized || !this.config) return;
 
+      // 1. Lấy metadata tự động (Url, Device, Session...)
+      const metadata = this.metadataNormalizer.getMetadata();
+      this.metadataNormalizer.updateSessionActivity();
+
+      // 2. Tạo Event Object
       const trackedEvent: TrackedEvent = {
         id: this.metadataNormalizer.generateEventId(),
-        timestamp: new Date(),
-        triggerTypeId: eventData.triggerTypeId,
+        timestamp: new Date(), // Hoặc Date.now() tùy type TrackedEvent
         domainKey: this.config.domainKey,
+        
+        // Nếu Server cần triggerTypeId (số), ta phải map từ eventName (chuỗi)
+        // Hoặc tốt nhất: Server nên nhận eventName là String để linh hoạt
+        // Ở đây mình tạm để payload chứa toàn bộ data
+        triggerTypeId: payload.triggerTypeId || 0, // Fallback nếu plugin không gửi ID
+        
         payload: {
-          UserId: eventData.userId,
-          ItemId: eventData.itemId,
-        },
-        ...(eventData.rate && { rate: eventData.rate }),
+          eventName: eventName,
+          userId: this.userId, // Gắn userId nếu đã setGlobal
+          ...payload,          // Merge dữ liệu từ form (content, formId...)
+          ...metadata.page,    // Gắn thông tin URL
+        }
       };
 
       this.eventBuffer.add(trackedEvent);

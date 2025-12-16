@@ -59,6 +59,7 @@ export class EventDispatcher {
         UserId: event.payload?.UserId,
         ItemId: event.payload?.ItemId,
       },
+      //Payload: event.payload,
       ...(event.rate && {
         Rate: {
           Value: event.rate.Value,
