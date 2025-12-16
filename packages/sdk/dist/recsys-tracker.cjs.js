@@ -1541,6 +1541,1691 @@ class DisplayManager {
     }
 }
 
+class BasePlugin {
+    constructor() {
+        this.tracker = null;
+        this.active = false;
+    }
+    init(tracker) {
+        if (this.tracker) {
+            console.warn(`[${this.name}] Plugin already initialized`);
+            return;
+        }
+        this.tracker = tracker;
+        console.log(`[${this.name}] Plugin v${this.version} initialized`);
+    }
+    stop() {
+        this.active = false;
+        console.log(`[${this.name}] Plugin stopped`);
+    }
+    destroy() {
+        this.stop();
+        this.tracker = null;
+        console.log(`[${this.name}] Plugin destroyed`);
+    }
+    isActive() {
+        return this.active;
+    }
+    ensureInitialized() {
+        if (!this.tracker) {
+            console.error(`[${this.name}] Plugin not initialized. Call init() first.`);
+            return false;
+        }
+        return true;
+    }
+}
+
+class PluginManager {
+    constructor(tracker) {
+        this.plugins = new Map();
+        this.tracker = tracker;
+    }
+    // Register a plugin
+    register(plugin) {
+        if (this.plugins.has(plugin.name)) {
+            console.warn(`[PluginManager] Plugin "${plugin.name}" already registered`);
+            return;
+        }
+        try {
+            plugin.init(this.tracker);
+            this.plugins.set(plugin.name, plugin);
+            console.log(`[PluginManager] Registered plugin: ${plugin.name} v${plugin.version}`);
+        }
+        catch (error) {
+            console.error(`[PluginManager] Failed to register plugin "${plugin.name}":`, error);
+        }
+    }
+    /**
+     * Unregister a plugin
+     */
+    unregister(pluginName) {
+        const plugin = this.plugins.get(pluginName);
+        if (!plugin) {
+            console.warn(`[PluginManager] Plugin "${pluginName}" not found`);
+            return false;
+        }
+        try {
+            plugin.destroy();
+            this.plugins.delete(pluginName);
+            console.log(`[PluginManager] Unregistered plugin: ${pluginName}`);
+            return true;
+        }
+        catch (error) {
+            console.error(`[PluginManager] Failed to unregister plugin "${pluginName}":`, error);
+            return false;
+        }
+    }
+    /**
+     * Start a specific plugin
+     */
+    start(pluginName) {
+        const plugin = this.plugins.get(pluginName);
+        if (!plugin) {
+            console.warn(`[PluginManager] Plugin "${pluginName}" not found`);
+            return false;
+        }
+        try {
+            plugin.start();
+            return true;
+        }
+        catch (error) {
+            console.error(`[PluginManager] Failed to start plugin "${pluginName}":`, error);
+            return false;
+        }
+    }
+    /**
+     * Stop a specific plugin
+     */
+    stop(pluginName) {
+        const plugin = this.plugins.get(pluginName);
+        if (!plugin) {
+            console.warn(`[PluginManager] Plugin "${pluginName}" not found`);
+            return false;
+        }
+        try {
+            plugin.stop();
+            return true;
+        }
+        catch (error) {
+            console.error(`[PluginManager] Failed to stop plugin "${pluginName}":`, error);
+            return false;
+        }
+    }
+    /**
+     * Start all registered plugins
+     */
+    startAll() {
+        console.log(`[PluginManager] Starting ${this.plugins.size} plugin(s)...`);
+        this.plugins.forEach((plugin, name) => {
+            try {
+                if (!plugin.isActive()) {
+                    plugin.start();
+                }
+            }
+            catch (error) {
+                console.error(`[PluginManager] Failed to start plugin "${name}":`, error);
+            }
+        });
+    }
+    /**
+     * Stop all registered plugins
+     */
+    stopAll() {
+        console.log(`[PluginManager] Stopping ${this.plugins.size} plugin(s)...`);
+        this.plugins.forEach((plugin, name) => {
+            try {
+                if (plugin.isActive()) {
+                    plugin.stop();
+                }
+            }
+            catch (error) {
+                console.error(`[PluginManager] Failed to stop plugin "${name}":`, error);
+            }
+        });
+    }
+    /**
+     * Get a plugin by name
+     */
+    get(pluginName) {
+        return this.plugins.get(pluginName);
+    }
+    /**
+     * Check if a plugin is registered
+     */
+    has(pluginName) {
+        return this.plugins.has(pluginName);
+    }
+    /**
+     * Get all registered plugin names
+     */
+    getPluginNames() {
+        return Array.from(this.plugins.keys());
+    }
+    /**
+     * Get plugin status
+     */
+    getStatus() {
+        return Array.from(this.plugins.values()).map(plugin => ({
+            name: plugin.name,
+            version: plugin.version,
+            active: plugin.isActive(),
+        }));
+    }
+    /**
+     * Destroy all plugins and cleanup
+     */
+    destroy() {
+        console.log(`[PluginManager] Destroying ${this.plugins.size} plugin(s)...`);
+        this.plugins.forEach((plugin, name) => {
+            try {
+                plugin.destroy();
+            }
+            catch (error) {
+                console.error(`[PluginManager] Failed to destroy plugin "${name}":`, error);
+            }
+        });
+        this.plugins.clear();
+    }
+}
+
+const STORAGE_KEYS = {
+    ANON_USER_ID: 'recsys_anon_id',
+    USER_ID: 'recsys_user_id',
+    SESSION_ID: 'recsys_session',
+    IDENTIFIERS: 'recsys_identifiers',
+    LAST_USER_ID: 'recsys_last_user_id'
+};
+function throttle(fn, delay) {
+    let lastCall = 0;
+    let timeoutId = null;
+    let lastArgs = null;
+    return function (...args) {
+        const now = Date.now();
+        lastArgs = args;
+        const remaining = delay - (now - lastCall);
+        const context = this;
+        if (remaining <= 0) {
+            if (timeoutId) {
+                clearTimeout(timeoutId);
+                timeoutId = null;
+            }
+            lastCall = now;
+            fn.apply(context, args);
+        }
+        else if (!timeoutId) {
+            timeoutId = window.setTimeout(() => {
+                lastCall = Date.now();
+                timeoutId = null;
+                fn.apply(context, lastArgs);
+            }, remaining);
+        }
+    };
+}
+const CUSTOM_ROUTE_EVENT = "recsys_route_change";
+
+let identityManagerInstance = null;
+class UserIdentityManager {
+    constructor() {
+        this.identifiers = {};
+        this.sessionId = '';
+        this.currentUserId = null;
+        this.isLoggedIn = false;
+        this.initialized = false;
+        this.authRequests = new Set();
+        this.trackerContext = null;
+        if (identityManagerInstance) {
+            return identityManagerInstance;
+        }
+        this.identifiers = this.loadIdentifiers();
+        this.sessionId = this.generateSessionId();
+        identityManagerInstance = this;
+        window.identityManager = this;
+        window.recsysIdentityManager = this;
+    }
+    setTrackerContext(context) {
+        this.trackerContext = context;
+        this.setupIdentitySynchronization();
+    }
+    initialize() {
+        if (this.initialized)
+            return;
+        const persistedUserId = this.getPersistedUserId();
+        if (persistedUserId && !persistedUserId.startsWith('anon_')) {
+            this.currentUserId = persistedUserId;
+            this.isLoggedIn = true;
+            console.log(`[RECSYS] Restored logged-in user: ${persistedUserId}`);
+            this.identifiers.detectedUserId = persistedUserId;
+            this.saveIdentifiers();
+        }
+        else {
+            this.currentUserId = this.findOrCreateUserId();
+        }
+        this.setupEnhancedNetworkMonitoring();
+        this.startMonitoring();
+        this.initialized = true;
+        console.log(`[RECSYS] Identity Manager initialized. Current user: ${this.currentUserId}, Logged in: ${this.isLoggedIn}`);
+    }
+    getPersistedUserId() {
+        if (this.identifiers.detectedUserId && typeof this.identifiers.detectedUserId === 'string' && !this.identifiers.detectedUserId.startsWith('anon_')) {
+            return this.identifiers.detectedUserId;
+        }
+        const storedUserId = localStorage.getItem(STORAGE_KEYS.USER_ID);
+        if (storedUserId && storedUserId !== 'undefined' && storedUserId !== 'null' && !storedUserId.startsWith('anon_')) {
+            return storedUserId;
+        }
+        const anonId = localStorage.getItem(STORAGE_KEYS.ANON_USER_ID);
+        if (anonId) {
+            return anonId;
+        }
+        return null;
+    }
+    findOrCreateUserId() {
+        const userId = this.extractUserIdFromCookies() ||
+            this.extractUserIdFromLocalStorage() ||
+            this.extractUserIdFromJWT(localStorage.getItem('token'));
+        if (userId && !userId.startsWith('anon_')) {
+            this.handleDetectedUserId(userId, 'initial_lookup');
+            this.isLoggedIn = true;
+            return userId;
+        }
+        let anonId = localStorage.getItem(STORAGE_KEYS.ANON_USER_ID);
+        if (!anonId) {
+            anonId = 'anon_' + Date.now() + '_' + Math.random().toString(36).substring(2, 9);
+            localStorage.setItem(STORAGE_KEYS.ANON_USER_ID, anonId);
+        }
+        this.isLoggedIn = false;
+        return anonId;
+    }
+    getUserId() {
+        if (this.currentUserId) {
+            return this.currentUserId;
+        }
+        return this.findOrCreateUserId();
+    }
+    getStableUserId() {
+        return this.currentUserId || this.getUserId();
+    }
+    getRealUserId() {
+        if (this.currentUserId && !this.currentUserId.startsWith('anon_')) {
+            return this.currentUserId;
+        }
+        return this.getUserId();
+    }
+    refreshUserId() {
+        const oldUserId = this.currentUserId;
+        const newUserId = this.findOrCreateUserId();
+        if (oldUserId !== newUserId) {
+            const wasLoggedIn = this.isLoggedIn;
+            this.isLoggedIn = !newUserId.startsWith('anon_');
+            console.log(`[RECSYS] User ID changed: ${oldUserId} -> ${newUserId}, Login status: ${wasLoggedIn} -> ${this.isLoggedIn}`);
+            this.currentUserId = newUserId;
+            window.dispatchEvent(new CustomEvent('recsys:userIdChanged', {
+                detail: {
+                    oldUserId,
+                    newUserId,
+                    wasLoggedIn,
+                    isNowLoggedIn: this.isLoggedIn,
+                    sessionId: this.sessionId
+                }
+            }));
+        }
+        return newUserId;
+    }
+    setupEnhancedNetworkMonitoring() {
+        const self = this;
+        const originalFetch = window.fetch;
+        window.fetch = async (...args) => {
+            const [resource] = args;
+            const url = typeof resource === 'string' ? resource : resource.url;
+            if (url && (url.includes('/auth') || url.includes('/login') || url.includes('/signin'))) {
+                self.authRequests.add(url);
+            }
+            try {
+                const response = await originalFetch(...args);
+                const clonedResponse = response.clone();
+                if (url && self.authRequests.has(url)) {
+                    setTimeout(() => { self.processAuthResponse(url, clonedResponse); }, 100);
+                }
+                return response;
+            }
+            catch (error) {
+                console.log('❌ Fetch error:', error);
+                throw error;
+            }
+        };
+        if (window.XMLHttpRequest) {
+            const originalOpen = XMLHttpRequest.prototype.open;
+            const originalSend = XMLHttpRequest.prototype.send;
+            XMLHttpRequest.prototype.open = function (method, url) {
+                this._url = url;
+                this._method = method;
+                if (url && (url.includes('/auth') || url.includes('/login') || url.includes('/signin'))) {
+                    this._isAuthRequest = true;
+                }
+                return originalOpen.apply(this, arguments);
+            };
+            XMLHttpRequest.prototype.send = function (_body) {
+                const xhr = this;
+                xhr.addEventListener('load', () => {
+                    if (xhr.status >= 200 && xhr.status < 300) {
+                        if (xhr._isAuthRequest) {
+                            setTimeout(() => { self.processXHRAuthResponse(xhr); }, 100);
+                        }
+                        setTimeout(() => { self.checkResponseForUserData(xhr); }, 150);
+                    }
+                });
+                return originalSend.apply(this, arguments);
+            };
+        }
+        this.setupLocalStorageMonitor();
+        this.setupCookieMonitor();
+    }
+    async processAuthResponse(_url, response) {
+        try {
+            const data = await response.json();
+            const userId = this.extractUserIdFromObject(data);
+            if (userId) {
+                this.handleDetectedUserId(userId, 'auth_response');
+            }
+            else {
+                setTimeout(() => { this.checkAllSourcesForUserId(); }, 1000);
+            }
+        }
+        catch (e) { }
+    }
+    processXHRAuthResponse(xhr) {
+        try {
+            const data = JSON.parse(xhr.responseText);
+            const userId = this.extractUserIdFromObject(data);
+            if (userId) {
+                this.handleDetectedUserId(userId, 'xhr_auth_response');
+            }
+        }
+        catch (e) { }
+    }
+    checkResponseForUserData(xhr) {
+        try {
+            const data = JSON.parse(xhr.responseText);
+            const userId = this.extractUserIdFromObject(data);
+            if (userId && !this.authRequests.has(xhr._url)) {
+                this.handleDetectedUserId(userId, 'api_response');
+            }
+        }
+        catch (e) { /* Ignore */ }
+    }
+    // --- LOGIN HANDLERS ---
+    // Đã đổi tên 'source' thành '_source'
+    handleDetectedUserId(userId, _source) {
+        if (this.currentUserId && !this.currentUserId.startsWith('anon_')) {
+            console.log(`[RECSYS] User already authenticated as ${this.currentUserId}. Ignoring ${userId} from ${_source}`);
+            return;
+        }
+        if (userId && !userId.startsWith('anon_')) {
+            const oldUserId = this.currentUserId;
+            const wasAnonymous = oldUserId && oldUserId.startsWith('anon_');
+            if (wasAnonymous) {
+                console.log(`[RECSYS CAPTURE] User logged in: ${oldUserId} -> ${userId} (Source: ${_source})`);
+                this.onUserLoginDetected(oldUserId, userId, _source);
+            }
+            else if (oldUserId !== userId) {
+                console.log(`[RECSYS CAPTURE] User ID updated: ${oldUserId} -> ${userId} (Source: ${_source})`);
+            }
+            this.currentUserId = userId;
+            this.isLoggedIn = true;
+            localStorage.setItem(STORAGE_KEYS.USER_ID, userId);
+            this.identifiers.detectedUserId = userId;
+            this.identifiers.detectionMethod = _source;
+            this.identifiers.detectionTime = new Date().toISOString();
+            this.saveIdentifiers();
+        }
+    }
+    // Đã đổi tên 'source' thành '_source'
+    onUserLoginDetected(anonymousId, userId, _source) {
+        this.sendLoginEvent(anonymousId, userId, _source);
+        window.dispatchEvent(new CustomEvent('recsys:userLoggedIn', {
+            detail: {
+                userId: userId,
+                anonymousId: anonymousId,
+                detectionMethod: _source,
+                sessionId: this.sessionId,
+                timestamp: new Date().toISOString()
+            }
+        }));
+    }
+    sendLoginEvent(anonymousId, userId, _source) {
+        console.log(`[RECSYS CAPTURE] Login event prepared for User ID: ${userId} (from ${anonymousId}).`);
+    }
+    checkAllSourcesForUserId() {
+        const cookieUserId = this.extractUserIdFromCookies();
+        if (cookieUserId) {
+            this.handleDetectedUserId(cookieUserId, 'cookies_after_login');
+            return;
+        }
+        const lsUserId = this.extractUserIdFromLocalStorage();
+        if (lsUserId) {
+            this.handleDetectedUserId(lsUserId, 'localStorage_after_login');
+            return;
+        }
+        setTimeout(() => { this.checkCommonUserEndpoints(); }, 2000);
+        this.startPostLoginPolling();
+    }
+    startPostLoginPolling() {
+        let attempts = 0;
+        const maxAttempts = 10;
+        const poll = () => {
+            attempts++;
+            const cookieId = this.extractUserIdFromCookies();
+            const lsId = this.extractUserIdFromLocalStorage();
+            if (cookieId) {
+                this.handleDetectedUserId(cookieId, 'polling_cookies');
+                return;
+            }
+            if (lsId) {
+                this.handleDetectedUserId(lsId, 'polling_localStorage');
+                return;
+            }
+            if (attempts < maxAttempts) {
+                setTimeout(poll, 1000);
+            }
+        };
+        setTimeout(poll, 1000);
+    }
+    checkCommonUserEndpoints() {
+        const endpoints = ['/user/profile', '/api/me', '/user/me', '/account/info'];
+        endpoints.forEach(endpoint => {
+            fetch(endpoint, { method: 'GET', credentials: 'include' })
+                .then(res => res.json())
+                .then(data => {
+                const userId = this.extractUserIdFromObject(data);
+                if (userId) {
+                    this.handleDetectedUserId(userId, `endpoint_${endpoint}`);
+                }
+            }).catch(() => { });
+        });
+    }
+    setupLocalStorageMonitor() {
+        const self = this;
+        const originalSetItem = localStorage.setItem;
+        localStorage.setItem = function (key, value) {
+            originalSetItem.call(this, key, value);
+            if (self.isUserRelatedKey(key)) {
+                window.dispatchEvent(new CustomEvent('storage', {
+                    detail: { key, newValue: value, storageArea: this }
+                }));
+            }
+        };
+        window.addEventListener('storage', ((e) => {
+            if (this.isUserRelatedKey(e.key)) {
+                setTimeout(() => {
+                    const userId = this.extractUserIdFromLocalStorage();
+                    if (userId && !userId.startsWith('anon_')) {
+                        this.handleDetectedUserId(userId, 'localStorage_event');
+                    }
+                }, 100);
+            }
+        }));
+    }
+    setupCookieMonitor() {
+        let lastCookieString = document.cookie;
+        setInterval(() => {
+            const currentCookieString = document.cookie;
+            if (currentCookieString !== lastCookieString) {
+                lastCookieString = currentCookieString;
+                const userId = this.extractUserIdFromCookies();
+                if (userId && !userId.startsWith('anon_')) {
+                    this.handleDetectedUserId(userId, 'cookies_polling');
+                }
+            }
+        }, 2000);
+    }
+    isUserRelatedKey(key) {
+        if (!key)
+            return false;
+        const keywords = ['user', 'auth', 'token', 'session', 'login', 'profile', 'id', 'account'];
+        return keywords.some(kw => key.toLowerCase().includes(kw.toLowerCase()));
+    }
+    extractUserIdFromCookies() {
+        const cookies = document.cookie.split(';');
+        const cookieMap = {};
+        cookies.forEach(cookie => {
+            const parts = cookie.trim().split('=');
+            const key = parts[0];
+            const value = parts.slice(1).join('=');
+            if (key && value)
+                cookieMap[key] = decodeURIComponent(value);
+        });
+        const possibleKeys = ['userId', 'user_id', 'uid', 'user-id', 'auth_user_id', STORAGE_KEYS.USER_ID];
+        for (const key of possibleKeys) {
+            if (cookieMap[key] && cookieMap[key] !== 'undefined') {
+                return cookieMap[key];
+            }
+        }
+        const jwtKeys = ['token', 'access_token', 'jwt', 'auth_token'];
+        for (const key of jwtKeys) {
+            if (cookieMap[key]) {
+                const userId = this.extractUserIdFromJWT(cookieMap[key]);
+                if (userId)
+                    return userId;
+            }
+        }
+        return null;
+    }
+    extractUserIdFromLocalStorage() {
+        try {
+            const possibleKeys = ['user', 'userData', 'auth', 'currentUser', 'userInfo', 'profile', 'account', STORAGE_KEYS.USER_ID];
+            for (const key of possibleKeys) {
+                const value = localStorage.getItem(key);
+                if (value) {
+                    try {
+                        const parsed = JSON.parse(value);
+                        const id = this.extractUserIdFromObject(parsed);
+                        if (id)
+                            return id;
+                    }
+                    catch (e) {
+                        if (value.length < 100 && !value.includes('.')) {
+                            return value;
+                        }
+                    }
+                }
+            }
+            const tokenKeys = ['token', 'access_token', 'jwt', 'auth_token'];
+            for (const key of tokenKeys) {
+                const token = localStorage.getItem(key);
+                if (token) {
+                    const userId = this.extractUserIdFromJWT(token);
+                    if (userId)
+                        return userId;
+                }
+            }
+        }
+        catch (e) {
+            return null;
+        }
+        return null;
+    }
+    extractUserIdFromJWT(token) {
+        if (!token || !token.includes('.'))
+            return null;
+        try {
+            const payload = token.split('.')[1];
+            const decoded = JSON.parse(atob(payload.replace(/-/g, '+').replace(/_/g, '/')));
+            return decoded.sub || decoded.userId || decoded.id || decoded.user_id || decoded.UserId;
+        }
+        catch (e) {
+            return null;
+        }
+    }
+    extractUserIdFromObject(obj) {
+        if (!obj || typeof obj !== 'object')
+            return null;
+        const idKeys = ['id', 'userId', 'user_id', 'uid', '_id', 'userID', 'UserId', 'UserID'];
+        for (const key of idKeys) {
+            if (obj[key] && obj[key] !== 'undefined' && obj[key] !== 'null') {
+                return String(obj[key]);
+            }
+        }
+        for (const key in obj) {
+            if (typeof obj[key] === 'object' && obj[key] !== null) {
+                const found = this.extractUserIdFromObject(obj[key]);
+                if (found)
+                    return found;
+            }
+        }
+        return null;
+    }
+    generateSessionId() {
+        return 'sess_' + Date.now() + '_' + Math.random().toString(36).substring(2, 11);
+    }
+    loadIdentifiers() {
+        try {
+            const stored = localStorage.getItem(STORAGE_KEYS.IDENTIFIERS);
+            return stored ? JSON.parse(stored) : {};
+        }
+        catch (e) {
+            return {};
+        }
+    }
+    saveIdentifiers() {
+        try {
+            localStorage.setItem(STORAGE_KEYS.IDENTIFIERS, JSON.stringify(this.identifiers));
+        }
+        catch (e) { /* Ignore */ }
+    }
+    startMonitoring() {
+        setInterval(() => {
+            if (!this.isLoggedIn || (this.currentUserId && this.currentUserId.startsWith('anon_'))) {
+                const newUserId = this.findOrCreateUserId();
+                if (newUserId !== this.currentUserId && !newUserId.startsWith('anon_')) {
+                    console.log(`[RECSYS] Monitoring detected login: ${this.currentUserId} -> ${newUserId}`);
+                    this.handleDetectedUserId(newUserId, 'monitoring');
+                }
+            }
+        }, 5000);
+    }
+    getUserInfo() {
+        return {
+            userId: this.currentUserId,
+            isLoggedIn: this.isLoggedIn,
+            sessionId: this.sessionId,
+            detectionMethod: this.identifiers.detectionMethod,
+            detectionTime: this.identifiers.detectionTime,
+            isAnonymous: this.currentUserId ? this.currentUserId.startsWith('anon_') : true
+        };
+    }
+    logout() {
+        const oldUserId = this.currentUserId;
+        this.currentUserId = null;
+        this.isLoggedIn = false;
+        localStorage.removeItem(STORAGE_KEYS.USER_ID);
+        const newAnonId = 'anon_' + Date.now() + '_' + Math.random().toString(36).substring(2, 9);
+        localStorage.setItem(STORAGE_KEYS.ANON_USER_ID, newAnonId);
+        this.currentUserId = newAnonId;
+        console.log(`[RECSYS] User logged out: ${oldUserId} -> ${newAnonId}`);
+        window.dispatchEvent(new CustomEvent('recsys:userLoggedOut', {
+            detail: {
+                oldUserId,
+                newUserId: newAnonId,
+                sessionId: this.sessionId
+            }
+        }));
+    }
+    setupIdentitySynchronization() {
+        if (!this.trackerContext)
+            return;
+        window.addEventListener('recsys:userLoggedIn', ((event) => {
+            const customEvent = event;
+            const newUserId = customEvent.detail.userId;
+            const source = customEvent.detail.detectionMethod;
+            if (newUserId) {
+                this.trackerContext.updateIdentity(newUserId);
+                console.log(`[Context Sync] User ID synced from IdentityManager (${source}).`);
+            }
+        }));
+    }
+}
+function getUserIdentityManager() {
+    if (!identityManagerInstance) {
+        identityManagerInstance = new UserIdentityManager();
+    }
+    return identityManagerInstance;
+}
+
+let aiItemDetectorInstance = null;
+class AIItemDetector {
+    constructor() {
+        this.itemCache = new Map();
+        this.domObserver = null;
+        if (aiItemDetectorInstance) {
+            return aiItemDetectorInstance;
+        }
+        this.init();
+        aiItemDetectorInstance = this;
+    }
+    init() {
+        console.log('[Recsys AI] 🤖 AI Item Detector initialized');
+        this.setupDOMMutationObserver();
+    }
+    detectItemFromClick(event) {
+        const element = event.target;
+        console.log('[Recsys AI] 🔍 Analyzing clicked element...');
+        const domItem = this.detectItemFromDOM(element);
+        if (domItem)
+            return domItem;
+        const textItem = this.detectItemFromText(element);
+        if (textItem)
+            return textItem;
+        const mediaItem = this.detectItemFromMedia(element);
+        if (mediaItem)
+            return mediaItem;
+        const structuredItem = this.detectItemFromStructuredData(element);
+        if (structuredItem)
+            return structuredItem;
+        return this.detectItemFromPosition(element);
+    }
+    detectItemFromDOM(element) {
+        console.log('[Recsys AI] 🔍 Analyzing DOM context (Self/Parent Check)...');
+        let current = element;
+        for (let i = 0; i < 5; i++) {
+            if (!current)
+                break;
+            const itemData = this.extractItemDataFromElement(current);
+            if (itemData) {
+                return itemData;
+            }
+            current = current.parentElement;
+        }
+        return null;
+    }
+    detectItemFromChildren(parentElement) {
+        var _a;
+        console.log('[Recsys AI] 🔍 Analyzing Item Card Children...');
+        const itemSelectors = ['[data-item-id]', '[data-id]',
+            '[data-song-id]', '[data-track-id]', '[data-video-id]',
+            '[data-product-id]', '[data-sku]', '[data-listing-id]',
+            '[data-article-id]', '[data-post-id]', '[data-thread-id]',
+            '[data-user-id]', '[data-author-id]',
+            '[data-content-id]'
+        ];
+        for (const selector of itemSelectors) {
+            const childElement = parentElement.querySelector(selector);
+            if (childElement) {
+                const itemData = this.extractItemDataFromElement(childElement);
+                if (itemData) {
+                    console.log('[Recsys AI] ✅ Found item in Child Element via Data Attribute:', itemData);
+                    return itemData;
+                }
+            }
+        }
+        const prominentChildren = parentElement.querySelectorAll('a, button, [role="link"], [role="button"]');
+        for (const child of Array.from(prominentChildren)) {
+            const itemData = this.extractItemDataFromElement(child);
+            if (itemData) {
+                console.log('[Recsys AI] ✅ Found item in Prominent Child Element:', itemData);
+                return itemData;
+            }
+        }
+        const titleElement = parentElement.querySelector('h1, h2, h3, h4, [data-title]');
+        const title = (_a = titleElement === null || titleElement === void 0 ? void 0 : titleElement.textContent) === null || _a === void 0 ? void 0 : _a.trim();
+        if (title) {
+            console.log('[Recsys AI] 💡 Detected item via Title Fallback:', title);
+            return {
+                id: this.generateHashId(title),
+                name: title,
+                type: 'content',
+                confidence: 0.6,
+                source: 'title_fallback'
+            };
+        }
+        return null;
+    }
+    detectItemFromText(element) {
+        console.log('[Recsys AI] 🔍 Analyzing text content...');
+        const textContext = this.getTextContext(element, 2);
+        if (!textContext)
+            return null;
+        const patterns = {
+            song: [
+                /(["'])(.+?)\1\s*(?:-|-|by)\s*(.+)/i,
+                /(.+?)\s*(?:-|-)\s*(.+)/i,
+                /Track\s*\d+[:\s]*(.+)/i,
+                /(.+?)\s*\(feat\.\s*(.+)\)/i,
+            ],
+            album: [
+                /Album[:\s]*(.+)/i,
+                /(.+?)\s*(?:album|LP|EP)/i,
+            ],
+            artist: [
+                /Artist[:\s]*(.+)/i,
+                /by\s*(.+)/i,
+            ],
+            product: [
+                /(Mã|SKU|Code|Item)\s*[:#]\s*([A-Z0-9-]+)/i,
+                /(Product|Sản phẩm)\s*[:\s]*(.+)/i,
+            ],
+            article: [
+                /(Bài viết|Post|News)\s*[:\s]*(.+)/i,
+                /Published\s*(?:by|on)\s*(.+)/i,
+            ],
+        };
+        for (const [type, typePatterns] of Object.entries(patterns)) {
+            for (const pattern of typePatterns) {
+                const match = textContext.match(pattern);
+                if (match) {
+                    const itemName = (match[2] || match[1] || '').trim();
+                    if (!itemName)
+                        continue;
+                    const idValue = (type === 'product' && itemName.length < 50) ? itemName : this.generateHashId(itemName);
+                    console.log(`[Recsys AI] ✅ Detected ${type}: ${itemName}`);
+                    return {
+                        id: idValue,
+                        name: itemName,
+                        type: type,
+                        confidence: 0.7,
+                        source: 'text_pattern',
+                        context: textContext.substring(0, 100)
+                    };
+                }
+            }
+        }
+        const keywords = {
+            song: ['play', 'listen', 'track', 'song', 'music', 'audio'],
+            video: ['watch', 'view', 'video', 'movie', 'film', 'trailer'],
+            product: ['buy', 'purchase', 'shop', 'product', 'item', 'add to cart', 'giá', 'mua hàng', 'price'],
+            article: ['read more', 'continue reading', 'bài viết', 'tin tức', 'blog post', 'tác giả'],
+            user: ['follow', 'profile', 'người dùng', 'tài khoản', 'friend'],
+            comment: ['like', 'share', 'comment', 'bình luận'],
+        };
+        const lowerText = textContext.toLowerCase();
+        for (const [type, words] of Object.entries(keywords)) {
+            if (words.some(word => lowerText.includes(word))) {
+                const words = textContext.split(/\s+/).slice(0, 5).join(' ');
+                if (words.length > 3) {
+                    return {
+                        id: this.generateHashId(words),
+                        name: words,
+                        type: type,
+                        confidence: 0.5,
+                        source: 'keyword_match',
+                        context: textContext.substring(0, 100)
+                    };
+                }
+            }
+        }
+        return null;
+    }
+    detectItemFromLimitedText(element) {
+        const textContext = this.getTextContext(element, 1);
+        if (!textContext)
+            return null;
+        const MAX_CONTEXT_LENGTH = 120;
+        if (textContext.length > MAX_CONTEXT_LENGTH) {
+            console.log('[Recsys AI] Text fallback ignored: Context too long (>' + MAX_CONTEXT_LENGTH + ').');
+            return null;
+        }
+        const patterns = {
+            song: [
+                /(["'])(.+?)\1\s*(?:-|-|by)\s*(.+)/i,
+                /(.+?)\s*(?:-|-)\s*(.+)/i,
+                /Track\s*\d+[:\s]*(.+)/i,
+                /(.+?)\s*\(feat\.\s*(.+)\)/i,
+            ],
+            product: [
+                /(Mã|SKU|Code|Item)\s*[:#]\s*([A-Z0-9-]+)/i,
+                /(Product|Sản phẩm)\s*[:\s]*(.+)/i,
+            ],
+            article: [
+                /(Bài viết|Post|News)\s*[:\s]*(.+)/i,
+                /Published\s*(?:by|on)\s*(.+)/i,
+            ],
+            album: [
+                /Album[:\s]*(.+)/i,
+                /(.+?)\s*(?:album|LP|EP)/i,
+            ],
+            artist: [
+                /Artist[:\s]*(.+)/i,
+                /by\s*(.+)/i,
+            ]
+        };
+        for (const [type, typePatterns] of Object.entries(patterns)) {
+            for (const pattern of typePatterns) {
+                const match = textContext.match(pattern);
+                if (match) {
+                    const itemName = (match[2] || match[1] || '').trim();
+                    if (!itemName)
+                        continue;
+                    const idValue = (type === 'product' && itemName.length < 50) ? itemName : this.generateHashId(itemName);
+                    return {
+                        id: idValue,
+                        name: itemName,
+                        type: type,
+                        confidence: 0.5,
+                        source: 'text_pattern_limited',
+                        context: textContext
+                    };
+                }
+            }
+        }
+        const keywords = {
+            song: ['play', 'listen', 'track', 'song', 'music', 'audio'],
+            video: ['watch', 'view', 'video', 'movie', 'film', 'trailer'],
+            product: ['buy', 'purchase', 'shop', 'product', 'item', 'add to cart', 'giá', 'mua hàng', 'price'],
+            article: ['read more', 'continue reading', 'bài viết', 'tin tức', 'blog post', 'tác giả'],
+            user: ['follow', 'profile', 'người dùng', 'tài khoản', 'friend'],
+            comment: ['like', 'share', 'comment', 'bình luận'],
+        };
+        const lowerText = textContext.toLowerCase();
+        for (const [type, words] of Object.entries(keywords)) {
+            if (words.some(word => lowerText.includes(word))) {
+                const words = textContext.split(/\s+/).slice(0, 5).join(' ');
+                if (words.length > 3) {
+                    return {
+                        id: this.generateHashId(words),
+                        name: words,
+                        type: type,
+                        confidence: 0.3,
+                        source: 'keyword_match_limited',
+                        context: textContext
+                    };
+                }
+            }
+        }
+        return null;
+    }
+    detectItemFromMedia(element) {
+        const mediaElement = this.findNearbyMedia(element);
+        if (!mediaElement)
+            return null;
+        const castedMedia = mediaElement;
+        let mediaData = {
+            type: mediaElement.tagName.toLowerCase(),
+            src: castedMedia.src || castedMedia.currentSrc || '',
+            alt: castedMedia.alt || castedMedia.getAttribute('alt') || '',
+            title: castedMedia.title || castedMedia.getAttribute('title') || ''
+        };
+        if (mediaElement.tagName === 'IMG') {
+            const imageInfo = this.analyzeImage(mediaElement);
+            if (imageInfo) {
+                return {
+                    id: this.generateHashId(mediaData.src + mediaData.alt),
+                    name: imageInfo.name || mediaData.alt || this.extractNameFromSrc(mediaData.src),
+                    type: 'media',
+                    confidence: 0.6,
+                    source: 'image_analysis',
+                    metadata: { ...mediaData, ...imageInfo }
+                };
+            }
+        }
+        if (mediaElement.tagName === 'VIDEO') {
+            const videoInfo = this.analyzeVideo(mediaElement);
+            if (videoInfo) {
+                return {
+                    id: this.generateHashId(mediaData.src + Date.now()),
+                    name: videoInfo.title || 'Video Content',
+                    type: 'video',
+                    confidence: 0.6,
+                    source: 'video_analysis',
+                    metadata: { ...mediaData, ...videoInfo }
+                };
+            }
+        }
+        return null;
+    }
+    detectItemFromStructuredData(element) {
+        const microdata = this.extractMicrodata(element);
+        if (microdata)
+            return microdata;
+        const jsonLdData = this.extractJsonLdData();
+        if (jsonLdData) {
+            const matchingItem = this.findMatchingItemInJsonLd(jsonLdData, element);
+            if (matchingItem)
+                return matchingItem;
+        }
+        const ogData = this.extractOpenGraphData();
+        if (ogData) {
+            return {
+                id: this.generateHashId(ogData.title),
+                name: ogData.title,
+                type: ogData.type || 'content',
+                confidence: 0.8,
+                source: 'open_graph',
+                metadata: ogData
+            };
+        }
+        return null;
+    }
+    detectItemFromPosition(element) {
+        var _a;
+        const rect = element.getBoundingClientRect();
+        const position = {
+            x: Math.round(rect.left + window.scrollX),
+            y: Math.round(rect.top + window.scrollY),
+            width: Math.round(rect.width),
+            height: Math.round(rect.height)
+        };
+        const positionId = `${position.x}_${position.y}_${position.width}_${position.height}`;
+        const contentHash = this.hashString(element.textContent || '');
+        return {
+            id: `pos_${positionId}_${contentHash}`,
+            name: this.extractNameFromPosition(element),
+            type: 'ui_element',
+            confidence: 0.3,
+            source: 'position_based',
+            metadata: {
+                position: position,
+                elementType: element.tagName.toLowerCase(),
+                textPreview: ((_a = element.textContent) === null || _a === void 0 ? void 0 : _a.substring(0, 50)) || ''
+            }
+        };
+    }
+    extractItemDataFromElement(element) {
+        var _a;
+        const dataAttrs = ['data-item-id', 'data-id',
+            'data-song-id', 'data-track-id', 'data-video-id',
+            'data-product-id', 'data-sku', 'data-listing-id',
+            'data-article-id', 'data-post-id', 'data-thread-id',
+            'data-user-id', 'data-author-id',
+            'data-content-id'
+        ];
+        const htmlElement = element;
+        for (const attr of dataAttrs) {
+            const value = element.getAttribute(attr);
+            if (value) {
+                const itemTitle = htmlElement.title || htmlElement.getAttribute('title');
+                const itemAlt = htmlElement.getAttribute('alt');
+                return {
+                    id: value,
+                    name: element.getAttribute('data-item-name') ||
+                        element.getAttribute('data-name') ||
+                        itemTitle ||
+                        itemAlt ||
+                        'Unnamed Item',
+                    type: this.inferTypeFromAttribute(attr),
+                    confidence: 0.9,
+                    source: 'data_attribute',
+                    metadata: { attribute: attr }
+                };
+            }
+        }
+        if (element.tagName === 'ARTICLE' || element.getAttribute('role') === 'article') {
+            const title = element.querySelector('h1, h2, h3, [role="heading"]');
+            if (title) {
+                return {
+                    id: this.generateHashId(title.textContent + element.innerHTML.length),
+                    name: (_a = title.textContent) === null || _a === void 0 ? void 0 : _a.trim(),
+                    type: 'article',
+                    confidence: 0.7,
+                    source: 'semantic_html'
+                };
+            }
+        }
+        return null;
+    }
+    getTextContext(element, depth = 2) {
+        var _a, _b, _c;
+        let context = '';
+        let current = element;
+        for (let i = 0; i <= depth; i++) {
+            if (!current)
+                break;
+            const text = (_a = current.textContent) === null || _a === void 0 ? void 0 : _a.trim();
+            if (text && text.length > 0 && text.length < 500) {
+                context += text + ' ';
+            }
+            if (current.previousElementSibling) {
+                const prevText = (_b = current.previousElementSibling.textContent) === null || _b === void 0 ? void 0 : _b.trim();
+                if (prevText && prevText.length < 200) {
+                    context = prevText + ' ' + context;
+                }
+            }
+            if (current.nextElementSibling) {
+                const nextText = (_c = current.nextElementSibling.textContent) === null || _c === void 0 ? void 0 : _c.trim();
+                if (nextText && nextText.length < 200) {
+                    context += ' ' + nextText;
+                }
+            }
+            current = current.parentElement;
+        }
+        return context.trim() || null;
+    }
+    findNearbyMedia(element, maxDistance = 3) {
+        if (element.tagName === 'IMG' || element.tagName === 'VIDEO' ||
+            element.tagName === 'AUDIO' || element.tagName === 'FIGURE') {
+            return element;
+        }
+        const mediaChild = element.querySelector('img, video, audio, figure, [data-media]');
+        if (mediaChild)
+            return mediaChild;
+        let current = element;
+        for (let i = 0; i < maxDistance; i++) {
+            if (!current)
+                break;
+            if (current.parentElement) {
+                const parentMedia = current.parentElement.querySelector('img, video, audio');
+                if (parentMedia)
+                    return parentMedia;
+            }
+            const siblings = [];
+            if (current.previousElementSibling)
+                siblings.push(current.previousElementSibling);
+            if (current.nextElementSibling)
+                siblings.push(current.nextElementSibling);
+            for (const sibling of siblings) {
+                const siblingMedia = sibling.querySelector('img, video, audio');
+                if (siblingMedia)
+                    return siblingMedia;
+            }
+            current = current.parentElement;
+        }
+        return null;
+    }
+    analyzeImage(imgElement) {
+        const src = imgElement.src || '';
+        const alt = imgElement.alt || '';
+        let name = alt;
+        if (!name && src) {
+            name = this.extractNameFromSrc(src);
+        }
+        let type = 'image';
+        const patterns = [
+            /(album|cover|artwork).*\.(jpg|jpeg|png|gif)/i,
+            /(song|track|music).*\.(jpg|jpeg|png|gif)/i,
+            /(artist|band).*\.(jpg|jpeg|png|gif)/i,
+            /(thumbnail|thumb).*\.(jpg|jpeg|png|gif)/i,
+        ];
+        for (const pattern of patterns) {
+            if (pattern.test(src) || pattern.test(alt)) {
+                if (pattern.toString().includes('album'))
+                    type = 'album_art';
+                if (pattern.toString().includes('song'))
+                    type = 'song_image';
+                if (pattern.toString().includes('artist'))
+                    type = 'artist_image';
+                break;
+            }
+        }
+        return {
+            name: name,
+            type: type,
+            dimensions: {
+                naturalWidth: imgElement.naturalWidth,
+                naturalHeight: imgElement.naturalHeight,
+                clientWidth: imgElement.clientWidth,
+                clientHeight: imgElement.clientHeight
+            }
+        };
+    }
+    analyzeVideo(videoElement) {
+        const src = videoElement.src || videoElement.currentSrc || '';
+        const duration = videoElement.duration || 0;
+        return {
+            title: videoElement.getAttribute('data-title') ||
+                videoElement.title ||
+                this.extractNameFromSrc(src),
+            duration: duration,
+            isPlaying: !videoElement.paused,
+            currentTime: videoElement.currentTime || 0
+        };
+    }
+    extractNameFromSrc(src) {
+        var _a;
+        if (!src)
+            return '';
+        const filename = ((_a = src.split('/').pop()) === null || _a === void 0 ? void 0 : _a.split('?')[0]) || '';
+        const name = filename.replace(/\.[^/.]+$/, '');
+        let cleanName = name.replace(/[-_]/g, ' ');
+        try {
+            cleanName = decodeURIComponent(cleanName);
+        }
+        catch (e) {
+            // Ignore
+        }
+        return cleanName;
+    }
+    extractMicrodata(element) {
+        const itemprops = element.querySelectorAll('[itemprop]');
+        if (itemprops.length === 0)
+            return null;
+        const data = {};
+        Array.from(itemprops).forEach(el => {
+            var _a;
+            const prop = el.getAttribute('itemprop');
+            const value = el.getAttribute('content') ||
+                el.getAttribute('src') ||
+                ((_a = el.textContent) === null || _a === void 0 ? void 0 : _a.trim());
+            if (prop && value) {
+                data[prop] = value;
+            }
+        });
+        if (Object.keys(data).length > 0) {
+            return {
+                id: data.url || data.identifier || this.generateHashId(JSON.stringify(data)),
+                name: data.name || data.title || 'Microdata Item',
+                type: data['@type'] || 'Thing',
+                confidence: 0.85,
+                source: 'microdata',
+                metadata: data
+            };
+        }
+        return null;
+    }
+    extractJsonLdData() {
+        const scripts = document.querySelectorAll('script[type="application/ld+json"]');
+        const allData = [];
+        Array.from(scripts).forEach(script => {
+            try {
+                const data = JSON.parse(script.textContent || '{}');
+                if (Array.isArray(data)) {
+                    allData.push(...data);
+                }
+                else {
+                    allData.push(data);
+                }
+            }
+            catch (e) {
+                console.error('[Recsys AI] Failed to parse JSON-LD:', e);
+            }
+        });
+        return allData.length > 0 ? allData : null;
+    }
+    findMatchingItemInJsonLd(jsonLdData, element) {
+        var _a;
+        const elementText = (_a = element.textContent) === null || _a === void 0 ? void 0 : _a.trim().toLowerCase();
+        if (!elementText)
+            return null;
+        for (const item of jsonLdData) {
+            if (item.name && item.name.toLowerCase().includes(elementText.substring(0, 20))) {
+                return {
+                    id: item['@id'] || item.identifier || this.generateHashId(item.name),
+                    name: item.name,
+                    type: item['@type'] || 'CreativeWork',
+                    confidence: 0.9,
+                    source: 'json_ld',
+                    metadata: item
+                };
+            }
+        }
+        return null;
+    }
+    extractOpenGraphData() {
+        const metaTags = document.querySelectorAll('meta[property^="og:"]');
+        const data = {};
+        Array.from(metaTags).forEach(tag => {
+            var _a;
+            const property = (_a = tag.getAttribute('property')) === null || _a === void 0 ? void 0 : _a.replace('og:', '');
+            const content = tag.getAttribute('content');
+            if (property && content) {
+                data[property] = content;
+            }
+        });
+        return Object.keys(data).length > 0 ? data : null;
+    }
+    extractNameFromPosition(element) {
+        var _a, _b;
+        const text = (_a = element.textContent) === null || _a === void 0 ? void 0 : _a.trim();
+        if (text && text.length > 0 && text.length < 100) {
+            return text;
+        }
+        const htmlElement = element;
+        const heading = htmlElement.closest('h1, h2, h3, h4, h5, h6, [role="heading"]');
+        if (heading)
+            return ((_b = heading.textContent) === null || _b === void 0 ? void 0 : _b.trim()) || 'UI Element';
+        const label = element.getAttribute('aria-label') ||
+            element.getAttribute('title') ||
+            element.getAttribute('alt');
+        if (label)
+            return label;
+        return `Element at (${htmlElement.offsetLeft}, ${htmlElement.offsetTop})`;
+    }
+    inferTypeFromAttribute(attr) {
+        if (attr.includes('song') || attr.includes('track'))
+            return 'song';
+        if (attr.includes('video'))
+            return 'video';
+        if (attr.includes('product') || attr.includes('sku') || attr.includes('listing'))
+            return 'product';
+        if (attr.includes('article') || attr.includes('post') || attr.includes('thread'))
+            return 'article';
+        if (attr.includes('user') || attr.includes('author'))
+            return 'user';
+        if (attr.includes('content'))
+            return 'content';
+        return 'item';
+    }
+    generateHashId(str) {
+        let hash = 0;
+        for (let i = 0; i < str.length; i++) {
+            const char = str.charCodeAt(i);
+            hash = ((hash << 5) - hash) + char;
+            hash = hash & hash;
+        }
+        return Math.abs(hash).toString(36);
+    }
+    hashString(str) {
+        let hash = 0;
+        for (let i = 0; i < str.length; i++) {
+            const char = str.charCodeAt(i);
+            hash = ((hash << 5) - hash) + char;
+            hash = hash & hash;
+        }
+        return hash.toString(36);
+    }
+    setupDOMMutationObserver() {
+        this.domObserver = new MutationObserver((mutations) => {
+            mutations.forEach((mutation) => {
+                if (mutation.type === 'childList' && mutation.addedNodes.length > 0) {
+                    this.scanNewContent(Array.from(mutation.addedNodes));
+                }
+            });
+        });
+        this.domObserver.observe(document.body, {
+            childList: true,
+            subtree: true
+        });
+    }
+    scanNewContent(nodes) {
+        nodes.forEach(node => {
+            if (node.nodeType === Node.ELEMENT_NODE) {
+                const element = node;
+                const items = element.querySelectorAll('[data-item-id], [data-song-id], [data-track-id]');
+                items.forEach(item => {
+                    const itemData = this.extractItemDataFromElement(item);
+                    if (itemData) {
+                        this.itemCache.set(itemData.id, itemData);
+                    }
+                });
+            }
+        });
+    }
+    detectItem(eventOrElement) {
+        if (!eventOrElement)
+            return null;
+        if (eventOrElement instanceof Event) {
+            return this.detectItemFromClick(eventOrElement);
+        }
+        else if (eventOrElement instanceof Element) {
+            let itemData = this.extractItemDataFromElement(eventOrElement);
+            if (itemData)
+                return itemData;
+            itemData = this.detectItemFromChildren(eventOrElement);
+            if (itemData)
+                return itemData;
+            console.log('[Recsys AI] ⚠️ Failed to find Item ID in DOM/Children. Falling back.');
+            let fallbackItemData = this.detectItemFromLimitedText(eventOrElement) ||
+                this.detectItemFromPosition(eventOrElement);
+            if (fallbackItemData) {
+                fallbackItemData.source = 'fallback_' + fallbackItemData.source;
+            }
+            return fallbackItemData;
+        }
+        return null;
+    }
+}
+function getAIItemDetector() {
+    if (!aiItemDetectorInstance) {
+        aiItemDetectorInstance = new AIItemDetector();
+    }
+    return aiItemDetectorInstance;
+}
+
+// Adapter to convert TrackingRule to IRecsysRule
+function convertToRecsysRule(trackingRule) {
+    // Map triggerEventId to event type
+    const triggerEvent = trackingRule.triggerEventId === 1 ? 'click' :
+        trackingRule.triggerEventId === 2 ? 'page_view' : 'click';
+    // Determine payload extractor source from tracking rule
+    const targetValue = trackingRule.targetElementValue || '';
+    const isRegex = targetValue.startsWith('^');
+    return {
+        ruleName: trackingRule.name,
+        triggerEvent,
+        targetSelector: targetValue,
+        condition: { type: "NONE", operator: "NONE", value: null },
+        payloadExtractor: {
+            source: isRegex ? 'regex_group' : 'ai_detect',
+            pattern: isRegex ? targetValue : undefined,
+            groupIndex: isRegex ? 1 : undefined,
+            eventKey: "itemId",
+        },
+    };
+}
+/**
+ * TrackerContextAdapter - Bridge between RecSysTracker and legacy IRecsysContext
+ * Keeps 100% original logic, only adapts data from new SDK config
+ */
+class TrackerContextAdapter {
+    constructor(tracker) {
+        this.config = {
+            getRules: (eventType) => {
+                const config = this.tracker.getConfig();
+                if (!(config === null || config === void 0 ? void 0 : config.trackingRules))
+                    return [];
+                const triggerEventId = eventType === 'click' ? 1 : 2;
+                return config.trackingRules
+                    .filter(rule => rule.triggerEventId === triggerEventId)
+                    .map(convertToRecsysRule)
+                    .filter((rule) => rule !== null);
+            },
+        };
+        this.payloadBuilder = {
+            build: (element, rule, extraData = {}) => {
+                const userIdentityManager = getUserIdentityManager();
+                const payload = {
+                    event: rule.triggerEvent === "click" ? "item_click" : "page_view",
+                    url: window.location.href,
+                    timestamp: Date.now(),
+                    ruleName: rule.ruleName,
+                    userId: userIdentityManager.getRealUserId(),
+                    itemId: 'N/A'
+                };
+                let detectionResult = null;
+                const extractor = rule.payloadExtractor;
+                if (!extractor || typeof extractor.source === 'undefined') {
+                    console.error(`[PayloadBuilder Error] Rule '${rule.ruleName}' is missing a valid payloadExtractor or source.`);
+                    return {
+                        ...payload,
+                        itemId: 'N/A (Invalid Rule Config)',
+                        itemName: 'Invalid Rule',
+                        confidence: 0,
+                        source: 'invalid_rule_config'
+                    };
+                }
+                if (extractor.source === 'regex_group' && extraData.regexMatch) {
+                    const match = extraData.regexMatch;
+                    const groupIndex = extractor.groupIndex;
+                    if (groupIndex !== undefined && match.length > groupIndex) {
+                        const itemId = match[groupIndex];
+                        return {
+                            ...payload,
+                            itemId: itemId,
+                            itemName: itemId,
+                            itemType: 'song',
+                            confidence: 1.0,
+                            source: 'regex_url'
+                        };
+                    }
+                }
+                if (extractor.source === 'ai_detect') {
+                    const detector = getAIItemDetector();
+                    if (rule.triggerEvent === 'page_view' && element && element.id) {
+                        detectionResult = element;
+                    }
+                    else if (detector && element instanceof Element) {
+                        detectionResult = detector.detectItem(element);
+                    }
+                    if (detectionResult && detectionResult.id && detectionResult.id !== 'N/A (AI Failed)') {
+                        return {
+                            ...payload,
+                            itemId: detectionResult.id,
+                            itemName: detectionResult.name || 'Unknown',
+                            itemType: detectionResult.type || 'content',
+                            confidence: detectionResult.confidence || 0,
+                            source: detectionResult.source || 'dom_based',
+                            metadata: detectionResult.metadata || {}
+                        };
+                    }
+                    else {
+                        return {
+                            ...payload,
+                            itemId: 'N/A (Failed)',
+                            itemName: 'Unknown Item',
+                            confidence: 0,
+                            source: 'rule_match_no_ai_id'
+                        };
+                    }
+                }
+                return payload;
+            },
+        };
+        this.eventBuffer = {
+            enqueue: (payload) => {
+                console.groupCollapsed(`✅ [RECSYS TRACK] - ${payload.event.toUpperCase()} (UserID: ${payload.userId.substring(0, Math.min(15, payload.userId.length))}... | Confidence: ${(payload.confidence !== undefined ? payload.confidence * 100 : 0).toFixed(0)}%)`);
+                console.log("Payload:", payload);
+                if (payload.itemId && payload.itemId !== 'N/A (Failed)') {
+                    console.log(`✨ ITEM ID CAPTURED: ${payload.itemId} (${payload.itemName})`);
+                    console.log(`Source: ${payload.source} | Type: ${payload.itemType}`);
+                }
+                else {
+                    console.warn('⚠️ ITEM ID EXTRACTION FAILED. Check AIItemDetector logs.');
+                }
+                console.log(`--- Mock Sending to /track endpoint ---`);
+                console.groupEnd();
+                // Also send to real SDK event buffer if needed
+                // TODO: Integrate with SDK's actual event tracking
+            },
+        };
+        this.tracker = tracker;
+    }
+    updateIdentity(newUserId) {
+        console.log(`[TrackerContext] Identity updated to: ${newUserId}`);
+        this.tracker.setUserId(newUserId);
+    }
+}
+
+// Click Plugin - 100% Original Logic with BasePlugin wrapper
+class ClickPlugin extends BasePlugin {
+    constructor() {
+        super();
+        this.name = 'ClickPlugin';
+        this.version = '1.0.0';
+        // Original plugin state
+        this.context = null;
+        this.detector = null;
+        this.THROTTLE_DELAY = 300;
+        this.throttledHandler = throttle(this.handleDocumentClick.bind(this), this.THROTTLE_DELAY);
+    }
+    // BasePlugin integration
+    init(tracker) {
+        super.init(tracker);
+        // Original init logic
+        this.context = new TrackerContextAdapter(tracker);
+        this.detector = getAIItemDetector();
+        console.log(`[ClickPlugin] initialized for Rule + AI-based tracking.`);
+    }
+    start() {
+        if (!this.ensureInitialized())
+            return;
+        // Original start logic
+        if (this.context && this.detector) {
+            document.addEventListener("click", this.throttledHandler, false);
+            console.log("[ClickPlugin] started Rule + AI-based listening (Throttled).");
+            this.active = true;
+        }
+    }
+    stop() {
+        document.removeEventListener("click", this.throttledHandler, false);
+        super.stop();
+    }
+    // Original logic - 100% preserved
+    handleDocumentClick(event) {
+        if (!this.context || !this.detector)
+            return;
+        try {
+            const clickRules = this.context.config.getRules('click');
+            if (clickRules.length === 0) {
+                return;
+            }
+            const rule = clickRules[0];
+            const selector = rule.targetSelector;
+            const matchedElement = event.target.closest(selector);
+            if (matchedElement) {
+                const payload = this.context.payloadBuilder.build(matchedElement, rule);
+                this.context.eventBuffer.enqueue(payload);
+            }
+        }
+        catch (error) {
+            console.error(`[ClickPlugin Error] Error during Rule processing or Payload building:`, error);
+        }
+    }
+}
+
+var clickPlugin = /*#__PURE__*/Object.freeze({
+    __proto__: null,
+    ClickPlugin: ClickPlugin
+});
+
+// Page View Plugin - 100% Original Logic with BasePlugin wrapper
+class PageViewPlugin extends BasePlugin {
+    constructor() {
+        super(...arguments);
+        this.name = 'PageViewPlugin';
+        this.version = '1.0.0';
+        // Original plugin state
+        this.context = null;
+        this.detector = null;
+    }
+    // BasePlugin integration
+    init(tracker) {
+        super.init(tracker);
+        // Original init logic
+        this.context = new TrackerContextAdapter(tracker);
+        this.detector = getAIItemDetector();
+        console.log(`[PageViewPlugin] initialized for Rule + AI tracking.`);
+    }
+    start() {
+        if (!this.ensureInitialized())
+            return;
+        // Original start logic
+        if (!this.context || !this.detector)
+            return;
+        window.addEventListener("popstate", this.handlePageChange.bind(this));
+        {
+            window.addEventListener(CUSTOM_ROUTE_EVENT, this.handlePageChange.bind(this));
+        }
+        this.trackCurrentPage(window.location.href);
+        console.log("[PageViewPlugin] started listening and tracked initial load.");
+        this.active = true;
+    }
+    stop() {
+        window.removeEventListener("popstate", this.handlePageChange.bind(this));
+        {
+            window.removeEventListener(CUSTOM_ROUTE_EVENT, this.handlePageChange.bind(this));
+        }
+        super.stop();
+    }
+    // Original logic - 100% preserved
+    handlePageChange() {
+        setTimeout(() => {
+            this.trackCurrentPage(window.location.href);
+        }, 0);
+    }
+    trackCurrentPage(currentUrl) {
+        if (!this.context || !this.detector)
+            return;
+        const urlObject = new URL(currentUrl);
+        const pathname = urlObject.pathname;
+        try {
+            const pageViewRules = this.context.config.getRules('page_view');
+            const defaultAiRule = pageViewRules.find(r => r.payloadExtractor.source === 'ai_detect' && r.targetSelector === 'body');
+            let matchFoundInSpecificRule = false;
+            for (const rule of pageViewRules) {
+                if (rule === defaultAiRule)
+                    continue;
+                let matchFound = false;
+                let matchData = null;
+                const selector = rule.targetSelector;
+                if (rule.payloadExtractor.source === 'regex_group' && selector && selector.startsWith('^')) {
+                    const pattern = new RegExp(selector);
+                    const match = pathname.match(pattern);
+                    if (match) {
+                        matchFound = true;
+                        matchData = { regexMatch: match };
+                    }
+                }
+                else if (selector) {
+                    if (document.querySelector(selector)) {
+                        matchFound = true;
+                    }
+                }
+                if (matchFound) {
+                    console.log(`[Recsys Tracker] ✅ Match Specific PageView Rule: ${rule.ruleName}`);
+                    let structuredItem = null;
+                    if (rule.payloadExtractor.source === 'ai_detect') {
+                        structuredItem = this.detector.detectItemFromStructuredData(document.body) ||
+                            this.detector.extractOpenGraphData();
+                    }
+                    const payload = this.context.payloadBuilder.build(structuredItem, rule, matchData || undefined);
+                    this.context.eventBuffer.enqueue(payload);
+                    matchFoundInSpecificRule = true;
+                    return;
+                }
+            }
+            if (!matchFoundInSpecificRule) {
+                console.log('[Recsys Tracker] ⏸️ Pageview skipped. No specific rule matched the current URL/DOM.');
+                return;
+            }
+        }
+        catch (error) {
+            console.error(`[PageViewPlugin Error] Error during tracking:`, error);
+        }
+    }
+}
+
+var pageViewPlugin = /*#__PURE__*/Object.freeze({
+    __proto__: null,
+    PageViewPlugin: PageViewPlugin
+});
+
 // RecSysTracker - Main SDK class
 class RecSysTracker {
     constructor() {
@@ -1554,6 +3239,7 @@ class RecSysTracker {
         this.errorBoundary = new ErrorBoundary();
         this.eventBuffer = new EventBuffer();
         this.metadataNormalizer = new MetadataNormalizer();
+        this.pluginManager = new PluginManager(this);
     }
     // Khởi tạo SDK - tự động gọi khi tải script
     async init() {
@@ -1585,6 +3271,8 @@ class RecSysTracker {
                     this.displayManager.initialize(this.config.returnMethods);
                     console.log('[RecSysTracker] Display methods initialized');
                 }
+                // Auto-register and start plugins based on tracking rules
+                this.autoInitializePlugins();
             }
             else {
                 // Nếu origin verification thất bại, không khởi tạo SDK
@@ -1599,6 +3287,41 @@ class RecSysTracker {
             this.setupUnloadHandler();
             this.isInitialized = true;
         }, 'init');
+    }
+    // Auto-initialize plugins based on tracking rules
+    autoInitializePlugins() {
+        var _a;
+        if (!((_a = this.config) === null || _a === void 0 ? void 0 : _a.trackingRules) || this.config.trackingRules.length === 0) {
+            return;
+        }
+        // Check if we need ClickPlugin (triggerEventId === 1)
+        const hasClickRules = this.config.trackingRules.some(rule => rule.triggerEventId === 1);
+        // Check if we need PageViewPlugin (triggerEventId === 2)
+        const hasPageViewRules = this.config.trackingRules.some(rule => rule.triggerEventId === 2);
+        // Only auto-initialize if no plugins are registered yet
+        if (this.pluginManager.getPluginNames().length === 0) {
+            if (hasClickRules) {
+                // Dynamic import to avoid circular dependency
+                Promise.resolve().then(function () { return clickPlugin; }).then(({ ClickPlugin }) => {
+                    this.use(new ClickPlugin());
+                    console.log('[RecSysTracker] Auto-registered ClickPlugin based on tracking rules');
+                });
+            }
+            if (hasPageViewRules) {
+                // Dynamic import to avoid circular dependency
+                Promise.resolve().then(function () { return pageViewPlugin; }).then(({ PageViewPlugin }) => {
+                    this.use(new PageViewPlugin());
+                    console.log('[RecSysTracker] Auto-registered PageViewPlugin based on tracking rules');
+                });
+            }
+            // Auto-start plugins after a small delay to ensure all are registered
+            if (hasClickRules || hasPageViewRules) {
+                setTimeout(() => {
+                    this.startPlugins();
+                    console.log('[RecSysTracker] Auto-started plugins');
+                }, 100);
+            }
+        }
     }
     // Track custom event
     track(eventData) {
@@ -1706,6 +3429,8 @@ class RecSysTracker {
             if (this.sendInterval) {
                 clearInterval(this.sendInterval);
             }
+            // Stop all plugins
+            this.pluginManager.destroy();
             // Flush remaining events
             if (!this.eventBuffer.isEmpty()) {
                 const allEvents = this.eventBuffer.getAll();
@@ -1718,6 +3443,38 @@ class RecSysTracker {
             }
             this.isInitialized = false;
         }, 'destroy');
+    }
+    // Plugin Management Methods
+    /**
+     * Get the plugin manager instance
+     */
+    getPluginManager() {
+        return this.pluginManager;
+    }
+    /**
+     * Get the display manager instance
+     */
+    getDisplayManager() {
+        return this.displayManager;
+    }
+    /**
+     * Register a plugin (convenience method)
+     */
+    use(plugin) {
+        this.pluginManager.register(plugin);
+        return this;
+    }
+    /**
+     * Start all registered plugins
+     */
+    startPlugins() {
+        this.pluginManager.startAll();
+    }
+    /**
+     * Stop all registered plugins
+     */
+    stopPlugins() {
+        this.pluginManager.stopAll();
     }
 }
 // Tự động tạo instance toàn cục và khởi tạo
@@ -1743,7 +3500,12 @@ if (typeof window !== 'undefined') {
     }
 }
 
+exports.BasePlugin = BasePlugin;
+exports.ClickPlugin = ClickPlugin;
 exports.ConfigLoader = ConfigLoader;
+exports.DisplayManager = DisplayManager;
+exports.PageViewPlugin = PageViewPlugin;
+exports.PluginManager = PluginManager;
 exports.RecSysTracker = RecSysTracker;
 exports.default = RecSysTracker;
 //# sourceMappingURL=recsys-tracker.cjs.js.map

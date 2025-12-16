@@ -1,41 +1,52 @@
-import { IRecsysContext, IRecsysRule, RuleEvent, IRecsysPayload, IAIItemDetectionResult, IPayloadExtraData } from './IRecsysContext';
-import { MockRules, ICondition, RuleSource } from './IRecsysRule';
-import { getUserIdentityManager } from './UserIdentityManager';
-import { getAIItemDetector } from './AIItemDetector';
+import { IRecsysContext, IRecsysRule, RuleEvent, IRecsysPayload, IAIItemDetectionResult, IPayloadExtraData } from '../interfaces/recsys-context.interface';
+import { getUserIdentityManager } from '../utils/user-identity-manager';
+import { getAIItemDetector } from '../utils/ai-item-detector';
+import { RecSysTracker } from '../../..';
+import { TrackingRule } from '../../../types';
 
-const MOCK_RULES: MockRules = {
-    click: [
-        {
-            ruleName: "Track_Item_Click",
-            triggerEvent: "click",
-            targetSelector: "._item-card-column_24svy_1",
-            condition: { type: "NONE", operator: "NONE", value: null } as ICondition,
-            payloadExtractor: {
-                source: 'ai_detect' as RuleSource,
-                eventKey: "itemId",
-            },
+// Adapter to convert TrackingRule to IRecsysRule
+function convertToRecsysRule(trackingRule: TrackingRule): IRecsysRule | null {
+    // Map triggerEventId to event type
+    const triggerEvent: RuleEvent = trackingRule.triggerEventId === 1 ? 'click' : 
+                                     trackingRule.triggerEventId === 2 ? 'page_view' : 'click';
+    
+    // Determine payload extractor source from tracking rule
+    const targetValue = trackingRule.targetElementValue || '';
+    const isRegex = targetValue.startsWith('^');
+    
+    return {
+        ruleName: trackingRule.name,
+        triggerEvent,
+        targetSelector: targetValue,
+        condition: { type: "NONE", operator: "NONE", value: null },
+        payloadExtractor: {
+            source: isRegex ? 'regex_group' : 'ai_detect',
+            pattern: isRegex ? targetValue : undefined,
+            groupIndex: isRegex ? 1 : undefined,
+            eventKey: "itemId",
         },
-    ],
-    page_view: [
-        {
-            ruleName: "Track_Song_Pageview",
-            triggerEvent: "page_view",
-            targetSelector: "^/song/([^/?#]+)", 
-            condition: { type: "NONE", operator: "NONE", value: null } as ICondition,
-            payloadExtractor: {
-                source: 'regex_group' as RuleSource,
-                pattern: "^/song/([^/?#]+)",
-                groupIndex: 1,
-                eventKey: "itemId",
-            },
-        }
-    ]
-};
+    };
+}
 
-export class TrackerContext implements IRecsysContext {
+export class TrackerContextAdapter implements IRecsysContext {
+    private tracker: RecSysTracker;
+
+    constructor(tracker: RecSysTracker) {
+        this.tracker = tracker;
+    }
 
     public config = {
-        getRules: (eventType: RuleEvent): IRecsysRule[] => MOCK_RULES[eventType] || [],
+        getRules: (eventType: RuleEvent): IRecsysRule[] => {
+            const config = this.tracker.getConfig();
+            if (!config?.trackingRules) return [];
+
+            const triggerEventId = eventType === 'click' ? 1 : 2;
+            
+            return config.trackingRules
+                .filter(rule => rule.triggerEventId === triggerEventId)
+                .map(convertToRecsysRule)
+                .filter((rule): rule is IRecsysRule => rule !== null);
+        },
     };
 
     public payloadBuilder = {
@@ -87,7 +98,7 @@ export class TrackerContext implements IRecsysContext {
                 const detector = getAIItemDetector();
                 
                 if (rule.triggerEvent === 'page_view' && element && (element as IAIItemDetectionResult).id) {
-                    detectionResult = element as IAIItemDetectionResult; // Sử dụng structuredItem được tìm thấy trước
+                    detectionResult = element as IAIItemDetectionResult;
                 } else if (detector && element instanceof Element) {
                     detectionResult = detector.detectItem(element); 
                 }
@@ -119,6 +130,7 @@ export class TrackerContext implements IRecsysContext {
     
     public eventBuffer = {
         enqueue: (payload: IRecsysPayload) => {
+            // Log for debugging
             console.groupCollapsed(
                 `✅ [RECSYS TRACK] - ${payload.event.toUpperCase()} (UserID: ${payload.userId.substring(0, Math.min(15, payload.userId.length))}... | Confidence: ${(payload.confidence !== undefined ? payload.confidence * 100 : 0).toFixed(0)}%)`
             );
@@ -129,12 +141,24 @@ export class TrackerContext implements IRecsysContext {
             } else {
                 console.warn('⚠️ ITEM ID EXTRACTION FAILED. Check AIItemDetector logs.');
             }
-            console.log(`--- Mock Sending to /track endpoint ---`);
             console.groupEnd();
+
+            // Convert IRecsysPayload to TrackedEvent format and send to real EventBuffer
+            const triggerTypeId = payload.event === 'item_click' ? 1 : 2;
+            
+            // Only track if itemId is valid
+            if (payload.itemId && !payload.itemId.startsWith('N/A')) {
+                this.tracker.track({
+                    triggerTypeId,
+                    userId: parseInt(payload.userId) || 0,
+                    itemId: parseInt(payload.itemId) || 0,
+                });
+            }
         },
     };
 
     public updateIdentity(newUserId: string) {
         console.log(`[TrackerContext] Identity updated to: ${newUserId}`);
+        this.tracker.setUserId(newUserId);
     }
 }

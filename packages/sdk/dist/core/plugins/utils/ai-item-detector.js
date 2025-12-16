@@ -1,79 +1,59 @@
-import { IAIItemDetectionResult } from './IRecsysContext'; 
-
-let aiItemDetectorInstance: AIItemDetector | null = null;
-
-type Position = {
-    x: number;
-    y: number;
-    width: number;
-    height: number;
-};
-
+let aiItemDetectorInstance = null;
 export class AIItemDetector {
-    private itemCache: Map<string, IAIItemDetectionResult> = new Map();
-    private domObserver: MutationObserver | null = null;
-
     constructor() {
+        this.itemCache = new Map();
+        this.domObserver = null;
         if (aiItemDetectorInstance) {
             return aiItemDetectorInstance;
         }
         this.init();
         aiItemDetectorInstance = this;
     }
-
-    public init(): void {
+    init() {
         console.log('[Recsys AI] 🤖 AI Item Detector initialized');
         this.setupDOMMutationObserver();
     }
-
-    private detectItemFromClick(event: Event): IAIItemDetectionResult | null {
-        const element = event.target as Element; 
+    detectItemFromClick(event) {
+        const element = event.target;
         console.log('[Recsys AI] 🔍 Analyzing clicked element...');
-
         const domItem = this.detectItemFromDOM(element);
-        if (domItem) return domItem;
-
+        if (domItem)
+            return domItem;
         const textItem = this.detectItemFromText(element);
-        if (textItem) return textItem;
-
+        if (textItem)
+            return textItem;
         const mediaItem = this.detectItemFromMedia(element);
-        if (mediaItem) return mediaItem;
-        
+        if (mediaItem)
+            return mediaItem;
         const structuredItem = this.detectItemFromStructuredData(element);
-        if (structuredItem) return structuredItem;
-
+        if (structuredItem)
+            return structuredItem;
         return this.detectItemFromPosition(element);
     }
-
-    private detectItemFromDOM(element: Element): IAIItemDetectionResult | null {
+    detectItemFromDOM(element) {
         console.log('[Recsys AI] 🔍 Analyzing DOM context (Self/Parent Check)...');
-        
-        let current: Element | null = element;
-        for (let i = 0; i < 5; i++) { 
-            if (!current) break;
-            
+        let current = element;
+        for (let i = 0; i < 5; i++) {
+            if (!current)
+                break;
             const itemData = this.extractItemDataFromElement(current);
             if (itemData) {
                 return itemData;
             }
-            
             current = current.parentElement;
         }
-        
         return null;
     }
-
-    private detectItemFromChildren(parentElement: Element): IAIItemDetectionResult | null {
+    detectItemFromChildren(parentElement) {
+        var _a;
         console.log('[Recsys AI] 🔍 Analyzing Item Card Children...');
-
-        const itemSelectors = ['[data-item-id]', '[data-id]', 
-                               '[data-song-id]', '[data-track-id]', '[data-video-id]', 
-                               '[data-product-id]', '[data-sku]', '[data-listing-id]', 
-                               '[data-article-id]', '[data-post-id]', '[data-thread-id]',
-                               '[data-user-id]', '[data-author-id]', 
-                               '[data-content-id]'
-                            ];
-                               
+        const itemSelectors = ['[data-item-id]', '[data-id]',
+            '[data-song-id]', '[data-track-id]', '[data-video-id]',
+            '[data-product-id]', '[data-sku]', '[data-listing-id]',
+            '[data-article-id]', '[data-post-id]', '[data-thread-id]',
+            '[data-user-id]', '[data-author-id]',
+            '[data-content-id]'
+        ];
         for (const selector of itemSelectors) {
             const childElement = parentElement.querySelector(selector);
             if (childElement) {
@@ -84,7 +64,6 @@ export class AIItemDetector {
                 }
             }
         }
-        
         const prominentChildren = parentElement.querySelectorAll('a, button, [role="link"], [role="button"]');
         for (const child of Array.from(prominentChildren)) {
             const itemData = this.extractItemDataFromElement(child);
@@ -93,10 +72,8 @@ export class AIItemDetector {
                 return itemData;
             }
         }
-
         const titleElement = parentElement.querySelector('h1, h2, h3, h4, [data-title]');
-        const title = titleElement?.textContent?.trim();
-        
+        const title = (_a = titleElement === null || titleElement === void 0 ? void 0 : titleElement.textContent) === null || _a === void 0 ? void 0 : _a.trim();
         if (title) {
             console.log('[Recsys AI] 💡 Detected item via Title Fallback:', title);
             return {
@@ -105,24 +82,21 @@ export class AIItemDetector {
                 type: 'content',
                 confidence: 0.6,
                 source: 'title_fallback'
-            } as IAIItemDetectionResult;
+            };
         }
-
         return null;
     }
-
-    private detectItemFromText(element: Element): IAIItemDetectionResult | null {
+    detectItemFromText(element) {
         console.log('[Recsys AI] 🔍 Analyzing text content...');
-        
         const textContext = this.getTextContext(element, 2);
-        if (!textContext) return null;
-        
+        if (!textContext)
+            return null;
         const patterns = {
             song: [
-                /(["'])(.+?)\1\s*(?:-|-|by)\s*(.+)/i, 
-                /(.+?)\s*(?:-|-)\s*(.+)/i, 
-                /Track\s*\d+[:\s]*(.+)/i, 
-                /(.+?)\s*\(feat\.\s*(.+)\)/i, 
+                /(["'])(.+?)\1\s*(?:-|-|by)\s*(.+)/i,
+                /(.+?)\s*(?:-|-)\s*(.+)/i,
+                /Track\s*\d+[:\s]*(.+)/i,
+                /(.+?)\s*\(feat\.\s*(.+)\)/i,
             ],
             album: [
                 /Album[:\s]*(.+)/i,
@@ -132,27 +106,24 @@ export class AIItemDetector {
                 /Artist[:\s]*(.+)/i,
                 /by\s*(.+)/i,
             ],
-            product: [ 
+            product: [
                 /(Mã|SKU|Code|Item)\s*[:#]\s*([A-Z0-9-]+)/i,
-                /(Product|Sản phẩm)\s*[:\s]*(.+)/i, 
+                /(Product|Sản phẩm)\s*[:\s]*(.+)/i,
             ],
-            article: [ 
+            article: [
                 /(Bài viết|Post|News)\s*[:\s]*(.+)/i,
                 /Published\s*(?:by|on)\s*(.+)/i,
             ],
         };
-        
         for (const [type, typePatterns] of Object.entries(patterns)) {
             for (const pattern of typePatterns) {
                 const match = textContext.match(pattern);
                 if (match) {
                     const itemName = (match[2] || match[1] || '').trim();
-                    if (!itemName) continue;
-
+                    if (!itemName)
+                        continue;
                     const idValue = (type === 'product' && itemName.length < 50) ? itemName : this.generateHashId(itemName);
-                    
                     console.log(`[Recsys AI] ✅ Detected ${type}: ${itemName}`);
-
                     return {
                         id: idValue,
                         name: itemName,
@@ -160,23 +131,18 @@ export class AIItemDetector {
                         confidence: 0.7,
                         source: 'text_pattern',
                         context: textContext.substring(0, 100)
-                    } as IAIItemDetectionResult;
+                    };
                 }
             }
         }
-        
         const keywords = {
             song: ['play', 'listen', 'track', 'song', 'music', 'audio'],
             video: ['watch', 'view', 'video', 'movie', 'film', 'trailer'],
-            
             product: ['buy', 'purchase', 'shop', 'product', 'item', 'add to cart', 'giá', 'mua hàng', 'price'],
-            
             article: ['read more', 'continue reading', 'bài viết', 'tin tức', 'blog post', 'tác giả'],
-            
             user: ['follow', 'profile', 'người dùng', 'tài khoản', 'friend'],
             comment: ['like', 'share', 'comment', 'bình luận'],
         };
-        
         const lowerText = textContext.toLowerCase();
         for (const [type, words] of Object.entries(keywords)) {
             if (words.some(word => lowerText.includes(word))) {
@@ -189,38 +155,33 @@ export class AIItemDetector {
                         confidence: 0.5,
                         source: 'keyword_match',
                         context: textContext.substring(0, 100)
-                    } as IAIItemDetectionResult;
+                    };
                 }
             }
         }
-        
         return null;
     }
-
-    private detectItemFromLimitedText(element: Element): IAIItemDetectionResult | null {
-        
-        const textContext = this.getTextContext(element, 1); 
-        if (!textContext) return null;
-        
+    detectItemFromLimitedText(element) {
+        const textContext = this.getTextContext(element, 1);
+        if (!textContext)
+            return null;
         const MAX_CONTEXT_LENGTH = 120;
-        
         if (textContext.length > MAX_CONTEXT_LENGTH) {
-             console.log('[Recsys AI] Text fallback ignored: Context too long (>' + MAX_CONTEXT_LENGTH + ').');
-             return null; 
+            console.log('[Recsys AI] Text fallback ignored: Context too long (>' + MAX_CONTEXT_LENGTH + ').');
+            return null;
         }
-        
         const patterns = {
             song: [
-                /(["'])(.+?)\1\s*(?:-|-|by)\s*(.+)/i, 
-                /(.+?)\s*(?:-|-)\s*(.+)/i, 
-                /Track\s*\d+[:\s]*(.+)/i, 
-                /(.+?)\s*\(feat\.\s*(.+)\)/i, 
+                /(["'])(.+?)\1\s*(?:-|-|by)\s*(.+)/i,
+                /(.+?)\s*(?:-|-)\s*(.+)/i,
+                /Track\s*\d+[:\s]*(.+)/i,
+                /(.+?)\s*\(feat\.\s*(.+)\)/i,
             ],
-            product: [ 
+            product: [
                 /(Mã|SKU|Code|Item)\s*[:#]\s*([A-Z0-9-]+)/i,
-                /(Product|Sản phẩm)\s*[:\s]*(.+)/i, 
+                /(Product|Sản phẩm)\s*[:\s]*(.+)/i,
             ],
-            article: [ 
+            article: [
                 /(Bài viết|Post|News)\s*[:\s]*(.+)/i,
                 /Published\s*(?:by|on)\s*(.+)/i,
             ],
@@ -233,16 +194,14 @@ export class AIItemDetector {
                 /by\s*(.+)/i,
             ]
         };
-        
         for (const [type, typePatterns] of Object.entries(patterns)) {
             for (const pattern of typePatterns) {
                 const match = textContext.match(pattern);
                 if (match) {
                     const itemName = (match[2] || match[1] || '').trim();
-                    if (!itemName) continue;
-
+                    if (!itemName)
+                        continue;
                     const idValue = (type === 'product' && itemName.length < 50) ? itemName : this.generateHashId(itemName);
-                    
                     return {
                         id: idValue,
                         name: itemName,
@@ -250,11 +209,10 @@ export class AIItemDetector {
                         confidence: 0.5,
                         source: 'text_pattern_limited',
                         context: textContext
-                    } as IAIItemDetectionResult;
+                    };
                 }
             }
         }
-        
         const keywords = {
             song: ['play', 'listen', 'track', 'song', 'music', 'audio'],
             video: ['watch', 'view', 'video', 'movie', 'film', 'trailer'],
@@ -263,7 +221,6 @@ export class AIItemDetector {
             user: ['follow', 'profile', 'người dùng', 'tài khoản', 'friend'],
             comment: ['like', 'share', 'comment', 'bình luận'],
         };
-        
         const lowerText = textContext.toLowerCase();
         for (const [type, words] of Object.entries(keywords)) {
             if (words.some(word => lowerText.includes(word))) {
@@ -276,29 +233,25 @@ export class AIItemDetector {
                         confidence: 0.3,
                         source: 'keyword_match_limited',
                         context: textContext
-                    } as IAIItemDetectionResult;
+                    };
                 }
             }
         }
-
         return null;
     }
-
-    private detectItemFromMedia(element: Element): IAIItemDetectionResult | null { 
+    detectItemFromMedia(element) {
         const mediaElement = this.findNearbyMedia(element);
-        if (!mediaElement) return null;
-        
-        const castedMedia = mediaElement as HTMLMediaElement & HTMLImageElement;
-
-        let mediaData: Record<string, any> = {
+        if (!mediaElement)
+            return null;
+        const castedMedia = mediaElement;
+        let mediaData = {
             type: mediaElement.tagName.toLowerCase(),
             src: castedMedia.src || castedMedia.currentSrc || '',
-            alt: castedMedia.alt || castedMedia.getAttribute('alt') || '', 
-            title: castedMedia.title || castedMedia.getAttribute('title') || '' 
+            alt: castedMedia.alt || castedMedia.getAttribute('alt') || '',
+            title: castedMedia.title || castedMedia.getAttribute('title') || ''
         };
-        
         if (mediaElement.tagName === 'IMG') {
-            const imageInfo = this.analyzeImage(mediaElement as HTMLImageElement);
+            const imageInfo = this.analyzeImage(mediaElement);
             if (imageInfo) {
                 return {
                     id: this.generateHashId(mediaData.src + mediaData.alt),
@@ -307,12 +260,11 @@ export class AIItemDetector {
                     confidence: 0.6,
                     source: 'image_analysis',
                     metadata: { ...mediaData, ...imageInfo }
-                } as IAIItemDetectionResult;
+                };
             }
         }
-        
         if (mediaElement.tagName === 'VIDEO') {
-            const videoInfo = this.analyzeVideo(mediaElement as HTMLVideoElement);
+            const videoInfo = this.analyzeVideo(mediaElement);
             if (videoInfo) {
                 return {
                     id: this.generateHashId(mediaData.src + Date.now()),
@@ -321,23 +273,21 @@ export class AIItemDetector {
                     confidence: 0.6,
                     source: 'video_analysis',
                     metadata: { ...mediaData, ...videoInfo }
-                } as IAIItemDetectionResult;
+                };
             }
         }
-        
         return null;
     }
-
-    public detectItemFromStructuredData(element: Element): IAIItemDetectionResult | null { 
+    detectItemFromStructuredData(element) {
         const microdata = this.extractMicrodata(element);
-        if (microdata) return microdata;
-        
+        if (microdata)
+            return microdata;
         const jsonLdData = this.extractJsonLdData();
         if (jsonLdData) {
             const matchingItem = this.findMatchingItemInJsonLd(jsonLdData, element);
-            if (matchingItem) return matchingItem;
+            if (matchingItem)
+                return matchingItem;
         }
-        
         const ogData = this.extractOpenGraphData();
         if (ogData) {
             return {
@@ -347,24 +297,21 @@ export class AIItemDetector {
                 confidence: 0.8,
                 source: 'open_graph',
                 metadata: ogData
-            } as IAIItemDetectionResult;
+            };
         }
-        
         return null;
     }
-
-    private detectItemFromPosition(element: Element): IAIItemDetectionResult {
+    detectItemFromPosition(element) {
+        var _a;
         const rect = element.getBoundingClientRect();
-        const position: Position = {
+        const position = {
             x: Math.round(rect.left + window.scrollX),
             y: Math.round(rect.top + window.scrollY),
             width: Math.round(rect.width),
             height: Math.round(rect.height)
         };
-        
         const positionId = `${position.x}_${position.y}_${position.width}_${position.height}`;
         const contentHash = this.hashString(element.textContent || '');
-        
         return {
             id: `pos_${positionId}_${contentHash}`,
             name: this.extractNameFromPosition(element),
@@ -372,135 +319,120 @@ export class AIItemDetector {
             confidence: 0.3,
             source: 'position_based',
             metadata: {
-                 position: position,
-                 elementType: element.tagName.toLowerCase(),
-                 textPreview: element.textContent?.substring(0, 50) || ''
+                position: position,
+                elementType: element.tagName.toLowerCase(),
+                textPreview: ((_a = element.textContent) === null || _a === void 0 ? void 0 : _a.substring(0, 50)) || ''
             }
-        } as IAIItemDetectionResult;
+        };
     }
-
-    private extractItemDataFromElement(element: Element): IAIItemDetectionResult | null {
-        const dataAttrs = ['data-item-id', 'data-id', 
-                            'data-song-id', 'data-track-id', 'data-video-id', 
-                            'data-product-id', 'data-sku', 'data-listing-id', 
-                            'data-article-id', 'data-post-id', 'data-thread-id',
-                            'data-user-id', 'data-author-id', 
-                            'data-content-id'
-                        ];
-        
-        const htmlElement = element as HTMLElement; 
-
+    extractItemDataFromElement(element) {
+        var _a;
+        const dataAttrs = ['data-item-id', 'data-id',
+            'data-song-id', 'data-track-id', 'data-video-id',
+            'data-product-id', 'data-sku', 'data-listing-id',
+            'data-article-id', 'data-post-id', 'data-thread-id',
+            'data-user-id', 'data-author-id',
+            'data-content-id'
+        ];
+        const htmlElement = element;
         for (const attr of dataAttrs) {
             const value = element.getAttribute(attr);
             if (value) {
                 const itemTitle = htmlElement.title || htmlElement.getAttribute('title');
-                const itemAlt = htmlElement.getAttribute('alt'); 
-
+                const itemAlt = htmlElement.getAttribute('alt');
                 return {
                     id: value,
-                    name: element.getAttribute('data-item-name') || 
-                          element.getAttribute('data-name') || 
-                          itemTitle || 
-                          itemAlt || 
-                          'Unnamed Item',
+                    name: element.getAttribute('data-item-name') ||
+                        element.getAttribute('data-name') ||
+                        itemTitle ||
+                        itemAlt ||
+                        'Unnamed Item',
                     type: this.inferTypeFromAttribute(attr),
                     confidence: 0.9,
                     source: 'data_attribute',
                     metadata: { attribute: attr }
-                } as IAIItemDetectionResult;
+                };
             }
         }
-        
         if (element.tagName === 'ARTICLE' || element.getAttribute('role') === 'article') {
             const title = element.querySelector('h1, h2, h3, [role="heading"]');
             if (title) {
                 return {
                     id: this.generateHashId(title.textContent + element.innerHTML.length),
-                    name: title.textContent?.trim(),
+                    name: (_a = title.textContent) === null || _a === void 0 ? void 0 : _a.trim(),
                     type: 'article',
                     confidence: 0.7,
                     source: 'semantic_html'
-                } as IAIItemDetectionResult;
+                };
             }
         }
-        
         return null;
     }
-
-    private getTextContext(element: Element, depth = 2): string | null {
+    getTextContext(element, depth = 2) {
+        var _a, _b, _c;
         let context = '';
-        let current: Element | null = element;
-        
+        let current = element;
         for (let i = 0; i <= depth; i++) {
-            if (!current) break;
-            
-            const text = current.textContent?.trim();
+            if (!current)
+                break;
+            const text = (_a = current.textContent) === null || _a === void 0 ? void 0 : _a.trim();
             if (text && text.length > 0 && text.length < 500) {
                 context += text + ' ';
             }
-            
             if (current.previousElementSibling) {
-                const prevText = current.previousElementSibling.textContent?.trim();
+                const prevText = (_b = current.previousElementSibling.textContent) === null || _b === void 0 ? void 0 : _b.trim();
                 if (prevText && prevText.length < 200) {
                     context = prevText + ' ' + context;
                 }
             }
-            
             if (current.nextElementSibling) {
-                const nextText = current.nextElementSibling.textContent?.trim();
+                const nextText = (_c = current.nextElementSibling.textContent) === null || _c === void 0 ? void 0 : _c.trim();
                 if (nextText && nextText.length < 200) {
                     context += ' ' + nextText;
                 }
             }
-            
             current = current.parentElement;
         }
-        
         return context.trim() || null;
     }
-    
-    private findNearbyMedia(element: Element, maxDistance = 3): Element | null {
-        if (element.tagName === 'IMG' || element.tagName === 'VIDEO' || 
+    findNearbyMedia(element, maxDistance = 3) {
+        if (element.tagName === 'IMG' || element.tagName === 'VIDEO' ||
             element.tagName === 'AUDIO' || element.tagName === 'FIGURE') {
             return element;
         }
-        
         const mediaChild = element.querySelector('img, video, audio, figure, [data-media]');
-        if (mediaChild) return mediaChild;
-        
-        let current: Element | null = element;
+        if (mediaChild)
+            return mediaChild;
+        let current = element;
         for (let i = 0; i < maxDistance; i++) {
-            if (!current) break;
-            
+            if (!current)
+                break;
             if (current.parentElement) {
                 const parentMedia = current.parentElement.querySelector('img, video, audio');
-                if (parentMedia) return parentMedia;
+                if (parentMedia)
+                    return parentMedia;
             }
-            
-            const siblings: Element[] = [];
-            if (current.previousElementSibling) siblings.push(current.previousElementSibling);
-            if (current.nextElementSibling) siblings.push(current.nextElementSibling);
-            
+            const siblings = [];
+            if (current.previousElementSibling)
+                siblings.push(current.previousElementSibling);
+            if (current.nextElementSibling)
+                siblings.push(current.nextElementSibling);
             for (const sibling of siblings) {
                 const siblingMedia = sibling.querySelector('img, video, audio');
-                if (siblingMedia) return siblingMedia;
+                if (siblingMedia)
+                    return siblingMedia;
             }
-            
             current = current.parentElement;
         }
-        
         return null;
     }
-
-    private analyzeImage(imgElement: HTMLImageElement): { name: string; type: string; dimensions: Record<string, number> } {
+    analyzeImage(imgElement) {
         const src = imgElement.src || '';
         const alt = imgElement.alt || '';
-        
         let name = alt;
         if (!name && src) {
             name = this.extractNameFromSrc(src);
         }
-        
         let type = 'image';
         const patterns = [
             /(album|cover|artwork).*\.(jpg|jpeg|png|gif)/i,
@@ -508,16 +440,17 @@ export class AIItemDetector {
             /(artist|band).*\.(jpg|jpeg|png|gif)/i,
             /(thumbnail|thumb).*\.(jpg|jpeg|png|gif)/i,
         ];
-        
         for (const pattern of patterns) {
             if (pattern.test(src) || pattern.test(alt)) {
-                if (pattern.toString().includes('album')) type = 'album_art';
-                if (pattern.toString().includes('song')) type = 'song_image';
-                if (pattern.toString().includes('artist')) type = 'artist_image';
+                if (pattern.toString().includes('album'))
+                    type = 'album_art';
+                if (pattern.toString().includes('song'))
+                    type = 'song_image';
+                if (pattern.toString().includes('artist'))
+                    type = 'artist_image';
                 break;
             }
         }
-        
         return {
             name: name,
             type: type,
@@ -529,52 +462,48 @@ export class AIItemDetector {
             }
         };
     }
-
-    private analyzeVideo(videoElement: HTMLVideoElement): { title: string; duration: number; isPlaying: boolean; currentTime: number } {
+    analyzeVideo(videoElement) {
         const src = videoElement.src || videoElement.currentSrc || '';
         const duration = videoElement.duration || 0;
-        
         return {
-            title: videoElement.getAttribute('data-title') || 
-                   videoElement.title || 
-                   this.extractNameFromSrc(src),
+            title: videoElement.getAttribute('data-title') ||
+                videoElement.title ||
+                this.extractNameFromSrc(src),
             duration: duration,
             isPlaying: !videoElement.paused,
             currentTime: videoElement.currentTime || 0
         };
     }
-
-    private extractNameFromSrc(src: string): string {
-        if (!src) return '';
-        
-        const filename = src.split('/').pop()?.split('?')[0] || '';
-        const name = filename.replace(/\.[^/.]+$/, ''); 
-        
+    extractNameFromSrc(src) {
+        var _a;
+        if (!src)
+            return '';
+        const filename = ((_a = src.split('/').pop()) === null || _a === void 0 ? void 0 : _a.split('?')[0]) || '';
+        const name = filename.replace(/\.[^/.]+$/, '');
         let cleanName = name.replace(/[-_]/g, ' ');
         try {
             cleanName = decodeURIComponent(cleanName);
-        } catch (e) {
+        }
+        catch (e) {
             // Ignore
         }
-        
         return cleanName;
     }
-
-    private extractMicrodata(element: Element): IAIItemDetectionResult | null {
+    extractMicrodata(element) {
         const itemprops = element.querySelectorAll('[itemprop]');
-        if (itemprops.length === 0) return null;
-        
-        const data: Record<string, string> = {};
+        if (itemprops.length === 0)
+            return null;
+        const data = {};
         Array.from(itemprops).forEach(el => {
+            var _a;
             const prop = el.getAttribute('itemprop');
-            const value = el.getAttribute('content') || 
-                            el.getAttribute('src') || 
-                            el.textContent?.trim();
+            const value = el.getAttribute('content') ||
+                el.getAttribute('src') ||
+                ((_a = el.textContent) === null || _a === void 0 ? void 0 : _a.trim());
             if (prop && value) {
                 data[prop] = value;
             }
         });
-        
         if (Object.keys(data).length > 0) {
             return {
                 id: data.url || data.identifier || this.generateHashId(JSON.stringify(data)),
@@ -583,36 +512,34 @@ export class AIItemDetector {
                 confidence: 0.85,
                 source: 'microdata',
                 metadata: data
-            } as IAIItemDetectionResult;
+            };
         }
-        
         return null;
     }
-
-    private extractJsonLdData(): any[] | null { 
+    extractJsonLdData() {
         const scripts = document.querySelectorAll('script[type="application/ld+json"]');
-        const allData: any[] = [];
-        
+        const allData = [];
         Array.from(scripts).forEach(script => {
             try {
                 const data = JSON.parse(script.textContent || '{}');
                 if (Array.isArray(data)) {
                     allData.push(...data);
-                } else {
+                }
+                else {
                     allData.push(data);
                 }
-            } catch (e) {
+            }
+            catch (e) {
                 console.error('[Recsys AI] Failed to parse JSON-LD:', e);
             }
         });
-        
         return allData.length > 0 ? allData : null;
     }
-
-    private findMatchingItemInJsonLd(jsonLdData: any[], element: Element): IAIItemDetectionResult | null {
-        const elementText = element.textContent?.trim().toLowerCase();
-        if (!elementText) return null;
-        
+    findMatchingItemInJsonLd(jsonLdData, element) {
+        var _a;
+        const elementText = (_a = element.textContent) === null || _a === void 0 ? void 0 : _a.trim().toLowerCase();
+        if (!elementText)
+            return null;
         for (const item of jsonLdData) {
             if (item.name && item.name.toLowerCase().includes(elementText.substring(0, 20))) {
                 return {
@@ -622,62 +549,57 @@ export class AIItemDetector {
                     confidence: 0.9,
                     source: 'json_ld',
                     metadata: item
-                } as IAIItemDetectionResult;
+                };
             }
         }
-        
         return null;
     }
-
-    public extractOpenGraphData(): Record<string, any> | null { 
+    extractOpenGraphData() {
         const metaTags = document.querySelectorAll('meta[property^="og:"]');
-        const data: Record<string, any> = {};
-        
+        const data = {};
         Array.from(metaTags).forEach(tag => {
-            const property = tag.getAttribute('property')?.replace('og:', '');
+            var _a;
+            const property = (_a = tag.getAttribute('property')) === null || _a === void 0 ? void 0 : _a.replace('og:', '');
             const content = tag.getAttribute('content');
             if (property && content) {
                 data[property] = content;
             }
         });
-        
         return Object.keys(data).length > 0 ? data : null;
     }
-
-    private extractNameFromPosition(element: Element): string {
-        const text = element.textContent?.trim();
+    extractNameFromPosition(element) {
+        var _a, _b;
+        const text = (_a = element.textContent) === null || _a === void 0 ? void 0 : _a.trim();
         if (text && text.length > 0 && text.length < 100) {
             return text;
         }
-        
-        const htmlElement = element as HTMLElement;
+        const htmlElement = element;
         const heading = htmlElement.closest('h1, h2, h3, h4, h5, h6, [role="heading"]');
-
-        if (heading) return heading.textContent?.trim() || 'UI Element';
-        
-        const label = element.getAttribute('aria-label') || 
-                        element.getAttribute('title') || 
-                        element.getAttribute('alt');
-        if (label) return label;
-        
+        if (heading)
+            return ((_b = heading.textContent) === null || _b === void 0 ? void 0 : _b.trim()) || 'UI Element';
+        const label = element.getAttribute('aria-label') ||
+            element.getAttribute('title') ||
+            element.getAttribute('alt');
+        if (label)
+            return label;
         return `Element at (${htmlElement.offsetLeft}, ${htmlElement.offsetTop})`;
     }
-
-    private inferTypeFromAttribute(attr: string): string {
-        if (attr.includes('song') || attr.includes('track')) return 'song';
-        if (attr.includes('video')) return 'video';
-
-        if (attr.includes('product') || attr.includes('sku') || attr.includes('listing')) return 'product';
-        
-        if (attr.includes('article') || attr.includes('post') || attr.includes('thread')) return 'article';
-        
-        if (attr.includes('user') || attr.includes('author')) return 'user';
-        
-        if (attr.includes('content')) return 'content';
+    inferTypeFromAttribute(attr) {
+        if (attr.includes('song') || attr.includes('track'))
+            return 'song';
+        if (attr.includes('video'))
+            return 'video';
+        if (attr.includes('product') || attr.includes('sku') || attr.includes('listing'))
+            return 'product';
+        if (attr.includes('article') || attr.includes('post') || attr.includes('thread'))
+            return 'article';
+        if (attr.includes('user') || attr.includes('author'))
+            return 'user';
+        if (attr.includes('content'))
+            return 'content';
         return 'item';
     }
-
-    private generateHashId(str: string): string {
+    generateHashId(str) {
         let hash = 0;
         for (let i = 0; i < str.length; i++) {
             const char = str.charCodeAt(i);
@@ -686,8 +608,7 @@ export class AIItemDetector {
         }
         return Math.abs(hash).toString(36);
     }
-
-    private hashString(str: string): string {
+    hashString(str) {
         let hash = 0;
         for (let i = 0; i < str.length; i++) {
             const char = str.charCodeAt(i);
@@ -696,26 +617,23 @@ export class AIItemDetector {
         }
         return hash.toString(36);
     }
-
-    private setupDOMMutationObserver(): void {
-        this.domObserver = new MutationObserver((mutations: MutationRecord[]) => {
+    setupDOMMutationObserver() {
+        this.domObserver = new MutationObserver((mutations) => {
             mutations.forEach((mutation) => {
                 if (mutation.type === 'childList' && mutation.addedNodes.length > 0) {
                     this.scanNewContent(Array.from(mutation.addedNodes));
                 }
             });
         });
-        
         this.domObserver.observe(document.body, {
             childList: true,
             subtree: true
         });
     }
-
-    private scanNewContent(nodes: Node[]): void {
+    scanNewContent(nodes) {
         nodes.forEach(node => {
             if (node.nodeType === Node.ELEMENT_NODE) {
-                const element = node as Element;
+                const element = node;
                 const items = element.querySelectorAll('[data-item-id], [data-song-id], [data-track-id]');
                 items.forEach(item => {
                     const itemData = this.extractItemDataFromElement(item);
@@ -726,25 +644,22 @@ export class AIItemDetector {
             }
         });
     }
-
-    public detectItem(eventOrElement: Event | Element | null): IAIItemDetectionResult | null {
-        if (!eventOrElement) return null;
-
+    detectItem(eventOrElement) {
+        if (!eventOrElement)
+            return null;
         if (eventOrElement instanceof Event) {
-            return this.detectItemFromClick(eventOrElement); 
-        } else if (eventOrElement instanceof Element) {
-            
+            return this.detectItemFromClick(eventOrElement);
+        }
+        else if (eventOrElement instanceof Element) {
             let itemData = this.extractItemDataFromElement(eventOrElement);
-            if (itemData) return itemData;
-            
+            if (itemData)
+                return itemData;
             itemData = this.detectItemFromChildren(eventOrElement);
-            if (itemData) return itemData;
-
+            if (itemData)
+                return itemData;
             console.log('[Recsys AI] ⚠️ Failed to find Item ID in DOM/Children. Falling back.');
-            
-            let fallbackItemData = this.detectItemFromLimitedText(eventOrElement) || 
-                                   this.detectItemFromPosition(eventOrElement);
-            
+            let fallbackItemData = this.detectItemFromLimitedText(eventOrElement) ||
+                this.detectItemFromPosition(eventOrElement);
             if (fallbackItemData) {
                 fallbackItemData.source = 'fallback_' + fallbackItemData.source;
             }
@@ -753,10 +668,10 @@ export class AIItemDetector {
         return null;
     }
 }
-
-export function getAIItemDetector(): AIItemDetector {
+export function getAIItemDetector() {
     if (!aiItemDetectorInstance) {
         aiItemDetectorInstance = new AIItemDetector();
     }
     return aiItemDetectorInstance;
 }
+//# sourceMappingURL=ai-item-detector.js.map

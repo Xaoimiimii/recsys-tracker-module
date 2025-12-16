@@ -1,4 +1,4 @@
-import { ConfigLoader, ErrorBoundary, EventBuffer, EventDispatcher, MetadataNormalizer, DisplayManager } from './core';
+import { ConfigLoader, ErrorBoundary, EventBuffer, EventDispatcher, MetadataNormalizer, DisplayManager, PluginManager } from './core';
 // RecSysTracker - Main SDK class
 export class RecSysTracker {
     constructor() {
@@ -12,6 +12,7 @@ export class RecSysTracker {
         this.errorBoundary = new ErrorBoundary();
         this.eventBuffer = new EventBuffer();
         this.metadataNormalizer = new MetadataNormalizer();
+        this.pluginManager = new PluginManager(this);
     }
     // Khởi tạo SDK - tự động gọi khi tải script
     async init() {
@@ -43,6 +44,8 @@ export class RecSysTracker {
                     this.displayManager.initialize(this.config.returnMethods);
                     console.log('[RecSysTracker] Display methods initialized');
                 }
+                // Auto-register and start plugins based on tracking rules
+                this.autoInitializePlugins();
             }
             else {
                 // Nếu origin verification thất bại, không khởi tạo SDK
@@ -57,6 +60,41 @@ export class RecSysTracker {
             this.setupUnloadHandler();
             this.isInitialized = true;
         }, 'init');
+    }
+    // Auto-initialize plugins based on tracking rules
+    autoInitializePlugins() {
+        var _a;
+        if (!((_a = this.config) === null || _a === void 0 ? void 0 : _a.trackingRules) || this.config.trackingRules.length === 0) {
+            return;
+        }
+        // Check if we need ClickPlugin (triggerEventId === 1)
+        const hasClickRules = this.config.trackingRules.some(rule => rule.triggerEventId === 1);
+        // Check if we need PageViewPlugin (triggerEventId === 2)
+        const hasPageViewRules = this.config.trackingRules.some(rule => rule.triggerEventId === 2);
+        // Only auto-initialize if no plugins are registered yet
+        if (this.pluginManager.getPluginNames().length === 0) {
+            if (hasClickRules) {
+                // Dynamic import to avoid circular dependency
+                import('./core/plugins/click-plugin').then(({ ClickPlugin }) => {
+                    this.use(new ClickPlugin());
+                    console.log('[RecSysTracker] Auto-registered ClickPlugin based on tracking rules');
+                });
+            }
+            if (hasPageViewRules) {
+                // Dynamic import to avoid circular dependency
+                import('./core/plugins/page-view-plugin').then(({ PageViewPlugin }) => {
+                    this.use(new PageViewPlugin());
+                    console.log('[RecSysTracker] Auto-registered PageViewPlugin based on tracking rules');
+                });
+            }
+            // Auto-start plugins after a small delay to ensure all are registered
+            if (hasClickRules || hasPageViewRules) {
+                setTimeout(() => {
+                    this.startPlugins();
+                    console.log('[RecSysTracker] Auto-started plugins');
+                }, 100);
+            }
+        }
     }
     // Track custom event
     track(eventData) {
@@ -164,6 +202,8 @@ export class RecSysTracker {
             if (this.sendInterval) {
                 clearInterval(this.sendInterval);
             }
+            // Stop all plugins
+            this.pluginManager.destroy();
             // Flush remaining events
             if (!this.eventBuffer.isEmpty()) {
                 const allEvents = this.eventBuffer.getAll();
@@ -176,6 +216,38 @@ export class RecSysTracker {
             }
             this.isInitialized = false;
         }, 'destroy');
+    }
+    // Plugin Management Methods
+    /**
+     * Get the plugin manager instance
+     */
+    getPluginManager() {
+        return this.pluginManager;
+    }
+    /**
+     * Get the display manager instance
+     */
+    getDisplayManager() {
+        return this.displayManager;
+    }
+    /**
+     * Register a plugin (convenience method)
+     */
+    use(plugin) {
+        this.pluginManager.register(plugin);
+        return this;
+    }
+    /**
+     * Start all registered plugins
+     */
+    startPlugins() {
+        this.pluginManager.startAll();
+    }
+    /**
+     * Stop all registered plugins
+     */
+    stopPlugins() {
+        this.pluginManager.stopAll();
     }
 }
 // Tự động tạo instance toàn cục và khởi tạo
@@ -202,6 +274,11 @@ if (typeof window !== 'undefined') {
 }
 // Default export for convenience
 export default RecSysTracker;
-// Export core classes for testing
-export { ConfigLoader } from './core';
+// Export core classes for testing and advanced usage
+export { ConfigLoader, PluginManager, DisplayManager } from './core';
+// Export plugin base classes
+export { BasePlugin } from './core/plugins/base-plugin';
+// Export built-in plugins
+export { ClickPlugin } from './core/plugins/click-plugin';
+export { PageViewPlugin } from './core/plugins/page-view-plugin';
 //# sourceMappingURL=index.js.map

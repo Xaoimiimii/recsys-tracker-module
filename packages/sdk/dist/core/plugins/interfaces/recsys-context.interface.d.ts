@@ -1,5 +1,5 @@
-import { IRecsysRule, RuleEvent } from './IRecsysRule';
-
+import { IRecsysRule, RuleEvent } from './recsys-rule.interface';
+export { IRecsysRule, RuleEvent };
 export interface IRecsysPayload {
     event: string;
     url: string;
@@ -13,7 +13,6 @@ export interface IRecsysPayload {
     source?: string;
     metadata?: Record<string, any>;
 }
-
 export interface IAIItemDetectionResult {
     id: string;
     name: string;
@@ -23,23 +22,15 @@ export interface IAIItemDetectionResult {
     context?: string;
     metadata?: Record<string, any>;
 }
-
 export interface IPayloadExtraData {
     regexMatch?: RegExpMatchArray;
 }
-
 export interface IPayloadBuilder {
-    build: (
-        element: Element | IAIItemDetectionResult | null,
-        rule: IRecsysRule,
-        extraData?: IPayloadExtraData
-    ) => IRecsysPayload;
+    build: (element: Element | IAIItemDetectionResult | null, rule: IRecsysRule, extraData?: IPayloadExtraData) => IRecsysPayload;
 }
-
 export interface IEventBuffer {
     enqueue: (payload: IRecsysPayload) => void;
 }
-
 export interface IRecsysContext {
     config: {
         getRules: (eventType: RuleEvent) => IRecsysRule[];
@@ -48,3 +39,4 @@ export interface IRecsysContext {
     eventBuffer: IEventBuffer;
     updateIdentity: (newUserId: string) => void;
 }
+//# sourceMappingURL=recsys-context.interface.d.ts.map
