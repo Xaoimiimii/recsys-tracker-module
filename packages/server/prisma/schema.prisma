@@ -114,6 +114,7 @@ model Condition {
 }
 
 model PayloadConfig {
+  Id                Int    @id @default(autoincrement())
   PayloadPatternID  Int
   RuleID            Int
   
@@ -125,8 +126,6 @@ model PayloadConfig {
 
   OperatorID        Int
   Operator          Operator @relation(fields: [OperatorID], references: [Id])
-
-  @@id([PayloadPatternID, RuleID])
 }
 
 model PayloadPattern {

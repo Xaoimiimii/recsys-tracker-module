@@ -173,6 +173,7 @@ export type ConditionScalarFieldEnum = (typeof ConditionScalarFieldEnum)[keyof t
 
 
 export const PayloadConfigScalarFieldEnum = {
+  Id: 'Id',
   PayloadPatternID: 'PayloadPatternID',
   RuleID: 'RuleID',
   Value: 'Value',

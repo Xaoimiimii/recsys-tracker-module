@@ -27,18 +27,21 @@ export type AggregatePayloadConfig = {
 }
 
 export type PayloadConfigAvgAggregateOutputType = {
+  Id: number | null
   PayloadPatternID: number | null
   RuleID: number | null
   OperatorID: number | null
 }
 
 export type PayloadConfigSumAggregateOutputType = {
+  Id: number | null
   PayloadPatternID: number | null
   RuleID: number | null
   OperatorID: number | null
 }
 
 export type PayloadConfigMinAggregateOutputType = {
+  Id: number | null
   PayloadPatternID: number | null
   RuleID: number | null
   Value: string | null
@@ -47,6 +50,7 @@ export type PayloadConfigMinAggregateOutputType = {
 }
 
 export type PayloadConfigMaxAggregateOutputType = {
+  Id: number | null
   PayloadPatternID: number | null
   RuleID: number | null
   Value: string | null
@@ -55,6 +59,7 @@ export type PayloadConfigMaxAggregateOutputType = {
 }
 
 export type PayloadConfigCountAggregateOutputType = {
+  Id: number
   PayloadPatternID: number
   RuleID: number
   Value: number
@@ -65,18 +70,21 @@ export type PayloadConfigCountAggregateOutputType = {
 
 
 export type PayloadConfigAvgAggregateInputType = {
+  Id?: true
   PayloadPatternID?: true
   RuleID?: true
   OperatorID?: true
 }
 
 export type PayloadConfigSumAggregateInputType = {
+  Id?: true
   PayloadPatternID?: true
   RuleID?: true
   OperatorID?: true
 }
 
 export type PayloadConfigMinAggregateInputType = {
+  Id?: true
   PayloadPatternID?: true
   RuleID?: true
   Value?: true
@@ -85,6 +93,7 @@ export type PayloadConfigMinAggregateInputType = {
 }
 
 export type PayloadConfigMaxAggregateInputType = {
+  Id?: true
   PayloadPatternID?: true
   RuleID?: true
   Value?: true
@@ -93,6 +102,7 @@ export type PayloadConfigMaxAggregateInputType = {
 }
 
 export type PayloadConfigCountAggregateInputType = {
+  Id?: true
   PayloadPatternID?: true
   RuleID?: true
   Value?: true
@@ -188,6 +198,7 @@ export type PayloadConfigGroupByArgs<ExtArgs extends runtime.Types.Extensions.In
 }
 
 export type PayloadConfigGroupByOutputType = {
+  Id: number
   PayloadPatternID: number
   RuleID: number
   Value: string | null
@@ -219,6 +230,7 @@ export type PayloadConfigWhereInput = {
   AND?: Prisma.PayloadConfigWhereInput | Prisma.PayloadConfigWhereInput[]
   OR?: Prisma.PayloadConfigWhereInput[]
   NOT?: Prisma.PayloadConfigWhereInput | Prisma.PayloadConfigWhereInput[]
+  Id?: Prisma.IntFilter<"PayloadConfig"> | number
   PayloadPatternID?: Prisma.IntFilter<"PayloadConfig"> | number
   RuleID?: Prisma.IntFilter<"PayloadConfig"> | number
   Value?: Prisma.StringNullableFilter<"PayloadConfig"> | string | null
@@ -230,6 +242,7 @@ export type PayloadConfigWhereInput = {
 }
 
 export type PayloadConfigOrderByWithRelationInput = {
+  Id?: Prisma.SortOrder
   PayloadPatternID?: Prisma.SortOrder
   RuleID?: Prisma.SortOrder
   Value?: Prisma.SortOrderInput | Prisma.SortOrder
@@ -241,7 +254,7 @@ export type PayloadConfigOrderByWithRelationInput = {
 }
 
 export type PayloadConfigWhereUniqueInput = Prisma.AtLeast<{
-  PayloadPatternID_RuleID?: Prisma.PayloadConfigPayloadPatternIDRuleIDCompoundUniqueInput
+  Id?: number
   AND?: Prisma.PayloadConfigWhereInput | Prisma.PayloadConfigWhereInput[]
   OR?: Prisma.PayloadConfigWhereInput[]
   NOT?: Prisma.PayloadConfigWhereInput | Prisma.PayloadConfigWhereInput[]
@@ -253,9 +266,10 @@ export type PayloadConfigWhereUniqueInput = Prisma.AtLeast<{
   PayloadPattern?: Prisma.XOR<Prisma.PayloadPatternScalarRelationFilter, Prisma.PayloadPatternWhereInput>
   Rule?: Prisma.XOR<Prisma.RuleScalarRelationFilter, Prisma.RuleWhereInput>
   Operator?: Prisma.XOR<Prisma.OperatorScalarRelationFilter, Prisma.OperatorWhereInput>
-}, "PayloadPatternID_RuleID">
+}, "Id">
 
 export type PayloadConfigOrderByWithAggregationInput = {
+  Id?: Prisma.SortOrder
   PayloadPatternID?: Prisma.SortOrder
   RuleID?: Prisma.SortOrder
   Value?: Prisma.SortOrderInput | Prisma.SortOrder
@@ -272,6 +286,7 @@ export type PayloadConfigScalarWhereWithAggregatesInput = {
   AND?: Prisma.PayloadConfigScalarWhereWithAggregatesInput | Prisma.PayloadConfigScalarWhereWithAggregatesInput[]
   OR?: Prisma.PayloadConfigScalarWhereWithAggregatesInput[]
   NOT?: Prisma.PayloadConfigScalarWhereWithAggregatesInput | Prisma.PayloadConfigScalarWhereWithAggregatesInput[]
+  Id?: Prisma.IntWithAggregatesFilter<"PayloadConfig"> | number
   PayloadPatternID?: Prisma.IntWithAggregatesFilter<"PayloadConfig"> | number
   RuleID?: Prisma.IntWithAggregatesFilter<"PayloadConfig"> | number
   Value?: Prisma.StringNullableWithAggregatesFilter<"PayloadConfig"> | string | null
@@ -288,6 +303,7 @@ export type PayloadConfigCreateInput = {
 }
 
 export type PayloadConfigUncheckedCreateInput = {
+  Id?: number
   PayloadPatternID: number
   RuleID: number
   Value?: string | null
@@ -304,6 +320,7 @@ export type PayloadConfigUpdateInput = {
 }
 
 export type PayloadConfigUncheckedUpdateInput = {
+  Id?: Prisma.IntFieldUpdateOperationsInput | number
   PayloadPatternID?: Prisma.IntFieldUpdateOperationsInput | number
   RuleID?: Prisma.IntFieldUpdateOperationsInput | number
   Value?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -312,6 +329,7 @@ export type PayloadConfigUncheckedUpdateInput = {
 }
 
 export type PayloadConfigCreateManyInput = {
+  Id?: number
   PayloadPatternID: number
   RuleID: number
   Value?: string | null
@@ -325,6 +343,7 @@ export type PayloadConfigUpdateManyMutationInput = {
 }
 
 export type PayloadConfigUncheckedUpdateManyInput = {
+  Id?: Prisma.IntFieldUpdateOperationsInput | number
   PayloadPatternID?: Prisma.IntFieldUpdateOperationsInput | number
   RuleID?: Prisma.IntFieldUpdateOperationsInput | number
   Value?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -342,12 +361,8 @@ export type PayloadConfigOrderByRelationAggregateInput = {
   _count?: Prisma.SortOrder
 }
 
-export type PayloadConfigPayloadPatternIDRuleIDCompoundUniqueInput = {
-  PayloadPatternID: number
-  RuleID: number
-}
-
 export type PayloadConfigCountOrderByAggregateInput = {
+  Id?: Prisma.SortOrder
   PayloadPatternID?: Prisma.SortOrder
   RuleID?: Prisma.SortOrder
   Value?: Prisma.SortOrder
@@ -356,12 +371,14 @@ export type PayloadConfigCountOrderByAggregateInput = {
 }
 
 export type PayloadConfigAvgOrderByAggregateInput = {
+  Id?: Prisma.SortOrder
   PayloadPatternID?: Prisma.SortOrder
   RuleID?: Prisma.SortOrder
   OperatorID?: Prisma.SortOrder
 }
 
 export type PayloadConfigMaxOrderByAggregateInput = {
+  Id?: Prisma.SortOrder
   PayloadPatternID?: Prisma.SortOrder
   RuleID?: Prisma.SortOrder
   Value?: Prisma.SortOrder
@@ -370,6 +387,7 @@ export type PayloadConfigMaxOrderByAggregateInput = {
 }
 
 export type PayloadConfigMinOrderByAggregateInput = {
+  Id?: Prisma.SortOrder
   PayloadPatternID?: Prisma.SortOrder
   RuleID?: Prisma.SortOrder
   Value?: Prisma.SortOrder
@@ -378,6 +396,7 @@ export type PayloadConfigMinOrderByAggregateInput = {
 }
 
 export type PayloadConfigSumOrderByAggregateInput = {
+  Id?: Prisma.SortOrder
   PayloadPatternID?: Prisma.SortOrder
   RuleID?: Prisma.SortOrder
   OperatorID?: Prisma.SortOrder
@@ -517,6 +536,7 @@ export type PayloadConfigCreateWithoutRuleInput = {
 }
 
 export type PayloadConfigUncheckedCreateWithoutRuleInput = {
+  Id?: number
   PayloadPatternID: number
   Value?: string | null
   Type?: string | null
@@ -553,6 +573,7 @@ export type PayloadConfigScalarWhereInput = {
   AND?: Prisma.PayloadConfigScalarWhereInput | Prisma.PayloadConfigScalarWhereInput[]
   OR?: Prisma.PayloadConfigScalarWhereInput[]
   NOT?: Prisma.PayloadConfigScalarWhereInput | Prisma.PayloadConfigScalarWhereInput[]
+  Id?: Prisma.IntFilter<"PayloadConfig"> | number
   PayloadPatternID?: Prisma.IntFilter<"PayloadConfig"> | number
   RuleID?: Prisma.IntFilter<"PayloadConfig"> | number
   Value?: Prisma.StringNullableFilter<"PayloadConfig"> | string | null
@@ -568,6 +589,7 @@ export type PayloadConfigCreateWithoutPayloadPatternInput = {
 }
 
 export type PayloadConfigUncheckedCreateWithoutPayloadPatternInput = {
+  Id?: number
   RuleID: number
   Value?: string | null
   Type?: string | null
@@ -608,6 +630,7 @@ export type PayloadConfigCreateWithoutOperatorInput = {
 }
 
 export type PayloadConfigUncheckedCreateWithoutOperatorInput = {
+  Id?: number
   PayloadPatternID: number
   RuleID: number
   Value?: string | null
@@ -641,6 +664,7 @@ export type PayloadConfigUpdateManyWithWhereWithoutOperatorInput = {
 }
 
 export type PayloadConfigCreateManyRuleInput = {
+  Id?: number
   PayloadPatternID: number
   Value?: string | null
   Type?: string | null
@@ -655,6 +679,7 @@ export type PayloadConfigUpdateWithoutRuleInput = {
 }
 
 export type PayloadConfigUncheckedUpdateWithoutRuleInput = {
+  Id?: Prisma.IntFieldUpdateOperationsInput | number
   PayloadPatternID?: Prisma.IntFieldUpdateOperationsInput | number
   Value?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   Type?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -662,6 +687,7 @@ export type PayloadConfigUncheckedUpdateWithoutRuleInput = {
 }
 
 export type PayloadConfigUncheckedUpdateManyWithoutRuleInput = {
+  Id?: Prisma.IntFieldUpdateOperationsInput | number
   PayloadPatternID?: Prisma.IntFieldUpdateOperationsInput | number
   Value?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   Type?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -669,6 +695,7 @@ export type PayloadConfigUncheckedUpdateManyWithoutRuleInput = {
 }
 
 export type PayloadConfigCreateManyPayloadPatternInput = {
+  Id?: number
   RuleID: number
   Value?: string | null
   Type?: string | null
@@ -683,6 +710,7 @@ export type PayloadConfigUpdateWithoutPayloadPatternInput = {
 }
 
 export type PayloadConfigUncheckedUpdateWithoutPayloadPatternInput = {
+  Id?: Prisma.IntFieldUpdateOperationsInput | number
   RuleID?: Prisma.IntFieldUpdateOperationsInput | number
   Value?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   Type?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -690,6 +718,7 @@ export type PayloadConfigUncheckedUpdateWithoutPayloadPatternInput = {
 }
 
 export type PayloadConfigUncheckedUpdateManyWithoutPayloadPatternInput = {
+  Id?: Prisma.IntFieldUpdateOperationsInput | number
   RuleID?: Prisma.IntFieldUpdateOperationsInput | number
   Value?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   Type?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -697,6 +726,7 @@ export type PayloadConfigUncheckedUpdateManyWithoutPayloadPatternInput = {
 }
 
 export type PayloadConfigCreateManyOperatorInput = {
+  Id?: number
   PayloadPatternID: number
   RuleID: number
   Value?: string | null
@@ -711,6 +741,7 @@ export type PayloadConfigUpdateWithoutOperatorInput = {
 }
 
 export type PayloadConfigUncheckedUpdateWithoutOperatorInput = {
+  Id?: Prisma.IntFieldUpdateOperationsInput | number
   PayloadPatternID?: Prisma.IntFieldUpdateOperationsInput | number
   RuleID?: Prisma.IntFieldUpdateOperationsInput | number
   Value?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -718,6 +749,7 @@ export type PayloadConfigUncheckedUpdateWithoutOperatorInput = {
 }
 
 export type PayloadConfigUncheckedUpdateManyWithoutOperatorInput = {
+  Id?: Prisma.IntFieldUpdateOperationsInput | number
   PayloadPatternID?: Prisma.IntFieldUpdateOperationsInput | number
   RuleID?: Prisma.IntFieldUpdateOperationsInput | number
   Value?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -727,6 +759,7 @@ export type PayloadConfigUncheckedUpdateManyWithoutOperatorInput = {
 
 
 export type PayloadConfigSelect<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetSelect<{
+  Id?: boolean
   PayloadPatternID?: boolean
   RuleID?: boolean
   Value?: boolean
@@ -738,6 +771,7 @@ export type PayloadConfigSelect<ExtArgs extends runtime.Types.Extensions.Interna
 }, ExtArgs["result"]["payloadConfig"]>
 
 export type PayloadConfigSelectCreateManyAndReturn<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetSelect<{
+  Id?: boolean
   PayloadPatternID?: boolean
   RuleID?: boolean
   Value?: boolean
@@ -749,6 +783,7 @@ export type PayloadConfigSelectCreateManyAndReturn<ExtArgs extends runtime.Types
 }, ExtArgs["result"]["payloadConfig"]>
 
 export type PayloadConfigSelectUpdateManyAndReturn<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetSelect<{
+  Id?: boolean
   PayloadPatternID?: boolean
   RuleID?: boolean
   Value?: boolean
@@ -760,6 +795,7 @@ export type PayloadConfigSelectUpdateManyAndReturn<ExtArgs extends runtime.Types
 }, ExtArgs["result"]["payloadConfig"]>
 
 export type PayloadConfigSelectScalar = {
+  Id?: boolean
   PayloadPatternID?: boolean
   RuleID?: boolean
   Value?: boolean
@@ -767,7 +803,7 @@ export type PayloadConfigSelectScalar = {
   OperatorID?: boolean
 }
 
-export type PayloadConfigOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"PayloadPatternID" | "RuleID" | "Value" | "Type" | "OperatorID", ExtArgs["result"]["payloadConfig"]>
+export type PayloadConfigOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"Id" | "PayloadPatternID" | "RuleID" | "Value" | "Type" | "OperatorID", ExtArgs["result"]["payloadConfig"]>
 export type PayloadConfigInclude<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   PayloadPattern?: boolean | Prisma.PayloadPatternDefaultArgs<ExtArgs>
   Rule?: boolean | Prisma.RuleDefaultArgs<ExtArgs>
@@ -792,6 +828,7 @@ export type $PayloadConfigPayload<ExtArgs extends runtime.Types.Extensions.Inter
     Operator: Prisma.$OperatorPayload<ExtArgs>
   }
   scalars: runtime.Types.Extensions.GetPayloadResult<{
+    Id: number
     PayloadPatternID: number
     RuleID: number
     Value: string | null
@@ -880,8 +917,8 @@ export interface PayloadConfigDelegate<ExtArgs extends runtime.Types.Extensions.
    * // Get first 10 PayloadConfigs
    * const payloadConfigs = await prisma.payloadConfig.findMany({ take: 10 })
    * 
-   * // Only select the `PayloadPatternID`
-   * const payloadConfigWithPayloadPatternIDOnly = await prisma.payloadConfig.findMany({ select: { PayloadPatternID: true } })
+   * // Only select the `Id`
+   * const payloadConfigWithIdOnly = await prisma.payloadConfig.findMany({ select: { Id: true } })
    * 
    */
   findMany<T extends PayloadConfigFindManyArgs>(args?: Prisma.SelectSubset<T, PayloadConfigFindManyArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$PayloadConfigPayload<ExtArgs>, T, "findMany", GlobalOmitOptions>>
@@ -925,9 +962,9 @@ export interface PayloadConfigDelegate<ExtArgs extends runtime.Types.Extensions.
    *   ]
    * })
    * 
-   * // Create many PayloadConfigs and only return the `PayloadPatternID`
-   * const payloadConfigWithPayloadPatternIDOnly = await prisma.payloadConfig.createManyAndReturn({
-   *   select: { PayloadPatternID: true },
+   * // Create many PayloadConfigs and only return the `Id`
+   * const payloadConfigWithIdOnly = await prisma.payloadConfig.createManyAndReturn({
+   *   select: { Id: true },
    *   data: [
    *     // ... provide data here
    *   ]
@@ -1016,9 +1053,9 @@ export interface PayloadConfigDelegate<ExtArgs extends runtime.Types.Extensions.
    *   ]
    * })
    * 
-   * // Update zero or more PayloadConfigs and only return the `PayloadPatternID`
-   * const payloadConfigWithPayloadPatternIDOnly = await prisma.payloadConfig.updateManyAndReturn({
-   *   select: { PayloadPatternID: true },
+   * // Update zero or more PayloadConfigs and only return the `Id`
+   * const payloadConfigWithIdOnly = await prisma.payloadConfig.updateManyAndReturn({
+   *   select: { Id: true },
    *   where: {
    *     // ... provide filter here
    *   },
@@ -1223,6 +1260,7 @@ export interface Prisma__PayloadConfigClient<T, Null = never, ExtArgs extends ru
  * Fields of the PayloadConfig model
  */
 export interface PayloadConfigFieldRefs {
+  readonly Id: Prisma.FieldRef<"PayloadConfig", 'Int'>
   readonly PayloadPatternID: Prisma.FieldRef<"PayloadConfig", 'Int'>
   readonly RuleID: Prisma.FieldRef<"PayloadConfig", 'Int'>
   readonly Value: Prisma.FieldRef<"PayloadConfig", 'String'>

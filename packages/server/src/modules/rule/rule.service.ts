@@ -78,6 +78,7 @@ export class RuleService {
         });
 
         if (!targetElement) return null;
+        
         const domain = await this.prisma.domain.findUnique({
             where: {
                 Key: rule.domainKey,
