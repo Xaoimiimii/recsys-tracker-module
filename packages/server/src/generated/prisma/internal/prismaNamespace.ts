@@ -2227,6 +2227,8 @@ export type ItemCategoryScalarFieldEnum = (typeof ItemCategoryScalarFieldEnum)[k
 
 export const ItemScalarFieldEnum = {
   Id: 'Id',
+  DomainItemId: 'DomainItemId',
+  Title: 'Title',
   DomainId: 'DomainId',
   Description: 'Description',
   EmbeddingVector: 'EmbeddingVector',
@@ -2261,6 +2263,7 @@ export type ItemFactorScalarFieldEnum = (typeof ItemFactorScalarFieldEnum)[keyof
 
 export const UserScalarFieldEnum = {
   Id: 'Id',
+  Username: 'Username',
   DomainId: 'DomainId',
   UserEmbeddingVector: 'UserEmbeddingVector',
   CreatedAt: 'CreatedAt',
@@ -2292,7 +2295,7 @@ export type PredictScalarFieldEnum = (typeof PredictScalarFieldEnum)[keyof typeo
 
 export const RatingScalarFieldEnum = {
   Id: 'Id',
-  UserId: 'UserId',
+  Username: 'Username',
   ItemId: 'ItemId',
   DomainId: 'DomainId',
   Value: 'Value',
@@ -2306,7 +2309,7 @@ export type RatingScalarFieldEnum = (typeof RatingScalarFieldEnum)[keyof typeof 
 
 export const InteractionScalarFieldEnum = {
   Id: 'Id',
-  UserId: 'UserId',
+  Username: 'Username',
   ItemId: 'ItemId',
   InteractionTypeId: 'InteractionTypeId',
   DomainId: 'DomainId',

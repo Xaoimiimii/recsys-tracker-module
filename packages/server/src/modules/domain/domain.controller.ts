@@ -21,4 +21,14 @@ export class DomainController {
     async getDomainsByTernantId(@Param('id', ParseIntPipe) id: number) {
         return this.domainService.getDomainsByTernantId(id);
     }
+
+    @Get('trigger-event/all')
+    async getAllTriggerEvents() {
+        return this.domainService.getAllTriggerEvents();
+    }
+
+    @Get('return-method/all')
+    async getAllReturnMethods() {
+        return this.domainService.getAllReturnMethods();
+    }
 }

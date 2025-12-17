@@ -28,7 +28,6 @@ export type AggregateRating = {
 
 export type RatingAvgAggregateOutputType = {
   Id: number | null
-  UserId: number | null
   ItemId: number | null
   DomainId: number | null
   Value: number | null
@@ -37,7 +36,6 @@ export type RatingAvgAggregateOutputType = {
 
 export type RatingSumAggregateOutputType = {
   Id: number | null
-  UserId: number | null
   ItemId: number | null
   DomainId: number | null
   Value: number | null
@@ -46,7 +44,7 @@ export type RatingSumAggregateOutputType = {
 
 export type RatingMinAggregateOutputType = {
   Id: number | null
-  UserId: number | null
+  Username: string | null
   ItemId: number | null
   DomainId: number | null
   Value: number | null
@@ -57,7 +55,7 @@ export type RatingMinAggregateOutputType = {
 
 export type RatingMaxAggregateOutputType = {
   Id: number | null
-  UserId: number | null
+  Username: string | null
   ItemId: number | null
   DomainId: number | null
   Value: number | null
@@ -68,7 +66,7 @@ export type RatingMaxAggregateOutputType = {
 
 export type RatingCountAggregateOutputType = {
   Id: number
-  UserId: number
+  Username: number
   ItemId: number
   DomainId: number
   Value: number
@@ -81,7 +79,6 @@ export type RatingCountAggregateOutputType = {
 
 export type RatingAvgAggregateInputType = {
   Id?: true
-  UserId?: true
   ItemId?: true
   DomainId?: true
   Value?: true
@@ -90,7 +87,6 @@ export type RatingAvgAggregateInputType = {
 
 export type RatingSumAggregateInputType = {
   Id?: true
-  UserId?: true
   ItemId?: true
   DomainId?: true
   Value?: true
@@ -99,7 +95,7 @@ export type RatingSumAggregateInputType = {
 
 export type RatingMinAggregateInputType = {
   Id?: true
-  UserId?: true
+  Username?: true
   ItemId?: true
   DomainId?: true
   Value?: true
@@ -110,7 +106,7 @@ export type RatingMinAggregateInputType = {
 
 export type RatingMaxAggregateInputType = {
   Id?: true
-  UserId?: true
+  Username?: true
   ItemId?: true
   DomainId?: true
   Value?: true
@@ -121,7 +117,7 @@ export type RatingMaxAggregateInputType = {
 
 export type RatingCountAggregateInputType = {
   Id?: true
-  UserId?: true
+  Username?: true
   ItemId?: true
   DomainId?: true
   Value?: true
@@ -219,7 +215,7 @@ export type RatingGroupByArgs<ExtArgs extends runtime.Types.Extensions.InternalA
 
 export type RatingGroupByOutputType = {
   Id: number
-  UserId: number
+  Username: string | null
   ItemId: number
   DomainId: number
   Value: number
@@ -253,21 +249,21 @@ export type RatingWhereInput = {
   OR?: Prisma.RatingWhereInput[]
   NOT?: Prisma.RatingWhereInput | Prisma.RatingWhereInput[]
   Id?: Prisma.IntFilter<"Rating"> | number
-  UserId?: Prisma.IntFilter<"Rating"> | number
+  Username?: Prisma.StringNullableFilter<"Rating"> | string | null
   ItemId?: Prisma.IntFilter<"Rating"> | number
   DomainId?: Prisma.IntFilter<"Rating"> | number
   Value?: Prisma.FloatFilter<"Rating"> | number
   ReviewText?: Prisma.StringNullableFilter<"Rating"> | string | null
   ConvertedScore?: Prisma.FloatFilter<"Rating"> | number
   CreatedAt?: Prisma.DateTimeFilter<"Rating"> | Date | string
-  User?: Prisma.XOR<Prisma.UserScalarRelationFilter, Prisma.UserWhereInput>
+  User?: Prisma.XOR<Prisma.UserNullableScalarRelationFilter, Prisma.UserWhereInput> | null
   Item?: Prisma.XOR<Prisma.ItemScalarRelationFilter, Prisma.ItemWhereInput>
   Domain?: Prisma.XOR<Prisma.DomainScalarRelationFilter, Prisma.DomainWhereInput>
 }
 
 export type RatingOrderByWithRelationInput = {
   Id?: Prisma.SortOrder
-  UserId?: Prisma.SortOrder
+  Username?: Prisma.SortOrderInput | Prisma.SortOrder
   ItemId?: Prisma.SortOrder
   DomainId?: Prisma.SortOrder
   Value?: Prisma.SortOrder
@@ -281,25 +277,25 @@ export type RatingOrderByWithRelationInput = {
 
 export type RatingWhereUniqueInput = Prisma.AtLeast<{
   Id?: number
-  UserId_ItemId?: Prisma.RatingUserIdItemIdCompoundUniqueInput
+  Username_ItemId?: Prisma.RatingUsernameItemIdCompoundUniqueInput
   AND?: Prisma.RatingWhereInput | Prisma.RatingWhereInput[]
   OR?: Prisma.RatingWhereInput[]
   NOT?: Prisma.RatingWhereInput | Prisma.RatingWhereInput[]
-  UserId?: Prisma.IntFilter<"Rating"> | number
+  Username?: Prisma.StringNullableFilter<"Rating"> | string | null
   ItemId?: Prisma.IntFilter<"Rating"> | number
   DomainId?: Prisma.IntFilter<"Rating"> | number
   Value?: Prisma.FloatFilter<"Rating"> | number
   ReviewText?: Prisma.StringNullableFilter<"Rating"> | string | null
   ConvertedScore?: Prisma.FloatFilter<"Rating"> | number
   CreatedAt?: Prisma.DateTimeFilter<"Rating"> | Date | string
-  User?: Prisma.XOR<Prisma.UserScalarRelationFilter, Prisma.UserWhereInput>
+  User?: Prisma.XOR<Prisma.UserNullableScalarRelationFilter, Prisma.UserWhereInput> | null
   Item?: Prisma.XOR<Prisma.ItemScalarRelationFilter, Prisma.ItemWhereInput>
   Domain?: Prisma.XOR<Prisma.DomainScalarRelationFilter, Prisma.DomainWhereInput>
-}, "Id" | "UserId_ItemId">
+}, "Id" | "Username_ItemId">
 
 export type RatingOrderByWithAggregationInput = {
   Id?: Prisma.SortOrder
-  UserId?: Prisma.SortOrder
+  Username?: Prisma.SortOrderInput | Prisma.SortOrder
   ItemId?: Prisma.SortOrder
   DomainId?: Prisma.SortOrder
   Value?: Prisma.SortOrder
@@ -318,7 +314,7 @@ export type RatingScalarWhereWithAggregatesInput = {
   OR?: Prisma.RatingScalarWhereWithAggregatesInput[]
   NOT?: Prisma.RatingScalarWhereWithAggregatesInput | Prisma.RatingScalarWhereWithAggregatesInput[]
   Id?: Prisma.IntWithAggregatesFilter<"Rating"> | number
-  UserId?: Prisma.IntWithAggregatesFilter<"Rating"> | number
+  Username?: Prisma.StringNullableWithAggregatesFilter<"Rating"> | string | null
   ItemId?: Prisma.IntWithAggregatesFilter<"Rating"> | number
   DomainId?: Prisma.IntWithAggregatesFilter<"Rating"> | number
   Value?: Prisma.FloatWithAggregatesFilter<"Rating"> | number
@@ -332,14 +328,14 @@ export type RatingCreateInput = {
   ReviewText?: string | null
   ConvertedScore?: number
   CreatedAt?: Date | string
-  User: Prisma.UserCreateNestedOneWithoutRatingsInput
+  User?: Prisma.UserCreateNestedOneWithoutRatingsInput
   Item: Prisma.ItemCreateNestedOneWithoutRatingsInput
   Domain: Prisma.DomainCreateNestedOneWithoutRatingsInput
 }
 
 export type RatingUncheckedCreateInput = {
   Id?: number
-  UserId: number
+  Username?: string | null
   ItemId: number
   DomainId: number
   Value: number
@@ -353,14 +349,14 @@ export type RatingUpdateInput = {
   ReviewText?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   ConvertedScore?: Prisma.FloatFieldUpdateOperationsInput | number
   CreatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
-  User?: Prisma.UserUpdateOneRequiredWithoutRatingsNestedInput
+  User?: Prisma.UserUpdateOneWithoutRatingsNestedInput
   Item?: Prisma.ItemUpdateOneRequiredWithoutRatingsNestedInput
   Domain?: Prisma.DomainUpdateOneRequiredWithoutRatingsNestedInput
 }
 
 export type RatingUncheckedUpdateInput = {
   Id?: Prisma.IntFieldUpdateOperationsInput | number
-  UserId?: Prisma.IntFieldUpdateOperationsInput | number
+  Username?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   ItemId?: Prisma.IntFieldUpdateOperationsInput | number
   DomainId?: Prisma.IntFieldUpdateOperationsInput | number
   Value?: Prisma.FloatFieldUpdateOperationsInput | number
@@ -371,7 +367,7 @@ export type RatingUncheckedUpdateInput = {
 
 export type RatingCreateManyInput = {
   Id?: number
-  UserId: number
+  Username?: string | null
   ItemId: number
   DomainId: number
   Value: number
@@ -389,7 +385,7 @@ export type RatingUpdateManyMutationInput = {
 
 export type RatingUncheckedUpdateManyInput = {
   Id?: Prisma.IntFieldUpdateOperationsInput | number
-  UserId?: Prisma.IntFieldUpdateOperationsInput | number
+  Username?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   ItemId?: Prisma.IntFieldUpdateOperationsInput | number
   DomainId?: Prisma.IntFieldUpdateOperationsInput | number
   Value?: Prisma.FloatFieldUpdateOperationsInput | number
@@ -408,14 +404,14 @@ export type RatingOrderByRelationAggregateInput = {
   _count?: Prisma.SortOrder
 }
 
-export type RatingUserIdItemIdCompoundUniqueInput = {
-  UserId: number
+export type RatingUsernameItemIdCompoundUniqueInput = {
+  Username: string
   ItemId: number
 }
 
 export type RatingCountOrderByAggregateInput = {
   Id?: Prisma.SortOrder
-  UserId?: Prisma.SortOrder
+  Username?: Prisma.SortOrder
   ItemId?: Prisma.SortOrder
   DomainId?: Prisma.SortOrder
   Value?: Prisma.SortOrder
@@ -426,7 +422,6 @@ export type RatingCountOrderByAggregateInput = {
 
 export type RatingAvgOrderByAggregateInput = {
   Id?: Prisma.SortOrder
-  UserId?: Prisma.SortOrder
   ItemId?: Prisma.SortOrder
   DomainId?: Prisma.SortOrder
   Value?: Prisma.SortOrder
@@ -435,7 +430,7 @@ export type RatingAvgOrderByAggregateInput = {
 
 export type RatingMaxOrderByAggregateInput = {
   Id?: Prisma.SortOrder
-  UserId?: Prisma.SortOrder
+  Username?: Prisma.SortOrder
   ItemId?: Prisma.SortOrder
   DomainId?: Prisma.SortOrder
   Value?: Prisma.SortOrder
@@ -446,7 +441,7 @@ export type RatingMaxOrderByAggregateInput = {
 
 export type RatingMinOrderByAggregateInput = {
   Id?: Prisma.SortOrder
-  UserId?: Prisma.SortOrder
+  Username?: Prisma.SortOrder
   ItemId?: Prisma.SortOrder
   DomainId?: Prisma.SortOrder
   Value?: Prisma.SortOrder
@@ -457,7 +452,6 @@ export type RatingMinOrderByAggregateInput = {
 
 export type RatingSumOrderByAggregateInput = {
   Id?: Prisma.SortOrder
-  UserId?: Prisma.SortOrder
   ItemId?: Prisma.SortOrder
   DomainId?: Prisma.SortOrder
   Value?: Prisma.SortOrder
@@ -595,13 +589,13 @@ export type RatingCreateWithoutDomainInput = {
   ReviewText?: string | null
   ConvertedScore?: number
   CreatedAt?: Date | string
-  User: Prisma.UserCreateNestedOneWithoutRatingsInput
+  User?: Prisma.UserCreateNestedOneWithoutRatingsInput
   Item: Prisma.ItemCreateNestedOneWithoutRatingsInput
 }
 
 export type RatingUncheckedCreateWithoutDomainInput = {
   Id?: number
-  UserId: number
+  Username?: string | null
   ItemId: number
   Value: number
   ReviewText?: string | null
@@ -640,7 +634,7 @@ export type RatingScalarWhereInput = {
   OR?: Prisma.RatingScalarWhereInput[]
   NOT?: Prisma.RatingScalarWhereInput | Prisma.RatingScalarWhereInput[]
   Id?: Prisma.IntFilter<"Rating"> | number
-  UserId?: Prisma.IntFilter<"Rating"> | number
+  Username?: Prisma.StringNullableFilter<"Rating"> | string | null
   ItemId?: Prisma.IntFilter<"Rating"> | number
   DomainId?: Prisma.IntFilter<"Rating"> | number
   Value?: Prisma.FloatFilter<"Rating"> | number
@@ -654,13 +648,13 @@ export type RatingCreateWithoutItemInput = {
   ReviewText?: string | null
   ConvertedScore?: number
   CreatedAt?: Date | string
-  User: Prisma.UserCreateNestedOneWithoutRatingsInput
+  User?: Prisma.UserCreateNestedOneWithoutRatingsInput
   Domain: Prisma.DomainCreateNestedOneWithoutRatingsInput
 }
 
 export type RatingUncheckedCreateWithoutItemInput = {
   Id?: number
-  UserId: number
+  Username?: string | null
   DomainId: number
   Value: number
   ReviewText?: string | null
@@ -706,7 +700,6 @@ export type RatingCreateWithoutUserInput = {
 export type RatingUncheckedCreateWithoutUserInput = {
   Id?: number
   ItemId: number
-  DomainId: number
   Value: number
   ReviewText?: string | null
   ConvertedScore?: number
@@ -741,7 +734,7 @@ export type RatingUpdateManyWithWhereWithoutUserInput = {
 
 export type RatingCreateManyDomainInput = {
   Id?: number
-  UserId: number
+  Username?: string | null
   ItemId: number
   Value: number
   ReviewText?: string | null
@@ -754,13 +747,13 @@ export type RatingUpdateWithoutDomainInput = {
   ReviewText?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   ConvertedScore?: Prisma.FloatFieldUpdateOperationsInput | number
   CreatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
-  User?: Prisma.UserUpdateOneRequiredWithoutRatingsNestedInput
+  User?: Prisma.UserUpdateOneWithoutRatingsNestedInput
   Item?: Prisma.ItemUpdateOneRequiredWithoutRatingsNestedInput
 }
 
 export type RatingUncheckedUpdateWithoutDomainInput = {
   Id?: Prisma.IntFieldUpdateOperationsInput | number
-  UserId?: Prisma.IntFieldUpdateOperationsInput | number
+  Username?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   ItemId?: Prisma.IntFieldUpdateOperationsInput | number
   Value?: Prisma.FloatFieldUpdateOperationsInput | number
   ReviewText?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -770,7 +763,7 @@ export type RatingUncheckedUpdateWithoutDomainInput = {
 
 export type RatingUncheckedUpdateManyWithoutDomainInput = {
   Id?: Prisma.IntFieldUpdateOperationsInput | number
-  UserId?: Prisma.IntFieldUpdateOperationsInput | number
+  Username?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   ItemId?: Prisma.IntFieldUpdateOperationsInput | number
   Value?: Prisma.FloatFieldUpdateOperationsInput | number
   ReviewText?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -780,7 +773,7 @@ export type RatingUncheckedUpdateManyWithoutDomainInput = {
 
 export type RatingCreateManyItemInput = {
   Id?: number
-  UserId: number
+  Username?: string | null
   DomainId: number
   Value: number
   ReviewText?: string | null
@@ -793,13 +786,13 @@ export type RatingUpdateWithoutItemInput = {
   ReviewText?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   ConvertedScore?: Prisma.FloatFieldUpdateOperationsInput | number
   CreatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
-  User?: Prisma.UserUpdateOneRequiredWithoutRatingsNestedInput
+  User?: Prisma.UserUpdateOneWithoutRatingsNestedInput
   Domain?: Prisma.DomainUpdateOneRequiredWithoutRatingsNestedInput
 }
 
 export type RatingUncheckedUpdateWithoutItemInput = {
   Id?: Prisma.IntFieldUpdateOperationsInput | number
-  UserId?: Prisma.IntFieldUpdateOperationsInput | number
+  Username?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   DomainId?: Prisma.IntFieldUpdateOperationsInput | number
   Value?: Prisma.FloatFieldUpdateOperationsInput | number
   ReviewText?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -809,7 +802,7 @@ export type RatingUncheckedUpdateWithoutItemInput = {
 
 export type RatingUncheckedUpdateManyWithoutItemInput = {
   Id?: Prisma.IntFieldUpdateOperationsInput | number
-  UserId?: Prisma.IntFieldUpdateOperationsInput | number
+  Username?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   DomainId?: Prisma.IntFieldUpdateOperationsInput | number
   Value?: Prisma.FloatFieldUpdateOperationsInput | number
   ReviewText?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -820,7 +813,6 @@ export type RatingUncheckedUpdateManyWithoutItemInput = {
 export type RatingCreateManyUserInput = {
   Id?: number
   ItemId: number
-  DomainId: number
   Value: number
   ReviewText?: string | null
   ConvertedScore?: number
@@ -839,7 +831,6 @@ export type RatingUpdateWithoutUserInput = {
 export type RatingUncheckedUpdateWithoutUserInput = {
   Id?: Prisma.IntFieldUpdateOperationsInput | number
   ItemId?: Prisma.IntFieldUpdateOperationsInput | number
-  DomainId?: Prisma.IntFieldUpdateOperationsInput | number
   Value?: Prisma.FloatFieldUpdateOperationsInput | number
   ReviewText?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   ConvertedScore?: Prisma.FloatFieldUpdateOperationsInput | number
@@ -849,7 +840,6 @@ export type RatingUncheckedUpdateWithoutUserInput = {
 export type RatingUncheckedUpdateManyWithoutUserInput = {
   Id?: Prisma.IntFieldUpdateOperationsInput | number
   ItemId?: Prisma.IntFieldUpdateOperationsInput | number
-  DomainId?: Prisma.IntFieldUpdateOperationsInput | number
   Value?: Prisma.FloatFieldUpdateOperationsInput | number
   ReviewText?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   ConvertedScore?: Prisma.FloatFieldUpdateOperationsInput | number
@@ -860,49 +850,49 @@ export type RatingUncheckedUpdateManyWithoutUserInput = {
 
 export type RatingSelect<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetSelect<{
   Id?: boolean
-  UserId?: boolean
+  Username?: boolean
   ItemId?: boolean
   DomainId?: boolean
   Value?: boolean
   ReviewText?: boolean
   ConvertedScore?: boolean
   CreatedAt?: boolean
-  User?: boolean | Prisma.UserDefaultArgs<ExtArgs>
+  User?: boolean | Prisma.Rating$UserArgs<ExtArgs>
   Item?: boolean | Prisma.ItemDefaultArgs<ExtArgs>
   Domain?: boolean | Prisma.DomainDefaultArgs<ExtArgs>
 }, ExtArgs["result"]["rating"]>
 
 export type RatingSelectCreateManyAndReturn<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetSelect<{
   Id?: boolean
-  UserId?: boolean
+  Username?: boolean
   ItemId?: boolean
   DomainId?: boolean
   Value?: boolean
   ReviewText?: boolean
   ConvertedScore?: boolean
   CreatedAt?: boolean
-  User?: boolean | Prisma.UserDefaultArgs<ExtArgs>
+  User?: boolean | Prisma.Rating$UserArgs<ExtArgs>
   Item?: boolean | Prisma.ItemDefaultArgs<ExtArgs>
   Domain?: boolean | Prisma.DomainDefaultArgs<ExtArgs>
 }, ExtArgs["result"]["rating"]>
 
 export type RatingSelectUpdateManyAndReturn<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetSelect<{
   Id?: boolean
-  UserId?: boolean
+  Username?: boolean
   ItemId?: boolean
   DomainId?: boolean
   Value?: boolean
   ReviewText?: boolean
   ConvertedScore?: boolean
   CreatedAt?: boolean
-  User?: boolean | Prisma.UserDefaultArgs<ExtArgs>
+  User?: boolean | Prisma.Rating$UserArgs<ExtArgs>
   Item?: boolean | Prisma.ItemDefaultArgs<ExtArgs>
   Domain?: boolean | Prisma.DomainDefaultArgs<ExtArgs>
 }, ExtArgs["result"]["rating"]>
 
 export type RatingSelectScalar = {
   Id?: boolean
-  UserId?: boolean
+  Username?: boolean
   ItemId?: boolean
   DomainId?: boolean
   Value?: boolean
@@ -911,19 +901,19 @@ export type RatingSelectScalar = {
   CreatedAt?: boolean
 }
 
-export type RatingOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"Id" | "UserId" | "ItemId" | "DomainId" | "Value" | "ReviewText" | "ConvertedScore" | "CreatedAt", ExtArgs["result"]["rating"]>
+export type RatingOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"Id" | "Username" | "ItemId" | "DomainId" | "Value" | "ReviewText" | "ConvertedScore" | "CreatedAt", ExtArgs["result"]["rating"]>
 export type RatingInclude<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
-  User?: boolean | Prisma.UserDefaultArgs<ExtArgs>
+  User?: boolean | Prisma.Rating$UserArgs<ExtArgs>
   Item?: boolean | Prisma.ItemDefaultArgs<ExtArgs>
   Domain?: boolean | Prisma.DomainDefaultArgs<ExtArgs>
 }
 export type RatingIncludeCreateManyAndReturn<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
-  User?: boolean | Prisma.UserDefaultArgs<ExtArgs>
+  User?: boolean | Prisma.Rating$UserArgs<ExtArgs>
   Item?: boolean | Prisma.ItemDefaultArgs<ExtArgs>
   Domain?: boolean | Prisma.DomainDefaultArgs<ExtArgs>
 }
 export type RatingIncludeUpdateManyAndReturn<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
-  User?: boolean | Prisma.UserDefaultArgs<ExtArgs>
+  User?: boolean | Prisma.Rating$UserArgs<ExtArgs>
   Item?: boolean | Prisma.ItemDefaultArgs<ExtArgs>
   Domain?: boolean | Prisma.DomainDefaultArgs<ExtArgs>
 }
@@ -931,13 +921,13 @@ export type RatingIncludeUpdateManyAndReturn<ExtArgs extends runtime.Types.Exten
 export type $RatingPayload<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   name: "Rating"
   objects: {
-    User: Prisma.$UserPayload<ExtArgs>
+    User: Prisma.$UserPayload<ExtArgs> | null
     Item: Prisma.$ItemPayload<ExtArgs>
     Domain: Prisma.$DomainPayload<ExtArgs>
   }
   scalars: runtime.Types.Extensions.GetPayloadResult<{
     Id: number
-    UserId: number
+    Username: string | null
     ItemId: number
     DomainId: number
     Value: number
@@ -1338,7 +1328,7 @@ readonly fields: RatingFieldRefs;
  */
 export interface Prisma__RatingClient<T, Null = never, ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs, GlobalOmitOptions = {}> extends Prisma.PrismaPromise<T> {
   readonly [Symbol.toStringTag]: "PrismaPromise"
-  User<T extends Prisma.UserDefaultArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.UserDefaultArgs<ExtArgs>>): Prisma.Prisma__UserClient<runtime.Types.Result.GetResult<Prisma.$UserPayload<ExtArgs>, T, "findUniqueOrThrow", GlobalOmitOptions> | Null, Null, ExtArgs, GlobalOmitOptions>
+  User<T extends Prisma.Rating$UserArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.Rating$UserArgs<ExtArgs>>): Prisma.Prisma__UserClient<runtime.Types.Result.GetResult<Prisma.$UserPayload<ExtArgs>, T, "findUniqueOrThrow", GlobalOmitOptions> | null, null, ExtArgs, GlobalOmitOptions>
   Item<T extends Prisma.ItemDefaultArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.ItemDefaultArgs<ExtArgs>>): Prisma.Prisma__ItemClient<runtime.Types.Result.GetResult<Prisma.$ItemPayload<ExtArgs>, T, "findUniqueOrThrow", GlobalOmitOptions> | Null, Null, ExtArgs, GlobalOmitOptions>
   Domain<T extends Prisma.DomainDefaultArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.DomainDefaultArgs<ExtArgs>>): Prisma.Prisma__DomainClient<runtime.Types.Result.GetResult<Prisma.$DomainPayload<ExtArgs>, T, "findUniqueOrThrow", GlobalOmitOptions> | Null, Null, ExtArgs, GlobalOmitOptions>
   /**
@@ -1371,7 +1361,7 @@ export interface Prisma__RatingClient<T, Null = never, ExtArgs extends runtime.T
  */
 export interface RatingFieldRefs {
   readonly Id: Prisma.FieldRef<"Rating", 'Int'>
-  readonly UserId: Prisma.FieldRef<"Rating", 'Int'>
+  readonly Username: Prisma.FieldRef<"Rating", 'String'>
   readonly ItemId: Prisma.FieldRef<"Rating", 'Int'>
   readonly DomainId: Prisma.FieldRef<"Rating", 'Int'>
   readonly Value: Prisma.FieldRef<"Rating", 'Float'>
@@ -1771,6 +1761,25 @@ export type RatingDeleteManyArgs<ExtArgs extends runtime.Types.Extensions.Intern
    * Limit how many Ratings to delete.
    */
   limit?: number
+}
+
+/**
+ * Rating.User
+ */
+export type Rating$UserArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  /**
+   * Select specific fields to fetch from the User
+   */
+  select?: Prisma.UserSelect<ExtArgs> | null
+  /**
+   * Omit specific fields from the User
+   */
+  omit?: Prisma.UserOmit<ExtArgs> | null
+  /**
+   * Choose, which related nodes to fetch as well
+   */
+  include?: Prisma.UserInclude<ExtArgs> | null
+  where?: Prisma.UserWhereInput
 }
 
 /**
