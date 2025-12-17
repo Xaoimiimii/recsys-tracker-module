@@ -134,7 +134,7 @@ export class RecSysTracker {
         targetElement: {
           targetEventPatternId: 1,
           targetOperatorId: 5,
-          targetElementValue: '#test-form'
+          targetElementValue: '#review-form'
         },
         
         conditions: [], // Không cần điều kiện

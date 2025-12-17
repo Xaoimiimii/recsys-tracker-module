@@ -2106,7 +2106,11 @@ class UserIdentityManager {
     }
     extractUserIdFromLocalStorage() {
         try {
-            const possibleKeys = ['user', 'userData', 'auth', 'currentUser', 'userInfo', 'profile', 'account', STORAGE_KEYS.USER_ID];
+            const possibleKeys = [
+                'user_id', 'userId', 'uid', 'customer_id',
+                'user', 'userData', 'auth', 'currentUser', 'userInfo', 'profile', 'account',
+                STORAGE_KEYS.USER_ID
+            ];
             for (const key of possibleKeys) {
                 const value = localStorage.getItem(key);
                 if (value) {
@@ -3229,6 +3233,7 @@ class FormPlugin extends BasePlugin {
         this.name = 'FormPlugin';
         this.context = null;
         this.detector = null;
+        this.identityManager = null;
         this.handleSubmitBound = this.handleSubmit.bind(this);
     }
     init(tracker) {
@@ -3236,6 +3241,12 @@ class FormPlugin extends BasePlugin {
             super.init(tracker);
             this.context = new TrackerContextAdapter(tracker);
             this.detector = getAIItemDetector();
+            this.identityManager = getUserIdentityManager();
+            this.identityManager.initialize();
+            if (this.context) {
+                this.identityManager.setTrackerContext(this.context);
+            }
+            console.log(`[FormPlugin] initialized with UserIdentityManager.`);
             console.log(`[FormPlugin] initialized.`);
         }, 'FormPlugin.init');
     }
@@ -3255,83 +3266,272 @@ class FormPlugin extends BasePlugin {
             super.stop();
         }, 'FormPlugin.stop');
     }
+    // private handleSubmit(event: Event): void {
+    //     if (!this.context || !this.detector) return;
+    //     const form = event.target as HTMLFormElement;
+    //     // 1. Lấy rules có Trigger là RATE (Giả sử ID = 2)
+    //     const rateRules = this.context.config.getRules(2); 
+    //     if (rateRules.length === 0) return;
+    //     for (const rule of rateRules) {
+    //         // 2. Check xem Form này có khớp với Rule không (dựa vào selector)
+    //         const selector = rule.targetElement.targetElementValue || '';
+    //         if (!selector) continue;
+    //         // Logic check khớp selector đơn giản (giống checkTargetMatch cũ nhưng gọn hơn)
+    //         let isMatch = false;
+    //         try {
+    //             if (form.matches(selector)) isMatch = true;
+    //             // Fallback check ID nếu selector là #id
+    //             else if (selector.startsWith('#') && form.id === selector.substring(1)) isMatch = true;
+    //         } catch (e) { console.warn('Invalid selector', selector); }
+    //         if (isMatch) {
+    //             // 1. Detect Item Context
+    //             const structuredItem = this.detector.detectItem(form);
+    //             // 2. Extract Form Data
+    //             const { rateValue, reviewText } = this.extractFormData(form, rule);
+    //             // 3. Build Payload cơ bản
+    //             const payload = this.context.payloadBuilder.build(structuredItem, rule);
+    //             // 4. Override event type
+    //             payload.event = 'rate_submit';
+    //             // 5. Đưa dữ liệu vào METADATA (Merge với metadata cũ nếu có)
+    //             payload.metadata = {
+    //                 ...(payload.metadata || {}), 
+    //                 rateValue: rateValue,   
+    //                 reviewText: reviewText  
+    //             };
+    //             // 6. Gửi đi
+    //             this.context.eventBuffer.enqueue(payload);
+    //             return;
+    //         }
+    //     }
+    // }
     handleSubmit(event) {
+        var _a, _b, _c;
+        console.log("🔥 [DEBUG] Sự kiện Submit đã được bắt!");
         if (!this.context || !this.detector)
             return;
         const form = event.target;
-        // 1. Lấy rules có Trigger là RATE (Giả sử ID = 2)
+        const formId = form.id;
+        console.log(`📝 [DEBUG] Form đang submit có ID: "${formId}"`);
+        // 1. Lấy rules RATE (ID=2)
         const rateRules = this.context.config.getRules(2);
-        if (rateRules.length === 0)
+        console.log(`🔎 [DEBUG] Tìm thấy ${rateRules.length} rule(s) cho sự kiện RATE.`);
+        if (rateRules.length === 0) {
+            console.warn("⚠️ [DEBUG] Không có rule nào trong Config/Mock khớp TriggerID=2");
             return;
+        }
         for (const rule of rateRules) {
-            // 2. Check xem Form này có khớp với Rule không (dựa vào selector)
-            const selector = rule.targetElement.targetElementValue || '';
-            if (!selector)
+            // Lấy selector từ cấu trúc lồng nhau (như trong index.ts bạn viết)
+            // Dùng optional chaining (?.) để an toàn
+            const selector = ((_a = rule.targetElement) === null || _a === void 0 ? void 0 : _a.targetElementValue) || rule.targetElementValue;
+            console.log(`   👉 Checking Rule [${rule.id}]: Cần tìm selector "${selector}"`);
+            if (!selector) {
+                console.log("      -> Bỏ qua: Rule không có selector");
                 continue;
-            // Logic check khớp selector đơn giản (giống checkTargetMatch cũ nhưng gọn hơn)
+            }
+            // Logic check khớp
             let isMatch = false;
             try {
                 if (form.matches(selector))
                     isMatch = true;
-                // Fallback check ID nếu selector là #id
-                else if (selector.startsWith('#') && form.id === selector.substring(1))
+                else if (selector.startsWith('#') && formId === selector.substring(1))
                     isMatch = true;
             }
             catch (e) {
-                console.warn('Invalid selector', selector);
+                console.warn('      -> Lỗi cú pháp selector', e);
             }
             if (isMatch) {
+                console.log("✅ [DEBUG] MATCH THÀNH CÔNG! Bắt đầu trích xuất dữ liệu...");
                 // 1. Detect Item Context
-                const structuredItem = this.detector.detectItem(form);
+                let structuredItem = this.detector.detectItem(form);
+                const isGarbageId = ((_b = structuredItem === null || structuredItem === void 0 ? void 0 : structuredItem.id) === null || _b === void 0 ? void 0 : _b.startsWith('pos_')) ||
+                    (structuredItem === null || structuredItem === void 0 ? void 0 : structuredItem.source) === 'fallback_position_based' ||
+                    ((_c = structuredItem === null || structuredItem === void 0 ? void 0 : structuredItem.name) === null || _c === void 0 ? void 0 : _c.startsWith('Element at'));
+                if (!structuredItem || !structuredItem.id || structuredItem.id === 'N/A (Failed)' || isGarbageId) {
+                    console.log("🔍 [FormPlugin] AI form failed. Scanning surrounding context...");
+                    const contextInfo = this.scanSurroundingContext(form);
+                    if (contextInfo.id) {
+                        // Merge kết quả tìm được
+                        structuredItem = {
+                            confidence: 1,
+                            source: contextInfo.source,
+                            context: 'dom_context',
+                            metadata: {},
+                            ...(structuredItem || {}), // Giữ lại metadata cũ nếu có
+                            id: contextInfo.id,
+                            name: contextInfo.name || (structuredItem === null || structuredItem === void 0 ? void 0 : structuredItem.name) || '',
+                            type: contextInfo.type || (structuredItem === null || structuredItem === void 0 ? void 0 : structuredItem.type) || ''
+                        };
+                        console.log("[FormPlugin] Found Context Item:", contextInfo);
+                    }
+                }
                 // 2. Extract Form Data
                 const { rateValue, reviewText } = this.extractFormData(form, rule);
-                // 3. Build Payload cơ bản
+                console.log("📦 [DEBUG] Dữ liệu trích xuất được:", { rateValue, reviewText });
+                // 3. Build Payload
                 const payload = this.context.payloadBuilder.build(structuredItem, rule);
-                // 4. Override event type
+                this.enrichPayload(payload, structuredItem, { rateValue, reviewText });
                 payload.event = 'rate_submit';
-                // 5. Đưa dữ liệu vào METADATA (Merge với metadata cũ nếu có)
                 payload.metadata = {
                     ...(payload.metadata || {}),
                     rateValue: rateValue,
                     reviewText: reviewText
                 };
-                // 6. Gửi đi
+                // 4. Send
+                console.log("🚀 [DEBUG] Đang gửi vào Buffer:", payload);
                 this.context.eventBuffer.enqueue(payload);
                 return;
+            }
+            else {
+                console.log(`      ❌ KHÔNG KHỚP: Form "${formId}" != Selector "${selector}"`);
+            }
+        }
+    }
+    /**
+     * DOM RADAR: Quét ngữ cảnh xung quanh theo phương pháp lan truyền
+     * 1. Check bản thân -> 2. Check tổ tiên -> 3. Check phạm vi (Parent Scope)
+     */
+    scanSurroundingContext(element) {
+        // Helper lấy data attribute
+        const getAttrs = (el) => {
+            if (!el)
+                return null;
+            const id = el.getAttribute('data-item-id') || el.getAttribute('data-product-id') || el.getAttribute('data-id');
+            if (id) {
+                return {
+                    id,
+                    name: el.getAttribute('data-item-name') || el.getAttribute('data-name') || undefined,
+                    type: el.getAttribute('data-item-type') || undefined
+                };
+            }
+            return null;
+        };
+        console.log("📡 [DOM Radar] Bắt đầu quét xung quanh form...");
+        // BƯỚC 1: Quét Tổ Tiên (Ancestors - Form nằm trong thẻ Item)
+        // Dùng closest để tìm ngược lên trên
+        const ancestor = element.closest('[data-item-id], [data-product-id], [data-id]');
+        const ancestorData = getAttrs(ancestor);
+        if (ancestorData) {
+            console.log("   => Tìm thấy ở Tổ tiên (Ancestor)");
+            return { ...ancestorData, source: 'ancestor' };
+        }
+        // BƯỚC 2: Quét Phạm Vi Gần (Scope Scan - Form nằm cạnh thẻ Item)
+        // Đi ngược lên Parent từng cấp (Max 5 cấp) để tìm "hàng xóm" có data
+        let currentParent = element.parentElement;
+        let levels = 0;
+        const maxLevels = 5; // Chỉ quét tối đa 5 cấp cha để tránh performance kém
+        while (currentParent && levels < maxLevels) {
+            // Tìm tất cả các thẻ có ID trong phạm vi cha này
+            const candidates = currentParent.querySelectorAll('[data-item-id], [data-product-id], [data-id]');
+            if (candidates.length > 0) {
+                // Có ứng viên! Chọn ứng viên đầu tiên không phải là chính cái form (tránh loop)
+                // (Thường querySelectorAll trả về theo thứ tự DOM, nên cái nào đứng trước/gần nhất sẽ được lấy)
+                for (let i = 0; i < candidates.length; i++) {
+                    const candidate = candidates[i];
+                    if (!element.contains(candidate)) { // Đảm bảo không tìm lại con của form (nếu có)
+                        const data = getAttrs(candidate);
+                        if (data) {
+                            console.log(`   => Tìm thấy ở Hàng xóm (Scope Level ${levels + 1})`);
+                            return { ...data, source: `scope_level_${levels + 1}` };
+                        }
+                    }
+                }
+            }
+            // Tiếp tục leo lên cấp cao hơn
+            currentParent = currentParent.parentElement;
+            levels++;
+        }
+        // BƯỚC 3: Fallback URL (Cứu cánh cuối cùng)
+        const urlParams = new URLSearchParams(window.location.search);
+        const urlId = urlParams.get('id') || urlParams.get('productId') || urlParams.get('item_id');
+        if (urlId) {
+            console.log("   => Tìm thấy ở URL Param");
+            return { id: urlId, source: 'url_param' };
+        }
+        console.warn("❌ [DOM Radar] Không tìm thấy ngữ cảnh nào xung quanh.");
+        return { id: undefined, source: 'none' };
+    }
+    enrichPayload(payload, itemCtx, formData) {
+        // Gán Event Type chuẩn
+        payload.event = 'rate_submit';
+        // Merge Metadata (Form Data)
+        payload.metadata = {
+            ...(payload.metadata || {}),
+            ...formData
+        };
+        // Override Item Info (Quan trọng: Đảm bảo công sức của Radar được ghi nhận)
+        // Chỉ ghi đè nếu Builder thất bại ("N/A") hoặc ID rỗng
+        if (itemCtx.id && (!payload.itemId || payload.itemId === 'N/A (Failed)')) {
+            payload.itemId = itemCtx.id;
+            payload.confidence = 1; // Khẳng định độ tin cậy
+            if (itemCtx.source)
+                payload.source = itemCtx.source;
+        }
+        // Name có thể optional
+        if (itemCtx.name && (!payload.itemName || payload.itemName === 'Unknown Item')) {
+            payload.itemName = itemCtx.name;
+        }
+        if (this.identityManager) {
+            // Lấy ID thật (nếu có đăng nhập), bỏ qua anon_
+            const realUserId = this.identityManager.getRealUserId();
+            const stableUserId = this.identityManager.getStableUserId();
+            // Ưu tiên ID thật (User ID từ DB)
+            if (realUserId && !realUserId.startsWith('anon_')) {
+                console.log(`👤 [FormPlugin] Auto-detected Real User ID: ${realUserId}`);
+                payload.userId = realUserId;
+            }
+            // Nếu không có ID thật, dùng ID ổn định (có thể là anon cũ) để đảm bảo continuity
+            else if (stableUserId) {
+                // Chỉ ghi đè nếu payload đang trống hoặc payload đang dùng anon mới tạo
+                if (!payload.userId || (payload.userId.startsWith('anon_') && stableUserId !== payload.userId)) {
+                    payload.userId = stableUserId;
+                }
+            }
+            // [MẸO] Gắn thêm SessionID để tracking phiên làm việc chuẩn xác hơn
+            const userInfo = this.identityManager.getUserInfo();
+            if (userInfo.sessionId) {
+                payload.sessionId = userInfo.sessionId; // Đảm bảo backend có trường này hoặc để vào metadata
+                payload.metadata.sessionId = userInfo.sessionId;
             }
         }
     }
     // Helper: Lấy dữ liệu từ form
     extractFormData(form, rule) {
-        // Cách đơn giản: Scrape toàn bộ input
         const formData = new FormData(form);
         const data = {};
+        // Convert FormData to Object & Log raw data
         formData.forEach((value, key) => { data[key] = value; });
-        // Logic "Thám tử" tìm trường rate và review (giống smart-form cũ)
+        console.log("RAW FORM DATA:", data);
         let rateValue = 0;
         let reviewText = '';
-        // Ưu tiên config từ Rule (nếu có PayloadConfig)
+        // Ưu tiên config từ Rule
         if (rule.payload && rule.payload.length > 0) {
             rule.payload.forEach((p) => {
-                // Giả sử type='number' là rate, type='string' là review
-                // Cần logic map payloadPatternId cụ thể ở đây theo config của bạn
-                const val = data[p.value]; // p.value là tên field name
+                const val = data[p.value];
                 if (p.type === 'number')
-                    rateValue = Number(val);
+                    rateValue = Number(val) || 0;
                 else
-                    reviewText = String(val);
+                    reviewText = String(val || '');
             });
         }
         else {
-            // Auto-detect nếu không có config
-            // Tìm field có tên chưa 'rate', 'star', 'score'
+            // Auto-detect Logic
             for (const [key, val] of Object.entries(data)) {
                 const k = key.toLowerCase();
-                if ((k.includes('rate') || k.includes('star') || k.includes('score')) && !isNaN(Number(val))) {
-                    rateValue = Number(val);
+                const vStr = String(val);
+                // Detect Rating
+                if (k.includes('rate') || k.includes('star') || k.includes('score') || k.includes('rating')) {
+                    // Chỉ nhận nếu là số hợp lệ và > 0
+                    const parsed = Number(val);
+                    if (!isNaN(parsed) && parsed > 0) {
+                        rateValue = parsed;
+                    }
                 }
-                if (k.includes('comment') || k.includes('review') || k.includes('content') || k.includes('message')) {
-                    reviewText = String(val);
+                // Detect Review
+                if (k.includes('comment') || k.includes('review') || k.includes('content') || k.includes('body')) {
+                    // Ưu tiên chuỗi dài hơn (tránh lấy nhầm ID)
+                    if (vStr.length > reviewText.length) {
+                        reviewText = vStr;
+                    }
                 }
             }
         }
@@ -3447,7 +3647,7 @@ class RecSysTracker {
                 targetElement: {
                     targetEventPatternId: 1,
                     targetOperatorId: 5,
-                    targetElementValue: '#test-form'
+                    targetElementValue: '#review-form'
                 },
                 conditions: [], // Không cần điều kiện
                 payload: [] // Để rỗng để test tính năng Auto-detect của FormPlugin

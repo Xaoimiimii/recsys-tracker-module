@@ -348,7 +348,11 @@ export class UserIdentityManager {
     }
     extractUserIdFromLocalStorage() {
         try {
-            const possibleKeys = ['user', 'userData', 'auth', 'currentUser', 'userInfo', 'profile', 'account', STORAGE_KEYS.USER_ID];
+            const possibleKeys = [
+                'user_id', 'userId', 'uid', 'customer_id',
+                'user', 'userData', 'auth', 'currentUser', 'userInfo', 'profile', 'account',
+                STORAGE_KEYS.USER_ID
+            ];
             for (const key of possibleKeys) {
                 const value = localStorage.getItem(key);
                 if (value) {

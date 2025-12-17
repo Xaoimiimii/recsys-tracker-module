@@ -34,11 +34,21 @@
         input[type="text"], input[type="number"], textarea, select {
             width: 100%; padding: 10px; border: 1px solid #ccc; border-radius: 6px; font-size: 14px;
         }
-        button[type="submit"] {
-            background: #1a73e8; color: white; border: none; padding: 12px; border-radius: 6px; cursor: pointer; font-weight: 600; transition: background 0.2s;
+        button {
+            padding: 10px 15px; border-radius: 6px; cursor: pointer; font-weight: 600; border: none; transition: 0.2s;
         }
-        button[type="submit"]:hover { background: #1557b0; }
+        button.primary { background: #1a73e8; color: white; }
+        button.primary:hover { background: #1557b0; }
         
+        button.danger { background: #dc3545; color: white; }
+        button.danger:hover { background: #c82333; }
+
+        /* User Identity Box */
+        .user-box { display: flex; gap: 10px; align-items: center; background: #f8f9fa; padding: 15px; border-radius: 8px; border: 1px dashed #ccc; }
+        .status-badge { padding: 4px 8px; border-radius: 4px; font-size: 12px; font-weight: bold; }
+        .status-anon { background: #eee; color: #666; }
+        .status-logged { background: #d4edda; color: #155724; }
+
         /* Console Log Styles */
         #console-output {
             background: #1e1e1e; color: #d4d4d4; padding: 15px; border-radius: 8px;
@@ -48,21 +58,34 @@
         .log-success { color: #4ec9b0; }
         .log-info { color: #9cdcfe; }
         .log-warn { color: #ce9178; }
-        
-        .badge { display: inline-block; padding: 3px 8px; border-radius: 12px; font-size: 12px; font-weight: bold; background: #eee; color: #333; margin-right: 5px; }
     </style>
 </head>
 <body>
     <div class="container">
         <div class="header">
             <h1>📝 Form Plugin Test Suite</h1>
-            <p>Testing Rate/Review submission with AI Context Detection.</p>
+            <p>Testing Rate/Review submission with <strong>User Identity Manager</strong> & AI Context.</p>
         </div>
 
-        <div style="background: #fff3cd; color: #856404; padding: 15px; border-radius: 8px; margin-bottom: 20px; border: 1px solid #ffeeba;">
-            <strong>⚠️ Yêu cầu Server Config:</strong><br>
-            Để test thành công, database của bạn cần có Rule sau (hoặc bạn phải mock nó):<br>
-            <code>TriggerEventID: 2</code> (Rate) | <code>TargetElementValue: "#review-form"</code>
+        <div class="demo-card">
+            <h2>👤 User Identity Simulation</h2>
+            <p>Giả lập đăng nhập để kiểm tra xem <code>UserIdentityManager</code> có tự động bắt được ID từ LocalStorage không.</p>
+            
+            <div id="login-ui" class="user-box">
+                <input type="text" id="simulated-user-id" value="USER-VIP-888" placeholder="Nhập User ID giả lập (VD: USER-123)">
+                <button class="primary" onclick="simulateLogin()">Simulate Login</button>
+            </div>
+
+            <div id="logged-in-ui" class="user-box" style="display:none">
+                <div>
+                    <span class="status-badge status-logged">LOGGED IN</span>
+                    User ID: <strong id="display-user-id" style="color:#1a73e8; font-size: 1.1em;"></strong>
+                </div>
+                <button class="danger" onclick="simulateLogout()">Logout</button>
+            </div>
+            <p style="font-size: 0.9em; color: #666; margin-top: 10px;">
+                <em>*Khi bấm Login, trang sẽ lưu key <code>user_id</code> vào LocalStorage và reload trang. SDK sẽ tự động đọc key này.</em>
+            </p>
         </div>
 
         <div class="demo-card">
@@ -85,7 +108,7 @@
                     <label>Review:</label>
                     <textarea name="review" rows="3" placeholder="Write your thoughts...">Great product!</textarea>
                 </div>
-                <button type="submit">Submit Review</button>
+                <button type="submit" class="primary">Submit Review</button>
             </form>
         </div>
 
@@ -101,7 +124,49 @@
     </div>
 
     <script>
-        // --- 1. SETUP LOGGING ---
+        // --- A. USER SIMULATION LOGIC ---
+        function checkLoginState() {
+            // UserIdentityManager của SDK sẽ tìm các key như 'user_id', 'userId', 'token'...
+            // Ở đây ta giả lập key 'user_id'
+            const storedId = localStorage.getItem('user_id');
+            const loginUi = document.getElementById('login-ui');
+            const loggedUi = document.getElementById('logged-in-ui');
+            const displayId = document.getElementById('display-user-id');
+
+            if (storedId) {
+                loginUi.style.display = 'none';
+                loggedUi.style.display = 'flex';
+                displayId.innerText = storedId;
+                addLog(`👤 Detected LocalStorage UserID: ${storedId}`, 'info');
+            } else {
+                loginUi.style.display = 'flex';
+                loggedUi.style.display = 'none';
+                addLog(`👤 No UserID in LocalStorage (Anonymous Mode)`, 'warn');
+            }
+        }
+
+        function simulateLogin() {
+            const val = document.getElementById('simulated-user-id').value;
+            if(!val) return alert("Vui lòng nhập ID");
+            
+            // Lưu vào LocalStorage -> Đây là mấu chốt để UserIdentityManager bắt được
+            localStorage.setItem('user_id', val);
+            
+            // Reload để SDK khởi tạo lại và đọc ID mới ngay từ đầu
+            location.reload();
+        }
+
+        function simulateLogout() {
+            // Xóa ID giả lập
+            localStorage.removeItem('user_id');
+            
+            // (Optional) Xóa luôn ID anon của SDK để test sạch sẽ
+            // localStorage.removeItem('_recsys_anon_id'); 
+            
+            location.reload();
+        }
+
+        // --- B. SETUP LOGGING ---
         const consoleOutput = document.getElementById('console-output');
         const originalConsoleLog = console.log;
 
@@ -112,43 +177,37 @@
             
             if (typeof msg === 'object') msg = JSON.stringify(msg, null, 2);
             div.innerHTML = `<span style="opacity:0.6">[${time}]</span> ${msg}`;
-            
             consoleOutput.prepend(div);
         }
 
         console.log = function(...args) {
             originalConsoleLog.apply(console, args);
             const msg = args.join(' ');
-            
-            // Filter logs liên quan đến tracking
-            if (msg.includes('[FormPlugin]') || msg.includes('RECSYS TRACK') || msg.includes('metadata')) {
+            if (msg.includes('[FormPlugin]') || msg.includes('RECSYS TRACK') || msg.includes('metadata') || msg.includes('UserId')) {
                 addLog(msg, 'success');
-            } else if (msg.includes('RecSys')) {
+            } else if (msg.includes('RecSys') || msg.includes('Identity')) {
                 addLog(msg, 'info');
             }
         };
 
         function clearLog() { consoleOutput.innerHTML = ''; }
 
-        // --- 2. HANDLE FORM SUBMIT (PREVENT RELOAD) ---
+        // --- C. HANDLE FORM SUBMIT ---
         function handleFormSubmit(e) {
-            e.preventDefault(); // Ngăn reload trang để xem log
-            addLog("📝 Form submitted by User (Page prevented reload, but SDK should capture event)", "warn");
+            e.preventDefault();
+            addLog("📝 Form submitted! Checking SDK...", "warn");
         }
 
-        // --- 3. MOCK RULES (QUAN TRỌNG ĐỂ TEST KHÔNG CẦN DB) ---
-        // Chúng ta sẽ "hack" vào ConfigLoader sau khi nó load xong để tiêm Rule test vào
-        // vì có thể bạn chưa kịp tạo rule trong database thật.
-        
+        // --- D. INIT ---
         window.addEventListener('load', () => {
+            checkLoginState();
+
+            // Mock Rule Injection (Giữ nguyên logic cũ của bạn)
             const checkSDK = setInterval(() => {
-                // [FIX] Kiểm tra kỹ: Object tồn tại VÀ getConfig là một function
                 if (window.RecSysTracker && typeof window.RecSysTracker.getConfig === 'function') {
-                    // Kiểm tra thêm config đã load xong chưa (đôi khi hàm có nhưng config null)
                     const config = window.RecSysTracker.getConfig();
                     if (config) {
                         clearInterval(checkSDK);
-                        console.log("✅ SDK Fully Loaded & Initialized!");
                         injectTestRule();
                     }
                 }
@@ -157,35 +216,24 @@
 
         function injectTestRule() {
             try {
-                // Lúc này chắc chắn gọi được getConfig()
                 const config = window.RecSysTracker.getConfig();
-                
-                // ... (Phần còn lại giữ nguyên) ...
                 const hasRateRule = config.trackingRules && config.trackingRules.some(r => r.triggerEventId === 2);
                 
                 if (!hasRateRule) {
-                    addLog("⚠️ No Rate Rules found. Injecting MOCK RULE...", "warn");
-                    
+                    addLog("⚠️ Injecting MOCK RULE for testing...", "warn");
                     const mockRule = {
                         id: 'test-rule-form',
                         name: 'Test Review Form',
                         triggerEventId: 2, 
-                        targetElementValue: '#review-form', // Lưu ý: Cấu trúc object phải khớp với types.ts
-                        targetEventPatternId: 1, // CSS SELECTOR (Pattern ID)
-                        targetOperatorId: 5,     // EQUALS (Operator ID - Check constant map của bạn)
-                        
+                        targetElementValue: '#review-form',
+                        targetEventPatternId: 1,
+                        targetOperatorId: 5,
                         conditions: [],
                         payload: []
                     };
-                    
-                    // Đảm bảo mảng tồn tại trước khi push
                     if (!config.trackingRules) config.trackingRules = [];
                     config.trackingRules.push(mockRule);
-                    
                     addLog("✅ Mock Rule Injected: #review-form", "success");
-                    
-                    // [MẸO] Nếu plugin đã lỡ start trước khi có rule này, ta có thể kích hoạt lại thủ công
-                    // Tuy nhiên với cơ chế reference object, thường plugin sẽ đọc được ngay.
                 }
             } catch (e) {
                 console.error("Failed to inject mock rule", e);

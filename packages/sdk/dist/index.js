@@ -102,7 +102,7 @@ export class RecSysTracker {
                 targetElement: {
                     targetEventPatternId: 1,
                     targetOperatorId: 5,
-                    targetElementValue: '#test-form'
+                    targetElementValue: '#review-form'
                 },
                 conditions: [], // Không cần điều kiện
                 payload: [] // Để rỗng để test tính năng Auto-detect của FormPlugin
