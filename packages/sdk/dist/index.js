@@ -92,20 +92,32 @@ export class RecSysTracker {
                 this.config.trackingRules = [];
             // Định nghĩa Mock Rule (Khớp với types.ts)
             const mockRateRule = {
-                id: 'MOCK-RULE-01',
-                name: 'Mock Rate Form Submission',
-                triggerEventId: 2, // 2 = FORM_SUBMIT / RATE (Khớp với TRIGGER_MAP)
-                // Target: Chọn Form có ID là "test-form"
-                // targetElementValue: '#test-form', 
-                // targetEventPatternId: 1, // 1 = CSS_SELECTOR (Khớp với PATTERN_MAP)
-                // targetOperatorId: 5,     // 5 = EQUALS (Khớp với OPERATOR_MAP)
+                // id: 'MOCK-RULE-01',
+                // name: 'Mock Rate Form Submission',
+                // triggerEventId: 2, // 2 = FORM_SUBMIT / RATE (Khớp với TRIGGER_MAP)
+                // // Target: Chọn Form có ID là "test-form"
+                // // targetElementValue: '#test-form', 
+                // // targetEventPatternId: 1, // 1 = CSS_SELECTOR (Khớp với PATTERN_MAP)
+                // // targetOperatorId: 5,     // 5 = EQUALS (Khớp với OPERATOR_MAP)
+                // targetElement: {
+                //   targetEventPatternId: 1,
+                //   targetOperatorId: 5,
+                //   targetElementValue: '#review-form'
+                // },
+                // conditions: [], // Không cần điều kiện
+                // payload: []     // Để rỗng để test tính năng Auto-detect của FormPlugin
+                id: 'MOCK-SCROLL-01',
+                name: 'Track Main Article Reading',
+                triggerEventId: 4, // 4 = SCROLL
+                // Target: Chỉ theo dõi khi người dùng đọc bài viết chính (#main-article)
+                // Plugin sẽ tìm Context ID (data-item-id) bên trong element này
                 targetElement: {
                     targetEventPatternId: 1,
                     targetOperatorId: 5,
-                    targetElementValue: '#review-form'
+                    targetElementValue: '#main-article'
                 },
-                conditions: [], // Không cần điều kiện
-                payload: [] // Để rỗng để test tính năng Auto-detect của FormPlugin
+                conditions: [],
+                payload: []
             };
             // Push vào config
             this.config.trackingRules.push(mockRateRule);
@@ -129,9 +141,9 @@ export class RecSysTracker {
         }
         // Kiểm tra nếu có rule nào cần ClickPlugin (triggerEventId === 1)
         const hasClickRules = this.config.trackingRules.some(rule => rule.triggerEventId === 1);
-        // Kiểm tra nếu có rule nào cần PageViewPlugin (triggerEventId === 3)
         const hasPageViewRules = this.config.trackingRules.some(rule => rule.triggerEventId === 3);
         const hasFormRules = this.config.trackingRules.some(rule => rule.triggerEventId === 2);
+        const hasScrollRules = this.config.trackingRules.some(rule => rule.triggerEventId === 4);
         // Chỉ tự động đăng ký nếu chưa có plugin nào được đăng ký
         if (this.pluginManager.getPluginNames().length === 0) {
             const pluginPromises = [];
@@ -159,6 +171,13 @@ export class RecSysTracker {
                     console.log('[RecSysTracker] Auto-registered FormPlugin based on tracking rules');
                 });
                 pluginPromises.push(formPromise);
+            }
+            if (hasScrollRules) {
+                const scrollPromise = import('./core/plugins/scroll-plugin').then(({ ScrollPlugin }) => {
+                    this.use(new ScrollPlugin());
+                    console.log('[RecSysTracker] Auto-registered ScrollPlugin');
+                });
+                pluginPromises.push(scrollPromise);
             }
             // Chờ tất cả plugin được đăng ký trước khi khởi động
             if (pluginPromises.length > 0) {
@@ -344,4 +363,5 @@ export { BasePlugin } from './core/plugins/base-plugin';
 export { ClickPlugin } from './core/plugins/click-plugin';
 export { PageViewPlugin } from './core/plugins/page-view-plugin';
 export { FormPlugin } from './core/plugins/form-plugin';
+export { ScrollPlugin } from './core/plugins/scroll-plugin';
 //# sourceMappingURL=index.js.map
