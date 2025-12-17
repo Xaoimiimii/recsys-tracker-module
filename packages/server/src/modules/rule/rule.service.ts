@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateRuleDto } from './dto';
 
@@ -31,7 +31,7 @@ export class RuleService {
             !rule.payloadConfigs ||
             rule.payloadConfigs.length === 0
         )
-            return null;
+            throw new BadRequestException('Missing required fields to create rule.');
 
         if (
             !(await this.prisma.triggerEvent.findUnique({
@@ -40,7 +40,7 @@ export class RuleService {
                 },
             }))
         )
-            return null;
+            throw new NotFoundException(`Trigger event id '${rule.triggerEventId}' does not exist.`);
 
         const eventPatterns = await this.prisma.eventPattern.findMany();
         const operators = await this.prisma.operator.findMany();
@@ -52,23 +52,22 @@ export class RuleService {
                     (pp) => pp.Id === payloadConfig.payloadPatternId,
                 )
             )
-                return null;
+                throw new NotFoundException(`Payload pattern id '${payloadConfig.payloadPatternId}' does not exist.`);
             if (!operators.find((op) => op.Id === payloadConfig.operatorId))
-                return null;
-            if (!payloadConfig.value) return null;
+                throw new NotFoundException(`Operator id '${payloadConfig.operatorId}' does not exist.`);
+            if (!payloadConfig.value) throw new BadRequestException('Payload config value is required.');
         }
 
         for (const condition of rule.conditions) {
             if (!eventPatterns.find((ep) => ep.Id === condition.eventPatternId))
-                return null;
+                throw new NotFoundException(`Event pattern id '${condition.eventPatternId}' does not exist.`);
             if (!operators.find((op) => op.Id === condition.operatorId))
-                return null;
-            if (!condition.value) return null;
+                throw new NotFoundException(`Operator id '${condition.operatorId}' does not exist.`);
+            if (!condition.value) throw new BadRequestException('Condition value is required.');
         }
 
-        if (!eventPatterns.find((ep) => ep.Id === rule.targetEventPatternId)) return null;
-        if (!operators.find((op) => op.Id === rule.targetOperatorId)) return null;
-
+        if (!eventPatterns.find((ep) => ep.Id === rule.targetEventPatternId)) throw new NotFoundException(`Event pattern id '${rule.targetEventPatternId}' does not exist.`);
+        if (!operators.find((op) => op.Id === rule.targetOperatorId)) throw new NotFoundException(`Operator id '${rule.targetOperatorId}' does not exist.`);
         const targetElement = await this.prisma.targetElement.create({
             data: {
                 Value: rule.targetElementValue,
@@ -77,7 +76,7 @@ export class RuleService {
             }
         });
 
-        if (!targetElement) return null;
+        if (!targetElement) throw new BadRequestException('Error creating target element for the rule.');
         
         const domain = await this.prisma.domain.findUnique({
             where: {
@@ -85,7 +84,7 @@ export class RuleService {
             },
         });
 
-        if (!domain) return null;
+        if (!domain) throw new NotFoundException(`Domain key '${rule.domainKey}' does not exist.`);
 
         const createdRule = await this.prisma.rule.create({
             data: {

@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { randomBytes } from 'crypto';
 
@@ -44,7 +44,7 @@ export class DomainService {
             where: {
                 Id: ternantId
             }
-        })) return null;
+        })) throw new NotFoundException(`Ternant id '${ternantId}' does not exist.`);
 
         const apiKey = await this.generateApiKey();
 

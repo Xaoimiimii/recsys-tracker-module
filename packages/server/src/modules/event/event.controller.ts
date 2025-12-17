@@ -10,14 +10,10 @@ export class EventController {
     async addEvent(@Body() body: CreateEventDto) {
         const result = await this.eventService.addEvent(body);
 
-        if (!result) {
-            throw new BadRequestException('Some error occurred');
-        }
-
-    return {
-        statusCode: 201,
-        message: 'Event was created successfully',
-        eventId: result,
-    };
+        return {
+            statusCode: 201,
+            message: 'Event was created successfully',
+            eventId: result,
+        };
     }
 }

@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateEventDto } from './dto/create-event.dto';
 
@@ -11,13 +11,13 @@ export class EventService {
             where: {
                 Key: event.DomainKey,
             }
-        }))) return null;
+        }))) throw new NotFoundException(`Domain key '${event.DomainKey}' does not exist.`);
 
         if (!(await this.prisma.triggerEvent.findUnique({
             where: {
                 Id: event.TriggerTypeId,
             }
-        }))) return null;
+        }))) throw new NotFoundException(`Trigger event id '${event.TriggerTypeId}' does not exist.`);
 
         const domainByKey = await this.prisma.domain.findUnique({
             where: {
@@ -25,7 +25,7 @@ export class EventService {
             }
         });
 
-        if (!domainByKey) return null;
+        if (!domainByKey) throw new NotFoundException(`Domain key '${event.DomainKey}' does not exist.`);
 
         if (!(await this.prisma.user.findUnique({
             where: {
@@ -44,12 +44,11 @@ export class EventService {
             });
         }
 
-
         if (!(await this.prisma.item.findUnique({
             where: {
                 Id: event.Payload.ItemId,
             }
-        }))) return null;
+        }))) throw new NotFoundException(`Item id '${event.Payload.ItemId}' does not exist.`);
 
         const domain = await this.prisma.domain.findUnique({
             where: {
@@ -61,8 +60,8 @@ export class EventService {
 
         if (event.TriggerTypeId === 2)
         {
-            if (event.Rate?.Value === null || event.Rate?.Value === undefined) return null;
-            if (event.Rate.Value < 1 || event.Rate.Value > 5) return null;
+            if (event.Rate?.Value === null || event.Rate?.Value === undefined) throw new BadRequestException(`Rating value is required for rating events.`);
+            if (event.Rate.Value < 1 || event.Rate.Value > 5) throw new BadRequestException(`Rating value must be between 1 and 5.`);
 
             const createdEvent = await this.prisma.rating.create({
                 data: {

@@ -1,9 +1,11 @@
+import { Not } from './../../generated/prisma/internal/prismaNamespace';
 import {
     Body,
     Controller,
     Get,
     HttpException,
     HttpStatus,
+    NotFoundException,
     Param,
     ParseIntPipe,
     Post,
@@ -36,16 +38,11 @@ export class RuleController {
     @Post('create')
     async createRule(@Body() rule: CreateRuleDto) {
         const createdRule = await this.ruleService.createRule(rule);
-        if (!createdRule) {
-            throw new HttpException(
-                { statusCode: 404, message: 'Some error occurred' },
-                HttpStatus.NOT_FOUND,
-            );
-        }
 
         return {
             statusCode: HttpStatus.CREATED,
             message: 'Rule was created successfully',
+            ruleId: createdRule?.Id,
         };
     }
 
@@ -54,10 +51,7 @@ export class RuleController {
     {
         const rule = await this.ruleService.getRuleById(id);
         if (!rule) {
-            throw new HttpException(
-                { statusCode: 404, message: 'Rule not found' },
-                HttpStatus.NOT_FOUND,
-            );
+            throw new NotFoundException(`Rule id '${id}' does not exist.`);
         }
         return rule;
     }
@@ -67,10 +61,7 @@ export class RuleController {
     {
         const rules = await this.ruleService.getRulesByDomainKey(key);
         if (!rules) {
-            throw new HttpException(
-                { statusCode: 404, message: 'No rules found for this domain' },
-                HttpStatus.NOT_FOUND,
-            );
+            throw new NotFoundException(`No rules found for domain key '${key}'.`);
         }
 
         const result = rules.map(r => ({ id: r.Id, name: r.Name, TriggerTypeName: r.TriggerEvent.Name }));
