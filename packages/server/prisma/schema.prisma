@@ -172,6 +172,8 @@ model ItemCategory {
 
 model Item {
   Id                Int     @id @default(autoincrement())
+  DomainItemId      String? @unique
+  Title             String?
   DomainId          Int
   Domain            Domain @relation(fields: [DomainId], references: [Id])
   Description       String
@@ -210,6 +212,7 @@ model ItemFactor {
 
 model User {
   Id                Int     @id @default(autoincrement())
+  Username          String?
   DomainId          Int
   Domain            Domain @relation(fields: [DomainId], references: [Id])
   UserEmbeddingVector Float[]
@@ -220,6 +223,7 @@ model User {
   Predicts          Predict[]
   Ratings           Rating[]
   Interactions      Interaction[]
+  @@unique([Username, DomainId])
 }
 
 model UserFactor {
@@ -245,8 +249,8 @@ model Predict {
 
 model Rating {
   Id                Int     @id @default(autoincrement())
-  UserId            Int
-  User              User    @relation(fields: [UserId], references: [Id])
+  Username          String?
+  User              User?    @relation(fields: [Username, DomainId], references: [Username, DomainId])
   ItemId            Int
   Item              Item    @relation(fields: [ItemId], references: [Id])
   DomainId          Int
@@ -256,13 +260,13 @@ model Rating {
   ConvertedScore    Float    @default(3)
   CreatedAt         DateTime @default(now())
 
-  @@unique([UserId, ItemId])
+  @@unique([Username, ItemId])
 }
 
 model Interaction {
   Id                Int     @id @default(autoincrement())
-  UserId            Int
-  User              User    @relation(fields: [UserId], references: [Id])
+  Username          String?
+  User              User?    @relation(fields: [Username, DomainId], references: [Username, DomainId])
   ItemId            Int
   Item              Item    @relation(fields: [ItemId], references: [Id])
   InteractionTypeId Int
@@ -271,6 +275,6 @@ model Interaction {
   Domain            Domain  @relation(fields: [DomainId], references: [Id])
   CreatedAt         DateTime @default(now())
 
-  @@index([UserId])
+  @@index([Username, DomainId])
   @@index([ItemId])
 }

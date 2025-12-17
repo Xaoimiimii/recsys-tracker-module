@@ -24,21 +24,12 @@ export class RuleService {
     async createRule(rule: CreateRuleDto) {
         if (
             !rule.name ||
-            !rule.domainId ||
+            !rule.domainKey ||
             !rule.triggerEventId ||
             !rule.targetEventPatternId ||
             !rule.targetOperatorId ||
             !rule.payloadConfigs ||
             rule.payloadConfigs.length === 0
-        )
-            return null;
-
-        if (
-            !(await this.prisma.domain.findUnique({
-                where: {
-                    Id: rule.domainId,
-                },
-            }))
         )
             return null;
 
@@ -87,11 +78,18 @@ export class RuleService {
         });
 
         if (!targetElement) return null;
+        const domain = await this.prisma.domain.findUnique({
+            where: {
+                Key: rule.domainKey,
+            },
+        });
+
+        if (!domain) return null;
 
         const createdRule = await this.prisma.rule.create({
             data: {
                 Name: rule.name,
-                DomainID: rule.domainId,
+                DomainID: domain.Id,
                 TriggerEventID: rule.triggerEventId,
                 TargetElementID: targetElement.Id,
                 PayloadConfigs: {

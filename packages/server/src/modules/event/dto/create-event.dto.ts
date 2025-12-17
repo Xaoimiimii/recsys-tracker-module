@@ -14,7 +14,7 @@ export class CreateEventDto {
 
     @IsNotEmpty()
     Payload: {
-        UserId: number;
+        Username: string;
         ItemId: number;
     }
 

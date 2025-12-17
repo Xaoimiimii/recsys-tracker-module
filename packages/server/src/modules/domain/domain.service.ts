@@ -69,4 +69,14 @@ export class DomainService {
         });
         return domains;
     }
+
+    async getAllTriggerEvents() {
+        const events = await this.prisma.triggerEvent.findMany();
+        return events;
+    }
+
+    async getAllReturnMethods() {
+        const methods = await this.prisma.returnMethod.findMany();
+        return methods;
+    }
 }

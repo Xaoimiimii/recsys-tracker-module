@@ -40,6 +40,8 @@ export type ItemSumAggregateOutputType = {
 
 export type ItemMinAggregateOutputType = {
   Id: number | null
+  DomainItemId: string | null
+  Title: string | null
   DomainId: number | null
   Description: string | null
   ModifiedAt: Date | null
@@ -47,6 +49,8 @@ export type ItemMinAggregateOutputType = {
 
 export type ItemMaxAggregateOutputType = {
   Id: number | null
+  DomainItemId: string | null
+  Title: string | null
   DomainId: number | null
   Description: string | null
   ModifiedAt: Date | null
@@ -54,6 +58,8 @@ export type ItemMaxAggregateOutputType = {
 
 export type ItemCountAggregateOutputType = {
   Id: number
+  DomainItemId: number
+  Title: number
   DomainId: number
   Description: number
   EmbeddingVector: number
@@ -76,6 +82,8 @@ export type ItemSumAggregateInputType = {
 
 export type ItemMinAggregateInputType = {
   Id?: true
+  DomainItemId?: true
+  Title?: true
   DomainId?: true
   Description?: true
   ModifiedAt?: true
@@ -83,6 +91,8 @@ export type ItemMinAggregateInputType = {
 
 export type ItemMaxAggregateInputType = {
   Id?: true
+  DomainItemId?: true
+  Title?: true
   DomainId?: true
   Description?: true
   ModifiedAt?: true
@@ -90,6 +100,8 @@ export type ItemMaxAggregateInputType = {
 
 export type ItemCountAggregateInputType = {
   Id?: true
+  DomainItemId?: true
+  Title?: true
   DomainId?: true
   Description?: true
   EmbeddingVector?: true
@@ -185,6 +197,8 @@ export type ItemGroupByArgs<ExtArgs extends runtime.Types.Extensions.InternalArg
 
 export type ItemGroupByOutputType = {
   Id: number
+  DomainItemId: string | null
+  Title: string | null
   DomainId: number
   Description: string
   EmbeddingVector: number[]
@@ -216,6 +230,8 @@ export type ItemWhereInput = {
   OR?: Prisma.ItemWhereInput[]
   NOT?: Prisma.ItemWhereInput | Prisma.ItemWhereInput[]
   Id?: Prisma.IntFilter<"Item"> | number
+  DomainItemId?: Prisma.StringNullableFilter<"Item"> | string | null
+  Title?: Prisma.StringNullableFilter<"Item"> | string | null
   DomainId?: Prisma.IntFilter<"Item"> | number
   Description?: Prisma.StringFilter<"Item"> | string
   EmbeddingVector?: Prisma.FloatNullableListFilter<"Item">
@@ -230,6 +246,8 @@ export type ItemWhereInput = {
 
 export type ItemOrderByWithRelationInput = {
   Id?: Prisma.SortOrder
+  DomainItemId?: Prisma.SortOrderInput | Prisma.SortOrder
+  Title?: Prisma.SortOrderInput | Prisma.SortOrder
   DomainId?: Prisma.SortOrder
   Description?: Prisma.SortOrder
   EmbeddingVector?: Prisma.SortOrder
@@ -244,9 +262,11 @@ export type ItemOrderByWithRelationInput = {
 
 export type ItemWhereUniqueInput = Prisma.AtLeast<{
   Id?: number
+  DomainItemId?: string
   AND?: Prisma.ItemWhereInput | Prisma.ItemWhereInput[]
   OR?: Prisma.ItemWhereInput[]
   NOT?: Prisma.ItemWhereInput | Prisma.ItemWhereInput[]
+  Title?: Prisma.StringNullableFilter<"Item"> | string | null
   DomainId?: Prisma.IntFilter<"Item"> | number
   Description?: Prisma.StringFilter<"Item"> | string
   EmbeddingVector?: Prisma.FloatNullableListFilter<"Item">
@@ -257,10 +277,12 @@ export type ItemWhereUniqueInput = Prisma.AtLeast<{
   Predicts?: Prisma.PredictListRelationFilter
   Ratings?: Prisma.RatingListRelationFilter
   Interactions?: Prisma.InteractionListRelationFilter
-}, "Id">
+}, "Id" | "DomainItemId">
 
 export type ItemOrderByWithAggregationInput = {
   Id?: Prisma.SortOrder
+  DomainItemId?: Prisma.SortOrderInput | Prisma.SortOrder
+  Title?: Prisma.SortOrderInput | Prisma.SortOrder
   DomainId?: Prisma.SortOrder
   Description?: Prisma.SortOrder
   EmbeddingVector?: Prisma.SortOrder
@@ -277,6 +299,8 @@ export type ItemScalarWhereWithAggregatesInput = {
   OR?: Prisma.ItemScalarWhereWithAggregatesInput[]
   NOT?: Prisma.ItemScalarWhereWithAggregatesInput | Prisma.ItemScalarWhereWithAggregatesInput[]
   Id?: Prisma.IntWithAggregatesFilter<"Item"> | number
+  DomainItemId?: Prisma.StringNullableWithAggregatesFilter<"Item"> | string | null
+  Title?: Prisma.StringNullableWithAggregatesFilter<"Item"> | string | null
   DomainId?: Prisma.IntWithAggregatesFilter<"Item"> | number
   Description?: Prisma.StringWithAggregatesFilter<"Item"> | string
   EmbeddingVector?: Prisma.FloatNullableListFilter<"Item">
@@ -284,6 +308,8 @@ export type ItemScalarWhereWithAggregatesInput = {
 }
 
 export type ItemCreateInput = {
+  DomainItemId?: string | null
+  Title?: string | null
   Description: string
   EmbeddingVector?: Prisma.ItemCreateEmbeddingVectorInput | number[]
   ModifiedAt: Date | string
@@ -297,6 +323,8 @@ export type ItemCreateInput = {
 
 export type ItemUncheckedCreateInput = {
   Id?: number
+  DomainItemId?: string | null
+  Title?: string | null
   DomainId: number
   Description: string
   EmbeddingVector?: Prisma.ItemCreateEmbeddingVectorInput | number[]
@@ -309,6 +337,8 @@ export type ItemUncheckedCreateInput = {
 }
 
 export type ItemUpdateInput = {
+  DomainItemId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  Title?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   Description?: Prisma.StringFieldUpdateOperationsInput | string
   EmbeddingVector?: Prisma.ItemUpdateEmbeddingVectorInput | number[]
   ModifiedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -322,6 +352,8 @@ export type ItemUpdateInput = {
 
 export type ItemUncheckedUpdateInput = {
   Id?: Prisma.IntFieldUpdateOperationsInput | number
+  DomainItemId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  Title?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   DomainId?: Prisma.IntFieldUpdateOperationsInput | number
   Description?: Prisma.StringFieldUpdateOperationsInput | string
   EmbeddingVector?: Prisma.ItemUpdateEmbeddingVectorInput | number[]
@@ -335,6 +367,8 @@ export type ItemUncheckedUpdateInput = {
 
 export type ItemCreateManyInput = {
   Id?: number
+  DomainItemId?: string | null
+  Title?: string | null
   DomainId: number
   Description: string
   EmbeddingVector?: Prisma.ItemCreateEmbeddingVectorInput | number[]
@@ -342,6 +376,8 @@ export type ItemCreateManyInput = {
 }
 
 export type ItemUpdateManyMutationInput = {
+  DomainItemId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  Title?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   Description?: Prisma.StringFieldUpdateOperationsInput | string
   EmbeddingVector?: Prisma.ItemUpdateEmbeddingVectorInput | number[]
   ModifiedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -349,6 +385,8 @@ export type ItemUpdateManyMutationInput = {
 
 export type ItemUncheckedUpdateManyInput = {
   Id?: Prisma.IntFieldUpdateOperationsInput | number
+  DomainItemId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  Title?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   DomainId?: Prisma.IntFieldUpdateOperationsInput | number
   Description?: Prisma.StringFieldUpdateOperationsInput | string
   EmbeddingVector?: Prisma.ItemUpdateEmbeddingVectorInput | number[]
@@ -380,6 +418,8 @@ export type FloatNullableListFilter<$PrismaModel = never> = {
 
 export type ItemCountOrderByAggregateInput = {
   Id?: Prisma.SortOrder
+  DomainItemId?: Prisma.SortOrder
+  Title?: Prisma.SortOrder
   DomainId?: Prisma.SortOrder
   Description?: Prisma.SortOrder
   EmbeddingVector?: Prisma.SortOrder
@@ -394,6 +434,8 @@ export type ItemAvgOrderByAggregateInput = {
 
 export type ItemMaxOrderByAggregateInput = {
   Id?: Prisma.SortOrder
+  DomainItemId?: Prisma.SortOrder
+  Title?: Prisma.SortOrder
   DomainId?: Prisma.SortOrder
   Description?: Prisma.SortOrder
   ModifiedAt?: Prisma.SortOrder
@@ -401,6 +443,8 @@ export type ItemMaxOrderByAggregateInput = {
 
 export type ItemMinOrderByAggregateInput = {
   Id?: Prisma.SortOrder
+  DomainItemId?: Prisma.SortOrder
+  Title?: Prisma.SortOrder
   DomainId?: Prisma.SortOrder
   Description?: Prisma.SortOrder
   ModifiedAt?: Prisma.SortOrder
@@ -534,6 +578,8 @@ export type ItemUpdateOneRequiredWithoutInteractionsNestedInput = {
 }
 
 export type ItemCreateWithoutDomainInput = {
+  DomainItemId?: string | null
+  Title?: string | null
   Description: string
   EmbeddingVector?: Prisma.ItemCreateEmbeddingVectorInput | number[]
   ModifiedAt: Date | string
@@ -546,6 +592,8 @@ export type ItemCreateWithoutDomainInput = {
 
 export type ItemUncheckedCreateWithoutDomainInput = {
   Id?: number
+  DomainItemId?: string | null
+  Title?: string | null
   Description: string
   EmbeddingVector?: Prisma.ItemCreateEmbeddingVectorInput | number[]
   ModifiedAt: Date | string
@@ -587,6 +635,8 @@ export type ItemScalarWhereInput = {
   OR?: Prisma.ItemScalarWhereInput[]
   NOT?: Prisma.ItemScalarWhereInput | Prisma.ItemScalarWhereInput[]
   Id?: Prisma.IntFilter<"Item"> | number
+  DomainItemId?: Prisma.StringNullableFilter<"Item"> | string | null
+  Title?: Prisma.StringNullableFilter<"Item"> | string | null
   DomainId?: Prisma.IntFilter<"Item"> | number
   Description?: Prisma.StringFilter<"Item"> | string
   EmbeddingVector?: Prisma.FloatNullableListFilter<"Item">
@@ -594,6 +644,8 @@ export type ItemScalarWhereInput = {
 }
 
 export type ItemCreateWithoutItemCategoriesInput = {
+  DomainItemId?: string | null
+  Title?: string | null
   Description: string
   EmbeddingVector?: Prisma.ItemCreateEmbeddingVectorInput | number[]
   ModifiedAt: Date | string
@@ -606,6 +658,8 @@ export type ItemCreateWithoutItemCategoriesInput = {
 
 export type ItemUncheckedCreateWithoutItemCategoriesInput = {
   Id?: number
+  DomainItemId?: string | null
+  Title?: string | null
   DomainId: number
   Description: string
   EmbeddingVector?: Prisma.ItemCreateEmbeddingVectorInput | number[]
@@ -633,6 +687,8 @@ export type ItemUpdateToOneWithWhereWithoutItemCategoriesInput = {
 }
 
 export type ItemUpdateWithoutItemCategoriesInput = {
+  DomainItemId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  Title?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   Description?: Prisma.StringFieldUpdateOperationsInput | string
   EmbeddingVector?: Prisma.ItemUpdateEmbeddingVectorInput | number[]
   ModifiedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -645,6 +701,8 @@ export type ItemUpdateWithoutItemCategoriesInput = {
 
 export type ItemUncheckedUpdateWithoutItemCategoriesInput = {
   Id?: Prisma.IntFieldUpdateOperationsInput | number
+  DomainItemId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  Title?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   DomainId?: Prisma.IntFieldUpdateOperationsInput | number
   Description?: Prisma.StringFieldUpdateOperationsInput | string
   EmbeddingVector?: Prisma.ItemUpdateEmbeddingVectorInput | number[]
@@ -656,6 +714,8 @@ export type ItemUncheckedUpdateWithoutItemCategoriesInput = {
 }
 
 export type ItemCreateWithoutItemFactorsInput = {
+  DomainItemId?: string | null
+  Title?: string | null
   Description: string
   EmbeddingVector?: Prisma.ItemCreateEmbeddingVectorInput | number[]
   ModifiedAt: Date | string
@@ -668,6 +728,8 @@ export type ItemCreateWithoutItemFactorsInput = {
 
 export type ItemUncheckedCreateWithoutItemFactorsInput = {
   Id?: number
+  DomainItemId?: string | null
+  Title?: string | null
   DomainId: number
   Description: string
   EmbeddingVector?: Prisma.ItemCreateEmbeddingVectorInput | number[]
@@ -695,6 +757,8 @@ export type ItemUpdateToOneWithWhereWithoutItemFactorsInput = {
 }
 
 export type ItemUpdateWithoutItemFactorsInput = {
+  DomainItemId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  Title?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   Description?: Prisma.StringFieldUpdateOperationsInput | string
   EmbeddingVector?: Prisma.ItemUpdateEmbeddingVectorInput | number[]
   ModifiedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -707,6 +771,8 @@ export type ItemUpdateWithoutItemFactorsInput = {
 
 export type ItemUncheckedUpdateWithoutItemFactorsInput = {
   Id?: Prisma.IntFieldUpdateOperationsInput | number
+  DomainItemId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  Title?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   DomainId?: Prisma.IntFieldUpdateOperationsInput | number
   Description?: Prisma.StringFieldUpdateOperationsInput | string
   EmbeddingVector?: Prisma.ItemUpdateEmbeddingVectorInput | number[]
@@ -718,6 +784,8 @@ export type ItemUncheckedUpdateWithoutItemFactorsInput = {
 }
 
 export type ItemCreateWithoutPredictsInput = {
+  DomainItemId?: string | null
+  Title?: string | null
   Description: string
   EmbeddingVector?: Prisma.ItemCreateEmbeddingVectorInput | number[]
   ModifiedAt: Date | string
@@ -730,6 +798,8 @@ export type ItemCreateWithoutPredictsInput = {
 
 export type ItemUncheckedCreateWithoutPredictsInput = {
   Id?: number
+  DomainItemId?: string | null
+  Title?: string | null
   DomainId: number
   Description: string
   EmbeddingVector?: Prisma.ItemCreateEmbeddingVectorInput | number[]
@@ -757,6 +827,8 @@ export type ItemUpdateToOneWithWhereWithoutPredictsInput = {
 }
 
 export type ItemUpdateWithoutPredictsInput = {
+  DomainItemId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  Title?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   Description?: Prisma.StringFieldUpdateOperationsInput | string
   EmbeddingVector?: Prisma.ItemUpdateEmbeddingVectorInput | number[]
   ModifiedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -769,6 +841,8 @@ export type ItemUpdateWithoutPredictsInput = {
 
 export type ItemUncheckedUpdateWithoutPredictsInput = {
   Id?: Prisma.IntFieldUpdateOperationsInput | number
+  DomainItemId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  Title?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   DomainId?: Prisma.IntFieldUpdateOperationsInput | number
   Description?: Prisma.StringFieldUpdateOperationsInput | string
   EmbeddingVector?: Prisma.ItemUpdateEmbeddingVectorInput | number[]
@@ -780,6 +854,8 @@ export type ItemUncheckedUpdateWithoutPredictsInput = {
 }
 
 export type ItemCreateWithoutRatingsInput = {
+  DomainItemId?: string | null
+  Title?: string | null
   Description: string
   EmbeddingVector?: Prisma.ItemCreateEmbeddingVectorInput | number[]
   ModifiedAt: Date | string
@@ -792,6 +868,8 @@ export type ItemCreateWithoutRatingsInput = {
 
 export type ItemUncheckedCreateWithoutRatingsInput = {
   Id?: number
+  DomainItemId?: string | null
+  Title?: string | null
   DomainId: number
   Description: string
   EmbeddingVector?: Prisma.ItemCreateEmbeddingVectorInput | number[]
@@ -819,6 +897,8 @@ export type ItemUpdateToOneWithWhereWithoutRatingsInput = {
 }
 
 export type ItemUpdateWithoutRatingsInput = {
+  DomainItemId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  Title?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   Description?: Prisma.StringFieldUpdateOperationsInput | string
   EmbeddingVector?: Prisma.ItemUpdateEmbeddingVectorInput | number[]
   ModifiedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -831,6 +911,8 @@ export type ItemUpdateWithoutRatingsInput = {
 
 export type ItemUncheckedUpdateWithoutRatingsInput = {
   Id?: Prisma.IntFieldUpdateOperationsInput | number
+  DomainItemId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  Title?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   DomainId?: Prisma.IntFieldUpdateOperationsInput | number
   Description?: Prisma.StringFieldUpdateOperationsInput | string
   EmbeddingVector?: Prisma.ItemUpdateEmbeddingVectorInput | number[]
@@ -842,6 +924,8 @@ export type ItemUncheckedUpdateWithoutRatingsInput = {
 }
 
 export type ItemCreateWithoutInteractionsInput = {
+  DomainItemId?: string | null
+  Title?: string | null
   Description: string
   EmbeddingVector?: Prisma.ItemCreateEmbeddingVectorInput | number[]
   ModifiedAt: Date | string
@@ -854,6 +938,8 @@ export type ItemCreateWithoutInteractionsInput = {
 
 export type ItemUncheckedCreateWithoutInteractionsInput = {
   Id?: number
+  DomainItemId?: string | null
+  Title?: string | null
   DomainId: number
   Description: string
   EmbeddingVector?: Prisma.ItemCreateEmbeddingVectorInput | number[]
@@ -881,6 +967,8 @@ export type ItemUpdateToOneWithWhereWithoutInteractionsInput = {
 }
 
 export type ItemUpdateWithoutInteractionsInput = {
+  DomainItemId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  Title?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   Description?: Prisma.StringFieldUpdateOperationsInput | string
   EmbeddingVector?: Prisma.ItemUpdateEmbeddingVectorInput | number[]
   ModifiedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -893,6 +981,8 @@ export type ItemUpdateWithoutInteractionsInput = {
 
 export type ItemUncheckedUpdateWithoutInteractionsInput = {
   Id?: Prisma.IntFieldUpdateOperationsInput | number
+  DomainItemId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  Title?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   DomainId?: Prisma.IntFieldUpdateOperationsInput | number
   Description?: Prisma.StringFieldUpdateOperationsInput | string
   EmbeddingVector?: Prisma.ItemUpdateEmbeddingVectorInput | number[]
@@ -905,12 +995,16 @@ export type ItemUncheckedUpdateWithoutInteractionsInput = {
 
 export type ItemCreateManyDomainInput = {
   Id?: number
+  DomainItemId?: string | null
+  Title?: string | null
   Description: string
   EmbeddingVector?: Prisma.ItemCreateEmbeddingVectorInput | number[]
   ModifiedAt: Date | string
 }
 
 export type ItemUpdateWithoutDomainInput = {
+  DomainItemId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  Title?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   Description?: Prisma.StringFieldUpdateOperationsInput | string
   EmbeddingVector?: Prisma.ItemUpdateEmbeddingVectorInput | number[]
   ModifiedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -923,6 +1017,8 @@ export type ItemUpdateWithoutDomainInput = {
 
 export type ItemUncheckedUpdateWithoutDomainInput = {
   Id?: Prisma.IntFieldUpdateOperationsInput | number
+  DomainItemId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  Title?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   Description?: Prisma.StringFieldUpdateOperationsInput | string
   EmbeddingVector?: Prisma.ItemUpdateEmbeddingVectorInput | number[]
   ModifiedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -935,6 +1031,8 @@ export type ItemUncheckedUpdateWithoutDomainInput = {
 
 export type ItemUncheckedUpdateManyWithoutDomainInput = {
   Id?: Prisma.IntFieldUpdateOperationsInput | number
+  DomainItemId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  Title?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   Description?: Prisma.StringFieldUpdateOperationsInput | string
   EmbeddingVector?: Prisma.ItemUpdateEmbeddingVectorInput | number[]
   ModifiedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -1009,6 +1107,8 @@ export type ItemCountOutputTypeCountInteractionsArgs<ExtArgs extends runtime.Typ
 
 export type ItemSelect<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetSelect<{
   Id?: boolean
+  DomainItemId?: boolean
+  Title?: boolean
   DomainId?: boolean
   Description?: boolean
   EmbeddingVector?: boolean
@@ -1024,6 +1124,8 @@ export type ItemSelect<ExtArgs extends runtime.Types.Extensions.InternalArgs = r
 
 export type ItemSelectCreateManyAndReturn<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetSelect<{
   Id?: boolean
+  DomainItemId?: boolean
+  Title?: boolean
   DomainId?: boolean
   Description?: boolean
   EmbeddingVector?: boolean
@@ -1033,6 +1135,8 @@ export type ItemSelectCreateManyAndReturn<ExtArgs extends runtime.Types.Extensio
 
 export type ItemSelectUpdateManyAndReturn<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetSelect<{
   Id?: boolean
+  DomainItemId?: boolean
+  Title?: boolean
   DomainId?: boolean
   Description?: boolean
   EmbeddingVector?: boolean
@@ -1042,13 +1146,15 @@ export type ItemSelectUpdateManyAndReturn<ExtArgs extends runtime.Types.Extensio
 
 export type ItemSelectScalar = {
   Id?: boolean
+  DomainItemId?: boolean
+  Title?: boolean
   DomainId?: boolean
   Description?: boolean
   EmbeddingVector?: boolean
   ModifiedAt?: boolean
 }
 
-export type ItemOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"Id" | "DomainId" | "Description" | "EmbeddingVector" | "ModifiedAt", ExtArgs["result"]["item"]>
+export type ItemOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"Id" | "DomainItemId" | "Title" | "DomainId" | "Description" | "EmbeddingVector" | "ModifiedAt", ExtArgs["result"]["item"]>
 export type ItemInclude<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   Domain?: boolean | Prisma.DomainDefaultArgs<ExtArgs>
   ItemCategories?: boolean | Prisma.Item$ItemCategoriesArgs<ExtArgs>
@@ -1077,6 +1183,8 @@ export type $ItemPayload<ExtArgs extends runtime.Types.Extensions.InternalArgs =
   }
   scalars: runtime.Types.Extensions.GetPayloadResult<{
     Id: number
+    DomainItemId: string | null
+    Title: string | null
     DomainId: number
     Description: string
     EmbeddingVector: number[]
@@ -1511,6 +1619,8 @@ export interface Prisma__ItemClient<T, Null = never, ExtArgs extends runtime.Typ
  */
 export interface ItemFieldRefs {
   readonly Id: Prisma.FieldRef<"Item", 'Int'>
+  readonly DomainItemId: Prisma.FieldRef<"Item", 'String'>
+  readonly Title: Prisma.FieldRef<"Item", 'String'>
   readonly DomainId: Prisma.FieldRef<"Item", 'Int'>
   readonly Description: Prisma.FieldRef<"Item", 'String'>
   readonly EmbeddingVector: Prisma.FieldRef<"Item", 'Float[]'>

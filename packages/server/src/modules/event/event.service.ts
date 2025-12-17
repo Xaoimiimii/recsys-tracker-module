@@ -19,11 +19,31 @@ export class EventService {
             }
         }))) return null;
 
+        const domainByKey = await this.prisma.domain.findUnique({
+            where: {
+                Key: event.DomainKey,
+            }
+        });
+
+        if (!domainByKey) return null;
+
         if (!(await this.prisma.user.findUnique({
             where: {
-                Id: event.Payload.UserId,
+                Username_DomainId: {
+                    Username: event.Payload.Username,
+                    DomainId: domainByKey.Id,
+                },
             }
-        }))) return null;
+        }))) {
+            const createdUser = await this.prisma.user.create({
+                data: {
+                    Username: event.Payload.Username,
+                    DomainId: domainByKey.Id,
+                    CreatedAt: new Date(),
+                } 
+            });
+        }
+
 
         if (!(await this.prisma.item.findUnique({
             where: {
@@ -39,14 +59,14 @@ export class EventService {
 
         if (!domain) return null;
 
-        if (event.TriggerTypeId === 2) // Rate
+        if (event.TriggerTypeId === 2)
         {
             if (event.Rate?.Value === null || event.Rate?.Value === undefined) return null;
             if (event.Rate.Value < 1 || event.Rate.Value > 5) return null;
 
             const createdEvent = await this.prisma.rating.create({
                 data: {
-                    UserId: event.Payload.UserId,
+                    Username: event.Payload.Username,
                     ItemId: event.Payload.ItemId,
                     Value: event.Rate.Value,
                     ReviewText: event.Rate.Review,
@@ -60,7 +80,7 @@ export class EventService {
             
             const createdEvent = await this.prisma.interaction.create({
                 data: {
-                    UserId: event.Payload.UserId,
+                    Username: event.Payload.Username,
                     ItemId: event.Payload.ItemId,
                     InteractionTypeId: event.TriggerTypeId,
                     CreatedAt: event.Timestamp,

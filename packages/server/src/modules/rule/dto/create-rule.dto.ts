@@ -8,9 +8,9 @@ export class CreateRuleDto {
     @IsNotEmpty()
     name: string;
 
-    @IsInt()
+    @IsString()
     @IsNotEmpty()
-    domainId: number;
+    domainKey: string;
 
     @IsInt()
     @IsNotEmpty()
