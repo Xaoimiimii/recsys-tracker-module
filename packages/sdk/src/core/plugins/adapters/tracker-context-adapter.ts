@@ -109,31 +109,40 @@ export class TrackerContextAdapter implements IRecsysContext {
         },
     };
     
+// File: core/adapters/tracker-context-adapter.ts
+
     public eventBuffer = {
         enqueue: (payload: IRecsysPayload) => {
-            // Log for debugging
-            console.groupCollapsed(
-                `✅ [RECSYS TRACK] - ${payload.event.toUpperCase()} (UserID: ${payload.userId.substring(0, Math.min(15, payload.userId.length))}... | Confidence: ${(payload.confidence !== undefined ? payload.confidence * 100 : 0).toFixed(0)}%)`
-            );
-            console.log("Payload:", payload);
-            if (payload.itemId && payload.itemId !== 'N/A (Failed)') {
-                console.log(`✨ ITEM ID CAPTURED: ${payload.itemId} (${payload.itemName})`);
-                console.log(`Source: ${payload.source} | Type: ${payload.itemType}`);
-            } else {
-                console.warn('⚠️ ITEM ID EXTRACTION FAILED. Check AIItemDetector logs.');
-            }
-            console.groupEnd();
+            let triggerTypeId = 2; 
 
-            // Convert IRecsysPayload to TrackedEvent format and send to real EventBuffer
-            const triggerTypeId = payload.event === 'item_click' ? 1 : 2;
-            
-            // Only track if itemId is valid
-            if (payload.itemId && !payload.itemId.startsWith('N/A')) {
-                this.tracker.track({
-                    triggerTypeId,
-                    userId: parseInt(payload.userId) || 0,
-                    itemId: parseInt(payload.itemId) || 0,
-                });
+            switch (payload.event) {
+                case 'item_click':
+                    triggerTypeId = 1;
+                    break;
+                case 'rate_submit': 
+                    triggerTypeId = 2;
+                    break;
+                case 'page_view':  
+                    triggerTypeId = 3;
+                    break;
+                default:
+                    triggerTypeId = 3;
+            }
+
+            const trackData: any = {
+                triggerTypeId,
+                userId: parseInt(payload.userId) || 0,
+                itemId: parseInt(payload.itemId) || 0, // Lưu ý: server nhận int
+            };
+
+            if (payload.metadata && payload.metadata.rateValue !== undefined) {
+                trackData.rate = {
+                    Value: Number(payload.metadata.rateValue),
+                    Review: String(payload.metadata.reviewText || '')
+                };
+            }
+            if (payload.itemId && !payload.itemId.toString().startsWith('N/A')) {
+                this.tracker.track(trackData);
             }
         },
     };

@@ -1,0 +1,196 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Form Tracking Test - RecSys Tracker</title>
+    
+    <script>
+      window.__RECSYS_DOMAIN_KEY__ = '079251187f351b700844164bf0ac5fddebaa305af8732fe06ae631b921eaf9e7';
+    </script>
+    
+    <script src="http://localhost:3000/dist/loader.js"></script>
+    
+    <style>
+        body { font-family: 'Segoe UI', sans-serif; background: #f0f2f5; padding: 20px; line-height: 1.6; }
+        .container { max-width: 1000px; margin: 0 auto; }
+        
+        .header { background: white; padding: 20px; border-radius: 8px; margin-bottom: 20px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
+        h1 { color: #1a73e8; margin: 0 0 10px 0; }
+        
+        .demo-card {
+            background: white; padding: 25px; border-radius: 12px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.05); margin-bottom: 20px;
+            border: 1px solid #e1e4e8;
+        }
+        
+        .product-context {
+            border-left: 4px solid #1a73e8; padding-left: 15px; margin-bottom: 15px; background: #e8f0fe; padding: 10px; border-radius: 0 4px 4px 0;
+        }
+        
+        /* Form Styling */
+        form { display: grid; gap: 15px; max-width: 500px; }
+        label { font-weight: 600; color: #444; }
+        input[type="text"], input[type="number"], textarea, select {
+            width: 100%; padding: 10px; border: 1px solid #ccc; border-radius: 6px; font-size: 14px;
+        }
+        button[type="submit"] {
+            background: #1a73e8; color: white; border: none; padding: 12px; border-radius: 6px; cursor: pointer; font-weight: 600; transition: background 0.2s;
+        }
+        button[type="submit"]:hover { background: #1557b0; }
+        
+        /* Console Log Styles */
+        #console-output {
+            background: #1e1e1e; color: #d4d4d4; padding: 15px; border-radius: 8px;
+            font-family: 'Consolas', monospace; font-size: 13px; height: 300px; overflow-y: auto;
+        }
+        .log-entry { padding: 5px 0; border-bottom: 1px solid #333; }
+        .log-success { color: #4ec9b0; }
+        .log-info { color: #9cdcfe; }
+        .log-warn { color: #ce9178; }
+        
+        .badge { display: inline-block; padding: 3px 8px; border-radius: 12px; font-size: 12px; font-weight: bold; background: #eee; color: #333; margin-right: 5px; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>📝 Form Plugin Test Suite</h1>
+            <p>Testing Rate/Review submission with AI Context Detection.</p>
+        </div>
+
+        <div style="background: #fff3cd; color: #856404; padding: 15px; border-radius: 8px; margin-bottom: 20px; border: 1px solid #ffeeba;">
+            <strong>⚠️ Yêu cầu Server Config:</strong><br>
+            Để test thành công, database của bạn cần có Rule sau (hoặc bạn phải mock nó):<br>
+            <code>TriggerEventID: 2</code> (Rate) | <code>TargetElementValue: "#review-form"</code>
+        </div>
+
+        <div class="demo-card">
+            <h2>🛒 Test Case 1: Product Review</h2>
+            <p>Form nằm trong ngữ cảnh sản phẩm (có Item ID).</p>
+            
+            <div class="product-context" 
+                 data-item-id="PROD-999" 
+                 data-item-name="MacBook Pro M3" 
+                 data-item-type="product">
+                <strong>Context:</strong> MacBook Pro M3 (ID: PROD-999)
+            </div>
+
+            <form id="review-form" onsubmit="handleFormSubmit(event)">
+                <div>
+                    <label>Rating (1-5):</label>
+                    <input type="number" name="rating" min="1" max="5" value="5">
+                </div>
+                <div>
+                    <label>Review:</label>
+                    <textarea name="review" rows="3" placeholder="Write your thoughts...">Great product!</textarea>
+                </div>
+                <button type="submit">Submit Review</button>
+            </form>
+        </div>
+
+        <div class="demo-card">
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
+                <h2>📊 SDK Event Log</h2>
+                <button onclick="clearLog()" style="padding:5px 10px; background:#444; color:white; border:none; border-radius:4px; cursor:pointer;">Clear Log</button>
+            </div>
+            <div id="console-output">
+                <div class="log-entry">Waiting for events...</div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // --- 1. SETUP LOGGING ---
+        const consoleOutput = document.getElementById('console-output');
+        const originalConsoleLog = console.log;
+
+        function addLog(msg, type = 'info') {
+            const div = document.createElement('div');
+            div.className = `log-entry log-${type}`;
+            const time = new Date().toLocaleTimeString();
+            
+            if (typeof msg === 'object') msg = JSON.stringify(msg, null, 2);
+            div.innerHTML = `<span style="opacity:0.6">[${time}]</span> ${msg}`;
+            
+            consoleOutput.prepend(div);
+        }
+
+        console.log = function(...args) {
+            originalConsoleLog.apply(console, args);
+            const msg = args.join(' ');
+            
+            // Filter logs liên quan đến tracking
+            if (msg.includes('[FormPlugin]') || msg.includes('RECSYS TRACK') || msg.includes('metadata')) {
+                addLog(msg, 'success');
+            } else if (msg.includes('RecSys')) {
+                addLog(msg, 'info');
+            }
+        };
+
+        function clearLog() { consoleOutput.innerHTML = ''; }
+
+        // --- 2. HANDLE FORM SUBMIT (PREVENT RELOAD) ---
+        function handleFormSubmit(e) {
+            e.preventDefault(); // Ngăn reload trang để xem log
+            addLog("📝 Form submitted by User (Page prevented reload, but SDK should capture event)", "warn");
+        }
+
+        // --- 3. MOCK RULES (QUAN TRỌNG ĐỂ TEST KHÔNG CẦN DB) ---
+        // Chúng ta sẽ "hack" vào ConfigLoader sau khi nó load xong để tiêm Rule test vào
+        // vì có thể bạn chưa kịp tạo rule trong database thật.
+        
+        window.addEventListener('load', () => {
+            const checkSDK = setInterval(() => {
+                // [FIX] Kiểm tra kỹ: Object tồn tại VÀ getConfig là một function
+                if (window.RecSysTracker && typeof window.RecSysTracker.getConfig === 'function') {
+                    // Kiểm tra thêm config đã load xong chưa (đôi khi hàm có nhưng config null)
+                    const config = window.RecSysTracker.getConfig();
+                    if (config) {
+                        clearInterval(checkSDK);
+                        console.log("✅ SDK Fully Loaded & Initialized!");
+                        injectTestRule();
+                    }
+                }
+            }, 500);
+        });
+
+        function injectTestRule() {
+            try {
+                // Lúc này chắc chắn gọi được getConfig()
+                const config = window.RecSysTracker.getConfig();
+                
+                // ... (Phần còn lại giữ nguyên) ...
+                const hasRateRule = config.trackingRules && config.trackingRules.some(r => r.triggerEventId === 2);
+                
+                if (!hasRateRule) {
+                    addLog("⚠️ No Rate Rules found. Injecting MOCK RULE...", "warn");
+                    
+                    const mockRule = {
+                        id: 'test-rule-form',
+                        name: 'Test Review Form',
+                        triggerEventId: 2, 
+                        targetElementValue: '#review-form', // Lưu ý: Cấu trúc object phải khớp với types.ts
+                        targetEventPatternId: 1, // CSS SELECTOR (Pattern ID)
+                        targetOperatorId: 5,     // EQUALS (Operator ID - Check constant map của bạn)
+                        
+                        conditions: [],
+                        payload: []
+                    };
+                    
+                    // Đảm bảo mảng tồn tại trước khi push
+                    if (!config.trackingRules) config.trackingRules = [];
+                    config.trackingRules.push(mockRule);
+                    
+                    addLog("✅ Mock Rule Injected: #review-form", "success");
+                    
+                    // [MẸO] Nếu plugin đã lỡ start trước khi có rule này, ta có thể kích hoạt lại thủ công
+                    // Tuy nhiên với cơ chế reference object, thường plugin sẽ đọc được ngay.
+                }
+            } catch (e) {
+                console.error("Failed to inject mock rule", e);
+            }
+        }
+    </script>
+</body>
+</html>

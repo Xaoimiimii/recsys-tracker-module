@@ -120,10 +120,17 @@ export class ConfigLoader {
                 name: rule.Name || rule.name,
                 // domainId: rule.DomainID || rule.domainId,
                 triggerEventId: rule.TriggerEventID || rule.triggerEventId,
-                targetElementId: rule.TargetElementID || rule.targetElementId,
-                targetEventPatternId: ((_c = rule.TargetElement) === null || _c === void 0 ? void 0 : _c.EventPatternID) || rule.targetEventPatternId,
-                targetOperatorId: ((_d = rule.TargetElement) === null || _d === void 0 ? void 0 : _d.OperatorID) || rule.targetOperatorId,
-                targetElementValue: ((_e = rule.TargetElement) === null || _e === void 0 ? void 0 : _e.Value) || rule.targetElementValue,
+                // targetElementId: rule.TargetElementID || rule.targetElementId,
+                // targetElement: {
+                //   targetEventPatternId?: number,
+                //   targetOperatorId?: number,
+                //   targetElementValue?: string
+                // };
+                targetElement: {
+                    targetEventPatternId: ((_c = rule.TargetElement) === null || _c === void 0 ? void 0 : _c.EventPatternID) || rule.targetEventPatternId,
+                    targetOperatorId: ((_d = rule.TargetElement) === null || _d === void 0 ? void 0 : _d.OperatorID) || rule.targetOperatorId,
+                    targetElementValue: ((_e = rule.TargetElement) === null || _e === void 0 ? void 0 : _e.Value) || rule.targetElementValue,
+                },
                 conditions: this.transformConditions(rule.Conditions || rule.conditions || []),
                 payload: this.transformPayloadConfigs(rule.PayloadConfigs || rule.payload || []),
             });
@@ -134,9 +141,9 @@ export class ConfigLoader {
         if (!Array.isArray(conditionsData))
             return [];
         return conditionsData.map(condition => ({
-            id: condition.Id || condition.id,
+            // id: condition.Id || condition.id,
             eventPatternId: condition.EventPatternID || condition.eventPatternId,
-            ruleId: condition.RuleID || condition.ruleId,
+            // ruleId: condition.RuleID || condition.ruleId,
             operatorId: condition.OperatorID || condition.operatorId,
             value: condition.Value || condition.value,
         }));
@@ -147,7 +154,7 @@ export class ConfigLoader {
             return [];
         return payloadData.map(payload => ({
             payloadPatternId: payload.PayloadPatternID || payload.payloadPatternId,
-            ruleId: payload.RuleID || payload.ruleId,
+            // ruleId: payload.RuleID || payload.ruleId,
             operatorId: payload.OperatorID || payload.operatorId,
             value: payload.Value || payload.value,
             type: payload.Type || payload.type,
