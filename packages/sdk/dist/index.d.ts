@@ -1,3 +1,4 @@
+import { DisplayManager, PluginManager } from './core';
 import { TrackerConfig } from './types';
 export declare class RecSysTracker {
     private configLoader;
@@ -5,12 +6,15 @@ export declare class RecSysTracker {
     private eventBuffer;
     private eventDispatcher;
     private metadataNormalizer;
+    private displayManager;
+    private pluginManager;
     private config;
     private userId;
     private isInitialized;
     private sendInterval;
     constructor();
     init(): Promise<void>;
+    private autoInitializePlugins;
     track(eventData: {
         triggerTypeId: number;
         userId: number;
@@ -28,8 +32,16 @@ export declare class RecSysTracker {
     setUserId(userId: string | null): void;
     getUserId(): string | null;
     destroy(): void;
+    getPluginManager(): PluginManager;
+    getDisplayManager(): DisplayManager | null;
+    use(plugin: any): this;
+    startPlugins(): void;
+    stopPlugins(): void;
 }
 export default RecSysTracker;
-export { ConfigLoader } from './core';
+export { ConfigLoader, PluginManager, DisplayManager } from './core';
+export { IPlugin, BasePlugin } from './core/plugins/base-plugin';
+export { ClickPlugin } from './core/plugins/click-plugin';
+export { PageViewPlugin } from './core/plugins/page-view-plugin';
 export type * from './types';
 //# sourceMappingURL=index.d.ts.map

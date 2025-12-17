@@ -64,8 +64,8 @@ export class ConfigLoader {
     }
 
     try {
-      // Gọi 3 API song song
-      const [domainResponse, rulesResponse, returnMethodsResponse] = await Promise.all([
+      // Bước 1: Gọi 3 API song song để lấy domain, list rules cơ bản, và return methods
+      const [domainResponse, rulesListResponse, returnMethodsResponse] = await Promise.all([
         fetch(`${this.BASE_API_URL}/domain/${this.domainKey}`),
         fetch(`${this.BASE_API_URL}/rule/domain/${this.domainKey}`),
         fetch(`${this.BASE_API_URL}/domain/return-method/${this.domainKey}`)
@@ -78,8 +78,20 @@ export class ConfigLoader {
 
       // Parse responses
       const domainData = domainResponse.ok ? await domainResponse.json() : null;
-      const rulesData = rulesResponse.ok ? await rulesResponse.json() : [];
+      const rulesListData = rulesListResponse.ok ? await rulesListResponse.json() : [];
       const returnMethodsData = returnMethodsResponse.ok ? await returnMethodsResponse.json() : [];
+
+      // Bước 2: Lấy chi tiết từng rule
+      let rulesData: any[] = [];
+      if (Array.isArray(rulesListData) && rulesListData.length > 0) {
+        const ruleDetailsPromises = rulesListData.map(rule => 
+          fetch(`${this.BASE_API_URL}/rule/${rule.id}`)
+            .then(res => res.ok ? res.json() : null)
+            .catch(() => null)
+        );
+        const ruleDetails = await Promise.all(ruleDetailsPromises);
+        rulesData = ruleDetails.filter(rule => rule !== null);
+      }
 
       // Cập nhật config với data từ server
       if (this.config) {
@@ -113,15 +125,49 @@ export class ConfigLoader {
     if (!Array.isArray(rulesData)) return [];
     
     return rulesData.map(rule => ({
-      id: rule.Id?.toString() || rule.id,
+      id: rule.Id?.toString() || rule.id?.toString(),
       name: rule.Name || rule.name,
       // domainId: rule.DomainID || rule.domainId,
       triggerEventId: rule.TriggerEventID || rule.triggerEventId,
-      targetEventPatternId: rule.TargetElement?.EventPatternID || rule.targetEventPatternId,
-      targetOperatorId: rule.TargetElement?.OperatorID || rule.targetOperatorId,
-      targetElementValue: rule.TargetElement?.Value || rule.targetElementValue,
-      conditions: rule.Conditions || rule.conditions || [],
-      payload: rule.PayloadConfigs || rule.payload || [],
+      // targetElementId: rule.TargetElementID || rule.targetElementId,
+      // targetElement: {
+      //   targetEventPatternId?: number,
+      //   targetOperatorId?: number,
+      //   targetElementValue?: string
+      // };
+      targetElement: {
+        targetEventPatternId: rule.TargetElement?.EventPatternID || rule.targetEventPatternId,
+        targetOperatorId: rule.TargetElement?.OperatorID || rule.targetOperatorId,
+        targetElementValue: rule.TargetElement?.Value || rule.targetElementValue,
+      },
+      conditions: this.transformConditions(rule.Conditions || rule.conditions || []),
+      payload: this.transformPayloadConfigs(rule.PayloadConfigs || rule.payload || []),
+    }));
+  }
+
+  // Transform conditions từ server format sang SDK format
+  private transformConditions(conditionsData: any[]): any[] {
+    if (!Array.isArray(conditionsData)) return [];
+    
+    return conditionsData.map(condition => ({
+      // id: condition.Id || condition.id,
+      eventPatternId: condition.EventPatternID || condition.eventPatternId,
+      // ruleId: condition.RuleID || condition.ruleId,
+      operatorId: condition.OperatorID || condition.operatorId,
+      value: condition.Value || condition.value,
+    }));
+  }
+
+  // Transform payload configs từ server format sang SDK format
+  private transformPayloadConfigs(payloadData: any[]): any[] {
+    if (!Array.isArray(payloadData)) return [];
+    
+    return payloadData.map(payload => ({
+      payloadPatternId: payload.PayloadPatternID || payload.payloadPatternId,
+      // ruleId: payload.RuleID || payload.ruleId,
+      operatorId: payload.OperatorID || payload.operatorId,
+      value: payload.Value || payload.value,
+      type: payload.Type || payload.type,
     }));
   }
 
