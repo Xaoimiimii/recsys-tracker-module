@@ -40,18 +40,32 @@ model Domain {
   Ratings           Rating[]
 }
 
-model DomainReturn {
-  DomainID          Int
-  SlotName          String
-  Value             String?
-  TargetUrl         String?
+// model DomainReturn {
+//   DomainID          Int
+//   SlotName          String
+//   Value             String?
+//   TargetUrl         String?
 
-  Domain            Domain       @relation(fields: [DomainID], references: [Id])
+//   Domain            Domain       @relation(fields: [DomainID], references: [Id])
   
+//   ReturnMethodID    Int
+//   ReturnMethod      ReturnMethod @relation(fields: [ReturnMethodID], references: [Id])
+
+//   @@id([DomainID, SlotName])
+// }
+
+model DomainReturn {
+  Id                Int     @id @default(autoincrement())
+
+  DomainID          Int
+  Domain            Domain       @relation(fields: [DomainID], references: [Id])
   ReturnMethodID    Int
   ReturnMethod      ReturnMethod @relation(fields: [ReturnMethodID], references: [Id])
+  OperatorID        Int
+  Operator          Operator @relation(fields: [OperatorID], references: [Id])
 
-  @@id([DomainID, SlotName])
+  Value             String
+  ConfigurationName String
 }
 
 model ReturnMethod {
@@ -152,6 +166,7 @@ model Operator {
   Conditions        Condition[]
   TargetElements    TargetElement[]
   PayloadConfigs    PayloadConfig[]
+  DomainReturns     DomainReturn[]
 }
 
 model Category {

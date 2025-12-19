@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { BadRequestException, Injectable } from '@nestjs/common';
 import { PrismaService } from 'src/modules/prisma/prisma.service';
 
 @Injectable()
@@ -22,27 +22,14 @@ export class ReturnMethodService {
         return domainReturns;
     }
 
-    async createReturnMethods(key: string, slotName: string, returnMethodId: number, value: string, targetUrl: string) {
+    async createReturnMethods(key: string, configurationName: string, returnMethodId: number, value: string, operatorId: number) {
         const domain = await this.prisma.domain.findUnique({
             where: {
                 Key: key
             }
         });
 
-        if (!domain) return null;
-
-        if (!targetUrl.startsWith(domain.Url) && !targetUrl.startsWith(domain.Url)) return null;
-
-        const domainReturnExists = await this.prisma.domainReturn.findUnique({
-            where: {
-                DomainID_SlotName: {
-                    DomainID: domain.Id,
-                    SlotName: slotName,
-                },
-            }
-        });
-
-        if (domainReturnExists) return null;
+        if (!domain) throw new BadRequestException('Domain not found');
 
         const returnMethod = await this.prisma.returnMethod.findUnique({
             where: {
@@ -50,15 +37,35 @@ export class ReturnMethodService {
             }
         });
 
-        if (!returnMethod) return null;
+        if (!returnMethod) throw new BadRequestException('Return method not found');
+
+        const operator = await this.prisma.operator.findUnique({
+            where: {
+                Id: operatorId
+            }
+        });
+
+        if (!operator) throw new BadRequestException('Operator not found');
+
+        const existingDomainReturn = await this.prisma.domainReturn.findFirst({
+            where: {
+                DomainID: domain.Id,
+                ConfigurationName: configurationName,
+                ReturnMethodID: returnMethodId,
+            }
+        });
+
+        if (existingDomainReturn) {
+            throw new BadRequestException('This domain return configuration already exists');
+        }
 
         const domainReturn = await this.prisma.domainReturn.create({
             data: {
                 DomainID: domain.Id,
-                SlotName: slotName,
+                ConfigurationName: configurationName,
                 ReturnMethodID: returnMethodId,
                 Value: value,
-                TargetUrl: targetUrl
+                OperatorID: operatorId
             }
         });
 
