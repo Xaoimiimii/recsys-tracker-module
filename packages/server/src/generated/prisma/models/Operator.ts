@@ -195,6 +195,7 @@ export type OperatorWhereInput = {
   Conditions?: Prisma.ConditionListRelationFilter
   TargetElements?: Prisma.TargetElementListRelationFilter
   PayloadConfigs?: Prisma.PayloadConfigListRelationFilter
+  DomainReturns?: Prisma.DomainReturnListRelationFilter
 }
 
 export type OperatorOrderByWithRelationInput = {
@@ -203,6 +204,7 @@ export type OperatorOrderByWithRelationInput = {
   Conditions?: Prisma.ConditionOrderByRelationAggregateInput
   TargetElements?: Prisma.TargetElementOrderByRelationAggregateInput
   PayloadConfigs?: Prisma.PayloadConfigOrderByRelationAggregateInput
+  DomainReturns?: Prisma.DomainReturnOrderByRelationAggregateInput
 }
 
 export type OperatorWhereUniqueInput = Prisma.AtLeast<{
@@ -214,6 +216,7 @@ export type OperatorWhereUniqueInput = Prisma.AtLeast<{
   Conditions?: Prisma.ConditionListRelationFilter
   TargetElements?: Prisma.TargetElementListRelationFilter
   PayloadConfigs?: Prisma.PayloadConfigListRelationFilter
+  DomainReturns?: Prisma.DomainReturnListRelationFilter
 }, "Id">
 
 export type OperatorOrderByWithAggregationInput = {
@@ -239,6 +242,7 @@ export type OperatorCreateInput = {
   Conditions?: Prisma.ConditionCreateNestedManyWithoutOperatorInput
   TargetElements?: Prisma.TargetElementCreateNestedManyWithoutOperatorInput
   PayloadConfigs?: Prisma.PayloadConfigCreateNestedManyWithoutOperatorInput
+  DomainReturns?: Prisma.DomainReturnCreateNestedManyWithoutOperatorInput
 }
 
 export type OperatorUncheckedCreateInput = {
@@ -247,6 +251,7 @@ export type OperatorUncheckedCreateInput = {
   Conditions?: Prisma.ConditionUncheckedCreateNestedManyWithoutOperatorInput
   TargetElements?: Prisma.TargetElementUncheckedCreateNestedManyWithoutOperatorInput
   PayloadConfigs?: Prisma.PayloadConfigUncheckedCreateNestedManyWithoutOperatorInput
+  DomainReturns?: Prisma.DomainReturnUncheckedCreateNestedManyWithoutOperatorInput
 }
 
 export type OperatorUpdateInput = {
@@ -254,6 +259,7 @@ export type OperatorUpdateInput = {
   Conditions?: Prisma.ConditionUpdateManyWithoutOperatorNestedInput
   TargetElements?: Prisma.TargetElementUpdateManyWithoutOperatorNestedInput
   PayloadConfigs?: Prisma.PayloadConfigUpdateManyWithoutOperatorNestedInput
+  DomainReturns?: Prisma.DomainReturnUpdateManyWithoutOperatorNestedInput
 }
 
 export type OperatorUncheckedUpdateInput = {
@@ -262,6 +268,7 @@ export type OperatorUncheckedUpdateInput = {
   Conditions?: Prisma.ConditionUncheckedUpdateManyWithoutOperatorNestedInput
   TargetElements?: Prisma.TargetElementUncheckedUpdateManyWithoutOperatorNestedInput
   PayloadConfigs?: Prisma.PayloadConfigUncheckedUpdateManyWithoutOperatorNestedInput
+  DomainReturns?: Prisma.DomainReturnUncheckedUpdateManyWithoutOperatorNestedInput
 }
 
 export type OperatorCreateManyInput = {
@@ -306,6 +313,20 @@ export type OperatorSumOrderByAggregateInput = {
   Id?: Prisma.SortOrder
 }
 
+export type OperatorCreateNestedOneWithoutDomainReturnsInput = {
+  create?: Prisma.XOR<Prisma.OperatorCreateWithoutDomainReturnsInput, Prisma.OperatorUncheckedCreateWithoutDomainReturnsInput>
+  connectOrCreate?: Prisma.OperatorCreateOrConnectWithoutDomainReturnsInput
+  connect?: Prisma.OperatorWhereUniqueInput
+}
+
+export type OperatorUpdateOneRequiredWithoutDomainReturnsNestedInput = {
+  create?: Prisma.XOR<Prisma.OperatorCreateWithoutDomainReturnsInput, Prisma.OperatorUncheckedCreateWithoutDomainReturnsInput>
+  connectOrCreate?: Prisma.OperatorCreateOrConnectWithoutDomainReturnsInput
+  upsert?: Prisma.OperatorUpsertWithoutDomainReturnsInput
+  connect?: Prisma.OperatorWhereUniqueInput
+  update?: Prisma.XOR<Prisma.XOR<Prisma.OperatorUpdateToOneWithWhereWithoutDomainReturnsInput, Prisma.OperatorUpdateWithoutDomainReturnsInput>, Prisma.OperatorUncheckedUpdateWithoutDomainReturnsInput>
+}
+
 export type OperatorCreateNestedOneWithoutTargetElementsInput = {
   create?: Prisma.XOR<Prisma.OperatorCreateWithoutTargetElementsInput, Prisma.OperatorUncheckedCreateWithoutTargetElementsInput>
   connectOrCreate?: Prisma.OperatorCreateOrConnectWithoutTargetElementsInput
@@ -348,10 +369,57 @@ export type OperatorUpdateOneRequiredWithoutPayloadConfigsNestedInput = {
   update?: Prisma.XOR<Prisma.XOR<Prisma.OperatorUpdateToOneWithWhereWithoutPayloadConfigsInput, Prisma.OperatorUpdateWithoutPayloadConfigsInput>, Prisma.OperatorUncheckedUpdateWithoutPayloadConfigsInput>
 }
 
+export type OperatorCreateWithoutDomainReturnsInput = {
+  Name: string
+  Conditions?: Prisma.ConditionCreateNestedManyWithoutOperatorInput
+  TargetElements?: Prisma.TargetElementCreateNestedManyWithoutOperatorInput
+  PayloadConfigs?: Prisma.PayloadConfigCreateNestedManyWithoutOperatorInput
+}
+
+export type OperatorUncheckedCreateWithoutDomainReturnsInput = {
+  Id?: number
+  Name: string
+  Conditions?: Prisma.ConditionUncheckedCreateNestedManyWithoutOperatorInput
+  TargetElements?: Prisma.TargetElementUncheckedCreateNestedManyWithoutOperatorInput
+  PayloadConfigs?: Prisma.PayloadConfigUncheckedCreateNestedManyWithoutOperatorInput
+}
+
+export type OperatorCreateOrConnectWithoutDomainReturnsInput = {
+  where: Prisma.OperatorWhereUniqueInput
+  create: Prisma.XOR<Prisma.OperatorCreateWithoutDomainReturnsInput, Prisma.OperatorUncheckedCreateWithoutDomainReturnsInput>
+}
+
+export type OperatorUpsertWithoutDomainReturnsInput = {
+  update: Prisma.XOR<Prisma.OperatorUpdateWithoutDomainReturnsInput, Prisma.OperatorUncheckedUpdateWithoutDomainReturnsInput>
+  create: Prisma.XOR<Prisma.OperatorCreateWithoutDomainReturnsInput, Prisma.OperatorUncheckedCreateWithoutDomainReturnsInput>
+  where?: Prisma.OperatorWhereInput
+}
+
+export type OperatorUpdateToOneWithWhereWithoutDomainReturnsInput = {
+  where?: Prisma.OperatorWhereInput
+  data: Prisma.XOR<Prisma.OperatorUpdateWithoutDomainReturnsInput, Prisma.OperatorUncheckedUpdateWithoutDomainReturnsInput>
+}
+
+export type OperatorUpdateWithoutDomainReturnsInput = {
+  Name?: Prisma.StringFieldUpdateOperationsInput | string
+  Conditions?: Prisma.ConditionUpdateManyWithoutOperatorNestedInput
+  TargetElements?: Prisma.TargetElementUpdateManyWithoutOperatorNestedInput
+  PayloadConfigs?: Prisma.PayloadConfigUpdateManyWithoutOperatorNestedInput
+}
+
+export type OperatorUncheckedUpdateWithoutDomainReturnsInput = {
+  Id?: Prisma.IntFieldUpdateOperationsInput | number
+  Name?: Prisma.StringFieldUpdateOperationsInput | string
+  Conditions?: Prisma.ConditionUncheckedUpdateManyWithoutOperatorNestedInput
+  TargetElements?: Prisma.TargetElementUncheckedUpdateManyWithoutOperatorNestedInput
+  PayloadConfigs?: Prisma.PayloadConfigUncheckedUpdateManyWithoutOperatorNestedInput
+}
+
 export type OperatorCreateWithoutTargetElementsInput = {
   Name: string
   Conditions?: Prisma.ConditionCreateNestedManyWithoutOperatorInput
   PayloadConfigs?: Prisma.PayloadConfigCreateNestedManyWithoutOperatorInput
+  DomainReturns?: Prisma.DomainReturnCreateNestedManyWithoutOperatorInput
 }
 
 export type OperatorUncheckedCreateWithoutTargetElementsInput = {
@@ -359,6 +427,7 @@ export type OperatorUncheckedCreateWithoutTargetElementsInput = {
   Name: string
   Conditions?: Prisma.ConditionUncheckedCreateNestedManyWithoutOperatorInput
   PayloadConfigs?: Prisma.PayloadConfigUncheckedCreateNestedManyWithoutOperatorInput
+  DomainReturns?: Prisma.DomainReturnUncheckedCreateNestedManyWithoutOperatorInput
 }
 
 export type OperatorCreateOrConnectWithoutTargetElementsInput = {
@@ -381,6 +450,7 @@ export type OperatorUpdateWithoutTargetElementsInput = {
   Name?: Prisma.StringFieldUpdateOperationsInput | string
   Conditions?: Prisma.ConditionUpdateManyWithoutOperatorNestedInput
   PayloadConfigs?: Prisma.PayloadConfigUpdateManyWithoutOperatorNestedInput
+  DomainReturns?: Prisma.DomainReturnUpdateManyWithoutOperatorNestedInput
 }
 
 export type OperatorUncheckedUpdateWithoutTargetElementsInput = {
@@ -388,12 +458,14 @@ export type OperatorUncheckedUpdateWithoutTargetElementsInput = {
   Name?: Prisma.StringFieldUpdateOperationsInput | string
   Conditions?: Prisma.ConditionUncheckedUpdateManyWithoutOperatorNestedInput
   PayloadConfigs?: Prisma.PayloadConfigUncheckedUpdateManyWithoutOperatorNestedInput
+  DomainReturns?: Prisma.DomainReturnUncheckedUpdateManyWithoutOperatorNestedInput
 }
 
 export type OperatorCreateWithoutConditionsInput = {
   Name: string
   TargetElements?: Prisma.TargetElementCreateNestedManyWithoutOperatorInput
   PayloadConfigs?: Prisma.PayloadConfigCreateNestedManyWithoutOperatorInput
+  DomainReturns?: Prisma.DomainReturnCreateNestedManyWithoutOperatorInput
 }
 
 export type OperatorUncheckedCreateWithoutConditionsInput = {
@@ -401,6 +473,7 @@ export type OperatorUncheckedCreateWithoutConditionsInput = {
   Name: string
   TargetElements?: Prisma.TargetElementUncheckedCreateNestedManyWithoutOperatorInput
   PayloadConfigs?: Prisma.PayloadConfigUncheckedCreateNestedManyWithoutOperatorInput
+  DomainReturns?: Prisma.DomainReturnUncheckedCreateNestedManyWithoutOperatorInput
 }
 
 export type OperatorCreateOrConnectWithoutConditionsInput = {
@@ -423,6 +496,7 @@ export type OperatorUpdateWithoutConditionsInput = {
   Name?: Prisma.StringFieldUpdateOperationsInput | string
   TargetElements?: Prisma.TargetElementUpdateManyWithoutOperatorNestedInput
   PayloadConfigs?: Prisma.PayloadConfigUpdateManyWithoutOperatorNestedInput
+  DomainReturns?: Prisma.DomainReturnUpdateManyWithoutOperatorNestedInput
 }
 
 export type OperatorUncheckedUpdateWithoutConditionsInput = {
@@ -430,12 +504,14 @@ export type OperatorUncheckedUpdateWithoutConditionsInput = {
   Name?: Prisma.StringFieldUpdateOperationsInput | string
   TargetElements?: Prisma.TargetElementUncheckedUpdateManyWithoutOperatorNestedInput
   PayloadConfigs?: Prisma.PayloadConfigUncheckedUpdateManyWithoutOperatorNestedInput
+  DomainReturns?: Prisma.DomainReturnUncheckedUpdateManyWithoutOperatorNestedInput
 }
 
 export type OperatorCreateWithoutPayloadConfigsInput = {
   Name: string
   Conditions?: Prisma.ConditionCreateNestedManyWithoutOperatorInput
   TargetElements?: Prisma.TargetElementCreateNestedManyWithoutOperatorInput
+  DomainReturns?: Prisma.DomainReturnCreateNestedManyWithoutOperatorInput
 }
 
 export type OperatorUncheckedCreateWithoutPayloadConfigsInput = {
@@ -443,6 +519,7 @@ export type OperatorUncheckedCreateWithoutPayloadConfigsInput = {
   Name: string
   Conditions?: Prisma.ConditionUncheckedCreateNestedManyWithoutOperatorInput
   TargetElements?: Prisma.TargetElementUncheckedCreateNestedManyWithoutOperatorInput
+  DomainReturns?: Prisma.DomainReturnUncheckedCreateNestedManyWithoutOperatorInput
 }
 
 export type OperatorCreateOrConnectWithoutPayloadConfigsInput = {
@@ -465,6 +542,7 @@ export type OperatorUpdateWithoutPayloadConfigsInput = {
   Name?: Prisma.StringFieldUpdateOperationsInput | string
   Conditions?: Prisma.ConditionUpdateManyWithoutOperatorNestedInput
   TargetElements?: Prisma.TargetElementUpdateManyWithoutOperatorNestedInput
+  DomainReturns?: Prisma.DomainReturnUpdateManyWithoutOperatorNestedInput
 }
 
 export type OperatorUncheckedUpdateWithoutPayloadConfigsInput = {
@@ -472,6 +550,7 @@ export type OperatorUncheckedUpdateWithoutPayloadConfigsInput = {
   Name?: Prisma.StringFieldUpdateOperationsInput | string
   Conditions?: Prisma.ConditionUncheckedUpdateManyWithoutOperatorNestedInput
   TargetElements?: Prisma.TargetElementUncheckedUpdateManyWithoutOperatorNestedInput
+  DomainReturns?: Prisma.DomainReturnUncheckedUpdateManyWithoutOperatorNestedInput
 }
 
 
@@ -483,12 +562,14 @@ export type OperatorCountOutputType = {
   Conditions: number
   TargetElements: number
   PayloadConfigs: number
+  DomainReturns: number
 }
 
 export type OperatorCountOutputTypeSelect<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   Conditions?: boolean | OperatorCountOutputTypeCountConditionsArgs
   TargetElements?: boolean | OperatorCountOutputTypeCountTargetElementsArgs
   PayloadConfigs?: boolean | OperatorCountOutputTypeCountPayloadConfigsArgs
+  DomainReturns?: boolean | OperatorCountOutputTypeCountDomainReturnsArgs
 }
 
 /**
@@ -522,6 +603,13 @@ export type OperatorCountOutputTypeCountPayloadConfigsArgs<ExtArgs extends runti
   where?: Prisma.PayloadConfigWhereInput
 }
 
+/**
+ * OperatorCountOutputType without action
+ */
+export type OperatorCountOutputTypeCountDomainReturnsArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  where?: Prisma.DomainReturnWhereInput
+}
+
 
 export type OperatorSelect<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetSelect<{
   Id?: boolean
@@ -529,6 +617,7 @@ export type OperatorSelect<ExtArgs extends runtime.Types.Extensions.InternalArgs
   Conditions?: boolean | Prisma.Operator$ConditionsArgs<ExtArgs>
   TargetElements?: boolean | Prisma.Operator$TargetElementsArgs<ExtArgs>
   PayloadConfigs?: boolean | Prisma.Operator$PayloadConfigsArgs<ExtArgs>
+  DomainReturns?: boolean | Prisma.Operator$DomainReturnsArgs<ExtArgs>
   _count?: boolean | Prisma.OperatorCountOutputTypeDefaultArgs<ExtArgs>
 }, ExtArgs["result"]["operator"]>
 
@@ -552,6 +641,7 @@ export type OperatorInclude<ExtArgs extends runtime.Types.Extensions.InternalArg
   Conditions?: boolean | Prisma.Operator$ConditionsArgs<ExtArgs>
   TargetElements?: boolean | Prisma.Operator$TargetElementsArgs<ExtArgs>
   PayloadConfigs?: boolean | Prisma.Operator$PayloadConfigsArgs<ExtArgs>
+  DomainReturns?: boolean | Prisma.Operator$DomainReturnsArgs<ExtArgs>
   _count?: boolean | Prisma.OperatorCountOutputTypeDefaultArgs<ExtArgs>
 }
 export type OperatorIncludeCreateManyAndReturn<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {}
@@ -563,6 +653,7 @@ export type $OperatorPayload<ExtArgs extends runtime.Types.Extensions.InternalAr
     Conditions: Prisma.$ConditionPayload<ExtArgs>[]
     TargetElements: Prisma.$TargetElementPayload<ExtArgs>[]
     PayloadConfigs: Prisma.$PayloadConfigPayload<ExtArgs>[]
+    DomainReturns: Prisma.$DomainReturnPayload<ExtArgs>[]
   }
   scalars: runtime.Types.Extensions.GetPayloadResult<{
     Id: number
@@ -964,6 +1055,7 @@ export interface Prisma__OperatorClient<T, Null = never, ExtArgs extends runtime
   Conditions<T extends Prisma.Operator$ConditionsArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.Operator$ConditionsArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$ConditionPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
   TargetElements<T extends Prisma.Operator$TargetElementsArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.Operator$TargetElementsArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$TargetElementPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
   PayloadConfigs<T extends Prisma.Operator$PayloadConfigsArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.Operator$PayloadConfigsArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$PayloadConfigPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
+  DomainReturns<T extends Prisma.Operator$DomainReturnsArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.Operator$DomainReturnsArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$DomainReturnPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
   /**
    * Attaches callbacks for the resolution and/or rejection of the Promise.
    * @param onfulfilled The callback to execute when the Promise is resolved.
@@ -1452,6 +1544,30 @@ export type Operator$PayloadConfigsArgs<ExtArgs extends runtime.Types.Extensions
   take?: number
   skip?: number
   distinct?: Prisma.PayloadConfigScalarFieldEnum | Prisma.PayloadConfigScalarFieldEnum[]
+}
+
+/**
+ * Operator.DomainReturns
+ */
+export type Operator$DomainReturnsArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  /**
+   * Select specific fields to fetch from the DomainReturn
+   */
+  select?: Prisma.DomainReturnSelect<ExtArgs> | null
+  /**
+   * Omit specific fields from the DomainReturn
+   */
+  omit?: Prisma.DomainReturnOmit<ExtArgs> | null
+  /**
+   * Choose, which related nodes to fetch as well
+   */
+  include?: Prisma.DomainReturnInclude<ExtArgs> | null
+  where?: Prisma.DomainReturnWhereInput
+  orderBy?: Prisma.DomainReturnOrderByWithRelationInput | Prisma.DomainReturnOrderByWithRelationInput[]
+  cursor?: Prisma.DomainReturnWhereUniqueInput
+  take?: number
+  skip?: number
+  distinct?: Prisma.DomainReturnScalarFieldEnum | Prisma.DomainReturnScalarFieldEnum[]
 }
 
 /**

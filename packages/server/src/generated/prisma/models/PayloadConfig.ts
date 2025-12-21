@@ -444,6 +444,10 @@ export type PayloadConfigUncheckedUpdateManyWithoutRuleNestedInput = {
   deleteMany?: Prisma.PayloadConfigScalarWhereInput | Prisma.PayloadConfigScalarWhereInput[]
 }
 
+export type NullableStringFieldUpdateOperationsInput = {
+  set?: string | null
+}
+
 export type PayloadConfigCreateNestedManyWithoutPayloadPatternInput = {
   create?: Prisma.XOR<Prisma.PayloadConfigCreateWithoutPayloadPatternInput, Prisma.PayloadConfigUncheckedCreateWithoutPayloadPatternInput> | Prisma.PayloadConfigCreateWithoutPayloadPatternInput[] | Prisma.PayloadConfigUncheckedCreateWithoutPayloadPatternInput[]
   connectOrCreate?: Prisma.PayloadConfigCreateOrConnectWithoutPayloadPatternInput | Prisma.PayloadConfigCreateOrConnectWithoutPayloadPatternInput[]
