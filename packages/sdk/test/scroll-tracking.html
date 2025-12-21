@@ -1,0 +1,176 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Scroll Tracking Test - RecSys Tracker</title>
+    
+    <script>
+      window.__RECSYS_DOMAIN_KEY__ = 'TEST_DOMAIN_KEY';
+    </script>
+    
+    <script src="http://localhost:3000/dist/loader.js"></script>
+    
+    <style>
+        body { font-family: 'Georgia', serif; background: #f9f9f9; margin: 0; padding: 0; line-height: 1.8; color: #333; }
+        
+        /* Fixed Console */
+        #console-wrapper {
+            position: fixed; top: 20px; right: 20px; width: 350px; z-index: 9999;
+            background: rgba(0,0,0,0.85); color: #0f0; border-radius: 8px;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.3); font-family: 'Consolas', monospace; font-size: 12px;
+        }
+        #console-header { padding: 10px; border-bottom: 1px solid #444; display: flex; justify-content: space-between; align-items: center; background: #222; border-radius: 8px 8px 0 0; }
+        #console-output { height: 250px; overflow-y: auto; padding: 10px; }
+        .log-entry { margin-bottom: 5px; border-bottom: 1px solid #333; padding-bottom: 2px; }
+        .log-scroll { color: #ffeb3b; font-weight: bold; }
+        .log-time { color: #00e5ff; }
+
+        /* Layout */
+        .container { max-width: 800px; margin: 0 auto; background: white; padding: 40px; box-shadow: 0 0 20px rgba(0,0,0,0.05); min-height: 3000px; /* Làm trang dài ra */ position: relative; }
+        
+        /* Depth Markers (Vạch kẻ 25, 50, 75%) */
+        .depth-marker {
+            position: absolute; left: 0; right: 0; border-top: 2px dashed red;
+            color: red; font-weight: bold; padding-left: 10px; pointer-events: none;
+        }
+        
+        /* User Box */
+        .user-box { background: #e3f2fd; padding: 15px; border-radius: 8px; margin-bottom: 30px; border: 1px solid #90caf9; font-family: sans-serif; }
+        
+        h1 { font-size: 2.5em; margin-bottom: 10px; }
+        .meta { color: #666; font-style: italic; margin-bottom: 30px; }
+        p { margin-bottom: 20px; font-size: 1.1em; }
+        
+        .image-placeholder { background: #ddd; height: 300px; width: 100%; margin: 20px 0; display: flex; align-items: center; justify-content: center; color: #666; font-weight: bold; border-radius: 4px; }
+    </style>
+</head>
+<body>
+
+    <div id="console-wrapper">
+        <div id="console-header">
+            <span>📡 SDK Live Events</span>
+            <button onclick="document.getElementById('console-output').innerHTML=''" style="cursor:pointer; background:#444; color:white; border:none; padding:2px 5px;">Clear</button>
+        </div>
+        <div id="console-output">
+            <div class="log-entry">Waiting for scroll...</div>
+        </div>
+    </div>
+
+    <div class="container">
+        <div class="depth-marker" style="top: 25%;">25% Depth ----------------</div>
+        <div class="depth-marker" style="top: 50%;">50% Depth ----------------</div>
+        <div class="depth-marker" style="top: 75%;">75% Depth ----------------</div>
+        <div class="depth-marker" style="top: 99%;">100% Depth ---------------</div>
+
+        <div class="user-box">
+            <h3>👤 User Identity Simulator</h3>
+            <div id="login-ui">
+                <input type="text" id="user-id-input" placeholder="Nhập User ID (VD: READER-1)" style="padding:5px;">
+                <button onclick="login()" style="padding:5px 10px; cursor:pointer;">Set User ID</button>
+            </div>
+            <div id="logged-ui" style="display:none">
+                Logged in as: <b id="display-uid"></b>
+                <button onclick="logout()">Logout</button>
+            </div>
+        </div>
+
+        <article id="main-article" 
+                 data-item-id="ARTICLE-2024-HOT" 
+                 data-item-name="The Future of AI Tracking" 
+                 data-item-type="news_article">
+            
+            <h1>The Future of AI Tracking</h1>
+            <div class="meta">Published on Dec 18, 2025 by TechDaily</div>
+            
+            <p><strong>[START]</strong> Hãy bắt đầu cuộn xuống. SDK sẽ theo dõi xem bạn đọc được bao nhiêu phần trăm bài viết này.</p>
+            
+            <p>Plugin sẽ tự động tìm thấy Context ID: <code>ARTICLE-2024-HOT</code> nhờ vào Mock Rule trỏ vào <code>#main-article</code>.</p>
+
+            <div class="image-placeholder">Image 1</div>
+            
+            <p>Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat.</p>
+            
+            <script>
+                // Generate lots of text
+                for(let i=0; i<30; i++) {
+                    document.write(`<p>Paragraph ${i+1}: Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum.</p>`);
+                    if(i % 5 === 0) document.write('<div class="image-placeholder">Visual Content Break</div>');
+                }
+            </script>
+
+            <p><strong>[END]</strong> Bạn đã đọc hết bài viết!</p>
+        </article>
+    </div>
+
+    <script>
+        // --- LOGIC GHI LOG RA MÀN HÌNH ---
+        const originalLog = console.log;
+        const consoleDiv = document.getElementById('console-output');
+
+        function addVisualLog(msg, type='') {
+            const div = document.createElement('div');
+            div.className = 'log-entry ' + type;
+            const time = new Date().toLocaleTimeString().split(' ')[0];
+            
+            if(typeof msg === 'object') msg = JSON.stringify(msg);
+            
+            // Format tin nhắn cho đẹp
+            let displayMsg = msg;
+            if (msg.includes('scroll_depth')) displayMsg = `📜 SCROLL EVENT: ${msg}`;
+            if (msg.includes('page_summary')) displayMsg = `⏱️ PAGE SUMMARY: ${msg}`;
+
+            div.innerHTML = `<span style="opacity:0.5">[${time}]</span> ${displayMsg}`;
+            consoleDiv.prepend(div);
+        }
+
+        console.log = function(...args) {
+            originalLog.apply(console, args);
+            const msg = args.map(a => (typeof a === 'object' ? JSON.stringify(a) : a)).join(' ');
+            
+            if (msg.includes('ScrollPlugin') || msg.includes('scroll_depth') || msg.includes('page_summary')) {
+                // Parse JSON để lấy thông tin đẹp hơn nếu có thể
+                try {
+                    const jsonMatch = msg.match(/({.*})/);
+                    if (jsonMatch) {
+                        const data = JSON.parse(jsonMatch[0]);
+                        if (data.event === 'scroll_depth') {
+                            addVisualLog(`Depth: ${data.metadata.depth_percentage}% | Time: ${data.metadata.time_on_page}s | Item: ${data.itemId}`, 'log-scroll');
+                            return;
+                        }
+                        if (data.event === 'page_summary') {
+                            addVisualLog(`SUMMARY: Max Depth ${data.metadata.max_scroll_depth}% | Total Time ${data.metadata.total_time_on_page}s`, 'log-time');
+                            return;
+                        }
+                    }
+                } catch(e) {}
+                
+                if(msg.includes('Reached')) addVisualLog(msg, 'log-scroll');
+                else addVisualLog(msg);
+            }
+        };
+
+        // --- USER AUTH SIMULATION ---
+        function checkUser() {
+            const uid = localStorage.getItem('user_id');
+            if(uid) {
+                document.getElementById('login-ui').style.display='none';
+                document.getElementById('logged-ui').style.display='block';
+                document.getElementById('display-uid').innerText = uid;
+            }
+        }
+        function login() {
+            const val = document.getElementById('user-id-input').value;
+            if(val) {
+                localStorage.setItem('user_id', val);
+                location.reload();
+            }
+        }
+        function logout() {
+            localStorage.removeItem('user_id');
+            location.reload();
+        }
+        checkUser();
+    </script>
+</body>
+</html>

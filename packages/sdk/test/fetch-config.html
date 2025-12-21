@@ -275,6 +275,8 @@
                     
                     // Load from window
                     const localConfig = configLoader.loadFromWindow();
+
+                    console.log('Local config loaded:', localConfig);
                     
                     if (!localConfig) {
                         showStatus('initStatus', 'Failed to load config from window', 'error');
@@ -285,6 +287,8 @@
 
                     // Fetch remote config
                     const remoteConfig = await configLoader.fetchRemoteConfig();
+
+                    console.log('Remote config fetched:', remoteConfig);
                     
                     if (remoteConfig) {
                         showStatus('initStatus', '✅ SDK initialized and remote config loaded successfully!', 'success');

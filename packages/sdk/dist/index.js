@@ -273,4 +273,6 @@ export { BasePlugin } from './core/plugins/base-plugin';
 // Export built-in plugins
 export { ClickPlugin } from './core/plugins/click-plugin';
 export { PageViewPlugin } from './core/plugins/page-view-plugin';
+export { FormPlugin } from './core/plugins/form-plugin';
+export { ScrollPlugin } from './core/plugins/scroll-plugin';
 //# sourceMappingURL=index.js.map

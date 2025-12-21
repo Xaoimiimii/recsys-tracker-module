@@ -7,7 +7,7 @@ export class CreateReturnMethodsDto {
 
     @IsString()
     @IsNotEmpty()
-    slotName: string;
+    configurationName: string;
 
     @IsNumber()
     @IsNotEmpty()
@@ -15,9 +15,9 @@ export class CreateReturnMethodsDto {
 
     @IsString()
     @IsNotEmpty()
-    targetUrl: string;
-    
-    @IsString()
-    @IsNotEmpty()
     value: string;
+
+    @IsNumber()
+    @IsNotEmpty()
+    operatorId: number;
 }
