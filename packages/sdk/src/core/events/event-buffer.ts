@@ -9,16 +9,15 @@
 export interface TrackedEvent {
   id: string;
   timestamp: string | Date;
-  triggerTypeId: number;
+  eventTypeId: number;
+  trackingRuleId: number;
   domainKey: string;
-  payload: {
-    UserId: number;
-    ItemId: number;
-  };
-  rate?: {
-    Value: number;
-    Review: string;
-  };
+  userField: string;
+  userValue: string;
+  itemField: string;
+  itemValue: string;
+  ratingValue?: number;
+  reviewValue?: string;
   retryCount?: number; // Cho logic SDK retry
   lastRetryAt?: number; // Timestamp của lần retry cuối cùng
   nextRetryAt?: number; // Timestamp của lần retry tiếp theo (exponential backoff)

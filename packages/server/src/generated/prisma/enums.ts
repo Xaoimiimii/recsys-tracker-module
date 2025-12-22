@@ -9,7 +9,67 @@
 * 🟢 You can import this file directly.
 */
 
+export const ReturnType = {
+  POPUP: 'POPUP',
+  INLINE_INJECTION: 'INLINE_INJECTION'
+} as const
+
+export type ReturnType = (typeof ReturnType)[keyof typeof ReturnType]
 
 
-// This file is empty because there are no enums in the schema.
-export {}
+export const PayloadField = {
+  UserId: 'UserId',
+  Username: 'Username',
+  ItemId: 'ItemId',
+  ItemTitle: 'ItemTitle',
+  Value: 'Value'
+} as const
+
+export type PayloadField = (typeof PayloadField)[keyof typeof PayloadField]
+
+
+export const PayloadSource = {
+  RequestBody: 'RequestBody',
+  Element: 'Element',
+  Cookie: 'Cookie',
+  LocalStorage: 'LocalStorage',
+  SessionStorage: 'SessionStorage',
+  Url: 'Url'
+} as const
+
+export type PayloadSource = (typeof PayloadSource)[keyof typeof PayloadSource]
+
+
+export const PayloadRequestMethod = {
+  GET: 'GET',
+  POST: 'POST',
+  PUT: 'PUT',
+  PATCH: 'PATCH'
+} as const
+
+export type PayloadRequestMethod = (typeof PayloadRequestMethod)[keyof typeof PayloadRequestMethod]
+
+
+export const PayloadUrlPart = {
+  QueryParam: 'QueryParam',
+  PathName: 'PathName',
+  Hash: 'Hash'
+} as const
+
+export type PayloadUrlPart = (typeof PayloadUrlPart)[keyof typeof PayloadUrlPart]
+
+
+export const EventUserField = {
+  UserId: 'UserId',
+  Username: 'Username'
+} as const
+
+export type EventUserField = (typeof EventUserField)[keyof typeof EventUserField]
+
+
+export const EventItemField = {
+  ItemId: 'ItemId',
+  ItemTitle: 'ItemTitle'
+} as const
+
+export type EventItemField = (typeof EventItemField)[keyof typeof EventItemField]

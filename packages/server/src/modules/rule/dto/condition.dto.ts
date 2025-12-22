@@ -1,15 +1,19 @@
-import { IsInt, IsNotEmpty, IsOptional, IsString } from "class-validator";
+import { ApiProperty } from "@nestjs/swagger";
+import { IsInt, IsNotEmpty, IsString } from "class-validator";
 
 export class ConditionDto {
-    @IsInt()
-    @IsNotEmpty()
-    eventPatternId: number;
-
-    @IsInt()
-    @IsNotEmpty()
-    operatorId: number;
-
+    @ApiProperty({ example: "Condition Value" })
     @IsString()
     @IsNotEmpty()
-    value: string;
+    Value: string;
+
+    @ApiProperty({ example: 1 })
+    @IsInt()
+    @IsNotEmpty()
+    PatternId: number;
+
+    @ApiProperty({ example: 1 })
+    @IsInt()
+    @IsNotEmpty()
+    OperatorId: number;
 }

@@ -11,29 +11,33 @@ export interface TrackerConfig {
 export interface TrackingRule {
     id: string;
     name: string;
-    triggerEventId: number;
+    eventTypeId: number;
     targetElement: {
-        targetEventPatternId?: number;
-        targetOperatorId?: number;
+        targetElementOperatorId?: number;
         targetElementValue?: string;
     };
     conditions: Condition[];
     payload: PayloadConfig[];
 }
 export interface PayloadConfig {
-    payloadPatternId: number;
-    operatorId: number;
+    field: string;
+    source: string;
     value?: string;
-    type?: string;
+    requestUrlPattern?: string;
+    requestMethod?: string;
+    requestBodyPath?: string;
+    urlPart?: string;
+    urlPartValue?: string;
 }
 export interface Condition {
-    eventPatternId: number;
+    patternId: number;
     operatorId: number;
     value?: string;
 }
 export interface ReturnMethod {
-    slotName: string;
+    configurationName: string;
     returnMethodId: number;
+    operatorId: number;
     value: string;
 }
 export interface TrackerOptions {

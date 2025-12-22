@@ -95,11 +95,11 @@ export class RecSysTracker {
       return;
     }
 
-    // Kiểm tra nếu có rule nào cần ClickPlugin (triggerEventId === 1)
-    const hasClickRules = this.config.trackingRules.some(rule => rule.triggerEventId === 1);
+    // Kiểm tra nếu có rule nào cần ClickPlugin (eventTypeId === 1)
+    const hasClickRules = this.config.trackingRules.some(rule => rule.eventTypeId === 1);
     
-    // Kiểm tra nếu có rule nào cần PageViewPlugin (triggerEventId === 3)
-    const hasPageViewRules = this.config.trackingRules.some(rule => rule.triggerEventId === 3);
+    // Kiểm tra nếu có rule nào cần PageViewPlugin (eventTypeId === 3)
+    const hasPageViewRules = this.config.trackingRules.some(rule => rule.eventTypeId === 5);
 
     // Chỉ tự động đăng ký nếu chưa có plugin nào được đăng ký
     if (this.pluginManager.getPluginNames().length === 0) {
@@ -134,13 +134,14 @@ export class RecSysTracker {
 
   // Track custom event
   track(eventData: {
-    triggerTypeId: number;
-    userId: number;
-    itemId: number;
-    rate?: {
-      Value: number;
-      Review: string;
-    };
+    eventTypeId: number;
+    trackingRuleId: number;
+    userField: string;
+    userValue: string;
+    itemField: string;
+    itemValue: string;
+    ratingValue?: number;
+    reviewValue?: string;
   }): void {
     this.errorBoundary.execute(() => {
       if (!this.isInitialized || !this.config) {
@@ -150,13 +151,15 @@ export class RecSysTracker {
       const trackedEvent: TrackedEvent = {
         id: this.metadataNormalizer.generateEventId(),
         timestamp: new Date(),
-        triggerTypeId: eventData.triggerTypeId,
+        eventTypeId: eventData.eventTypeId,
+        trackingRuleId: eventData.trackingRuleId,
         domainKey: this.config.domainKey,
-        payload: {
-          UserId: eventData.userId,
-          ItemId: eventData.itemId,
-        },
-        ...(eventData.rate && { rate: eventData.rate }),
+        userField: eventData.userField,
+        userValue: eventData.userValue,
+        itemField: eventData.itemField,
+        itemValue: eventData.itemValue,
+        ...(eventData.ratingValue !== undefined && { ratingValue: eventData.ratingValue }),
+        ...(eventData.reviewValue !== undefined && { reviewValue: eventData.reviewValue }),
       };
 
       this.eventBuffer.add(trackedEvent);

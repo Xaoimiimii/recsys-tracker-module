@@ -251,22 +251,14 @@
             if (!Array.isArray(rulesData))
                 return [];
             return rulesData.map(rule => {
-                var _a, _b, _c, _d, _e;
+                var _a, _b, _c, _d;
                 return ({
                     id: ((_a = rule.Id) === null || _a === void 0 ? void 0 : _a.toString()) || ((_b = rule.id) === null || _b === void 0 ? void 0 : _b.toString()),
                     name: rule.Name || rule.name,
-                    // domainId: rule.DomainID || rule.domainId,
-                    triggerEventId: rule.TriggerEventID || rule.triggerEventId,
-                    // targetElementId: rule.TargetElementID || rule.targetElementId,
-                    // targetElement: {
-                    //   targetEventPatternId?: number,
-                    //   targetOperatorId?: number,
-                    //   targetElementValue?: string
-                    // };
+                    eventTypeId: rule.EventTypeID || rule.eventTypeId,
                     targetElement: {
-                        targetEventPatternId: ((_c = rule.TargetElement) === null || _c === void 0 ? void 0 : _c.EventPatternID) || rule.targetEventPatternId,
-                        targetOperatorId: ((_d = rule.TargetElement) === null || _d === void 0 ? void 0 : _d.OperatorID) || rule.targetOperatorId,
-                        targetElementValue: ((_e = rule.TargetElement) === null || _e === void 0 ? void 0 : _e.Value) || rule.targetElementValue,
+                        targetElementOperatorId: ((_c = rule.TargetElement) === null || _c === void 0 ? void 0 : _c.OperatorID) || rule.targetElementOperatorId,
+                        targetElementValue: ((_d = rule.TargetElement) === null || _d === void 0 ? void 0 : _d.Value) || rule.targetElementValue,
                     },
                     conditions: this.transformConditions(rule.Conditions || rule.conditions || []),
                     payload: this.transformPayloadConfigs(rule.PayloadConfigs || rule.payload || []),
@@ -302,8 +294,9 @@
             if (!returnMethodsData || !Array.isArray(returnMethodsData))
                 return [];
             return returnMethodsData.map(method => ({
-                slotName: method.SlotName || method.slotName,
+                configurationName: method.ConfigurationName || method.configurationName,
                 returnMethodId: method.ReturnMethodID || method.returnMethodId,
+                operatorId: method.OperatorID || method.operatorId,
                 value: method.Value || method.value || '',
             }));
         }
@@ -561,7 +554,6 @@
         }
         // Gửi 1 event đơn lẻ
         async send(event) {
-            var _a, _b;
             if (!event) {
                 return false;
             }
@@ -575,19 +567,16 @@
             }
             // Chuyển đổi TrackedEvent sang định dạng CreateEventDto
             const payload = JSON.stringify({
-                TriggerTypeId: event.triggerTypeId,
-                DomainKey: event.domainKey,
                 Timestamp: event.timestamp,
-                Payload: {
-                    UserId: (_a = event.payload) === null || _a === void 0 ? void 0 : _a.UserId,
-                    ItemId: (_b = event.payload) === null || _b === void 0 ? void 0 : _b.ItemId,
-                },
-                ...(event.rate && {
-                    Rate: {
-                        Value: event.rate.Value,
-                        Review: event.rate.Review,
-                    }
-                })
+                EventTypeId: event.eventTypeId,
+                TrackingRuleId: event.trackingRuleId,
+                DomainKey: event.domainKey,
+                UserField: event.userField,
+                UserValue: event.userValue,
+                ItemField: event.itemField,
+                ItemValue: event.itemValue,
+                RatingValue: event.ratingValue,
+                ReviewValue: event.reviewValue
             });
             // Thử từng phương thức gửi theo thứ tự ưu tiên
             const strategies = ['beacon', 'fetch'];
@@ -1502,13 +1491,13 @@
         }
         // Kích hoạt display method tương ứng
         activateDisplayMethod(method) {
-            const { returnMethodId, slotName, value } = method;
+            const { returnMethodId, configurationName, value } = method;
             switch (returnMethodId) {
                 case 1: // Popup
-                    this.initializePopup(slotName, value);
+                    this.initializePopup(configurationName, value);
                     break;
                 case 2: // Inline
-                    this.initializeInline(slotName, value);
+                    this.initializeInline(configurationName, value);
                     break;
                 default:
                     console.warn(`[DisplayManager] Unknown returnMethodId: ${returnMethodId}`);
@@ -2931,19 +2920,19 @@
     class TrackerContextAdapter {
         constructor(tracker) {
             this.config = {
-                getRules: (triggerEventId) => {
+                getRules: (eventTypeId) => {
                     const config = this.tracker.getConfig();
                     if (!(config === null || config === void 0 ? void 0 : config.trackingRules))
                         return [];
                     return config.trackingRules
-                        .filter(rule => rule.triggerEventId === triggerEventId);
+                        .filter(rule => rule.eventTypeId === eventTypeId);
                 },
             };
             this.payloadBuilder = {
                 build: (element, rule, extraData = {}) => {
                     const userIdentityManager = getUserIdentityManager();
                     const payload = {
-                        event: rule.triggerEventId === 1 ? "item_click" : "page_view",
+                        event: rule.eventTypeId === 1 ? "item_click" : "page_view",
                         url: window.location.href,
                         timestamp: Date.now(),
                         ruleName: rule.name,
@@ -2985,7 +2974,7 @@
                     }
                     if (extractor.source === 'ai_detect') {
                         const detector = getAIItemDetector();
-                        if (rule.triggerEventId === 3 && element && element.id) {
+                        if (rule.eventTypeId === 3 && element && element.id) {
                             detectionResult = element;
                         }
                         else if (detector && element instanceof Element) {
@@ -3918,10 +3907,10 @@
             if (!((_a = this.config) === null || _a === void 0 ? void 0 : _a.trackingRules) || this.config.trackingRules.length === 0) {
                 return;
             }
-            // Kiểm tra nếu có rule nào cần ClickPlugin (triggerEventId === 1)
-            const hasClickRules = this.config.trackingRules.some(rule => rule.triggerEventId === 1);
-            // Kiểm tra nếu có rule nào cần PageViewPlugin (triggerEventId === 3)
-            const hasPageViewRules = this.config.trackingRules.some(rule => rule.triggerEventId === 3);
+            // Kiểm tra nếu có rule nào cần ClickPlugin (eventTypeId === 1)
+            const hasClickRules = this.config.trackingRules.some(rule => rule.eventTypeId === 1);
+            // Kiểm tra nếu có rule nào cần PageViewPlugin (eventTypeId === 3)
+            const hasPageViewRules = this.config.trackingRules.some(rule => rule.eventTypeId === 5);
             // Chỉ tự động đăng ký nếu chưa có plugin nào được đăng ký
             if (this.pluginManager.getPluginNames().length === 0) {
                 const pluginPromises = [];
@@ -3958,13 +3947,15 @@
                 const trackedEvent = {
                     id: this.metadataNormalizer.generateEventId(),
                     timestamp: new Date(),
-                    triggerTypeId: eventData.triggerTypeId,
+                    eventTypeId: eventData.eventTypeId,
+                    trackingRuleId: eventData.trackingRuleId,
                     domainKey: this.config.domainKey,
-                    payload: {
-                        UserId: eventData.userId,
-                        ItemId: eventData.itemId,
-                    },
-                    ...(eventData.rate && { rate: eventData.rate }),
+                    userField: eventData.userField,
+                    userValue: eventData.userValue,
+                    itemField: eventData.itemField,
+                    itemValue: eventData.itemValue,
+                    ...(eventData.ratingValue !== undefined && { ratingValue: eventData.ratingValue }),
+                    ...(eventData.reviewValue !== undefined && { reviewValue: eventData.reviewValue }),
                 };
                 this.eventBuffer.add(trackedEvent);
             }, 'track');

@@ -5,8 +5,8 @@
 // Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
 
 generator client {
-  provider = "prisma-client"
-  output   = "../src/generated/prisma"
+  provider     = "prisma-client"
+  output       = "../src/generated/prisma"
   moduleFormat = "cjs"
 }
 
@@ -15,29 +15,30 @@ datasource db {
 }
 
 model Ternant {
-  Id                Int      @id @default(autoincrement())
-  Name              String   
-  Username          String   @unique
-  Password          String
+  Id       Int    @id @default(autoincrement())
+  Name     String
+  Username String @unique
+  Password String
 
-  Domains           Domain[]
+  Domains Domain[]
 }
 
 model Domain {
-  Id                Int      @id @default(autoincrement())
-  Key               String   @unique
-  Url               String
-  Type              Int?
-  CreatedAt         DateTime @default(now())
+  Id        Int      @id @default(autoincrement())
+  Key       String   @unique
+  Url       String
+  Type      Int?
+  CreatedAt DateTime @default(now())
 
-  TernantID         Int
-  Ternant           Ternant  @relation(fields: [TernantID], references: [Id])
-  Rules             Rule[]
-  DomainReturns     DomainReturn[]
-  Interactions      Interaction[]
-  Items             Item[]
-  Users             User[]
-  Ratings           Rating[]
+  TernantID Int
+  Ternant   Ternant @relation(fields: [TernantID], references: [Id])
+
+  TrackingRules TrackingRule[]
+  ReturnMethods ReturnMethod[]
+  Interactions  Interaction[]
+  Items         Item[]
+  Users         User[]
+  Ratings       Rating[]
 }
 
 // model DomainReturn {
@@ -47,248 +48,365 @@ model Domain {
 //   TargetUrl         String?
 
 //   Domain            Domain       @relation(fields: [DomainID], references: [Id])
-  
+
 //   ReturnMethodID    Int
 //   ReturnMethod      ReturnMethod @relation(fields: [ReturnMethodID], references: [Id])
 
 //   @@id([DomainID, SlotName])
 // }
 
-model DomainReturn {
-  Id                Int     @id @default(autoincrement())
+enum ReturnType {
+  POPUP
+  INLINE_INJECTION
+}
 
-  DomainID          Int
-  Domain            Domain       @relation(fields: [DomainID], references: [Id])
-  ReturnMethodID    Int
-  ReturnMethod      ReturnMethod @relation(fields: [ReturnMethodID], references: [Id])
-  OperatorID        Int
-  Operator          Operator @relation(fields: [OperatorID], references: [Id])
+model ReturnMethod {
+  Id Int @id @default(autoincrement())
 
+  DomainID Int
+  Domain   Domain @relation(fields: [DomainID], references: [Id])
+
+  OperatorID Int
+  Operator   Operator @relation(fields: [OperatorID], references: [Id])
+
+  ReturnType        ReturnType
   Value             String
   ConfigurationName String
 }
 
-model ReturnMethod {
-  Id                Int     @id @default(autoincrement())
-  Name              String
+// model ReturnMethod {
+//   Id   Int    @id @default(autoincrement())
+//   Name String
 
-  DomainReturns     DomainReturn[]
+//   DomainReturns DomainReturn[]
+// }
+
+model TrackingRule {
+  Id   Int    @id @default(autoincrement())
+  Name String
+
+  DomainID Int
+  Domain   Domain @relation(fields: [DomainID], references: [Id])
+
+  // TriggerEventID Int
+  // TriggerEvent   TriggerEvent @relation(fields: [TriggerEventID], references: [Id])
+
+  EventTypeID Int
+  EventType   EventType @relation(fields: [EventTypeID], references: [Id])
+
+  TrackingTargetId Int
+  TrackingTarget   TrackingTarget @relation(fields: [TrackingTargetId], references: [Id])
+
+  Conditions      Condition[]
+  PayloadMappings PayloadMapping[]
+  Events          Event[]
 }
 
-model Rule {
-  Id                Int    @id @default(autoincrement())
-  Name              String
+// model TriggerEvent {
+//   Id   Int    @id @default(autoincrement())
+//   Name String
 
-  DomainID          Int
-  Domain            Domain @relation(fields: [DomainID], references: [Id])
+//   Rules        Rule[]
+//   Interactions Interaction[]
+// }
 
-  TriggerEventID    Int
-  TriggerEvent      TriggerEvent @relation(fields: [TriggerEventID], references: [Id])
+model EventType {
+  Id   Int    @id @default(autoincrement())
+  Name String
 
-  TargetElementID   Int
-  TargetElement     TargetElement @relation(fields: [TargetElementID], references: [Id])
-
-  Conditions        Condition[]
-  PayloadConfigs    PayloadConfig[]
+  TrackingRules TrackingRule[]
+  Interactions  Interaction[]
+  Events        Event[]
 }
 
-model TriggerEvent {
-  Id                Int    @id @default(autoincrement())
-  Name              String
+model TrackingTarget {
+  Id    Int    @id @default(autoincrement())
+  Value String
 
-  Rules             Rule[]
-  Interactions      Interaction[]
-}
+  PatternId Int
+  Pattern   Pattern @relation(fields: [PatternId], references: [Id])
 
-model TargetElement {
-  Id                Int    @id @default(autoincrement())
-  Value             String
+  OperatorId Int
+  Operator   Operator @relation(fields: [OperatorId], references: [Id])
 
-  EventPatternID    Int
-  EventPattern      EventPattern @relation(fields: [EventPatternID], references: [Id])
-
-  OperatorID        Int
-  Operator          Operator @relation(fields: [OperatorID], references: [Id])
-
-  Rules Rule[]
+  TrackingRules TrackingRule[]
 }
 
 model Condition {
-  Id                Int    @id @default(autoincrement())
-  Value             String
+  Id    Int    @id @default(autoincrement())
+  Value String
 
-  RuleID            Int
-  Rule              Rule @relation(fields: [RuleID], references: [Id])  
+  TrackingRuleID Int
+  TrackingRule   TrackingRule @relation(fields: [TrackingRuleID], references: [Id])
 
-  EventPatternID    Int
-  EventPattern      EventPattern @relation(fields: [EventPatternID], references: [Id])
+  PatternId Int
+  Pattern   Pattern @relation(fields: [PatternId], references: [Id])
 
-  OperatorID        Int
-  Operator          Operator @relation(fields: [OperatorID], references: [Id])
+  OperatorID Int
+  Operator   Operator @relation(fields: [OperatorID], references: [Id])
 }
 
-model PayloadConfig {
-  Id                Int    @id @default(autoincrement())
-  PayloadPatternID  Int
-  RuleID            Int
-  
-  Value String?
-  Type  String?
+// model PayloadConfig {
+//   Id               Int @id @default(autoincrement())
+//   PayloadPatternID Int
+//   TrackingRuleID   Int
 
-  PayloadPattern    PayloadPattern @relation(fields: [PayloadPatternID], references: [Id])
-  Rule              Rule           @relation(fields: [RuleID], references: [Id])
+//   Value String?
+//   Type  String?
 
-  OperatorID        Int
-  Operator          Operator @relation(fields: [OperatorID], references: [Id])
+//   PayloadPattern PayloadPattern @relation(fields: [PayloadPatternID], references: [Id])
+//   TrackingRule   TrackingRule   @relation(fields: [TrackingRuleID], references: [Id])
+
+//   OperatorID Int
+//   Operator   Operator @relation(fields: [OperatorID], references: [Id])
+// }
+
+// model PayloadPattern {
+//   Id   Int     @id @default(autoincrement())
+//   Name String
+//   Type String?
+
+//   PayloadConfigs PayloadConfig[]
+// }
+
+model Pattern {
+  Id   Int    @id @default(autoincrement())
+  Name String
+
+  TrackingTargets TrackingTarget[]
+  Conditions      Condition[]
 }
 
-model PayloadPattern {
-  Id                Int     @id @default(autoincrement())
-  Name              String
-  Type              String?
-
-  PayloadConfigs    PayloadConfig[]
+enum PayloadField {
+  UserId
+  Username
+  ItemId
+  ItemTitle
+  Value
 }
 
-
-model EventPattern {
-  Id                Int    @id @default(autoincrement())
-  Name              String
-
-  TargetElements    TargetElement[]
-  Conditions        Condition[]
+enum PayloadSource {
+  RequestBody
+  Element
+  Cookie
+  LocalStorage
+  SessionStorage
+  Url
 }
+
+enum PayloadRequestMethod {
+  GET
+  POST
+  PUT
+  PATCH
+}
+
+enum PayloadUrlPart {
+  QueryParam
+  PathName
+  Hash
+}
+
+model PayloadMapping {
+  Id                Int                   @id @default(autoincrement())
+  Field             PayloadField
+  Source            PayloadSource
+  Value             String?
+  RequestUrlPattern String?
+  RequestMethod     PayloadRequestMethod?
+  RequestBodyPath   String?
+  UrlPart           PayloadUrlPart?
+  UrlPartValue      String?
+
+  TrackingRuleId Int
+  TrackingRule   TrackingRule @relation(fields: [TrackingRuleId], references: [Id])
+}
+
+// model EventPattern {
+//   Id   Int    @id @default(autoincrement())
+//   Name String
+
+//   TrackingTargets TrackingTarget[]
+//   Conditions      Condition[]
+// }
 
 model Operator {
-  Id                Int    @id @default(autoincrement())
-  Name              String
+  Id   Int    @id @default(autoincrement())
+  Name String
 
-  Conditions        Condition[]
-  TargetElements    TargetElement[]
-  PayloadConfigs    PayloadConfig[]
-  DomainReturns     DomainReturn[]
+  Conditions      Condition[]
+  TrackingTargets TrackingTarget[]
+  ReturnMethods   ReturnMethod[]
+}
+
+enum EventUserField {
+  UserId
+  Username
+}
+
+enum EventItemField {
+  ItemId
+  ItemTitle
+}
+
+model Event {
+  Id Int @id @default(autoincrement())
+
+  EventTypeId Int
+  EventType   EventType @relation(fields: [EventTypeId], references: [Id])
+
+  UserField EventUserField
+  UserValue String
+
+  ItemField EventItemField
+  ItemValue String
+
+  RatingValue Int?
+  ReviewValue String?
+
+  Timestamp DateTime
+
+  TrackingRuleId Int
+  TrackingRule   TrackingRule @relation(fields: [TrackingRuleId], references: [Id])
 }
 
 model Category {
-  Id                Int     @id @default(autoincrement())
-  Name              String
+  Id   Int    @id @default(autoincrement())
+  Name String
 
-  ItemCategories    ItemCategory[]
+  ItemCategories ItemCategory[]
 }
 
 model ItemCategory {
-  CategoryId        Int
-  ItemId            Int
-  Category          Category @relation(fields: [CategoryId], references: [Id])
-  Item              Item     @relation(fields: [ItemId], references: [Id])
+  CategoryId Int
+  ItemId     Int
+  Category   Category @relation(fields: [CategoryId], references: [Id])
+  Item       Item     @relation(fields: [ItemId], references: [Id])
+
   @@id([CategoryId, ItemId])
 }
 
 model Item {
-  Id                Int     @id @default(autoincrement())
-  DomainItemId      String? @unique
-  Title             String?
-  DomainId          Int
-  Domain            Domain @relation(fields: [DomainId], references: [Id])
-  Description       String
-  EmbeddingVector   Float[]
-  ModifiedAt        DateTime
+  Id           Int     @id @default(autoincrement())
+  DomainItemId String?
+  Title        String?
 
-  ItemCategories    ItemCategory[]
-  ItemFactors       ItemFactor[]
-  Predicts          Predict[]
-  Ratings           Rating[]
-  Interactions      Interaction[]
+  DomainId Int
+  Domain   Domain @relation(fields: [DomainId], references: [Id])
+
+  Description     String
+  EmbeddingVector Float[]
+  ModifiedAt      DateTime
+
+  ItemCategories ItemCategory[]
+  ItemFactors    ItemFactor[]
+  Predicts       Predict[]
+  Ratings        Rating[]
+  interactions   Interaction[]
 }
 
 model Model {
-  Id                Int     @id @default(autoincrement())
-  Name              String
-  Description       String?
-  AverageRating     Float
-  LearnableParameters   Float[]
-  ModifiedAt        DateTime
+  Id                  Int      @id @default(autoincrement())
+  Name                String
+  Description         String?
+  AverageRating       Float
+  LearnableParameters Float[]
+  ModifiedAt          DateTime
 
-  ItemFactors       ItemFactor[]
-  UserFactors       UserFactor[]
+  ItemFactors ItemFactor[]
+  UserFactors UserFactor[]
 }
 
 model ItemFactor {
-  Id              Int     @id @default(autoincrement())
-  ItemId            Int
-  ModelId           Int
-  ItemBias          Float
-  ItemFactors       Float[]
+  Id Int @id @default(autoincrement())
 
-  Item              Item    @relation(fields: [ItemId], references: [Id])
-  Model             Model   @relation(fields: [ModelId], references: [Id])
+  ItemId Int
+  Item   Item @relation(fields: [ItemId], references: [Id])
+
+  ModelId Int
+  Model   Model @relation(fields: [ModelId], references: [Id])
+
+  ItemBias    Float
+  ItemFactors Float[]
 }
 
 model User {
-  Id                Int     @id @default(autoincrement())
-  Username          String?
-  DomainId          Int
-  Domain            Domain @relation(fields: [DomainId], references: [Id])
-  UserEmbeddingVector Float[]
-  CreatedAt         DateTime @default(now())
-  ModifiedAt        DateTime @updatedAt
+  Id           Int     @id @default(autoincrement())
+  DomainUserId String?
+  Username     String?
 
-  UserFactors       UserFactor[]
-  Predicts          Predict[]
-  Ratings           Rating[]
-  Interactions      Interaction[]
+  DomainId Int
+  Domain   Domain @relation(fields: [DomainId], references: [Id])
+
+  UserEmbeddingVector Float[]
+  CreatedAt           DateTime @default(now())
+  ModifiedAt          DateTime @updatedAt
+
+  UserFactors  UserFactor[]
+  Predicts     Predict[]
+  Ratings      Rating[]
+  Interactions Interaction[]
+
   @@unique([Username, DomainId])
 }
 
 model UserFactor {
-  Id                Int     @id @default(autoincrement())
-  UserId            Int
-  ModelId           Int
-  UserBias          Float
-  UserFactors       Float[]
+  Id Int @id @default(autoincrement())
 
-  User              User    @relation(fields: [UserId], references: [Id])
-  Model             Model   @relation(fields: [ModelId], references: [Id])
+  UserId Int
+  User   User @relation(fields: [UserId], references: [Id])
+
+  ModelId Int
+  Model   Model @relation(fields: [ModelId], references: [Id])
+
+  UserBias    Float
+  UserFactors Float[]
 }
 
 model Predict {
-  UserId            Int
-  User              User    @relation(fields: [UserId], references: [Id])
-  ItemId            Int
-  Item              Item    @relation(fields: [ItemId], references: [Id])
-  Value             Float
+  UserId Int
+  User   User  @relation(fields: [UserId], references: [Id])
+  ItemId Int
+  Item   Item  @relation(fields: [ItemId], references: [Id])
+  Value  Float
 
   @@id([UserId, ItemId])
 }
 
 model Rating {
-  Id                Int     @id @default(autoincrement())
-  Username          String?
-  User              User?    @relation(fields: [Username, DomainId], references: [Username, DomainId])
-  ItemId            Int
-  Item              Item    @relation(fields: [ItemId], references: [Id])
-  DomainId          Int
-  Domain            Domain @relation(fields: [DomainId], references: [Id])
-  Value             Float
-  ReviewText        String?
-  ConvertedScore    Float    @default(3)
-  CreatedAt         DateTime @default(now())
+  Id Int @id @default(autoincrement())
 
-  @@unique([Username, ItemId])
+  UserId Int
+  User   User? @relation(fields: [UserId], references: [Id])
+
+  ItemId Int
+  Item   Item @relation(fields: [ItemId], references: [Id])
+
+  DomainId Int
+  Domain   Domain @relation(fields: [DomainId], references: [Id])
+
+  Value          Float
+  ReviewText     String?
+  ConvertedScore Float    @default(3)
+  CreatedAt      DateTime @default(now())
+
+  @@unique([UserId, ItemId])
 }
 
 model Interaction {
-  Id                Int     @id @default(autoincrement())
-  Username          String?
-  User              User?    @relation(fields: [Username, DomainId], references: [Username, DomainId])
-  ItemId            Int
-  Item              Item    @relation(fields: [ItemId], references: [Id])
-  InteractionTypeId Int
-  InteractionType   TriggerEvent @relation(fields: [InteractionTypeId], references: [Id])
-  DomainId          Int
-  Domain            Domain  @relation(fields: [DomainId], references: [Id])
-  CreatedAt         DateTime @default(now())
+  Id Int @id @default(autoincrement())
 
-  @@index([Username, DomainId])
-  @@index([ItemId])
+  UserId Int
+  User   User? @relation(fields: [UserId], references: [Id])
+
+  ItemId Int
+  Item   Item @relation(fields: [ItemId], references: [Id])
+
+  InteractionTypeId Int
+  InteractionType   EventType @relation(fields: [InteractionTypeId], references: [Id])
+
+  DomainId Int
+  Domain   Domain @relation(fields: [DomainId], references: [Id])
+
+  CreatedAt DateTime @default(now())
 }

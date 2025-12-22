@@ -127,17 +127,9 @@ export class ConfigLoader {
     return rulesData.map(rule => ({
       id: rule.Id?.toString() || rule.id?.toString(),
       name: rule.Name || rule.name,
-      // domainId: rule.DomainID || rule.domainId,
-      triggerEventId: rule.TriggerEventID || rule.triggerEventId,
-      // targetElementId: rule.TargetElementID || rule.targetElementId,
-      // targetElement: {
-      //   targetEventPatternId?: number,
-      //   targetOperatorId?: number,
-      //   targetElementValue?: string
-      // };
+      eventTypeId: rule.EventTypeID || rule.eventTypeId,
       targetElement: {
-        targetEventPatternId: rule.TargetElement?.EventPatternID || rule.targetEventPatternId,
-        targetOperatorId: rule.TargetElement?.OperatorID || rule.targetOperatorId,
+        targetElementOperatorId: rule.TargetElement?.OperatorID || rule.targetElementOperatorId,
         targetElementValue: rule.TargetElement?.Value || rule.targetElementValue,
       },
       conditions: this.transformConditions(rule.Conditions || rule.conditions || []),
@@ -176,8 +168,9 @@ export class ConfigLoader {
     if (!returnMethodsData || !Array.isArray(returnMethodsData)) return [];
     
     return returnMethodsData.map(method => ({
-      slotName: method.SlotName || method.slotName,
+      configurationName: method.ConfigurationName || method.configurationName,
       returnMethodId: method.ReturnMethodID || method.returnMethodId,
+      operatorId: method.OperatorID || method.operatorId,
       value: method.Value || method.value || '',
     }));
   }

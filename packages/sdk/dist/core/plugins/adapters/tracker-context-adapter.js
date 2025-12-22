@@ -3,19 +3,19 @@ import { getAIItemDetector } from '../utils/ai-item-detector';
 export class TrackerContextAdapter {
     constructor(tracker) {
         this.config = {
-            getRules: (triggerEventId) => {
+            getRules: (eventTypeId) => {
                 const config = this.tracker.getConfig();
                 if (!(config === null || config === void 0 ? void 0 : config.trackingRules))
                     return [];
                 return config.trackingRules
-                    .filter(rule => rule.triggerEventId === triggerEventId);
+                    .filter(rule => rule.eventTypeId === eventTypeId);
             },
         };
         this.payloadBuilder = {
             build: (element, rule, extraData = {}) => {
                 const userIdentityManager = getUserIdentityManager();
                 const payload = {
-                    event: rule.triggerEventId === 1 ? "item_click" : "page_view",
+                    event: rule.eventTypeId === 1 ? "item_click" : "page_view",
                     url: window.location.href,
                     timestamp: Date.now(),
                     ruleName: rule.name,
@@ -59,7 +59,7 @@ export class TrackerContextAdapter {
                 }
                 if (extractor.source === 'ai_detect') {
                     const detector = getAIItemDetector();
-                    if (rule.triggerEventId === 3 && element && element.id) {
+                    if (rule.eventTypeId === 3 && element && element.id) {
                         detectionResult = element;
                     }
                     else if (detector && element instanceof Element) {

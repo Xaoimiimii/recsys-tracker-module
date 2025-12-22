@@ -114,22 +114,14 @@ export class ConfigLoader {
         if (!Array.isArray(rulesData))
             return [];
         return rulesData.map(rule => {
-            var _a, _b, _c, _d, _e;
+            var _a, _b, _c, _d;
             return ({
                 id: ((_a = rule.Id) === null || _a === void 0 ? void 0 : _a.toString()) || ((_b = rule.id) === null || _b === void 0 ? void 0 : _b.toString()),
                 name: rule.Name || rule.name,
-                // domainId: rule.DomainID || rule.domainId,
-                triggerEventId: rule.TriggerEventID || rule.triggerEventId,
-                // targetElementId: rule.TargetElementID || rule.targetElementId,
-                // targetElement: {
-                //   targetEventPatternId?: number,
-                //   targetOperatorId?: number,
-                //   targetElementValue?: string
-                // };
+                eventTypeId: rule.EventTypeID || rule.eventTypeId,
                 targetElement: {
-                    targetEventPatternId: ((_c = rule.TargetElement) === null || _c === void 0 ? void 0 : _c.EventPatternID) || rule.targetEventPatternId,
-                    targetOperatorId: ((_d = rule.TargetElement) === null || _d === void 0 ? void 0 : _d.OperatorID) || rule.targetOperatorId,
-                    targetElementValue: ((_e = rule.TargetElement) === null || _e === void 0 ? void 0 : _e.Value) || rule.targetElementValue,
+                    targetElementOperatorId: ((_c = rule.TargetElement) === null || _c === void 0 ? void 0 : _c.OperatorID) || rule.targetElementOperatorId,
+                    targetElementValue: ((_d = rule.TargetElement) === null || _d === void 0 ? void 0 : _d.Value) || rule.targetElementValue,
                 },
                 conditions: this.transformConditions(rule.Conditions || rule.conditions || []),
                 payload: this.transformPayloadConfigs(rule.PayloadConfigs || rule.payload || []),
@@ -165,8 +157,9 @@ export class ConfigLoader {
         if (!returnMethodsData || !Array.isArray(returnMethodsData))
             return [];
         return returnMethodsData.map(method => ({
-            slotName: method.SlotName || method.slotName,
+            configurationName: method.ConfigurationName || method.configurationName,
             returnMethodId: method.ReturnMethodID || method.returnMethodId,
+            operatorId: method.OperatorID || method.operatorId,
             value: method.Value || method.value || '',
         }));
     }

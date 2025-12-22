@@ -12,12 +12,12 @@ export class TrackerContextAdapter implements IRecsysContext {
     }
 
     public config = {
-        getRules: (triggerEventId: number): TrackingRule[] => {
+        getRules: (eventTypeId: number): TrackingRule[] => {
             const config = this.tracker.getConfig();
             if (!config?.trackingRules) return [];
             
             return config.trackingRules
-                .filter(rule => rule.triggerEventId === triggerEventId);
+                .filter(rule => rule.eventTypeId === eventTypeId);
         },
     };
 
@@ -26,7 +26,7 @@ export class TrackerContextAdapter implements IRecsysContext {
             const userIdentityManager = getUserIdentityManager();
             
             const payload: IRecsysPayload = {
-                event: rule.triggerEventId === 1 ? "item_click" : "page_view",
+                event: rule.eventTypeId === 1 ? "item_click" : "page_view",
                 url: window.location.href,
                 timestamp: Date.now(),
                 ruleName: rule.name,
@@ -78,7 +78,7 @@ export class TrackerContextAdapter implements IRecsysContext {
             if (extractor.source === 'ai_detect') {
                 const detector = getAIItemDetector();
                 
-                if (rule.triggerEventId === 3 && element && (element as IAIItemDetectionResult).id) {
+                if (rule.eventTypeId === 3 && element && (element as IAIItemDetectionResult).id) {
                     detectionResult = element as IAIItemDetectionResult;
                 } else if (detector && element instanceof Element) {
                     detectionResult = detector.detectItem(element); 

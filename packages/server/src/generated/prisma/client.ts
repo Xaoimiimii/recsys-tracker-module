@@ -48,55 +48,50 @@ export type Ternant = Prisma.TernantModel
  */
 export type Domain = Prisma.DomainModel
 /**
- * Model DomainReturn
- * 
- */
-export type DomainReturn = Prisma.DomainReturnModel
-/**
  * Model ReturnMethod
  * 
  */
 export type ReturnMethod = Prisma.ReturnMethodModel
 /**
- * Model Rule
+ * Model TrackingRule
  * 
  */
-export type Rule = Prisma.RuleModel
+export type TrackingRule = Prisma.TrackingRuleModel
 /**
- * Model TriggerEvent
+ * Model EventType
  * 
  */
-export type TriggerEvent = Prisma.TriggerEventModel
+export type EventType = Prisma.EventTypeModel
 /**
- * Model TargetElement
+ * Model TrackingTarget
  * 
  */
-export type TargetElement = Prisma.TargetElementModel
+export type TrackingTarget = Prisma.TrackingTargetModel
 /**
  * Model Condition
  * 
  */
 export type Condition = Prisma.ConditionModel
 /**
- * Model PayloadConfig
+ * Model Pattern
  * 
  */
-export type PayloadConfig = Prisma.PayloadConfigModel
+export type Pattern = Prisma.PatternModel
 /**
- * Model PayloadPattern
+ * Model PayloadMapping
  * 
  */
-export type PayloadPattern = Prisma.PayloadPatternModel
-/**
- * Model EventPattern
- * 
- */
-export type EventPattern = Prisma.EventPatternModel
+export type PayloadMapping = Prisma.PayloadMappingModel
 /**
  * Model Operator
  * 
  */
 export type Operator = Prisma.OperatorModel
+/**
+ * Model Event
+ * 
+ */
+export type Event = Prisma.EventModel
 /**
  * Model Category
  * 

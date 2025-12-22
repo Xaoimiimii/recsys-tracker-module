@@ -28,6 +28,7 @@ export type AggregateInteraction = {
 
 export type InteractionAvgAggregateOutputType = {
   Id: number | null
+  UserId: number | null
   ItemId: number | null
   InteractionTypeId: number | null
   DomainId: number | null
@@ -35,6 +36,7 @@ export type InteractionAvgAggregateOutputType = {
 
 export type InteractionSumAggregateOutputType = {
   Id: number | null
+  UserId: number | null
   ItemId: number | null
   InteractionTypeId: number | null
   DomainId: number | null
@@ -42,7 +44,7 @@ export type InteractionSumAggregateOutputType = {
 
 export type InteractionMinAggregateOutputType = {
   Id: number | null
-  Username: string | null
+  UserId: number | null
   ItemId: number | null
   InteractionTypeId: number | null
   DomainId: number | null
@@ -51,7 +53,7 @@ export type InteractionMinAggregateOutputType = {
 
 export type InteractionMaxAggregateOutputType = {
   Id: number | null
-  Username: string | null
+  UserId: number | null
   ItemId: number | null
   InteractionTypeId: number | null
   DomainId: number | null
@@ -60,7 +62,7 @@ export type InteractionMaxAggregateOutputType = {
 
 export type InteractionCountAggregateOutputType = {
   Id: number
-  Username: number
+  UserId: number
   ItemId: number
   InteractionTypeId: number
   DomainId: number
@@ -71,6 +73,7 @@ export type InteractionCountAggregateOutputType = {
 
 export type InteractionAvgAggregateInputType = {
   Id?: true
+  UserId?: true
   ItemId?: true
   InteractionTypeId?: true
   DomainId?: true
@@ -78,6 +81,7 @@ export type InteractionAvgAggregateInputType = {
 
 export type InteractionSumAggregateInputType = {
   Id?: true
+  UserId?: true
   ItemId?: true
   InteractionTypeId?: true
   DomainId?: true
@@ -85,7 +89,7 @@ export type InteractionSumAggregateInputType = {
 
 export type InteractionMinAggregateInputType = {
   Id?: true
-  Username?: true
+  UserId?: true
   ItemId?: true
   InteractionTypeId?: true
   DomainId?: true
@@ -94,7 +98,7 @@ export type InteractionMinAggregateInputType = {
 
 export type InteractionMaxAggregateInputType = {
   Id?: true
-  Username?: true
+  UserId?: true
   ItemId?: true
   InteractionTypeId?: true
   DomainId?: true
@@ -103,7 +107,7 @@ export type InteractionMaxAggregateInputType = {
 
 export type InteractionCountAggregateInputType = {
   Id?: true
-  Username?: true
+  UserId?: true
   ItemId?: true
   InteractionTypeId?: true
   DomainId?: true
@@ -199,7 +203,7 @@ export type InteractionGroupByArgs<ExtArgs extends runtime.Types.Extensions.Inte
 
 export type InteractionGroupByOutputType = {
   Id: number
-  Username: string | null
+  UserId: number
   ItemId: number
   InteractionTypeId: number
   DomainId: number
@@ -231,27 +235,27 @@ export type InteractionWhereInput = {
   OR?: Prisma.InteractionWhereInput[]
   NOT?: Prisma.InteractionWhereInput | Prisma.InteractionWhereInput[]
   Id?: Prisma.IntFilter<"Interaction"> | number
-  Username?: Prisma.StringNullableFilter<"Interaction"> | string | null
+  UserId?: Prisma.IntFilter<"Interaction"> | number
   ItemId?: Prisma.IntFilter<"Interaction"> | number
   InteractionTypeId?: Prisma.IntFilter<"Interaction"> | number
   DomainId?: Prisma.IntFilter<"Interaction"> | number
   CreatedAt?: Prisma.DateTimeFilter<"Interaction"> | Date | string
   User?: Prisma.XOR<Prisma.UserNullableScalarRelationFilter, Prisma.UserWhereInput> | null
   Item?: Prisma.XOR<Prisma.ItemScalarRelationFilter, Prisma.ItemWhereInput>
-  InteractionType?: Prisma.XOR<Prisma.TriggerEventScalarRelationFilter, Prisma.TriggerEventWhereInput>
+  InteractionType?: Prisma.XOR<Prisma.EventTypeScalarRelationFilter, Prisma.EventTypeWhereInput>
   Domain?: Prisma.XOR<Prisma.DomainScalarRelationFilter, Prisma.DomainWhereInput>
 }
 
 export type InteractionOrderByWithRelationInput = {
   Id?: Prisma.SortOrder
-  Username?: Prisma.SortOrderInput | Prisma.SortOrder
+  UserId?: Prisma.SortOrder
   ItemId?: Prisma.SortOrder
   InteractionTypeId?: Prisma.SortOrder
   DomainId?: Prisma.SortOrder
   CreatedAt?: Prisma.SortOrder
   User?: Prisma.UserOrderByWithRelationInput
   Item?: Prisma.ItemOrderByWithRelationInput
-  InteractionType?: Prisma.TriggerEventOrderByWithRelationInput
+  InteractionType?: Prisma.EventTypeOrderByWithRelationInput
   Domain?: Prisma.DomainOrderByWithRelationInput
 }
 
@@ -260,20 +264,20 @@ export type InteractionWhereUniqueInput = Prisma.AtLeast<{
   AND?: Prisma.InteractionWhereInput | Prisma.InteractionWhereInput[]
   OR?: Prisma.InteractionWhereInput[]
   NOT?: Prisma.InteractionWhereInput | Prisma.InteractionWhereInput[]
-  Username?: Prisma.StringNullableFilter<"Interaction"> | string | null
+  UserId?: Prisma.IntFilter<"Interaction"> | number
   ItemId?: Prisma.IntFilter<"Interaction"> | number
   InteractionTypeId?: Prisma.IntFilter<"Interaction"> | number
   DomainId?: Prisma.IntFilter<"Interaction"> | number
   CreatedAt?: Prisma.DateTimeFilter<"Interaction"> | Date | string
   User?: Prisma.XOR<Prisma.UserNullableScalarRelationFilter, Prisma.UserWhereInput> | null
   Item?: Prisma.XOR<Prisma.ItemScalarRelationFilter, Prisma.ItemWhereInput>
-  InteractionType?: Prisma.XOR<Prisma.TriggerEventScalarRelationFilter, Prisma.TriggerEventWhereInput>
+  InteractionType?: Prisma.XOR<Prisma.EventTypeScalarRelationFilter, Prisma.EventTypeWhereInput>
   Domain?: Prisma.XOR<Prisma.DomainScalarRelationFilter, Prisma.DomainWhereInput>
 }, "Id">
 
 export type InteractionOrderByWithAggregationInput = {
   Id?: Prisma.SortOrder
-  Username?: Prisma.SortOrderInput | Prisma.SortOrder
+  UserId?: Prisma.SortOrder
   ItemId?: Prisma.SortOrder
   InteractionTypeId?: Prisma.SortOrder
   DomainId?: Prisma.SortOrder
@@ -290,7 +294,7 @@ export type InteractionScalarWhereWithAggregatesInput = {
   OR?: Prisma.InteractionScalarWhereWithAggregatesInput[]
   NOT?: Prisma.InteractionScalarWhereWithAggregatesInput | Prisma.InteractionScalarWhereWithAggregatesInput[]
   Id?: Prisma.IntWithAggregatesFilter<"Interaction"> | number
-  Username?: Prisma.StringNullableWithAggregatesFilter<"Interaction"> | string | null
+  UserId?: Prisma.IntWithAggregatesFilter<"Interaction"> | number
   ItemId?: Prisma.IntWithAggregatesFilter<"Interaction"> | number
   InteractionTypeId?: Prisma.IntWithAggregatesFilter<"Interaction"> | number
   DomainId?: Prisma.IntWithAggregatesFilter<"Interaction"> | number
@@ -301,13 +305,13 @@ export type InteractionCreateInput = {
   CreatedAt?: Date | string
   User?: Prisma.UserCreateNestedOneWithoutInteractionsInput
   Item: Prisma.ItemCreateNestedOneWithoutInteractionsInput
-  InteractionType: Prisma.TriggerEventCreateNestedOneWithoutInteractionsInput
+  InteractionType: Prisma.EventTypeCreateNestedOneWithoutInteractionsInput
   Domain: Prisma.DomainCreateNestedOneWithoutInteractionsInput
 }
 
 export type InteractionUncheckedCreateInput = {
   Id?: number
-  Username?: string | null
+  UserId: number
   ItemId: number
   InteractionTypeId: number
   DomainId: number
@@ -318,13 +322,13 @@ export type InteractionUpdateInput = {
   CreatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   User?: Prisma.UserUpdateOneWithoutInteractionsNestedInput
   Item?: Prisma.ItemUpdateOneRequiredWithoutInteractionsNestedInput
-  InteractionType?: Prisma.TriggerEventUpdateOneRequiredWithoutInteractionsNestedInput
+  InteractionType?: Prisma.EventTypeUpdateOneRequiredWithoutInteractionsNestedInput
   Domain?: Prisma.DomainUpdateOneRequiredWithoutInteractionsNestedInput
 }
 
 export type InteractionUncheckedUpdateInput = {
   Id?: Prisma.IntFieldUpdateOperationsInput | number
-  Username?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  UserId?: Prisma.IntFieldUpdateOperationsInput | number
   ItemId?: Prisma.IntFieldUpdateOperationsInput | number
   InteractionTypeId?: Prisma.IntFieldUpdateOperationsInput | number
   DomainId?: Prisma.IntFieldUpdateOperationsInput | number
@@ -333,7 +337,7 @@ export type InteractionUncheckedUpdateInput = {
 
 export type InteractionCreateManyInput = {
   Id?: number
-  Username?: string | null
+  UserId: number
   ItemId: number
   InteractionTypeId: number
   DomainId: number
@@ -346,7 +350,7 @@ export type InteractionUpdateManyMutationInput = {
 
 export type InteractionUncheckedUpdateManyInput = {
   Id?: Prisma.IntFieldUpdateOperationsInput | number
-  Username?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  UserId?: Prisma.IntFieldUpdateOperationsInput | number
   ItemId?: Prisma.IntFieldUpdateOperationsInput | number
   InteractionTypeId?: Prisma.IntFieldUpdateOperationsInput | number
   DomainId?: Prisma.IntFieldUpdateOperationsInput | number
@@ -365,7 +369,7 @@ export type InteractionOrderByRelationAggregateInput = {
 
 export type InteractionCountOrderByAggregateInput = {
   Id?: Prisma.SortOrder
-  Username?: Prisma.SortOrder
+  UserId?: Prisma.SortOrder
   ItemId?: Prisma.SortOrder
   InteractionTypeId?: Prisma.SortOrder
   DomainId?: Prisma.SortOrder
@@ -374,6 +378,7 @@ export type InteractionCountOrderByAggregateInput = {
 
 export type InteractionAvgOrderByAggregateInput = {
   Id?: Prisma.SortOrder
+  UserId?: Prisma.SortOrder
   ItemId?: Prisma.SortOrder
   InteractionTypeId?: Prisma.SortOrder
   DomainId?: Prisma.SortOrder
@@ -381,7 +386,7 @@ export type InteractionAvgOrderByAggregateInput = {
 
 export type InteractionMaxOrderByAggregateInput = {
   Id?: Prisma.SortOrder
-  Username?: Prisma.SortOrder
+  UserId?: Prisma.SortOrder
   ItemId?: Prisma.SortOrder
   InteractionTypeId?: Prisma.SortOrder
   DomainId?: Prisma.SortOrder
@@ -390,7 +395,7 @@ export type InteractionMaxOrderByAggregateInput = {
 
 export type InteractionMinOrderByAggregateInput = {
   Id?: Prisma.SortOrder
-  Username?: Prisma.SortOrder
+  UserId?: Prisma.SortOrder
   ItemId?: Prisma.SortOrder
   InteractionTypeId?: Prisma.SortOrder
   DomainId?: Prisma.SortOrder
@@ -399,6 +404,7 @@ export type InteractionMinOrderByAggregateInput = {
 
 export type InteractionSumOrderByAggregateInput = {
   Id?: Prisma.SortOrder
+  UserId?: Prisma.SortOrder
   ItemId?: Prisma.SortOrder
   InteractionTypeId?: Prisma.SortOrder
   DomainId?: Prisma.SortOrder
@@ -576,12 +582,12 @@ export type InteractionCreateWithoutDomainInput = {
   CreatedAt?: Date | string
   User?: Prisma.UserCreateNestedOneWithoutInteractionsInput
   Item: Prisma.ItemCreateNestedOneWithoutInteractionsInput
-  InteractionType: Prisma.TriggerEventCreateNestedOneWithoutInteractionsInput
+  InteractionType: Prisma.EventTypeCreateNestedOneWithoutInteractionsInput
 }
 
 export type InteractionUncheckedCreateWithoutDomainInput = {
   Id?: number
-  Username?: string | null
+  UserId: number
   ItemId: number
   InteractionTypeId: number
   CreatedAt?: Date | string
@@ -618,7 +624,7 @@ export type InteractionScalarWhereInput = {
   OR?: Prisma.InteractionScalarWhereInput[]
   NOT?: Prisma.InteractionScalarWhereInput | Prisma.InteractionScalarWhereInput[]
   Id?: Prisma.IntFilter<"Interaction"> | number
-  Username?: Prisma.StringNullableFilter<"Interaction"> | string | null
+  UserId?: Prisma.IntFilter<"Interaction"> | number
   ItemId?: Prisma.IntFilter<"Interaction"> | number
   InteractionTypeId?: Prisma.IntFilter<"Interaction"> | number
   DomainId?: Prisma.IntFilter<"Interaction"> | number
@@ -634,7 +640,7 @@ export type InteractionCreateWithoutInteractionTypeInput = {
 
 export type InteractionUncheckedCreateWithoutInteractionTypeInput = {
   Id?: number
-  Username?: string | null
+  UserId: number
   ItemId: number
   DomainId: number
   CreatedAt?: Date | string
@@ -669,13 +675,13 @@ export type InteractionUpdateManyWithWhereWithoutInteractionTypeInput = {
 export type InteractionCreateWithoutItemInput = {
   CreatedAt?: Date | string
   User?: Prisma.UserCreateNestedOneWithoutInteractionsInput
-  InteractionType: Prisma.TriggerEventCreateNestedOneWithoutInteractionsInput
+  InteractionType: Prisma.EventTypeCreateNestedOneWithoutInteractionsInput
   Domain: Prisma.DomainCreateNestedOneWithoutInteractionsInput
 }
 
 export type InteractionUncheckedCreateWithoutItemInput = {
   Id?: number
-  Username?: string | null
+  UserId: number
   InteractionTypeId: number
   DomainId: number
   CreatedAt?: Date | string
@@ -710,7 +716,7 @@ export type InteractionUpdateManyWithWhereWithoutItemInput = {
 export type InteractionCreateWithoutUserInput = {
   CreatedAt?: Date | string
   Item: Prisma.ItemCreateNestedOneWithoutInteractionsInput
-  InteractionType: Prisma.TriggerEventCreateNestedOneWithoutInteractionsInput
+  InteractionType: Prisma.EventTypeCreateNestedOneWithoutInteractionsInput
   Domain: Prisma.DomainCreateNestedOneWithoutInteractionsInput
 }
 
@@ -718,6 +724,7 @@ export type InteractionUncheckedCreateWithoutUserInput = {
   Id?: number
   ItemId: number
   InteractionTypeId: number
+  DomainId: number
   CreatedAt?: Date | string
 }
 
@@ -749,7 +756,7 @@ export type InteractionUpdateManyWithWhereWithoutUserInput = {
 
 export type InteractionCreateManyDomainInput = {
   Id?: number
-  Username?: string | null
+  UserId: number
   ItemId: number
   InteractionTypeId: number
   CreatedAt?: Date | string
@@ -759,12 +766,12 @@ export type InteractionUpdateWithoutDomainInput = {
   CreatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   User?: Prisma.UserUpdateOneWithoutInteractionsNestedInput
   Item?: Prisma.ItemUpdateOneRequiredWithoutInteractionsNestedInput
-  InteractionType?: Prisma.TriggerEventUpdateOneRequiredWithoutInteractionsNestedInput
+  InteractionType?: Prisma.EventTypeUpdateOneRequiredWithoutInteractionsNestedInput
 }
 
 export type InteractionUncheckedUpdateWithoutDomainInput = {
   Id?: Prisma.IntFieldUpdateOperationsInput | number
-  Username?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  UserId?: Prisma.IntFieldUpdateOperationsInput | number
   ItemId?: Prisma.IntFieldUpdateOperationsInput | number
   InteractionTypeId?: Prisma.IntFieldUpdateOperationsInput | number
   CreatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -772,7 +779,7 @@ export type InteractionUncheckedUpdateWithoutDomainInput = {
 
 export type InteractionUncheckedUpdateManyWithoutDomainInput = {
   Id?: Prisma.IntFieldUpdateOperationsInput | number
-  Username?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  UserId?: Prisma.IntFieldUpdateOperationsInput | number
   ItemId?: Prisma.IntFieldUpdateOperationsInput | number
   InteractionTypeId?: Prisma.IntFieldUpdateOperationsInput | number
   CreatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -780,7 +787,7 @@ export type InteractionUncheckedUpdateManyWithoutDomainInput = {
 
 export type InteractionCreateManyInteractionTypeInput = {
   Id?: number
-  Username?: string | null
+  UserId: number
   ItemId: number
   DomainId: number
   CreatedAt?: Date | string
@@ -795,7 +802,7 @@ export type InteractionUpdateWithoutInteractionTypeInput = {
 
 export type InteractionUncheckedUpdateWithoutInteractionTypeInput = {
   Id?: Prisma.IntFieldUpdateOperationsInput | number
-  Username?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  UserId?: Prisma.IntFieldUpdateOperationsInput | number
   ItemId?: Prisma.IntFieldUpdateOperationsInput | number
   DomainId?: Prisma.IntFieldUpdateOperationsInput | number
   CreatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -803,7 +810,7 @@ export type InteractionUncheckedUpdateWithoutInteractionTypeInput = {
 
 export type InteractionUncheckedUpdateManyWithoutInteractionTypeInput = {
   Id?: Prisma.IntFieldUpdateOperationsInput | number
-  Username?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  UserId?: Prisma.IntFieldUpdateOperationsInput | number
   ItemId?: Prisma.IntFieldUpdateOperationsInput | number
   DomainId?: Prisma.IntFieldUpdateOperationsInput | number
   CreatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -811,7 +818,7 @@ export type InteractionUncheckedUpdateManyWithoutInteractionTypeInput = {
 
 export type InteractionCreateManyItemInput = {
   Id?: number
-  Username?: string | null
+  UserId: number
   InteractionTypeId: number
   DomainId: number
   CreatedAt?: Date | string
@@ -820,13 +827,13 @@ export type InteractionCreateManyItemInput = {
 export type InteractionUpdateWithoutItemInput = {
   CreatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   User?: Prisma.UserUpdateOneWithoutInteractionsNestedInput
-  InteractionType?: Prisma.TriggerEventUpdateOneRequiredWithoutInteractionsNestedInput
+  InteractionType?: Prisma.EventTypeUpdateOneRequiredWithoutInteractionsNestedInput
   Domain?: Prisma.DomainUpdateOneRequiredWithoutInteractionsNestedInput
 }
 
 export type InteractionUncheckedUpdateWithoutItemInput = {
   Id?: Prisma.IntFieldUpdateOperationsInput | number
-  Username?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  UserId?: Prisma.IntFieldUpdateOperationsInput | number
   InteractionTypeId?: Prisma.IntFieldUpdateOperationsInput | number
   DomainId?: Prisma.IntFieldUpdateOperationsInput | number
   CreatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -834,7 +841,7 @@ export type InteractionUncheckedUpdateWithoutItemInput = {
 
 export type InteractionUncheckedUpdateManyWithoutItemInput = {
   Id?: Prisma.IntFieldUpdateOperationsInput | number
-  Username?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  UserId?: Prisma.IntFieldUpdateOperationsInput | number
   InteractionTypeId?: Prisma.IntFieldUpdateOperationsInput | number
   DomainId?: Prisma.IntFieldUpdateOperationsInput | number
   CreatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -844,13 +851,14 @@ export type InteractionCreateManyUserInput = {
   Id?: number
   ItemId: number
   InteractionTypeId: number
+  DomainId: number
   CreatedAt?: Date | string
 }
 
 export type InteractionUpdateWithoutUserInput = {
   CreatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   Item?: Prisma.ItemUpdateOneRequiredWithoutInteractionsNestedInput
-  InteractionType?: Prisma.TriggerEventUpdateOneRequiredWithoutInteractionsNestedInput
+  InteractionType?: Prisma.EventTypeUpdateOneRequiredWithoutInteractionsNestedInput
   Domain?: Prisma.DomainUpdateOneRequiredWithoutInteractionsNestedInput
 }
 
@@ -858,6 +866,7 @@ export type InteractionUncheckedUpdateWithoutUserInput = {
   Id?: Prisma.IntFieldUpdateOperationsInput | number
   ItemId?: Prisma.IntFieldUpdateOperationsInput | number
   InteractionTypeId?: Prisma.IntFieldUpdateOperationsInput | number
+  DomainId?: Prisma.IntFieldUpdateOperationsInput | number
   CreatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
 }
 
@@ -865,6 +874,7 @@ export type InteractionUncheckedUpdateManyWithoutUserInput = {
   Id?: Prisma.IntFieldUpdateOperationsInput | number
   ItemId?: Prisma.IntFieldUpdateOperationsInput | number
   InteractionTypeId?: Prisma.IntFieldUpdateOperationsInput | number
+  DomainId?: Prisma.IntFieldUpdateOperationsInput | number
   CreatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
 }
 
@@ -872,69 +882,69 @@ export type InteractionUncheckedUpdateManyWithoutUserInput = {
 
 export type InteractionSelect<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetSelect<{
   Id?: boolean
-  Username?: boolean
+  UserId?: boolean
   ItemId?: boolean
   InteractionTypeId?: boolean
   DomainId?: boolean
   CreatedAt?: boolean
   User?: boolean | Prisma.Interaction$UserArgs<ExtArgs>
   Item?: boolean | Prisma.ItemDefaultArgs<ExtArgs>
-  InteractionType?: boolean | Prisma.TriggerEventDefaultArgs<ExtArgs>
+  InteractionType?: boolean | Prisma.EventTypeDefaultArgs<ExtArgs>
   Domain?: boolean | Prisma.DomainDefaultArgs<ExtArgs>
 }, ExtArgs["result"]["interaction"]>
 
 export type InteractionSelectCreateManyAndReturn<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetSelect<{
   Id?: boolean
-  Username?: boolean
+  UserId?: boolean
   ItemId?: boolean
   InteractionTypeId?: boolean
   DomainId?: boolean
   CreatedAt?: boolean
   User?: boolean | Prisma.Interaction$UserArgs<ExtArgs>
   Item?: boolean | Prisma.ItemDefaultArgs<ExtArgs>
-  InteractionType?: boolean | Prisma.TriggerEventDefaultArgs<ExtArgs>
+  InteractionType?: boolean | Prisma.EventTypeDefaultArgs<ExtArgs>
   Domain?: boolean | Prisma.DomainDefaultArgs<ExtArgs>
 }, ExtArgs["result"]["interaction"]>
 
 export type InteractionSelectUpdateManyAndReturn<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetSelect<{
   Id?: boolean
-  Username?: boolean
+  UserId?: boolean
   ItemId?: boolean
   InteractionTypeId?: boolean
   DomainId?: boolean
   CreatedAt?: boolean
   User?: boolean | Prisma.Interaction$UserArgs<ExtArgs>
   Item?: boolean | Prisma.ItemDefaultArgs<ExtArgs>
-  InteractionType?: boolean | Prisma.TriggerEventDefaultArgs<ExtArgs>
+  InteractionType?: boolean | Prisma.EventTypeDefaultArgs<ExtArgs>
   Domain?: boolean | Prisma.DomainDefaultArgs<ExtArgs>
 }, ExtArgs["result"]["interaction"]>
 
 export type InteractionSelectScalar = {
   Id?: boolean
-  Username?: boolean
+  UserId?: boolean
   ItemId?: boolean
   InteractionTypeId?: boolean
   DomainId?: boolean
   CreatedAt?: boolean
 }
 
-export type InteractionOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"Id" | "Username" | "ItemId" | "InteractionTypeId" | "DomainId" | "CreatedAt", ExtArgs["result"]["interaction"]>
+export type InteractionOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"Id" | "UserId" | "ItemId" | "InteractionTypeId" | "DomainId" | "CreatedAt", ExtArgs["result"]["interaction"]>
 export type InteractionInclude<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   User?: boolean | Prisma.Interaction$UserArgs<ExtArgs>
   Item?: boolean | Prisma.ItemDefaultArgs<ExtArgs>
-  InteractionType?: boolean | Prisma.TriggerEventDefaultArgs<ExtArgs>
+  InteractionType?: boolean | Prisma.EventTypeDefaultArgs<ExtArgs>
   Domain?: boolean | Prisma.DomainDefaultArgs<ExtArgs>
 }
 export type InteractionIncludeCreateManyAndReturn<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   User?: boolean | Prisma.Interaction$UserArgs<ExtArgs>
   Item?: boolean | Prisma.ItemDefaultArgs<ExtArgs>
-  InteractionType?: boolean | Prisma.TriggerEventDefaultArgs<ExtArgs>
+  InteractionType?: boolean | Prisma.EventTypeDefaultArgs<ExtArgs>
   Domain?: boolean | Prisma.DomainDefaultArgs<ExtArgs>
 }
 export type InteractionIncludeUpdateManyAndReturn<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   User?: boolean | Prisma.Interaction$UserArgs<ExtArgs>
   Item?: boolean | Prisma.ItemDefaultArgs<ExtArgs>
-  InteractionType?: boolean | Prisma.TriggerEventDefaultArgs<ExtArgs>
+  InteractionType?: boolean | Prisma.EventTypeDefaultArgs<ExtArgs>
   Domain?: boolean | Prisma.DomainDefaultArgs<ExtArgs>
 }
 
@@ -943,12 +953,12 @@ export type $InteractionPayload<ExtArgs extends runtime.Types.Extensions.Interna
   objects: {
     User: Prisma.$UserPayload<ExtArgs> | null
     Item: Prisma.$ItemPayload<ExtArgs>
-    InteractionType: Prisma.$TriggerEventPayload<ExtArgs>
+    InteractionType: Prisma.$EventTypePayload<ExtArgs>
     Domain: Prisma.$DomainPayload<ExtArgs>
   }
   scalars: runtime.Types.Extensions.GetPayloadResult<{
     Id: number
-    Username: string | null
+    UserId: number
     ItemId: number
     InteractionTypeId: number
     DomainId: number
@@ -1349,7 +1359,7 @@ export interface Prisma__InteractionClient<T, Null = never, ExtArgs extends runt
   readonly [Symbol.toStringTag]: "PrismaPromise"
   User<T extends Prisma.Interaction$UserArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.Interaction$UserArgs<ExtArgs>>): Prisma.Prisma__UserClient<runtime.Types.Result.GetResult<Prisma.$UserPayload<ExtArgs>, T, "findUniqueOrThrow", GlobalOmitOptions> | null, null, ExtArgs, GlobalOmitOptions>
   Item<T extends Prisma.ItemDefaultArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.ItemDefaultArgs<ExtArgs>>): Prisma.Prisma__ItemClient<runtime.Types.Result.GetResult<Prisma.$ItemPayload<ExtArgs>, T, "findUniqueOrThrow", GlobalOmitOptions> | Null, Null, ExtArgs, GlobalOmitOptions>
-  InteractionType<T extends Prisma.TriggerEventDefaultArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.TriggerEventDefaultArgs<ExtArgs>>): Prisma.Prisma__TriggerEventClient<runtime.Types.Result.GetResult<Prisma.$TriggerEventPayload<ExtArgs>, T, "findUniqueOrThrow", GlobalOmitOptions> | Null, Null, ExtArgs, GlobalOmitOptions>
+  InteractionType<T extends Prisma.EventTypeDefaultArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.EventTypeDefaultArgs<ExtArgs>>): Prisma.Prisma__EventTypeClient<runtime.Types.Result.GetResult<Prisma.$EventTypePayload<ExtArgs>, T, "findUniqueOrThrow", GlobalOmitOptions> | Null, Null, ExtArgs, GlobalOmitOptions>
   Domain<T extends Prisma.DomainDefaultArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.DomainDefaultArgs<ExtArgs>>): Prisma.Prisma__DomainClient<runtime.Types.Result.GetResult<Prisma.$DomainPayload<ExtArgs>, T, "findUniqueOrThrow", GlobalOmitOptions> | Null, Null, ExtArgs, GlobalOmitOptions>
   /**
    * Attaches callbacks for the resolution and/or rejection of the Promise.
@@ -1381,7 +1391,7 @@ export interface Prisma__InteractionClient<T, Null = never, ExtArgs extends runt
  */
 export interface InteractionFieldRefs {
   readonly Id: Prisma.FieldRef<"Interaction", 'Int'>
-  readonly Username: Prisma.FieldRef<"Interaction", 'String'>
+  readonly UserId: Prisma.FieldRef<"Interaction", 'Int'>
   readonly ItemId: Prisma.FieldRef<"Interaction", 'Int'>
   readonly InteractionTypeId: Prisma.FieldRef<"Interaction", 'Int'>
   readonly DomainId: Prisma.FieldRef<"Interaction", 'Int'>

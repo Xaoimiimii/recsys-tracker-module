@@ -1,4 +1,3 @@
-import { Not } from './../../generated/prisma/internal/prismaNamespace';
 import {
     Body,
     Controller,
@@ -15,19 +14,19 @@ import { CreateRuleDto } from './dto';
 
 @Controller('rule')
 export class RuleController {
-    constructor(private ruleService: RuleService) {}
+    constructor(private ruleService: RuleService) { }
 
-    @Get('event-patterns')
-    async getEventPatterns() {
-        const eventPatterns = await this.ruleService.getEventPatterns();
-        return eventPatterns;
+    @Get('pattern')
+    async getPatterns() {
+        const patterns = await this.ruleService.getPatterns();
+        return patterns;
     }
 
-    @Get('payload-patterns')
-    async getPayloadPatterns() {
-        const payloadPatterns = await this.ruleService.getPayloadPatterns();
-        return payloadPatterns;
-    }
+    // @Get('payload-patterns')
+    // async getPayloadPatterns() {
+    //     const payloadPatterns = await this.ruleService.getPayloadPatterns();
+    //     return payloadPatterns;
+    // }
 
     @Get('operators')
     async getOperators() {
@@ -47,8 +46,7 @@ export class RuleController {
     }
 
     @Get(':id')
-    async getRule(@Param('id', ParseIntPipe) id: number)
-    {
+    async getRule(@Param('id', ParseIntPipe) id: number) {
         const rule = await this.ruleService.getRuleById(id);
         if (!rule) {
             throw new NotFoundException(`Rule id '${id}' does not exist.`);
@@ -57,14 +55,13 @@ export class RuleController {
     }
 
     @Get('/domain/:key')
-    async getRulesByDomainKey(@Param('key') key: string)
-    {
+    async getRulesByDomainKey(@Param('key') key: string) {
         const rules = await this.ruleService.getRulesByDomainKey(key);
         if (!rules) {
             throw new NotFoundException(`No rules found for domain key '${key}'.`);
         }
 
-        const result = rules.map(r => ({ id: r.Id, name: r.Name, TriggerTypeName: r.TriggerEvent.Name }));
+        const result = rules.map(r => ({ id: r.Id, name: r.Name, EventTypeName: r.EventType.Name }));
         return result;
     }
 }

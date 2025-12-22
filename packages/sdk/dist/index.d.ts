@@ -16,13 +16,14 @@ export declare class RecSysTracker {
     init(): Promise<void>;
     private autoInitializePlugins;
     track(eventData: {
-        triggerTypeId: number;
-        userId: number;
-        itemId: number;
-        rate?: {
-            Value: number;
-            Review: string;
-        };
+        eventTypeId: number;
+        trackingRuleId: number;
+        userField: string;
+        userValue: string;
+        itemField: string;
+        itemValue: string;
+        ratingValue?: number;
+        reviewValue?: string;
     }): void;
     private setupBatchSending;
     private sendBatch;
