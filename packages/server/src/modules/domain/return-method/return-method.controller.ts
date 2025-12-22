@@ -12,7 +12,7 @@ import { CreateReturnMethodsDto } from './dto/create-return-method.dto';
 
 @Controller('domain/return-method')
 export class ReturnMethodController {
-    constructor(private returnMethodService: ReturnMethodService) {}
+    constructor(private returnMethodService: ReturnMethodService) { }
 
     @Get(':key')
     async getReturnMethods(@Param('key') key: string) {
@@ -22,11 +22,11 @@ export class ReturnMethodController {
     @Post()
     async createReturnMethods(@Body() dto: CreateReturnMethodsDto) {
         const result = await this.returnMethodService.createReturnMethods(
-            dto.key,
-            dto.configurationName,
-            dto.returnMethodId,
-            dto.value,
-            dto.operatorId,
+            dto.Key,
+            dto.ConfigurationName,
+            dto.ReturnType,
+            dto.Value,
+            dto.OperatorId,
         );
 
         if (!result) {

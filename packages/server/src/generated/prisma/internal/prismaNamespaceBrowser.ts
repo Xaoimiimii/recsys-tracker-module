@@ -53,16 +53,15 @@ export const AnyNull = runtime.AnyNull
 export const ModelName = {
   Ternant: 'Ternant',
   Domain: 'Domain',
-  DomainReturn: 'DomainReturn',
   ReturnMethod: 'ReturnMethod',
-  Rule: 'Rule',
-  TriggerEvent: 'TriggerEvent',
-  TargetElement: 'TargetElement',
+  TrackingRule: 'TrackingRule',
+  EventType: 'EventType',
+  TrackingTarget: 'TrackingTarget',
   Condition: 'Condition',
-  PayloadConfig: 'PayloadConfig',
-  PayloadPattern: 'PayloadPattern',
-  EventPattern: 'EventPattern',
+  Pattern: 'Pattern',
+  PayloadMapping: 'PayloadMapping',
   Operator: 'Operator',
+  Event: 'Event',
   Category: 'Category',
   ItemCategory: 'ItemCategory',
   Item: 'Item',
@@ -113,93 +112,80 @@ export const DomainScalarFieldEnum = {
 export type DomainScalarFieldEnum = (typeof DomainScalarFieldEnum)[keyof typeof DomainScalarFieldEnum]
 
 
-export const DomainReturnScalarFieldEnum = {
-  Id: 'Id',
-  DomainID: 'DomainID',
-  ReturnMethodID: 'ReturnMethodID',
-  OperatorID: 'OperatorID',
-  Value: 'Value',
-  ConfigurationName: 'ConfigurationName'
-} as const
-
-export type DomainReturnScalarFieldEnum = (typeof DomainReturnScalarFieldEnum)[keyof typeof DomainReturnScalarFieldEnum]
-
-
 export const ReturnMethodScalarFieldEnum = {
   Id: 'Id',
-  Name: 'Name'
+  DomainID: 'DomainID',
+  OperatorID: 'OperatorID',
+  ReturnType: 'ReturnType',
+  Value: 'Value',
+  ConfigurationName: 'ConfigurationName'
 } as const
 
 export type ReturnMethodScalarFieldEnum = (typeof ReturnMethodScalarFieldEnum)[keyof typeof ReturnMethodScalarFieldEnum]
 
 
-export const RuleScalarFieldEnum = {
+export const TrackingRuleScalarFieldEnum = {
   Id: 'Id',
   Name: 'Name',
   DomainID: 'DomainID',
-  TriggerEventID: 'TriggerEventID',
-  TargetElementID: 'TargetElementID'
+  EventTypeID: 'EventTypeID',
+  TrackingTargetId: 'TrackingTargetId'
 } as const
 
-export type RuleScalarFieldEnum = (typeof RuleScalarFieldEnum)[keyof typeof RuleScalarFieldEnum]
+export type TrackingRuleScalarFieldEnum = (typeof TrackingRuleScalarFieldEnum)[keyof typeof TrackingRuleScalarFieldEnum]
 
 
-export const TriggerEventScalarFieldEnum = {
+export const EventTypeScalarFieldEnum = {
   Id: 'Id',
   Name: 'Name'
 } as const
 
-export type TriggerEventScalarFieldEnum = (typeof TriggerEventScalarFieldEnum)[keyof typeof TriggerEventScalarFieldEnum]
+export type EventTypeScalarFieldEnum = (typeof EventTypeScalarFieldEnum)[keyof typeof EventTypeScalarFieldEnum]
 
 
-export const TargetElementScalarFieldEnum = {
+export const TrackingTargetScalarFieldEnum = {
   Id: 'Id',
   Value: 'Value',
-  EventPatternID: 'EventPatternID',
-  OperatorID: 'OperatorID'
+  PatternId: 'PatternId',
+  OperatorId: 'OperatorId'
 } as const
 
-export type TargetElementScalarFieldEnum = (typeof TargetElementScalarFieldEnum)[keyof typeof TargetElementScalarFieldEnum]
+export type TrackingTargetScalarFieldEnum = (typeof TrackingTargetScalarFieldEnum)[keyof typeof TrackingTargetScalarFieldEnum]
 
 
 export const ConditionScalarFieldEnum = {
   Id: 'Id',
   Value: 'Value',
-  RuleID: 'RuleID',
-  EventPatternID: 'EventPatternID',
+  TrackingRuleID: 'TrackingRuleID',
+  PatternId: 'PatternId',
   OperatorID: 'OperatorID'
 } as const
 
 export type ConditionScalarFieldEnum = (typeof ConditionScalarFieldEnum)[keyof typeof ConditionScalarFieldEnum]
 
 
-export const PayloadConfigScalarFieldEnum = {
-  Id: 'Id',
-  PayloadPatternID: 'PayloadPatternID',
-  RuleID: 'RuleID',
-  Value: 'Value',
-  Type: 'Type',
-  OperatorID: 'OperatorID'
-} as const
-
-export type PayloadConfigScalarFieldEnum = (typeof PayloadConfigScalarFieldEnum)[keyof typeof PayloadConfigScalarFieldEnum]
-
-
-export const PayloadPatternScalarFieldEnum = {
-  Id: 'Id',
-  Name: 'Name',
-  Type: 'Type'
-} as const
-
-export type PayloadPatternScalarFieldEnum = (typeof PayloadPatternScalarFieldEnum)[keyof typeof PayloadPatternScalarFieldEnum]
-
-
-export const EventPatternScalarFieldEnum = {
+export const PatternScalarFieldEnum = {
   Id: 'Id',
   Name: 'Name'
 } as const
 
-export type EventPatternScalarFieldEnum = (typeof EventPatternScalarFieldEnum)[keyof typeof EventPatternScalarFieldEnum]
+export type PatternScalarFieldEnum = (typeof PatternScalarFieldEnum)[keyof typeof PatternScalarFieldEnum]
+
+
+export const PayloadMappingScalarFieldEnum = {
+  Id: 'Id',
+  Field: 'Field',
+  Source: 'Source',
+  Value: 'Value',
+  RequestUrlPattern: 'RequestUrlPattern',
+  RequestMethod: 'RequestMethod',
+  RequestBodyPath: 'RequestBodyPath',
+  UrlPart: 'UrlPart',
+  UrlPartValue: 'UrlPartValue',
+  TrackingRuleId: 'TrackingRuleId'
+} as const
+
+export type PayloadMappingScalarFieldEnum = (typeof PayloadMappingScalarFieldEnum)[keyof typeof PayloadMappingScalarFieldEnum]
 
 
 export const OperatorScalarFieldEnum = {
@@ -208,6 +194,22 @@ export const OperatorScalarFieldEnum = {
 } as const
 
 export type OperatorScalarFieldEnum = (typeof OperatorScalarFieldEnum)[keyof typeof OperatorScalarFieldEnum]
+
+
+export const EventScalarFieldEnum = {
+  Id: 'Id',
+  EventTypeId: 'EventTypeId',
+  UserField: 'UserField',
+  UserValue: 'UserValue',
+  ItemField: 'ItemField',
+  ItemValue: 'ItemValue',
+  RatingValue: 'RatingValue',
+  ReviewValue: 'ReviewValue',
+  Timestamp: 'Timestamp',
+  TrackingRuleId: 'TrackingRuleId'
+} as const
+
+export type EventScalarFieldEnum = (typeof EventScalarFieldEnum)[keyof typeof EventScalarFieldEnum]
 
 
 export const CategoryScalarFieldEnum = {
@@ -264,6 +266,7 @@ export type ItemFactorScalarFieldEnum = (typeof ItemFactorScalarFieldEnum)[keyof
 
 export const UserScalarFieldEnum = {
   Id: 'Id',
+  DomainUserId: 'DomainUserId',
   Username: 'Username',
   DomainId: 'DomainId',
   UserEmbeddingVector: 'UserEmbeddingVector',
@@ -296,7 +299,7 @@ export type PredictScalarFieldEnum = (typeof PredictScalarFieldEnum)[keyof typeo
 
 export const RatingScalarFieldEnum = {
   Id: 'Id',
-  Username: 'Username',
+  UserId: 'UserId',
   ItemId: 'ItemId',
   DomainId: 'DomainId',
   Value: 'Value',
@@ -310,7 +313,7 @@ export type RatingScalarFieldEnum = (typeof RatingScalarFieldEnum)[keyof typeof 
 
 export const InteractionScalarFieldEnum = {
   Id: 'Id',
-  Username: 'Username',
+  UserId: 'UserId',
   ItemId: 'ItemId',
   InteractionTypeId: 'InteractionTypeId',
   DomainId: 'DomainId',
