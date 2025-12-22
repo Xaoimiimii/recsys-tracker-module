@@ -52,19 +52,20 @@ export class EventDispatcher {
 
     // Chuyển đổi TrackedEvent sang định dạng CreateEventDto
     const payload = JSON.stringify({
-      TriggerTypeId: event.triggerTypeId,
-      DomainKey: event.domainKey,
-      Timestamp: event.timestamp,
-      Payload: {
-        UserId: event.payload?.UserId,
-        ItemId: event.payload?.ItemId,
-      },
-      ...(event.rate && {
-        Rate: {
-          Value: event.rate.Value,
-          Review: event.rate.Review,
-        }
-      })
+      EventType: event.eventType,       // DB: EventType ENUM
+      Timestamp: event.timestamp,       // DB: Timestamp
+      
+      UserField: event.userField || 'user_id', 
+      UserValue: event.userValue,       // DB: UserValue
+      
+      ItemField: event.itemField || 'item_id',
+      ItemValue: event.itemValue,       // DB: ItemValue
+      
+      ...(event.ratingValue !== undefined && { RatingValue: event.ratingValue }), // DB: RatingValue
+      ...(event.reviewValue !== undefined && { ReviewValue: event.reviewValue }), // DB: ReviewValue
+      
+      // Các trường phụ nếu cần (DomainKey có thể nằm ở header hoặc body tùy backend)
+      DomainKey: event.domainKey 
     });
 
     // Thử từng phương thức gửi theo thứ tự ưu tiên

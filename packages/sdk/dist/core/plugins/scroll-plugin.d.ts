@@ -13,6 +13,7 @@ export declare class ScrollPlugin extends BasePlugin {
     private isTabVisible;
     private currentItemContext;
     private activeRule;
+    private targetScrollElement;
     private lastScrollProcessTime;
     private readonly THROTTLE_MS;
     private handleScrollBound;
@@ -22,27 +23,24 @@ export declare class ScrollPlugin extends BasePlugin {
     start(): void;
     stop(): void;
     private resetState;
-    private resolveContextFromRule;
     /**
-     * LOGIC XỬ LÝ SCROLL (Có Throttling)
+     * [NÂNG CẤP] Duyệt qua danh sách Rule để tìm Rule phù hợp nhất
+     * Check Target Match & Check Conditions
      */
+    private resolveContextFromRules;
+    private findTargetElement;
+    private detectContextForItem;
+    private checkConditions;
+    private compareValues;
+    private isNegativeOperator;
+    private scanSurroundingContext;
     private handleScroll;
-    /**
-     * Gửi Event Scroll Depth
-     */
     private sendScrollEvent;
-    /**
-     * LOGIC TÍNH TIME ON PAGE (Xử lý ẩn/hiện Tab)
-     */
+    private handleUnload;
     private handleVisibilityChange;
     private calculateActiveTime;
-    /**
-     * Xử lý khi user tắt tab/chuyển trang: Gửi báo cáo tổng kết
-     */
-    private handleUnload;
-    private createSyntheticItem;
-    private scanContextSimple;
     private enrichUserIdentity;
+    private createSyntheticItem;
     private createDefaultRule;
     private debugPersistent;
 }

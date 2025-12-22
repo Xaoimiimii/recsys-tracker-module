@@ -48,6 +48,15 @@ export class ConfigLoader {
                     offlineStorage: true,
                 },
             };
+            const mockConfig = window.RecSysTrackerConfig;
+            if (mockConfig) {
+                console.log("⚠️ [ConfigLoader] Detect Mock Config from Window. Overriding defaults...");
+                this.config = {
+                    ...this.config,
+                    ...mockConfig,
+                    trackingRules: mockConfig.trackingRules || []
+                };
+            }
             return this.config;
         }
         catch (error) {
@@ -57,6 +66,10 @@ export class ConfigLoader {
     }
     // Lấy cấu hình từ server (remote)
     async fetchRemoteConfig() {
+        if (window.RecSysTrackerConfig || this.domainKey === 'TEST-DOMAIN-KEY') {
+            console.log("⚠️ [ConfigLoader] Mock Mode detected. Skipping Server Fetch.");
+            return this.config;
+        }
         if (!this.domainKey) {
             return this.config;
         }
@@ -132,9 +145,18 @@ export class ConfigLoader {
                     targetElementValue: ((_e = rule.TargetElement) === null || _e === void 0 ? void 0 : _e.Value) || rule.targetElementValue,
                 },
                 conditions: this.transformConditions(rule.Conditions || rule.conditions || []),
-                payload: this.transformPayloadConfigs(rule.PayloadConfigs || rule.payload || []),
+                payloadMappings: this.transformPayloadMappings(rule.PayloadMappings || rule.payloadMappings || []),
             });
         });
+    }
+    transformPayloadMappings(mappingsData) {
+        if (!Array.isArray(mappingsData))
+            return [];
+        return mappingsData.map(mapping => ({
+            field: mapping.Field || mapping.field,
+            source: mapping.Source || mapping.source,
+            value: mapping.Value || mapping.value,
+        }));
     }
     // Transform conditions từ server format sang SDK format
     transformConditions(conditionsData) {
@@ -148,18 +170,17 @@ export class ConfigLoader {
             value: condition.Value || condition.value,
         }));
     }
-    // Transform payload configs từ server format sang SDK format
-    transformPayloadConfigs(payloadData) {
-        if (!Array.isArray(payloadData))
-            return [];
-        return payloadData.map(payload => ({
-            payloadPatternId: payload.PayloadPatternID || payload.payloadPatternId,
-            // ruleId: payload.RuleID || payload.ruleId,
-            operatorId: payload.OperatorID || payload.operatorId,
-            value: payload.Value || payload.value,
-            type: payload.Type || payload.type,
-        }));
-    }
+    // // Transform payload configs từ server format sang SDK format
+    // private transformPayloadConfigs(payloadData: any[]): any[] {
+    //   if (!Array.isArray(payloadData)) return [];
+    //   return payloadData.map(payload => ({
+    //     payloadPatternId: payload.PayloadPatternID || payload.payloadPatternId,
+    //     // ruleId: payload.RuleID || payload.ruleId,
+    //     operatorId: payload.OperatorID || payload.operatorId,
+    //     value: payload.Value || payload.value,
+    //     type: payload.Type || payload.type,
+    //   }));
+    // }
     // Transform return methods từ server format sang SDK format
     transformReturnMethods(returnMethodsData) {
         if (!returnMethodsData || !Array.isArray(returnMethodsData))

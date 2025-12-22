@@ -1,16 +1,14 @@
 export interface TrackedEvent {
     id: string;
     timestamp: string | Date;
-    triggerTypeId: number;
     domainKey: string;
-    payload: {
-        UserId: number;
-        ItemId: number;
-    };
-    rate?: {
-        Value: number;
-        Review: string;
-    };
+    eventType: 'click' | 'rating' | 'review' | 'scroll' | 'page_view';
+    userField?: string;
+    userValue?: string;
+    itemField?: string;
+    itemValue?: string;
+    ratingValue?: number;
+    reviewValue?: string;
     retryCount?: number;
     lastRetryAt?: number;
     nextRetryAt?: number;

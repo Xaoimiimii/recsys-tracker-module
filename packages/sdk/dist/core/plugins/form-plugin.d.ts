@@ -11,6 +11,17 @@ export declare class FormPlugin extends BasePlugin {
     stop(): void;
     private handleSubmit;
     /**
+     * Hàm kiểm tra xem Form hiện tại có khớp với Rule không
+     * Hỗ trợ mọi Operator (Equals, Contains, Regex...) và Pattern (CSS, ID...)
+     */
+    private checkTargetMatch;
+    /**
+     * CHECK CONDITIONS: Dùng CONDITION_PATTERN
+     */
+    private checkConditions;
+    private compareValues;
+    private isNegativeOperator;
+    /**
      * DOM RADAR: Quét ngữ cảnh xung quanh theo phương pháp lan truyền
      * 1. Check bản thân -> 2. Check tổ tiên -> 3. Check phạm vi (Parent Scope)
      */

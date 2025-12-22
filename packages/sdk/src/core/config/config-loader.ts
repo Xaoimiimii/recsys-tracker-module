@@ -50,6 +50,16 @@ export class ConfigLoader {
         },
       };
 
+      const mockConfig = (window as any).RecSysTrackerConfig;
+      if (mockConfig) {
+          console.log("⚠️ [ConfigLoader] Detect Mock Config from Window. Overriding defaults...");
+          this.config = {
+              ...this.config,
+              ...mockConfig,
+              trackingRules: mockConfig.trackingRules || [] 
+          };
+      }
+
       return this.config;
     } catch (error) {
       console.error('[RecSysTracker] Error loading config:', error);
@@ -59,6 +69,10 @@ export class ConfigLoader {
 
   // Lấy cấu hình từ server (remote)
   async fetchRemoteConfig(): Promise<TrackerConfig | null> {
+    if ((window as any).RecSysTrackerConfig || this.domainKey === 'TEST-DOMAIN-KEY') {
+        console.log("⚠️ [ConfigLoader] Mock Mode detected. Skipping Server Fetch.");
+        return this.config;
+    }
     if (!this.domainKey) {
       return this.config;
     }
@@ -141,7 +155,17 @@ export class ConfigLoader {
         targetElementValue: rule.TargetElement?.Value || rule.targetElementValue,
       },
       conditions: this.transformConditions(rule.Conditions || rule.conditions || []),
-      payload: this.transformPayloadConfigs(rule.PayloadConfigs || rule.payload || []),
+      payloadMappings: this.transformPayloadMappings(rule.PayloadMappings || rule.payloadMappings || []),
+    }));
+  }
+
+  private transformPayloadMappings(mappingsData: any[]): any[] {
+    if (!Array.isArray(mappingsData)) return [];
+    
+    return mappingsData.map(mapping => ({
+      field: mapping.Field || mapping.field, 
+      source: mapping.Source || mapping.source, 
+      value: mapping.Value || mapping.value,
     }));
   }
 
@@ -158,18 +182,18 @@ export class ConfigLoader {
     }));
   }
 
-  // Transform payload configs từ server format sang SDK format
-  private transformPayloadConfigs(payloadData: any[]): any[] {
-    if (!Array.isArray(payloadData)) return [];
+  // // Transform payload configs từ server format sang SDK format
+  // private transformPayloadConfigs(payloadData: any[]): any[] {
+  //   if (!Array.isArray(payloadData)) return [];
     
-    return payloadData.map(payload => ({
-      payloadPatternId: payload.PayloadPatternID || payload.payloadPatternId,
-      // ruleId: payload.RuleID || payload.ruleId,
-      operatorId: payload.OperatorID || payload.operatorId,
-      value: payload.Value || payload.value,
-      type: payload.Type || payload.type,
-    }));
-  }
+  //   return payloadData.map(payload => ({
+  //     payloadPatternId: payload.PayloadPatternID || payload.payloadPatternId,
+  //     // ruleId: payload.RuleID || payload.ruleId,
+  //     operatorId: payload.OperatorID || payload.operatorId,
+  //     value: payload.Value || payload.value,
+  //     type: payload.Type || payload.type,
+  //   }));
+  // }
 
   // Transform return methods từ server format sang SDK format
   private transformReturnMethods(returnMethodsData: any): ReturnMethod[] {

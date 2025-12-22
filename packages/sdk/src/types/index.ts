@@ -21,14 +21,14 @@ export interface TrackingRule {
     targetElementValue?: string
   };
   conditions: Condition[];
-  payload: PayloadConfig[];
+  payloadMappings: PayloadConfig[];
 }
 
 export interface PayloadConfig {
   payloadPatternId: number;
-  operatorId: number;
+  field: number;
+  source?: string;
   value?: string;
-  type?: string;
 }
 
 export interface Condition {

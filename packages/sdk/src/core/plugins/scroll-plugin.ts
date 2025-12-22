@@ -5,6 +5,31 @@ import { TrackerContextAdapter } from './adapters/tracker-context-adapter';
 import { UserIdentityManager, getUserIdentityManager } from './utils/user-identity-manager';
 import { getAIItemDetector, AIItemDetector } from './utils/ai-item-detector';
 
+// [1] Copy ENUMS từ FormPlugin sang để dùng chung chuẩn
+// const TARGET_PATTERN = {
+//     CSS_SELECTOR: 1,    
+//     DOM_ATTRIBUTE: 2,
+//     DATA_ATTRIBUTE: 3
+// };
+
+const CONDITION_PATTERN = {
+    URL_PARAM: 1,
+    CSS_SELECTOR: 2,    
+    DOM_ATTRIBUTE: 3,
+    DATA_ATTRIBUTE: 4,
+};
+
+const TARGET_OPERATOR = {
+    CONTAINS: 1,
+    NOT_CONTAINS: 2,
+    STARTS_WITH: 3,
+    ENDS_WITH: 4,
+    EQUALS: 5,
+    NOT_EQUALS: 6,
+    EXISTS: 8,
+    NOT_EXISTS: 9
+};
+
 export class ScrollPlugin extends BasePlugin {
     public readonly name = 'ScrollPlugin';
     
@@ -17,20 +42,20 @@ export class ScrollPlugin extends BasePlugin {
     private sentMilestones: Set<number> = new Set(); 
     private maxScrollDepth: number = 0; 
     
-    // --- STATE QUẢN LÝ THỜI GIAN (VISIBILITY API) ---
+    // --- STATE QUẢN LÝ THỜI GIAN ---
     private startTime: number = Date.now();
     private totalActiveTime: number = 0;
     private isTabVisible: boolean = true;
     
-    // State Context (Lưu Item ID tìm được để dùng cho scroll)
+    // State Context
     private currentItemContext: any = null;
     private activeRule: any = null; 
+    private targetScrollElement: HTMLElement | Window | null = null; // Element đang được track scroll
 
     // --- THROTTLE CONFIG ---
     private lastScrollProcessTime: number = 0;
-    private readonly THROTTLE_MS = 200; // Chỉ xử lý scroll tối đa 1 lần mỗi 200ms
+    private readonly THROTTLE_MS = 200; 
 
-    // Bind functions để giữ 'this' context khi truyền vào event listener
     private handleScrollBound = this.handleScroll.bind(this);
     private handleVisibilityChangeBound = this.handleVisibilityChange.bind(this);
     private handleUnloadBound = this.handleUnload.bind(this);
@@ -53,20 +78,29 @@ export class ScrollPlugin extends BasePlugin {
         this.errorBoundary.execute(() => {
             if (!this.ensureInitialized()) return;
             this.resetState();
-            this.resolveContextFromRule();
+            
+            // [NÂNG CẤP] Logic chọn Rule thông minh hơn
+            const isResolved = this.resolveContextFromRules();
 
-            // Lắng nghe sự kiện
-            window.addEventListener('scroll', this.handleScrollBound, { passive: true });
-            document.addEventListener('visibilitychange', this.handleVisibilityChangeBound);
-            window.addEventListener('beforeunload', this.handleUnloadBound);
-            console.log("[ScrollPlugin] started tracking scroll & time.");
-            this.active = true;
+            if (isResolved) {
+                // Chỉ lắng nghe nếu tìm thấy Rule phù hợp
+                const target = this.targetScrollElement || window;
+                target.addEventListener('scroll', this.handleScrollBound, { passive: true }); // passive để mượt
+                
+                document.addEventListener('visibilitychange', this.handleVisibilityChangeBound);
+                window.addEventListener('beforeunload', this.handleUnloadBound);
+                console.log(`[ScrollPlugin] Started. Target:`, this.targetScrollElement ? 'Specific Element' : 'Window');
+                this.active = true;
+            } else {
+                console.log(`[ScrollPlugin] No matching rule found for this page. Idle.`);
+            }
         }, 'ScrollPlugin.start');
     }
 
     public stop(): void {
         this.errorBoundary.execute(() => {
-            window.removeEventListener('scroll', this.handleScrollBound);
+            const target = this.targetScrollElement || window;
+            target.removeEventListener('scroll', this.handleScrollBound);
             document.removeEventListener('visibilitychange', this.handleVisibilityChangeBound);
             window.removeEventListener('beforeunload', this.handleUnloadBound);
             super.stop();
@@ -81,40 +115,90 @@ export class ScrollPlugin extends BasePlugin {
         this.isTabVisible = document.visibilityState === 'visible';
         this.currentItemContext = null;
         this.activeRule = null;
+        this.targetScrollElement = null;
     }
 
-    private resolveContextFromRule(): void {
-        if (!this.context || !this.detector) return;
-        // 1. Lấy Rule cho sự kiện SCROLL (ID = 4)
-        const scrollRules = this.context.config.getRules(4);      
-        // Ưu tiên rule đầu tiên tìm thấy (hoặc logic complex hơn tùy bạn)
-        this.activeRule = scrollRules.length > 0 ? scrollRules[0] : null;
-        let targetElement: HTMLElement | null = null;
-        // 2. Nếu Rule có chỉ định Element cụ thể (VD: #product-detail)
-        if (this.activeRule) {
-            const selector = this.activeRule.targetElement?.targetElementValue || (this.activeRule as any).targetElementValue;
-            if (selector) {
-                try {
-                    targetElement = document.querySelector(selector);
-                    console.log(`[ScrollPlugin] Targeted element from rule: ${selector}`, targetElement);
-                } catch(e) {}
+    /**
+     * [NÂNG CẤP] Duyệt qua danh sách Rule để tìm Rule phù hợp nhất
+     * Check Target Match & Check Conditions
+     */
+    private resolveContextFromRules(): boolean {
+        if (!this.context || !this.detector) return false;
+
+        // 1. Lấy tất cả Rule SCROLL (ID = 4)
+        const scrollRules = this.context.config.getRules(4);
+        if (scrollRules.length === 0) return false;
+
+        console.log(`📜 [ScrollPlugin] Checking ${scrollRules.length} rules...`);
+
+        // Tìm Rule đầu tiên thỏa mãn cả Target và Condition
+        for (const rule of scrollRules) {
+            // A. Check xem Element đích có tồn tại không
+            // Với Scroll, Target Element chính là container cần track cuộn (hoặc body)
+            const element = this.findTargetElement(rule);
+            
+            if (element) {
+                // B. Check Conditions (URL, Param, State...)
+                // Lưu ý: checkConditions cần truyền 1 HTMLElement để check attribute/class
+                // Nếu track window, ta dùng document.body làm đại diện để check
+                const representativeEl = (element instanceof Window) ? document.body : element as HTMLElement;
+                
+                if (this.checkConditions(representativeEl, rule)) {
+                    this.activeRule = rule;
+                    this.targetScrollElement = (element instanceof Window) ? null : element as HTMLElement;
+                    
+                    console.log(`✅ [ScrollPlugin] Rule Matched: "${rule.name}"`);
+                    
+                    // C. Sau khi chốt Rule, bắt đầu Detect Item ID dựa trên Element đó
+                    this.detectContextForItem(representativeEl);
+                    return true;
+                }
             }
         }
-        // 3. Nếu không có Rule hoặc Selector không tìm thấy, fallback về Body (Toàn trang)
-        if (!targetElement) {
-            targetElement = document.body;
+        
+        return false;
+    }
+
+    // Helper: Tìm Element dựa trên Rule Config
+    private findTargetElement(rule: any): HTMLElement | Window | null {
+        const target = rule.targetElement || rule.TargetElement;
+        // Nếu không config target, hoặc target là "document"/"window" -> Track Window
+        if (!target || !target.targetElementValue || target.targetElementValue === 'document' || target.targetElementValue === 'window') {
+            return window;
         }
-        // 4. Dùng AI Detector để quét Item ID trên element đó
-        // (Đây là sự tái sử dụng tuyệt vời logic của FormPlugin)
-        const detected = this.detector.detectItem(targetElement);
-        // 5. Nếu AI fail, thử quét thủ công (DOM Radar phiên bản đơn giản)
+
+        // Nếu có selector cụ thể (VD: .scrollable-sidebar)
+        const selector = target.targetElementValue || target.Value;
+        try {
+            const el = document.querySelector(selector);
+            return el as HTMLElement; // Trả về null nếu không thấy
+        } catch {
+            return null;
+        }
+    }
+
+    // [NÂNG CẤP] Detect Item ID (Dùng lại logic Tam Trụ của FormPlugin)
+    private detectContextForItem(element: HTMLElement) {
+        // 1. Dùng AI
+        let detected = this.detector?.detectItem(element);
+
+        // 2. Nếu AI fail, dùng Radar (Full version)
         if (!detected || !detected.id || detected.id === 'N/A (Failed)') {
-             // Thử tìm data attribute trên chính nó hoặc cha gần nhất
-             const manualScan = this.scanContextSimple(targetElement);
-             if (manualScan) {
-                 this.currentItemContext = manualScan;
+             console.log("🔍 [ScrollPlugin] AI failed. Scanning radar...");
+             // Dùng hàm quét full (Ancestors + Siblings + URL)
+             const contextInfo = this.scanSurroundingContext(element);
+             
+             if (contextInfo.id) {
+                 this.currentItemContext = {
+                     id: contextInfo.id,
+                     name: contextInfo.name || 'Unknown Item',
+                     type: contextInfo.type || 'item',
+                     confidence: 1,
+                     source: contextInfo.source,
+                     context: 'dom_context'
+                 };
              } else {
-                 // Fallback cuối cùng: Tạo Synthetic Item (Page Scroll)
+                 // Fallback: Tạo Synthetic Item
                  this.currentItemContext = this.createSyntheticItem();
              }
         } else {
@@ -123,104 +207,164 @@ export class ScrollPlugin extends BasePlugin {
         console.log("🎯 [ScrollPlugin] Resolved Context:", this.currentItemContext);
     }
 
-    /**
-     * LOGIC XỬ LÝ SCROLL (Có Throttling)
-     */
+    // --- LOGIC CHECK CONDITIONS (Port từ FormPlugin sang) ---
+    private checkConditions(element: HTMLElement, rule: any): boolean {
+        const conditions = rule.Conditions || rule.conditions;
+        if (!conditions || conditions.length === 0) return true;
+
+        for (const condition of conditions) {
+            const patternId = condition.EventPatternID || condition.eventPatternId || 1;
+            const operatorId = condition.OperatorID || condition.operatorId || 5;
+            const expectedValue = condition.Value || condition.value || '';
+
+            let actualValue: string | null = null;
+            let isMet = false;
+
+            switch (patternId) {
+                case CONDITION_PATTERN.URL_PARAM: // 1
+                    const urlParams = new URLSearchParams(window.location.search);
+                    if (urlParams.has(expectedValue)) actualValue = urlParams.get(expectedValue);
+                    else actualValue = window.location.href;
+                    break;
+                case CONDITION_PATTERN.CSS_SELECTOR: // 2
+                    try {
+                        isMet = element.matches(expectedValue);
+                        if (this.isNegativeOperator(operatorId)) { if (!isMet) continue; return false; }
+                        if (!isMet) return false;
+                        continue; 
+                    } catch { return false; }
+                case CONDITION_PATTERN.DOM_ATTRIBUTE: // 3
+                    actualValue = element.id; break;
+                case CONDITION_PATTERN.DATA_ATTRIBUTE: // 4
+                    actualValue = element.getAttribute(expectedValue); break;
+                default: actualValue = '';
+            }
+
+            isMet = this.compareValues(actualValue, expectedValue, operatorId);
+            if (!isMet) return false;
+        }
+        return true;
+    }
+
+    private compareValues(actual: string | null, expected: string, operatorId: number): boolean {
+        if (actual === null) actual = '';
+        switch (operatorId) {
+            case TARGET_OPERATOR.EQUALS: return actual === expected;
+            case TARGET_OPERATOR.NOT_EQUALS: return actual !== expected;
+            case TARGET_OPERATOR.CONTAINS: return actual.includes(expected);
+            case TARGET_OPERATOR.NOT_CONTAINS: return !actual.includes(expected);
+            case TARGET_OPERATOR.STARTS_WITH: return actual.startsWith(expected);
+            case TARGET_OPERATOR.ENDS_WITH: return actual.endsWith(expected);
+            case TARGET_OPERATOR.EXISTS: return actual !== '' && actual !== null;
+            case TARGET_OPERATOR.NOT_EXISTS: return actual === '' || actual === null;
+            default: return actual === expected;
+        }
+    }
+
+    private isNegativeOperator(opId: number): boolean {
+        return opId === TARGET_OPERATOR.NOT_EQUALS || opId === TARGET_OPERATOR.NOT_CONTAINS || opId === TARGET_OPERATOR.NOT_EXISTS;
+    }
+
+    // --- DOM RADAR (Full Version - Port từ FormPlugin) ---
+    private scanSurroundingContext(element: HTMLElement): { id?: string, name?: string, type?: string, source: string } {
+        const getAttrs = (el: Element | null) => {
+            if (!el) return null;
+            const id = el.getAttribute('data-item-id') || el.getAttribute('data-product-id') || el.getAttribute('data-id');
+            if (id) return { id, name: el.getAttribute('data-item-name') || undefined, type: el.getAttribute('data-item-type') || undefined };
+            return null;
+        };
+
+        // 1. Ancestors
+        const ancestor = element.closest('[data-item-id], [data-product-id], [data-id]');
+        const ancestorData = getAttrs(ancestor);
+        if (ancestorData) return { ...ancestorData, source: 'ancestor' };
+
+        // 2. Siblings (Scope Scan)
+        let currentParent = element.parentElement;
+        let levels = 0;
+        while (currentParent && levels < 5) {
+            const candidates = currentParent.querySelectorAll('[data-item-id], [data-product-id], [data-id]');
+            if (candidates.length > 0) {
+                for (let i = 0; i < candidates.length; i++) {
+                    const candidate = candidates[i];
+                    if (!element.contains(candidate)) {
+                        const data = getAttrs(candidate);
+                        if (data) return { ...data, source: `scope_level_${levels + 1}` };
+                    }
+                }
+            }
+            currentParent = currentParent.parentElement;
+            levels++;
+        }
+
+        // 3. URL
+        const urlParams = new URLSearchParams(window.location.search);
+        const urlId = urlParams.get('id') || urlParams.get('productId');
+        if (urlId) return { id: urlId, source: 'url_param' };
+        
+        return { id: undefined, source: 'none' };
+    }
+
+    // --- SCROLL HANDLER (Giữ nguyên logic cũ) ---
     private handleScroll(): void {
-        const now = Date.now();       
-        // --- 1. THROTTLE CHECK ---
-        // Nếu chưa đến thời gian cho phép xử lý tiếp theo -> Bỏ qua
-        if (now - this.lastScrollProcessTime < this.THROTTLE_MS) {
-            return;
-        }
+        const now = Date.now();
+        if (now - this.lastScrollProcessTime < this.THROTTLE_MS) return;
         this.lastScrollProcessTime = now;
-        // --- 2. TÍNH TOÁN % SCROLL ---
-        const scrollTop = window.scrollY || document.documentElement.scrollTop;
-        const windowHeight = window.innerHeight;
-        const docHeight = document.documentElement.scrollHeight;
-        // Công thức: (Vị trí hiện tại + Chiều cao màn hình) / Tổng chiều cao * 100
-        // Math.min để đảm bảo không quá 100% (do sai số browser)
-        const currentPercent = Math.min(100, Math.round(((scrollTop + windowHeight) / docHeight) * 100));
-        // Cập nhật độ sâu kỷ lục
-        if (currentPercent > this.maxScrollDepth) {
-            this.maxScrollDepth = currentPercent;
+
+        // Xử lý scroll trên Window hoặc Element cụ thể
+        let scrollTop, docHeight, clientHeight;
+        
+        if (this.targetScrollElement instanceof HTMLElement) {
+            // Scroll trên div
+            scrollTop = this.targetScrollElement.scrollTop;
+            docHeight = this.targetScrollElement.scrollHeight;
+            clientHeight = this.targetScrollElement.clientHeight;
+        } else {
+            // Scroll trên window
+            scrollTop = window.scrollY || document.documentElement.scrollTop;
+            docHeight = document.documentElement.scrollHeight;
+            clientHeight = window.innerHeight;
         }
-        // --- 3. CHECK MILESTONES (25, 50, 75, 100) ---
+
+        const currentPercent = Math.min(100, Math.round(((scrollTop + clientHeight) / docHeight) * 100));
+
+        if (currentPercent > this.maxScrollDepth) this.maxScrollDepth = currentPercent;
+
         this.milestones.forEach(milestone => {
-            // Nếu đã vượt qua mốc này VÀ chưa gửi event mốc này
             if (currentPercent >= milestone && !this.sentMilestones.has(milestone)) {
                 this.sendScrollEvent(milestone);
-                this.sentMilestones.add(milestone); // Đánh dấu đã gửi
+                this.sentMilestones.add(milestone);
             }
         });
     }
-
-    /**
-     * Gửi Event Scroll Depth
-     */
+    
+    // --- CÁC HÀM GỬI EVENT (Update type safety) ---
     private sendScrollEvent(depth: number): void {
         if (!this.context) return;
-        const rule = this.activeRule || this.createDefaultRule('default-scroll', 'Default Scroll Tracking');
-        // Tính thời gian Active tính đến lúc này
+        const rule = this.activeRule || this.createDefaultRule('default-scroll', 'Default Scroll');
         const currentActiveSeconds = this.calculateActiveTime();
-        // Build Payload
-        // Lưu ý: Scroll không có Item Context cụ thể (trừ khi bạn muốn gắn), nên để null hoặc object rỗng
+        
         const payload = this.context.payloadBuilder.build(this.currentItemContext, rule);
         payload.event = 'scroll_depth';
         payload.metadata = {
             ...(payload.metadata || {}),
-            depth_percentage: depth, 
-            time_on_page: currentActiveSeconds, 
+            depth_percentage: depth,
+            time_on_page: currentActiveSeconds,
             url: window.location.href
         };
-        // Gắn User Identity (tương tự FormPlugin)
-        if (this.currentItemContext.id && (!payload.itemId || payload.itemId === 'N/A (Failed)')) {
-            payload.itemId = this.currentItemContext.id;
-            if (this.currentItemContext.name) payload.itemName = this.currentItemContext.name;
-        }
         this.enrichUserIdentity(payload);
         this.context.eventBuffer.enqueue(payload);
-        console.log(`📜 [ScrollPlugin] Reached ${depth}% depth after ${currentActiveSeconds}s active.`);
     }
 
-    /**
-     * LOGIC TÍNH TIME ON PAGE (Xử lý ẩn/hiện Tab)
-     */
-    private handleVisibilityChange(): void {
-        if (document.visibilityState === 'hidden') {
-            // User vừa ẩn tab: Cộng dồn thời gian từ lúc start đến giờ vào tổng
-            this.totalActiveTime += Date.now() - this.startTime;
-            this.isTabVisible = false;
-        } else {
-            // User vừa mở lại tab: Reset mốc thời gian bắt đầu tính
-            this.startTime = Date.now();
-            this.isTabVisible = true;
-        }
-    }
-
-    private calculateActiveTime(): number {
-        let currentSessionTime = 0;
-        // Nếu tab đang hiện, tính thời gian trôi qua từ lúc mở lại tab đến giờ
-        if (this.isTabVisible) {
-            currentSessionTime = Date.now() - this.startTime;
-        }
-        // Tổng = Thời gian đã tích lũy (lúc ẩn) + Thời gian phiên hiện tại (nếu đang hiện)
-        const totalMs = this.totalActiveTime + currentSessionTime;
-        return parseFloat((totalMs / 1000).toFixed(1)); // Trả về giây, làm tròn 1 số thập phân
-    }
-
-    /**
-     * Xử lý khi user tắt tab/chuyển trang: Gửi báo cáo tổng kết
-     */
     private handleUnload(): void {
         if (!this.context) return;
         if (this.isTabVisible) this.totalActiveTime += Date.now() - this.startTime;
         const finalTime = parseFloat((this.totalActiveTime / 1000).toFixed(1));
         if (finalTime < 1) return;
+
         const rule = this.activeRule || this.createDefaultRule('summary', 'Page Summary');
-        if (!this.currentItemContext) {
-            this.currentItemContext = this.createSyntheticItem(); 
-        }
+        if (!this.currentItemContext) this.currentItemContext = this.createSyntheticItem();
+
         const payload = this.context.payloadBuilder.build(this.currentItemContext, rule);
         payload.event = 'page_summary';
         payload.metadata = {
@@ -228,13 +372,36 @@ export class ScrollPlugin extends BasePlugin {
             total_time_on_page: finalTime,
             is_bounce: this.maxScrollDepth < 25 && finalTime < 5
         };
-        if (this.currentItemContext.id && (!payload.itemId || payload.itemId === 'N/A (Failed)')) {
-            payload.itemId = this.currentItemContext.id;
-        }
         this.enrichUserIdentity(payload);
-        this.debugPersistent('PAGE_SUMMARY_EVENT', payload);
+        this.debugPersistent('PAGE_SUMMARY', payload);
         this.context.eventBuffer.enqueue(payload);
-        console.log("🚀 [DEBUG] Đang gửi vào Buffer:", payload);
+    }
+
+    // --- HELPERS (Giữ nguyên) ---
+    private handleVisibilityChange(): void {
+        if (document.visibilityState === 'hidden') {
+            this.totalActiveTime += Date.now() - this.startTime;
+            this.isTabVisible = false;
+        } else {
+            this.startTime = Date.now();
+            this.isTabVisible = true;
+        }
+    }
+    
+    private calculateActiveTime(): number {
+        let currentSessionTime = 0;
+        if (this.isTabVisible) currentSessionTime = Date.now() - this.startTime;
+        const totalMs = this.totalActiveTime + currentSessionTime;
+        return parseFloat((totalMs / 1000).toFixed(1));
+    }
+
+    private enrichUserIdentity(payload: any) {
+        if (this.identityManager) {
+            const uid = this.identityManager.getRealUserId() || this.identityManager.getStableUserId();
+            if (uid && !uid.startsWith('anon_')) payload.userId = uid;
+            const uInfo = this.identityManager.getUserInfo();
+            if (uInfo.sessionId) payload.sessionId = uInfo.sessionId;
+        }
     }
 
     private createSyntheticItem(): any {
@@ -247,76 +414,18 @@ export class ScrollPlugin extends BasePlugin {
         };
     }
 
-    private scanContextSimple(el: HTMLElement): any | null {
-        const target = el.closest('[data-item-id], [data-product-id]');
-        if (target) {
-            return {
-                id: target.getAttribute('data-item-id') || target.getAttribute('data-product-id'),
-                name: target.getAttribute('data-item-name'),
-                type: target.getAttribute('data-item-type') || 'unknown',
-                confidence: 1,
-                source: 'dom_attribute'
-            };
-        }
-        const urlParams = new URLSearchParams(window.location.search);
-        const urlId = urlParams.get('id') || urlParams.get('productId');
-        if (urlId) {
-            return {
-                id: urlId,
-                name: document.title,
-                type: 'url_param',
-                confidence: 1,
-                source: 'url'
-            };
-        }
-        return null;
-    }
-    // Helper: Gắn User ID (Copy logic từ FormPlugin sang cho đồng bộ)
-    private enrichUserIdentity(payload: any) {
-        if (this.identityManager) {
-            const realUserId = this.identityManager.getRealUserId();
-            const stableUserId = this.identityManager.getStableUserId();
-            if (realUserId && !realUserId.startsWith('anon_')) {
-                payload.userId = realUserId;
-            } else if (stableUserId) {
-                 if (!payload.userId || (payload.userId.startsWith('anon_') && stableUserId !== payload.userId)) {
-                    payload.userId = stableUserId;
-                }
-            }
-            const userInfo = this.identityManager.getUserInfo();
-            if (userInfo.sessionId) {
-                payload.sessionId = userInfo.sessionId;
-                payload.metadata.sessionId = userInfo.sessionId;
-            }
-        }
-    }
-
     private createDefaultRule(id: string, name: string): any {
         return {
-            id: id,
-            name: name,
-            triggerEventId: 4,
-            targetElement: {
-                targetElementValue: 'document', 
-                targetEventPatternId: 1, 
-                targetOperatorId: 5      
-            },
-            conditions: [],
-            payload: []
+            id, name, triggerEventId: 4,
+            targetElement: { targetElementValue: 'document', targetEventPatternId: 1, targetOperatorId: 5 },
+            conditions: [], payload: []
         };
     }
 
     private debugPersistent(tag: string, data: any) {
-        const logEntry = {
-            time: new Date().toISOString(),
-            tag: tag,
-            data: data,
-            url: window.location.href
-        };
-        // Lưu vào LocalStorage (chỉ giữ lại 10 log gần nhất để không bị đầy)
+        const logEntry = { time: new Date().toISOString(), tag, data, url: window.location.href };
         const history = JSON.parse(localStorage.getItem('SDK_DEBUG_LOGS') || '[]');
         history.unshift(logEntry);
         localStorage.setItem('SDK_DEBUG_LOGS', JSON.stringify(history.slice(0, 10)));
-        console.log(`💾 [Saved to Storage] ${tag}`, data);
     }
 }

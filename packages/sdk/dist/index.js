@@ -1,4 +1,5 @@
 import { ConfigLoader, ErrorBoundary, EventBuffer, EventDispatcher, MetadataNormalizer, DisplayManager, PluginManager } from './core';
+import { PayloadBuilder } from './core/payload/payload-builder';
 // RecSysTracker - Main SDK class
 export class RecSysTracker {
     constructor() {
@@ -13,6 +14,7 @@ export class RecSysTracker {
         this.eventBuffer = new EventBuffer();
         this.metadataNormalizer = new MetadataNormalizer();
         this.pluginManager = new PluginManager(this);
+        this.payloadBuilder = new PayloadBuilder();
     }
     // Khởi tạo SDK - tự động gọi khi tải script
     async init() {
@@ -71,6 +73,9 @@ export class RecSysTracker {
         const hasClickRules = this.config.trackingRules.some(rule => rule.triggerEventId === 1);
         // Kiểm tra nếu có rule nào cần PageViewPlugin (triggerEventId === 3)
         const hasPageViewRules = this.config.trackingRules.some(rule => rule.triggerEventId === 3);
+        const hasFormRules = this.config.trackingRules.some(rule => rule.triggerEventId === 2);
+        const hasScrollRules = this.config.trackingRules.some(rule => rule.triggerEventId === 4);
+        const hasReviewRules = this.config.trackingRules.some(rule => rule.triggerEventId === 5);
         // Chỉ tự động đăng ký nếu chưa có plugin nào được đăng ký
         if (this.pluginManager.getPluginNames().length === 0) {
             const pluginPromises = [];
@@ -90,6 +95,27 @@ export class RecSysTracker {
                 });
                 pluginPromises.push(pageViewPromise);
             }
+            if (hasFormRules) {
+                const formPromise = import('./core/plugins/form-plugin').then(({ FormPlugin }) => {
+                    this.use(new FormPlugin());
+                    console.log('[RecSysTracker] Auto-registered FormPlugin based on tracking rules');
+                });
+                pluginPromises.push(formPromise);
+            }
+            if (hasScrollRules) {
+                const scrollPromise = import('./core/plugins/scroll-plugin').then(({ ScrollPlugin }) => {
+                    this.use(new ScrollPlugin());
+                    console.log('[RecSysTracker] Auto-registered ScrollPlugin');
+                });
+                pluginPromises.push(scrollPromise);
+            }
+            if (hasReviewRules) {
+                const scrollPromise = import('./core/plugins/review-plugin').then(({ ReviewPlugin }) => {
+                    this.use(new ReviewPlugin());
+                    console.log('[RecSysTracker] Auto-registered ScrollPlugin');
+                });
+                pluginPromises.push(scrollPromise);
+            }
             // Chờ tất cả plugin được đăng ký trước khi khởi động
             if (pluginPromises.length > 0) {
                 await Promise.all(pluginPromises);
@@ -104,16 +130,22 @@ export class RecSysTracker {
             if (!this.isInitialized || !this.config) {
                 return;
             }
+            // Map dữ liệu từ Adapter sang TrackedEvent (Structure mới của EventBuffer)
             const trackedEvent = {
                 id: this.metadataNormalizer.generateEventId(),
-                timestamp: new Date(),
-                triggerTypeId: eventData.triggerTypeId,
+                timestamp: new Date().toISOString(),
                 domainKey: this.config.domainKey,
-                payload: {
-                    UserId: eventData.userId,
-                    ItemId: eventData.itemId,
-                },
-                ...(eventData.rate && { rate: eventData.rate }),
+                // Map các trường phẳng (Flat Fields)
+                eventType: eventData.eventType || 'page_view',
+                userField: eventData.userField,
+                userValue: eventData.userValue,
+                itemField: eventData.itemField,
+                itemValue: eventData.itemValue,
+                // Optional Fields
+                ratingValue: eventData.ratingValue,
+                reviewValue: eventData.reviewValue,
+                // Giữ lại retry logic
+                retryCount: 0
             };
             this.eventBuffer.add(trackedEvent);
         }, 'track');
@@ -275,4 +307,5 @@ export { ClickPlugin } from './core/plugins/click-plugin';
 export { PageViewPlugin } from './core/plugins/page-view-plugin';
 export { FormPlugin } from './core/plugins/form-plugin';
 export { ScrollPlugin } from './core/plugins/scroll-plugin';
+export { ReviewPlugin } from './core/plugins/review-plugin';
 //# sourceMappingURL=index.js.map
