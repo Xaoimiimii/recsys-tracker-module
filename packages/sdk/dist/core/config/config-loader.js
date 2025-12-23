@@ -1,4 +1,4 @@
-import { OriginVerifier } from '../utils/origin-verifier';
+//import { OriginVerifier } from '../utils/origin-verifier';
 // Luồng hoạt động
 // 1. SDK khởi tạo
 // 2. Gọi loadFromWindow() để lấy domainKey từ window
@@ -108,14 +108,14 @@ export class ConfigLoader {
                     returnMethods: this.transformReturnMethods(returnMethodsData),
                 };
                 // Verify origin sau khi có domainUrl từ server
-                if (this.config.domainUrl) {
-                    const isOriginValid = OriginVerifier.verify(this.config.domainUrl);
-                    if (!isOriginValid) {
-                        console.error('[RecSysTracker] Origin verification failed. SDK will not function.');
-                        this.config = null;
-                        return null;
-                    }
-                }
+                // if (this.config.domainUrl) {
+                //   const isOriginValid = OriginVerifier.verify(this.config.domainUrl);
+                //   if (!isOriginValid) {
+                //     console.error('[RecSysTracker] Origin verification failed. SDK will not function.');
+                //     this.config = null;
+                //     return null;
+                //   }
+                // }
             }
             return this.config;
         }

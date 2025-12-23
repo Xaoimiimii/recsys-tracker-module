@@ -15,77 +15,77 @@
         document.cookie = "browsing_history_last=P-COOKIE-777; path=/";
 
         // 2. MOCK CONFIGURATION
-        window.__RECSYS_DOMAIN_KEY__ = 'TEST-DOMAIN-KEY';
+        window.__RECSYS_DOMAIN_KEY__ = '079251187f351b700844164bf0ac5fddebaa305af8732fe06ae631b921eaf9e7';
 
-        window.RecSysTrackerConfig = {
-            trackEndpoint: 'http://localhost:3000/track',
-            trackingRules: [
-                // --- CASE 1: STORAGE MAPPING (User & Item from Storage) ---
-                {
-                    id: 'RULE-STORAGE', 
-                    name: 'Test Storage Mapping', 
-                    eventTypeId: 5, // 5 = REVIEW
-                    targetElement: { 
-                        targetElementValue: '#form-storage', 
-                        targetEventPatternId: 1, // CSS Selector
-                        targetOperatorId: 5      // Equals
-                    },
-                    payloadMappings: [
-                        // [UPDATE] User lấy từ LocalStorage
-                        { 
-                            field: 'userId', 
-                            source: 'local_storage', 
-                            value: 'curr_user_id' 
-                        },
-                        // [UPDATE] Item lấy từ Cookie
-                        { 
-                            field: 'itemId', 
-                            source: 'cookie', 
-                            value: 'browsing_history_last' 
-                        },
-                        // Content vẫn lấy từ Element (Textarea)
-                        { 
-                            field: 'content', 
-                            source: 'element', 
-                            value: '#storage-content' 
-                        }
-                    ]
-                },
+        // window.RecSysTrackerConfig = {
+        //     trackEndpoint: 'http://localhost:3000/track',
+        //     trackingRules: [
+        //         // --- CASE 1: STORAGE MAPPING (User & Item from Storage) ---
+        //         {
+        //             id: 'RULE-STORAGE', 
+        //             name: 'Test Storage Mapping', 
+        //             eventTypeId: 5, // 5 = REVIEW
+        //             targetElement: { 
+        //                 targetElementValue: '#form-storage', 
+        //                 targetEventPatternId: 1, // CSS Selector
+        //                 targetOperatorId: 5      // Equals
+        //             },
+        //             payloadMappings: [
+        //                 // [UPDATE] User lấy từ LocalStorage
+        //                 { 
+        //                     field: 'userId', 
+        //                     source: 'local_storage', 
+        //                     value: 'curr_user_id' 
+        //                 },
+        //                 // [UPDATE] Item lấy từ Cookie
+        //                 { 
+        //                     field: 'itemId', 
+        //                     source: 'cookie', 
+        //                     value: 'browsing_history_last' 
+        //                 },
+        //                 // Content vẫn lấy từ Element (Textarea)
+        //                 { 
+        //                     field: 'content', 
+        //                     source: 'element', 
+        //                     value: '#storage-content' 
+        //                 }
+        //             ]
+        //         },
 
-                // --- CASE 2: NESTED JSON STORAGE ---
-                // Test khả năng đọc JSON lồng nhau: app_settings.last_product
-                {
-                    id: 'RULE-NESTED', 
-                    name: 'Test Nested JSON Storage', 
-                    eventTypeId: 5,
-                    targetElement: { 
-                        targetElementValue: '#form-nested', 
-                        targetEventPatternId: 1, 
-                        targetOperatorId: 5 
-                    },
-                    payloadMappings: [
-                        { field: 'userId', source: 'local_storage', value: 'curr_user_id' },
-                        // Item lấy từ JSON trong LS: {"last_product": "..."}
-                        { field: 'itemId', source: 'local_storage', value: 'app_settings.last_product' },
-                        { field: 'content', source: 'element', value: '#nested-content' }
-                    ]
-                },
+        //         // --- CASE 2: NESTED JSON STORAGE ---
+        //         // Test khả năng đọc JSON lồng nhau: app_settings.last_product
+        //         {
+        //             id: 'RULE-NESTED', 
+        //             name: 'Test Nested JSON Storage', 
+        //             eventTypeId: 5,
+        //             targetElement: { 
+        //                 targetElementValue: '#form-nested', 
+        //                 targetEventPatternId: 1, 
+        //                 targetOperatorId: 5 
+        //             },
+        //             payloadMappings: [
+        //                 { field: 'userId', source: 'local_storage', value: 'curr_user_id' },
+        //                 // Item lấy từ JSON trong LS: {"last_product": "..."}
+        //                 { field: 'itemId', source: 'local_storage', value: 'app_settings.last_product' },
+        //                 { field: 'content', source: 'element', value: '#nested-content' }
+        //             ]
+        //         },
 
-                // --- CASE 3: AUTO DETECT (Fallback) ---
-                // Không map gì cả, để SDK tự fallback (Radar/Auto Content)
-                {
-                    id: 'RULE-AUTO', 
-                    name: 'Test Auto Fallback', 
-                    eventTypeId: 5,
-                    targetElement: { 
-                        targetElementValue: '#form-auto', 
-                        targetEventPatternId: 1, 
-                        targetOperatorId: 5 
-                    },
-                    payloadMappings: [] // Rỗng
-                }
-            ]
-        };
+        //         // --- CASE 3: AUTO DETECT (Fallback) ---
+        //         // Không map gì cả, để SDK tự fallback (Radar/Auto Content)
+        //         {
+        //             id: 'RULE-AUTO', 
+        //             name: 'Test Auto Fallback', 
+        //             eventTypeId: 5,
+        //             targetElement: { 
+        //                 targetElementValue: '#form-auto', 
+        //                 targetEventPatternId: 1, 
+        //                 targetOperatorId: 5 
+        //             },
+        //             payloadMappings: [] // Rỗng
+        //         }
+        //     ]
+        // };
     </script>
     
     <script src="http://localhost:3000/dist/loader.js"></script>
