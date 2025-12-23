@@ -9,17 +9,20 @@ import {
 } from '@nestjs/common';
 import { ReturnMethodService } from './return-method.service';
 import { CreateReturnMethodsDto } from './dto/create-return-method.dto';
+import { ApiOperation } from '@nestjs/swagger';
 
 @Controller('domain/return-method')
 export class ReturnMethodController {
     constructor(private returnMethodService: ReturnMethodService) { }
 
     @Get(':key')
+    @ApiOperation({ summary: 'Get all return methods by domain key' })
     async getReturnMethods(@Param('key') key: string) {
         return this.returnMethodService.getReturnMethodsByDomainKey(key);
     }
 
     @Post()
+    @ApiOperation({ summary: 'Create a new return method for a domain' })
     async createReturnMethods(@Body() dto: CreateReturnMethodsDto) {
         const result = await this.returnMethodService.createReturnMethods(
             dto.Key,

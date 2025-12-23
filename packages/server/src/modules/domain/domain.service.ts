@@ -56,6 +56,14 @@ export class DomainService {
     }
 
     async getDomainsByTernantId(ternantId: number) {
+        const ternant = await this.prisma.ternant.findUnique({
+            where: {
+                Id: ternantId
+            }
+        });
+
+        if (!ternant) throw new NotFoundException('Ternant not found');
+
         const domains = await this.prisma.domain.findMany({
             where: {
                 TernantID: ternantId
@@ -69,10 +77,6 @@ export class DomainService {
     //     return events;
     // }
 
-    async getAllEventTypes() {
-        const types = await this.prisma.eventType.findMany();
-        return types;
-    }
 
     async getAllReturnMethods() {
         const methods = await this.prisma.returnMethod.findMany();

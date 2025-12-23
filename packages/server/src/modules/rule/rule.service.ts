@@ -143,4 +143,9 @@ export class RuleService {
         });
         return rules;
     }
+
+    async getAllEventTypes() {
+        const types = await this.prisma.eventType.findMany();
+        return types;
+    }
 }

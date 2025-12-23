@@ -116,7 +116,7 @@ export class FormPlugin extends BasePlugin {
         for (const rule of rateRules) {
             // Lấy selector từ cấu trúc lồng nhau (như trong index.ts bạn viết)
             // Dùng optional chaining (?.) để an toàn
-            const selector = rule.targetElement?.targetElementValue || (rule as any).targetElementValue;
+            const selector = rule.trackingTarget?.value || (rule as any).targetElementValue;
 
             console.log(`   👉 Checking Rule [${rule.id}]: Cần tìm selector "${selector}"`);
 

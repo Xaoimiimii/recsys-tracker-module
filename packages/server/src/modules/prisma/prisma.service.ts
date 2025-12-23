@@ -13,7 +13,7 @@ export class PrismaService extends PrismaClient {
         const pool = new Pool({
             connectionString: config.get<string>('DATABASE_URL'),
         });
-        const adapter = new PrismaPg(pool, { schema: 'webconfig' });
+        const adapter = new PrismaPg(pool, { schema: 'public' });
         super({ adapter });
     }
 }

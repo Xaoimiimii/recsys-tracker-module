@@ -35,7 +35,7 @@ export class TrackerContextAdapter implements IRecsysContext {
             };
             
             // Build payload extractor from rule data
-            const targetValue = rule.targetElement.targetElementValue || '';
+            const targetValue = rule.trackingTarget.value || '';
             const isRegex = targetValue.startsWith('^');
             const extractor: PayloadExtractor = {
                 source: isRegex ? 'regex_group' : 'ai_detect',

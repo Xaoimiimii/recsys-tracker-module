@@ -245,17 +245,16 @@ class ConfigLoader {
         if (!Array.isArray(rulesData))
             return [];
         return rulesData.map(rule => {
-            var _a, _b, _c, _d;
+            var _a, _b;
             return ({
                 id: ((_a = rule.Id) === null || _a === void 0 ? void 0 : _a.toString()) || ((_b = rule.id) === null || _b === void 0 ? void 0 : _b.toString()),
                 name: rule.Name || rule.name,
+                domainId: rule.DomainID || rule.domainId,
                 eventTypeId: rule.EventTypeID || rule.eventTypeId,
-                targetElement: {
-                    targetElementOperatorId: ((_c = rule.TargetElement) === null || _c === void 0 ? void 0 : _c.OperatorID) || rule.targetElementOperatorId,
-                    targetElementValue: ((_d = rule.TargetElement) === null || _d === void 0 ? void 0 : _d.Value) || rule.targetElementValue,
-                },
+                trackingTargetId: rule.TrackingTargetId || rule.trackingTargetId,
+                payloadMappings: this.transformPayloadMappings(rule.PayloadMappings || rule.payloadMappings || []),
                 conditions: this.transformConditions(rule.Conditions || rule.conditions || []),
-                payload: this.transformPayloadConfigs(rule.PayloadConfigs || rule.payload || []),
+                trackingTarget: this.transformTrackingTarget(rule.TrackingTarget || rule.trackingTarget),
             });
         });
     }
@@ -264,24 +263,46 @@ class ConfigLoader {
         if (!Array.isArray(conditionsData))
             return [];
         return conditionsData.map(condition => ({
-            // id: condition.Id || condition.id,
-            eventPatternId: condition.EventPatternID || condition.eventPatternId,
-            // ruleId: condition.RuleID || condition.ruleId,
-            operatorId: condition.OperatorID || condition.operatorId,
+            id: condition.Id || condition.id,
             value: condition.Value || condition.value,
+            trackingRuleId: condition.TrackingRuleID || condition.trackingRuleId,
+            patternId: condition.PatternId || condition.patternId,
+            operatorId: condition.OperatorID || condition.operatorId,
         }));
     }
-    // Transform payload configs từ server format sang SDK format
-    transformPayloadConfigs(payloadData) {
+    // Transform payload mappings từ server format sang SDK format
+    transformPayloadMappings(payloadData) {
         if (!Array.isArray(payloadData))
             return [];
         return payloadData.map(payload => ({
-            payloadPatternId: payload.PayloadPatternID || payload.payloadPatternId,
-            // ruleId: payload.RuleID || payload.ruleId,
-            operatorId: payload.OperatorID || payload.operatorId,
+            id: payload.Id || payload.id,
+            field: payload.Field || payload.field,
+            source: payload.Source || payload.source,
             value: payload.Value || payload.value,
-            type: payload.Type || payload.type,
+            requestUrlPattern: payload.RequestUrlPattern || payload.requestUrlPattern || null,
+            requestMethod: payload.RequestMethod || payload.requestMethod || null,
+            requestBodyPath: payload.RequestBodyPath || payload.requestBodyPath || null,
+            urlPart: payload.UrlPart || payload.urlPart || null,
+            urlPartValue: payload.UrlPartValue || payload.urlPartValue || null,
+            trackingRuleId: payload.TrackingRuleId || payload.trackingRuleId,
         }));
+    }
+    // Transform tracking target từ server format sang SDK format
+    transformTrackingTarget(targetData) {
+        if (!targetData) {
+            return {
+                id: 0,
+                value: '',
+                patternId: 0,
+                operatorId: 0,
+            };
+        }
+        return {
+            id: targetData.Id || targetData.id || 0,
+            value: targetData.Value || targetData.value || '',
+            patternId: targetData.PatternId || targetData.patternId || 0,
+            operatorId: targetData.OperatorId || targetData.operatorId || 0,
+        };
     }
     // Transform return methods từ server format sang SDK format
     transformReturnMethods(returnMethodsData) {
@@ -2934,7 +2955,7 @@ class TrackerContextAdapter {
                     itemId: 'N/A'
                 };
                 // Build payload extractor from rule data
-                const targetValue = rule.targetElement.targetElementValue || '';
+                const targetValue = rule.trackingTarget.value || '';
                 const isRegex = targetValue.startsWith('^');
                 const extractor = {
                     source: isRegex ? 'regex_group' : 'ai_detect',
@@ -3082,7 +3103,7 @@ class ClickPlugin extends BasePlugin {
         }
         // Loop qua tất cả click rules và check match
         for (const rule of clickRules) {
-            const selector = rule.targetElement.targetElementValue;
+            const selector = rule.trackingTarget.value;
             if (!selector)
                 continue;
             const matchedElement = event.target.closest(selector);
@@ -3149,6 +3170,7 @@ class PageViewPlugin extends BasePlugin {
         }, 0);
     }
     trackCurrentPage(currentUrl) {
+        var _a;
         if (!this.context || !this.detector)
             return;
         const urlObject = new URL(currentUrl);
@@ -3162,7 +3184,7 @@ class PageViewPlugin extends BasePlugin {
         for (const rule of pageViewRules) {
             let matchFound = false;
             let matchData = null;
-            const selector = rule.targetElement.targetElementValue || '';
+            const selector = ((_a = rule.trackingTarget) === null || _a === void 0 ? void 0 : _a.value) || '';
             // Determine payload extractor from rule data
             const isRegex = selector.startsWith('^');
             const extractorSource = isRegex ? 'regex_group' : 'ai_detect';
@@ -3305,7 +3327,7 @@ class FormPlugin extends BasePlugin {
         for (const rule of rateRules) {
             // Lấy selector từ cấu trúc lồng nhau (như trong index.ts bạn viết)
             // Dùng optional chaining (?.) để an toàn
-            const selector = ((_a = rule.targetElement) === null || _a === void 0 ? void 0 : _a.targetElementValue) || rule.targetElementValue;
+            const selector = ((_a = rule.trackingTarget) === null || _a === void 0 ? void 0 : _a.value) || rule.targetElementValue;
             console.log(`   👉 Checking Rule [${rule.id}]: Cần tìm selector "${selector}"`);
             if (!selector) {
                 console.log("      -> Bỏ qua: Rule không có selector");
