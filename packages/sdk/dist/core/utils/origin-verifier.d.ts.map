@@ -1,1 +1,0 @@
-{"version":3,"file":"origin-verifier.d.ts","sourceRoot":"","sources":["../../../src/core/utils/origin-verifier.ts"],"names":[],"mappings":"AAAA,qBAAa,cAAc;IACzB;;;;;OAKG;IACH,MAAM,CAAC,MAAM,CAAC,SAAS,EAAE,MAAM,GAAG,OAAO;IAwCzC,OAAO,CAAC,MAAM,CAAC,cAAc;IAuB7B,OAAO,CAAC,MAAM,CAAC,gBAAgB;IAuC/B,OAAO,CAAC,MAAM,CAAC,YAAY;IA0B3B;;;OAGG;IACH,MAAM,CAAC,aAAa,IAAI,OAAO;CAchC"}

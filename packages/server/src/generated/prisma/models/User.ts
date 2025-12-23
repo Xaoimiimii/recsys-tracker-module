@@ -40,6 +40,7 @@ export type UserSumAggregateOutputType = {
 
 export type UserMinAggregateOutputType = {
   Id: number | null
+  DomainUserId: string | null
   Username: string | null
   DomainId: number | null
   CreatedAt: Date | null
@@ -48,6 +49,7 @@ export type UserMinAggregateOutputType = {
 
 export type UserMaxAggregateOutputType = {
   Id: number | null
+  DomainUserId: string | null
   Username: string | null
   DomainId: number | null
   CreatedAt: Date | null
@@ -56,6 +58,7 @@ export type UserMaxAggregateOutputType = {
 
 export type UserCountAggregateOutputType = {
   Id: number
+  DomainUserId: number
   Username: number
   DomainId: number
   UserEmbeddingVector: number
@@ -79,6 +82,7 @@ export type UserSumAggregateInputType = {
 
 export type UserMinAggregateInputType = {
   Id?: true
+  DomainUserId?: true
   Username?: true
   DomainId?: true
   CreatedAt?: true
@@ -87,6 +91,7 @@ export type UserMinAggregateInputType = {
 
 export type UserMaxAggregateInputType = {
   Id?: true
+  DomainUserId?: true
   Username?: true
   DomainId?: true
   CreatedAt?: true
@@ -95,6 +100,7 @@ export type UserMaxAggregateInputType = {
 
 export type UserCountAggregateInputType = {
   Id?: true
+  DomainUserId?: true
   Username?: true
   DomainId?: true
   UserEmbeddingVector?: true
@@ -191,6 +197,7 @@ export type UserGroupByArgs<ExtArgs extends runtime.Types.Extensions.InternalArg
 
 export type UserGroupByOutputType = {
   Id: number
+  DomainUserId: string | null
   Username: string | null
   DomainId: number
   UserEmbeddingVector: number[]
@@ -223,6 +230,7 @@ export type UserWhereInput = {
   OR?: Prisma.UserWhereInput[]
   NOT?: Prisma.UserWhereInput | Prisma.UserWhereInput[]
   Id?: Prisma.IntFilter<"User"> | number
+  DomainUserId?: Prisma.StringNullableFilter<"User"> | string | null
   Username?: Prisma.StringNullableFilter<"User"> | string | null
   DomainId?: Prisma.IntFilter<"User"> | number
   UserEmbeddingVector?: Prisma.FloatNullableListFilter<"User">
@@ -237,6 +245,7 @@ export type UserWhereInput = {
 
 export type UserOrderByWithRelationInput = {
   Id?: Prisma.SortOrder
+  DomainUserId?: Prisma.SortOrderInput | Prisma.SortOrder
   Username?: Prisma.SortOrderInput | Prisma.SortOrder
   DomainId?: Prisma.SortOrder
   UserEmbeddingVector?: Prisma.SortOrder
@@ -255,6 +264,7 @@ export type UserWhereUniqueInput = Prisma.AtLeast<{
   AND?: Prisma.UserWhereInput | Prisma.UserWhereInput[]
   OR?: Prisma.UserWhereInput[]
   NOT?: Prisma.UserWhereInput | Prisma.UserWhereInput[]
+  DomainUserId?: Prisma.StringNullableFilter<"User"> | string | null
   Username?: Prisma.StringNullableFilter<"User"> | string | null
   DomainId?: Prisma.IntFilter<"User"> | number
   UserEmbeddingVector?: Prisma.FloatNullableListFilter<"User">
@@ -269,6 +279,7 @@ export type UserWhereUniqueInput = Prisma.AtLeast<{
 
 export type UserOrderByWithAggregationInput = {
   Id?: Prisma.SortOrder
+  DomainUserId?: Prisma.SortOrderInput | Prisma.SortOrder
   Username?: Prisma.SortOrderInput | Prisma.SortOrder
   DomainId?: Prisma.SortOrder
   UserEmbeddingVector?: Prisma.SortOrder
@@ -286,6 +297,7 @@ export type UserScalarWhereWithAggregatesInput = {
   OR?: Prisma.UserScalarWhereWithAggregatesInput[]
   NOT?: Prisma.UserScalarWhereWithAggregatesInput | Prisma.UserScalarWhereWithAggregatesInput[]
   Id?: Prisma.IntWithAggregatesFilter<"User"> | number
+  DomainUserId?: Prisma.StringNullableWithAggregatesFilter<"User"> | string | null
   Username?: Prisma.StringNullableWithAggregatesFilter<"User"> | string | null
   DomainId?: Prisma.IntWithAggregatesFilter<"User"> | number
   UserEmbeddingVector?: Prisma.FloatNullableListFilter<"User">
@@ -294,6 +306,7 @@ export type UserScalarWhereWithAggregatesInput = {
 }
 
 export type UserCreateInput = {
+  DomainUserId?: string | null
   Username?: string | null
   UserEmbeddingVector?: Prisma.UserCreateUserEmbeddingVectorInput | number[]
   CreatedAt?: Date | string
@@ -307,6 +320,7 @@ export type UserCreateInput = {
 
 export type UserUncheckedCreateInput = {
   Id?: number
+  DomainUserId?: string | null
   Username?: string | null
   DomainId: number
   UserEmbeddingVector?: Prisma.UserCreateUserEmbeddingVectorInput | number[]
@@ -319,6 +333,7 @@ export type UserUncheckedCreateInput = {
 }
 
 export type UserUpdateInput = {
+  DomainUserId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   Username?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   UserEmbeddingVector?: Prisma.UserUpdateUserEmbeddingVectorInput | number[]
   CreatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -332,6 +347,7 @@ export type UserUpdateInput = {
 
 export type UserUncheckedUpdateInput = {
   Id?: Prisma.IntFieldUpdateOperationsInput | number
+  DomainUserId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   Username?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   DomainId?: Prisma.IntFieldUpdateOperationsInput | number
   UserEmbeddingVector?: Prisma.UserUpdateUserEmbeddingVectorInput | number[]
@@ -345,6 +361,7 @@ export type UserUncheckedUpdateInput = {
 
 export type UserCreateManyInput = {
   Id?: number
+  DomainUserId?: string | null
   Username?: string | null
   DomainId: number
   UserEmbeddingVector?: Prisma.UserCreateUserEmbeddingVectorInput | number[]
@@ -353,6 +370,7 @@ export type UserCreateManyInput = {
 }
 
 export type UserUpdateManyMutationInput = {
+  DomainUserId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   Username?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   UserEmbeddingVector?: Prisma.UserUpdateUserEmbeddingVectorInput | number[]
   CreatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -361,6 +379,7 @@ export type UserUpdateManyMutationInput = {
 
 export type UserUncheckedUpdateManyInput = {
   Id?: Prisma.IntFieldUpdateOperationsInput | number
+  DomainUserId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   Username?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   DomainId?: Prisma.IntFieldUpdateOperationsInput | number
   UserEmbeddingVector?: Prisma.UserUpdateUserEmbeddingVectorInput | number[]
@@ -385,6 +404,7 @@ export type UserUsernameDomainIdCompoundUniqueInput = {
 
 export type UserCountOrderByAggregateInput = {
   Id?: Prisma.SortOrder
+  DomainUserId?: Prisma.SortOrder
   Username?: Prisma.SortOrder
   DomainId?: Prisma.SortOrder
   UserEmbeddingVector?: Prisma.SortOrder
@@ -400,6 +420,7 @@ export type UserAvgOrderByAggregateInput = {
 
 export type UserMaxOrderByAggregateInput = {
   Id?: Prisma.SortOrder
+  DomainUserId?: Prisma.SortOrder
   Username?: Prisma.SortOrder
   DomainId?: Prisma.SortOrder
   CreatedAt?: Prisma.SortOrder
@@ -408,6 +429,7 @@ export type UserMaxOrderByAggregateInput = {
 
 export type UserMinOrderByAggregateInput = {
   Id?: Prisma.SortOrder
+  DomainUserId?: Prisma.SortOrder
   Username?: Prisma.SortOrder
   DomainId?: Prisma.SortOrder
   CreatedAt?: Prisma.SortOrder
@@ -542,6 +564,7 @@ export type UserUpdateOneWithoutInteractionsNestedInput = {
 }
 
 export type UserCreateWithoutDomainInput = {
+  DomainUserId?: string | null
   Username?: string | null
   UserEmbeddingVector?: Prisma.UserCreateUserEmbeddingVectorInput | number[]
   CreatedAt?: Date | string
@@ -554,6 +577,7 @@ export type UserCreateWithoutDomainInput = {
 
 export type UserUncheckedCreateWithoutDomainInput = {
   Id?: number
+  DomainUserId?: string | null
   Username?: string | null
   UserEmbeddingVector?: Prisma.UserCreateUserEmbeddingVectorInput | number[]
   CreatedAt?: Date | string
@@ -595,6 +619,7 @@ export type UserScalarWhereInput = {
   OR?: Prisma.UserScalarWhereInput[]
   NOT?: Prisma.UserScalarWhereInput | Prisma.UserScalarWhereInput[]
   Id?: Prisma.IntFilter<"User"> | number
+  DomainUserId?: Prisma.StringNullableFilter<"User"> | string | null
   Username?: Prisma.StringNullableFilter<"User"> | string | null
   DomainId?: Prisma.IntFilter<"User"> | number
   UserEmbeddingVector?: Prisma.FloatNullableListFilter<"User">
@@ -603,6 +628,7 @@ export type UserScalarWhereInput = {
 }
 
 export type UserCreateWithoutUserFactorsInput = {
+  DomainUserId?: string | null
   Username?: string | null
   UserEmbeddingVector?: Prisma.UserCreateUserEmbeddingVectorInput | number[]
   CreatedAt?: Date | string
@@ -615,6 +641,7 @@ export type UserCreateWithoutUserFactorsInput = {
 
 export type UserUncheckedCreateWithoutUserFactorsInput = {
   Id?: number
+  DomainUserId?: string | null
   Username?: string | null
   DomainId: number
   UserEmbeddingVector?: Prisma.UserCreateUserEmbeddingVectorInput | number[]
@@ -642,6 +669,7 @@ export type UserUpdateToOneWithWhereWithoutUserFactorsInput = {
 }
 
 export type UserUpdateWithoutUserFactorsInput = {
+  DomainUserId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   Username?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   UserEmbeddingVector?: Prisma.UserUpdateUserEmbeddingVectorInput | number[]
   CreatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -654,6 +682,7 @@ export type UserUpdateWithoutUserFactorsInput = {
 
 export type UserUncheckedUpdateWithoutUserFactorsInput = {
   Id?: Prisma.IntFieldUpdateOperationsInput | number
+  DomainUserId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   Username?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   DomainId?: Prisma.IntFieldUpdateOperationsInput | number
   UserEmbeddingVector?: Prisma.UserUpdateUserEmbeddingVectorInput | number[]
@@ -665,6 +694,7 @@ export type UserUncheckedUpdateWithoutUserFactorsInput = {
 }
 
 export type UserCreateWithoutPredictsInput = {
+  DomainUserId?: string | null
   Username?: string | null
   UserEmbeddingVector?: Prisma.UserCreateUserEmbeddingVectorInput | number[]
   CreatedAt?: Date | string
@@ -677,6 +707,7 @@ export type UserCreateWithoutPredictsInput = {
 
 export type UserUncheckedCreateWithoutPredictsInput = {
   Id?: number
+  DomainUserId?: string | null
   Username?: string | null
   DomainId: number
   UserEmbeddingVector?: Prisma.UserCreateUserEmbeddingVectorInput | number[]
@@ -704,6 +735,7 @@ export type UserUpdateToOneWithWhereWithoutPredictsInput = {
 }
 
 export type UserUpdateWithoutPredictsInput = {
+  DomainUserId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   Username?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   UserEmbeddingVector?: Prisma.UserUpdateUserEmbeddingVectorInput | number[]
   CreatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -716,6 +748,7 @@ export type UserUpdateWithoutPredictsInput = {
 
 export type UserUncheckedUpdateWithoutPredictsInput = {
   Id?: Prisma.IntFieldUpdateOperationsInput | number
+  DomainUserId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   Username?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   DomainId?: Prisma.IntFieldUpdateOperationsInput | number
   UserEmbeddingVector?: Prisma.UserUpdateUserEmbeddingVectorInput | number[]
@@ -727,6 +760,7 @@ export type UserUncheckedUpdateWithoutPredictsInput = {
 }
 
 export type UserCreateWithoutRatingsInput = {
+  DomainUserId?: string | null
   Username?: string | null
   UserEmbeddingVector?: Prisma.UserCreateUserEmbeddingVectorInput | number[]
   CreatedAt?: Date | string
@@ -739,6 +773,7 @@ export type UserCreateWithoutRatingsInput = {
 
 export type UserUncheckedCreateWithoutRatingsInput = {
   Id?: number
+  DomainUserId?: string | null
   Username?: string | null
   DomainId: number
   UserEmbeddingVector?: Prisma.UserCreateUserEmbeddingVectorInput | number[]
@@ -766,6 +801,7 @@ export type UserUpdateToOneWithWhereWithoutRatingsInput = {
 }
 
 export type UserUpdateWithoutRatingsInput = {
+  DomainUserId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   Username?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   UserEmbeddingVector?: Prisma.UserUpdateUserEmbeddingVectorInput | number[]
   CreatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -778,6 +814,7 @@ export type UserUpdateWithoutRatingsInput = {
 
 export type UserUncheckedUpdateWithoutRatingsInput = {
   Id?: Prisma.IntFieldUpdateOperationsInput | number
+  DomainUserId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   Username?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   DomainId?: Prisma.IntFieldUpdateOperationsInput | number
   UserEmbeddingVector?: Prisma.UserUpdateUserEmbeddingVectorInput | number[]
@@ -789,6 +826,7 @@ export type UserUncheckedUpdateWithoutRatingsInput = {
 }
 
 export type UserCreateWithoutInteractionsInput = {
+  DomainUserId?: string | null
   Username?: string | null
   UserEmbeddingVector?: Prisma.UserCreateUserEmbeddingVectorInput | number[]
   CreatedAt?: Date | string
@@ -801,6 +839,7 @@ export type UserCreateWithoutInteractionsInput = {
 
 export type UserUncheckedCreateWithoutInteractionsInput = {
   Id?: number
+  DomainUserId?: string | null
   Username?: string | null
   DomainId: number
   UserEmbeddingVector?: Prisma.UserCreateUserEmbeddingVectorInput | number[]
@@ -828,6 +867,7 @@ export type UserUpdateToOneWithWhereWithoutInteractionsInput = {
 }
 
 export type UserUpdateWithoutInteractionsInput = {
+  DomainUserId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   Username?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   UserEmbeddingVector?: Prisma.UserUpdateUserEmbeddingVectorInput | number[]
   CreatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -840,6 +880,7 @@ export type UserUpdateWithoutInteractionsInput = {
 
 export type UserUncheckedUpdateWithoutInteractionsInput = {
   Id?: Prisma.IntFieldUpdateOperationsInput | number
+  DomainUserId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   Username?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   DomainId?: Prisma.IntFieldUpdateOperationsInput | number
   UserEmbeddingVector?: Prisma.UserUpdateUserEmbeddingVectorInput | number[]
@@ -852,6 +893,7 @@ export type UserUncheckedUpdateWithoutInteractionsInput = {
 
 export type UserCreateManyDomainInput = {
   Id?: number
+  DomainUserId?: string | null
   Username?: string | null
   UserEmbeddingVector?: Prisma.UserCreateUserEmbeddingVectorInput | number[]
   CreatedAt?: Date | string
@@ -859,6 +901,7 @@ export type UserCreateManyDomainInput = {
 }
 
 export type UserUpdateWithoutDomainInput = {
+  DomainUserId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   Username?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   UserEmbeddingVector?: Prisma.UserUpdateUserEmbeddingVectorInput | number[]
   CreatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -871,6 +914,7 @@ export type UserUpdateWithoutDomainInput = {
 
 export type UserUncheckedUpdateWithoutDomainInput = {
   Id?: Prisma.IntFieldUpdateOperationsInput | number
+  DomainUserId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   Username?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   UserEmbeddingVector?: Prisma.UserUpdateUserEmbeddingVectorInput | number[]
   CreatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -883,6 +927,7 @@ export type UserUncheckedUpdateWithoutDomainInput = {
 
 export type UserUncheckedUpdateManyWithoutDomainInput = {
   Id?: Prisma.IntFieldUpdateOperationsInput | number
+  DomainUserId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   Username?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   UserEmbeddingVector?: Prisma.UserUpdateUserEmbeddingVectorInput | number[]
   CreatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -949,6 +994,7 @@ export type UserCountOutputTypeCountInteractionsArgs<ExtArgs extends runtime.Typ
 
 export type UserSelect<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetSelect<{
   Id?: boolean
+  DomainUserId?: boolean
   Username?: boolean
   DomainId?: boolean
   UserEmbeddingVector?: boolean
@@ -964,6 +1010,7 @@ export type UserSelect<ExtArgs extends runtime.Types.Extensions.InternalArgs = r
 
 export type UserSelectCreateManyAndReturn<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetSelect<{
   Id?: boolean
+  DomainUserId?: boolean
   Username?: boolean
   DomainId?: boolean
   UserEmbeddingVector?: boolean
@@ -974,6 +1021,7 @@ export type UserSelectCreateManyAndReturn<ExtArgs extends runtime.Types.Extensio
 
 export type UserSelectUpdateManyAndReturn<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetSelect<{
   Id?: boolean
+  DomainUserId?: boolean
   Username?: boolean
   DomainId?: boolean
   UserEmbeddingVector?: boolean
@@ -984,6 +1032,7 @@ export type UserSelectUpdateManyAndReturn<ExtArgs extends runtime.Types.Extensio
 
 export type UserSelectScalar = {
   Id?: boolean
+  DomainUserId?: boolean
   Username?: boolean
   DomainId?: boolean
   UserEmbeddingVector?: boolean
@@ -991,7 +1040,7 @@ export type UserSelectScalar = {
   ModifiedAt?: boolean
 }
 
-export type UserOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"Id" | "Username" | "DomainId" | "UserEmbeddingVector" | "CreatedAt" | "ModifiedAt", ExtArgs["result"]["user"]>
+export type UserOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"Id" | "DomainUserId" | "Username" | "DomainId" | "UserEmbeddingVector" | "CreatedAt" | "ModifiedAt", ExtArgs["result"]["user"]>
 export type UserInclude<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   Domain?: boolean | Prisma.DomainDefaultArgs<ExtArgs>
   UserFactors?: boolean | Prisma.User$UserFactorsArgs<ExtArgs>
@@ -1018,6 +1067,7 @@ export type $UserPayload<ExtArgs extends runtime.Types.Extensions.InternalArgs =
   }
   scalars: runtime.Types.Extensions.GetPayloadResult<{
     Id: number
+    DomainUserId: string | null
     Username: string | null
     DomainId: number
     UserEmbeddingVector: number[]
@@ -1452,6 +1502,7 @@ export interface Prisma__UserClient<T, Null = never, ExtArgs extends runtime.Typ
  */
 export interface UserFieldRefs {
   readonly Id: Prisma.FieldRef<"User", 'Int'>
+  readonly DomainUserId: Prisma.FieldRef<"User", 'String'>
   readonly Username: Prisma.FieldRef<"User", 'String'>
   readonly DomainId: Prisma.FieldRef<"User", 'Int'>
   readonly UserEmbeddingVector: Prisma.FieldRef<"User", 'Float[]'>

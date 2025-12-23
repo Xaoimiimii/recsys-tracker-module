@@ -43,7 +43,7 @@ export function throttle<T extends (...args: any[]) => void>(fn: T, delay: numbe
 }
 
 export function checkRuleCondition(url: string, condition: Condition): boolean {
-    if (condition.eventPatternId === 0) { return true; }
+    if (condition.patternId === 0) { return true; }
     let urlPath: string;
     try {
         urlPath = new URL(url).pathname;
@@ -51,7 +51,7 @@ export function checkRuleCondition(url: string, condition: Condition): boolean {
         urlPath = "";
     }
     if (
-        condition.eventPatternId === 2 &&
+        condition.patternId === 2 &&
         condition.operatorId === 5 &&
         condition.value
     ) {

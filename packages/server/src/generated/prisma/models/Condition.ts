@@ -28,39 +28,39 @@ export type AggregateCondition = {
 
 export type ConditionAvgAggregateOutputType = {
   Id: number | null
-  RuleID: number | null
-  EventPatternID: number | null
+  TrackingRuleID: number | null
+  PatternId: number | null
   OperatorID: number | null
 }
 
 export type ConditionSumAggregateOutputType = {
   Id: number | null
-  RuleID: number | null
-  EventPatternID: number | null
+  TrackingRuleID: number | null
+  PatternId: number | null
   OperatorID: number | null
 }
 
 export type ConditionMinAggregateOutputType = {
   Id: number | null
   Value: string | null
-  RuleID: number | null
-  EventPatternID: number | null
+  TrackingRuleID: number | null
+  PatternId: number | null
   OperatorID: number | null
 }
 
 export type ConditionMaxAggregateOutputType = {
   Id: number | null
   Value: string | null
-  RuleID: number | null
-  EventPatternID: number | null
+  TrackingRuleID: number | null
+  PatternId: number | null
   OperatorID: number | null
 }
 
 export type ConditionCountAggregateOutputType = {
   Id: number
   Value: number
-  RuleID: number
-  EventPatternID: number
+  TrackingRuleID: number
+  PatternId: number
   OperatorID: number
   _all: number
 }
@@ -68,39 +68,39 @@ export type ConditionCountAggregateOutputType = {
 
 export type ConditionAvgAggregateInputType = {
   Id?: true
-  RuleID?: true
-  EventPatternID?: true
+  TrackingRuleID?: true
+  PatternId?: true
   OperatorID?: true
 }
 
 export type ConditionSumAggregateInputType = {
   Id?: true
-  RuleID?: true
-  EventPatternID?: true
+  TrackingRuleID?: true
+  PatternId?: true
   OperatorID?: true
 }
 
 export type ConditionMinAggregateInputType = {
   Id?: true
   Value?: true
-  RuleID?: true
-  EventPatternID?: true
+  TrackingRuleID?: true
+  PatternId?: true
   OperatorID?: true
 }
 
 export type ConditionMaxAggregateInputType = {
   Id?: true
   Value?: true
-  RuleID?: true
-  EventPatternID?: true
+  TrackingRuleID?: true
+  PatternId?: true
   OperatorID?: true
 }
 
 export type ConditionCountAggregateInputType = {
   Id?: true
   Value?: true
-  RuleID?: true
-  EventPatternID?: true
+  TrackingRuleID?: true
+  PatternId?: true
   OperatorID?: true
   _all?: true
 }
@@ -194,8 +194,8 @@ export type ConditionGroupByArgs<ExtArgs extends runtime.Types.Extensions.Intern
 export type ConditionGroupByOutputType = {
   Id: number
   Value: string
-  RuleID: number
-  EventPatternID: number
+  TrackingRuleID: number
+  PatternId: number
   OperatorID: number
   _count: ConditionCountAggregateOutputType | null
   _avg: ConditionAvgAggregateOutputType | null
@@ -225,22 +225,22 @@ export type ConditionWhereInput = {
   NOT?: Prisma.ConditionWhereInput | Prisma.ConditionWhereInput[]
   Id?: Prisma.IntFilter<"Condition"> | number
   Value?: Prisma.StringFilter<"Condition"> | string
-  RuleID?: Prisma.IntFilter<"Condition"> | number
-  EventPatternID?: Prisma.IntFilter<"Condition"> | number
+  TrackingRuleID?: Prisma.IntFilter<"Condition"> | number
+  PatternId?: Prisma.IntFilter<"Condition"> | number
   OperatorID?: Prisma.IntFilter<"Condition"> | number
-  Rule?: Prisma.XOR<Prisma.RuleScalarRelationFilter, Prisma.RuleWhereInput>
-  EventPattern?: Prisma.XOR<Prisma.EventPatternScalarRelationFilter, Prisma.EventPatternWhereInput>
+  TrackingRule?: Prisma.XOR<Prisma.TrackingRuleScalarRelationFilter, Prisma.TrackingRuleWhereInput>
+  Pattern?: Prisma.XOR<Prisma.PatternScalarRelationFilter, Prisma.PatternWhereInput>
   Operator?: Prisma.XOR<Prisma.OperatorScalarRelationFilter, Prisma.OperatorWhereInput>
 }
 
 export type ConditionOrderByWithRelationInput = {
   Id?: Prisma.SortOrder
   Value?: Prisma.SortOrder
-  RuleID?: Prisma.SortOrder
-  EventPatternID?: Prisma.SortOrder
+  TrackingRuleID?: Prisma.SortOrder
+  PatternId?: Prisma.SortOrder
   OperatorID?: Prisma.SortOrder
-  Rule?: Prisma.RuleOrderByWithRelationInput
-  EventPattern?: Prisma.EventPatternOrderByWithRelationInput
+  TrackingRule?: Prisma.TrackingRuleOrderByWithRelationInput
+  Pattern?: Prisma.PatternOrderByWithRelationInput
   Operator?: Prisma.OperatorOrderByWithRelationInput
 }
 
@@ -250,19 +250,19 @@ export type ConditionWhereUniqueInput = Prisma.AtLeast<{
   OR?: Prisma.ConditionWhereInput[]
   NOT?: Prisma.ConditionWhereInput | Prisma.ConditionWhereInput[]
   Value?: Prisma.StringFilter<"Condition"> | string
-  RuleID?: Prisma.IntFilter<"Condition"> | number
-  EventPatternID?: Prisma.IntFilter<"Condition"> | number
+  TrackingRuleID?: Prisma.IntFilter<"Condition"> | number
+  PatternId?: Prisma.IntFilter<"Condition"> | number
   OperatorID?: Prisma.IntFilter<"Condition"> | number
-  Rule?: Prisma.XOR<Prisma.RuleScalarRelationFilter, Prisma.RuleWhereInput>
-  EventPattern?: Prisma.XOR<Prisma.EventPatternScalarRelationFilter, Prisma.EventPatternWhereInput>
+  TrackingRule?: Prisma.XOR<Prisma.TrackingRuleScalarRelationFilter, Prisma.TrackingRuleWhereInput>
+  Pattern?: Prisma.XOR<Prisma.PatternScalarRelationFilter, Prisma.PatternWhereInput>
   Operator?: Prisma.XOR<Prisma.OperatorScalarRelationFilter, Prisma.OperatorWhereInput>
 }, "Id">
 
 export type ConditionOrderByWithAggregationInput = {
   Id?: Prisma.SortOrder
   Value?: Prisma.SortOrder
-  RuleID?: Prisma.SortOrder
-  EventPatternID?: Prisma.SortOrder
+  TrackingRuleID?: Prisma.SortOrder
+  PatternId?: Prisma.SortOrder
   OperatorID?: Prisma.SortOrder
   _count?: Prisma.ConditionCountOrderByAggregateInput
   _avg?: Prisma.ConditionAvgOrderByAggregateInput
@@ -277,46 +277,46 @@ export type ConditionScalarWhereWithAggregatesInput = {
   NOT?: Prisma.ConditionScalarWhereWithAggregatesInput | Prisma.ConditionScalarWhereWithAggregatesInput[]
   Id?: Prisma.IntWithAggregatesFilter<"Condition"> | number
   Value?: Prisma.StringWithAggregatesFilter<"Condition"> | string
-  RuleID?: Prisma.IntWithAggregatesFilter<"Condition"> | number
-  EventPatternID?: Prisma.IntWithAggregatesFilter<"Condition"> | number
+  TrackingRuleID?: Prisma.IntWithAggregatesFilter<"Condition"> | number
+  PatternId?: Prisma.IntWithAggregatesFilter<"Condition"> | number
   OperatorID?: Prisma.IntWithAggregatesFilter<"Condition"> | number
 }
 
 export type ConditionCreateInput = {
   Value: string
-  Rule: Prisma.RuleCreateNestedOneWithoutConditionsInput
-  EventPattern: Prisma.EventPatternCreateNestedOneWithoutConditionsInput
+  TrackingRule: Prisma.TrackingRuleCreateNestedOneWithoutConditionsInput
+  Pattern: Prisma.PatternCreateNestedOneWithoutConditionsInput
   Operator: Prisma.OperatorCreateNestedOneWithoutConditionsInput
 }
 
 export type ConditionUncheckedCreateInput = {
   Id?: number
   Value: string
-  RuleID: number
-  EventPatternID: number
+  TrackingRuleID: number
+  PatternId: number
   OperatorID: number
 }
 
 export type ConditionUpdateInput = {
   Value?: Prisma.StringFieldUpdateOperationsInput | string
-  Rule?: Prisma.RuleUpdateOneRequiredWithoutConditionsNestedInput
-  EventPattern?: Prisma.EventPatternUpdateOneRequiredWithoutConditionsNestedInput
+  TrackingRule?: Prisma.TrackingRuleUpdateOneRequiredWithoutConditionsNestedInput
+  Pattern?: Prisma.PatternUpdateOneRequiredWithoutConditionsNestedInput
   Operator?: Prisma.OperatorUpdateOneRequiredWithoutConditionsNestedInput
 }
 
 export type ConditionUncheckedUpdateInput = {
   Id?: Prisma.IntFieldUpdateOperationsInput | number
   Value?: Prisma.StringFieldUpdateOperationsInput | string
-  RuleID?: Prisma.IntFieldUpdateOperationsInput | number
-  EventPatternID?: Prisma.IntFieldUpdateOperationsInput | number
+  TrackingRuleID?: Prisma.IntFieldUpdateOperationsInput | number
+  PatternId?: Prisma.IntFieldUpdateOperationsInput | number
   OperatorID?: Prisma.IntFieldUpdateOperationsInput | number
 }
 
 export type ConditionCreateManyInput = {
   Id?: number
   Value: string
-  RuleID: number
-  EventPatternID: number
+  TrackingRuleID: number
+  PatternId: number
   OperatorID: number
 }
 
@@ -327,8 +327,8 @@ export type ConditionUpdateManyMutationInput = {
 export type ConditionUncheckedUpdateManyInput = {
   Id?: Prisma.IntFieldUpdateOperationsInput | number
   Value?: Prisma.StringFieldUpdateOperationsInput | string
-  RuleID?: Prisma.IntFieldUpdateOperationsInput | number
-  EventPatternID?: Prisma.IntFieldUpdateOperationsInput | number
+  TrackingRuleID?: Prisma.IntFieldUpdateOperationsInput | number
+  PatternId?: Prisma.IntFieldUpdateOperationsInput | number
   OperatorID?: Prisma.IntFieldUpdateOperationsInput | number
 }
 
@@ -345,122 +345,122 @@ export type ConditionOrderByRelationAggregateInput = {
 export type ConditionCountOrderByAggregateInput = {
   Id?: Prisma.SortOrder
   Value?: Prisma.SortOrder
-  RuleID?: Prisma.SortOrder
-  EventPatternID?: Prisma.SortOrder
+  TrackingRuleID?: Prisma.SortOrder
+  PatternId?: Prisma.SortOrder
   OperatorID?: Prisma.SortOrder
 }
 
 export type ConditionAvgOrderByAggregateInput = {
   Id?: Prisma.SortOrder
-  RuleID?: Prisma.SortOrder
-  EventPatternID?: Prisma.SortOrder
+  TrackingRuleID?: Prisma.SortOrder
+  PatternId?: Prisma.SortOrder
   OperatorID?: Prisma.SortOrder
 }
 
 export type ConditionMaxOrderByAggregateInput = {
   Id?: Prisma.SortOrder
   Value?: Prisma.SortOrder
-  RuleID?: Prisma.SortOrder
-  EventPatternID?: Prisma.SortOrder
+  TrackingRuleID?: Prisma.SortOrder
+  PatternId?: Prisma.SortOrder
   OperatorID?: Prisma.SortOrder
 }
 
 export type ConditionMinOrderByAggregateInput = {
   Id?: Prisma.SortOrder
   Value?: Prisma.SortOrder
-  RuleID?: Prisma.SortOrder
-  EventPatternID?: Prisma.SortOrder
+  TrackingRuleID?: Prisma.SortOrder
+  PatternId?: Prisma.SortOrder
   OperatorID?: Prisma.SortOrder
 }
 
 export type ConditionSumOrderByAggregateInput = {
   Id?: Prisma.SortOrder
-  RuleID?: Prisma.SortOrder
-  EventPatternID?: Prisma.SortOrder
+  TrackingRuleID?: Prisma.SortOrder
+  PatternId?: Prisma.SortOrder
   OperatorID?: Prisma.SortOrder
 }
 
-export type ConditionCreateNestedManyWithoutRuleInput = {
-  create?: Prisma.XOR<Prisma.ConditionCreateWithoutRuleInput, Prisma.ConditionUncheckedCreateWithoutRuleInput> | Prisma.ConditionCreateWithoutRuleInput[] | Prisma.ConditionUncheckedCreateWithoutRuleInput[]
-  connectOrCreate?: Prisma.ConditionCreateOrConnectWithoutRuleInput | Prisma.ConditionCreateOrConnectWithoutRuleInput[]
-  createMany?: Prisma.ConditionCreateManyRuleInputEnvelope
+export type ConditionCreateNestedManyWithoutTrackingRuleInput = {
+  create?: Prisma.XOR<Prisma.ConditionCreateWithoutTrackingRuleInput, Prisma.ConditionUncheckedCreateWithoutTrackingRuleInput> | Prisma.ConditionCreateWithoutTrackingRuleInput[] | Prisma.ConditionUncheckedCreateWithoutTrackingRuleInput[]
+  connectOrCreate?: Prisma.ConditionCreateOrConnectWithoutTrackingRuleInput | Prisma.ConditionCreateOrConnectWithoutTrackingRuleInput[]
+  createMany?: Prisma.ConditionCreateManyTrackingRuleInputEnvelope
   connect?: Prisma.ConditionWhereUniqueInput | Prisma.ConditionWhereUniqueInput[]
 }
 
-export type ConditionUncheckedCreateNestedManyWithoutRuleInput = {
-  create?: Prisma.XOR<Prisma.ConditionCreateWithoutRuleInput, Prisma.ConditionUncheckedCreateWithoutRuleInput> | Prisma.ConditionCreateWithoutRuleInput[] | Prisma.ConditionUncheckedCreateWithoutRuleInput[]
-  connectOrCreate?: Prisma.ConditionCreateOrConnectWithoutRuleInput | Prisma.ConditionCreateOrConnectWithoutRuleInput[]
-  createMany?: Prisma.ConditionCreateManyRuleInputEnvelope
+export type ConditionUncheckedCreateNestedManyWithoutTrackingRuleInput = {
+  create?: Prisma.XOR<Prisma.ConditionCreateWithoutTrackingRuleInput, Prisma.ConditionUncheckedCreateWithoutTrackingRuleInput> | Prisma.ConditionCreateWithoutTrackingRuleInput[] | Prisma.ConditionUncheckedCreateWithoutTrackingRuleInput[]
+  connectOrCreate?: Prisma.ConditionCreateOrConnectWithoutTrackingRuleInput | Prisma.ConditionCreateOrConnectWithoutTrackingRuleInput[]
+  createMany?: Prisma.ConditionCreateManyTrackingRuleInputEnvelope
   connect?: Prisma.ConditionWhereUniqueInput | Prisma.ConditionWhereUniqueInput[]
 }
 
-export type ConditionUpdateManyWithoutRuleNestedInput = {
-  create?: Prisma.XOR<Prisma.ConditionCreateWithoutRuleInput, Prisma.ConditionUncheckedCreateWithoutRuleInput> | Prisma.ConditionCreateWithoutRuleInput[] | Prisma.ConditionUncheckedCreateWithoutRuleInput[]
-  connectOrCreate?: Prisma.ConditionCreateOrConnectWithoutRuleInput | Prisma.ConditionCreateOrConnectWithoutRuleInput[]
-  upsert?: Prisma.ConditionUpsertWithWhereUniqueWithoutRuleInput | Prisma.ConditionUpsertWithWhereUniqueWithoutRuleInput[]
-  createMany?: Prisma.ConditionCreateManyRuleInputEnvelope
+export type ConditionUpdateManyWithoutTrackingRuleNestedInput = {
+  create?: Prisma.XOR<Prisma.ConditionCreateWithoutTrackingRuleInput, Prisma.ConditionUncheckedCreateWithoutTrackingRuleInput> | Prisma.ConditionCreateWithoutTrackingRuleInput[] | Prisma.ConditionUncheckedCreateWithoutTrackingRuleInput[]
+  connectOrCreate?: Prisma.ConditionCreateOrConnectWithoutTrackingRuleInput | Prisma.ConditionCreateOrConnectWithoutTrackingRuleInput[]
+  upsert?: Prisma.ConditionUpsertWithWhereUniqueWithoutTrackingRuleInput | Prisma.ConditionUpsertWithWhereUniqueWithoutTrackingRuleInput[]
+  createMany?: Prisma.ConditionCreateManyTrackingRuleInputEnvelope
   set?: Prisma.ConditionWhereUniqueInput | Prisma.ConditionWhereUniqueInput[]
   disconnect?: Prisma.ConditionWhereUniqueInput | Prisma.ConditionWhereUniqueInput[]
   delete?: Prisma.ConditionWhereUniqueInput | Prisma.ConditionWhereUniqueInput[]
   connect?: Prisma.ConditionWhereUniqueInput | Prisma.ConditionWhereUniqueInput[]
-  update?: Prisma.ConditionUpdateWithWhereUniqueWithoutRuleInput | Prisma.ConditionUpdateWithWhereUniqueWithoutRuleInput[]
-  updateMany?: Prisma.ConditionUpdateManyWithWhereWithoutRuleInput | Prisma.ConditionUpdateManyWithWhereWithoutRuleInput[]
+  update?: Prisma.ConditionUpdateWithWhereUniqueWithoutTrackingRuleInput | Prisma.ConditionUpdateWithWhereUniqueWithoutTrackingRuleInput[]
+  updateMany?: Prisma.ConditionUpdateManyWithWhereWithoutTrackingRuleInput | Prisma.ConditionUpdateManyWithWhereWithoutTrackingRuleInput[]
   deleteMany?: Prisma.ConditionScalarWhereInput | Prisma.ConditionScalarWhereInput[]
 }
 
-export type ConditionUncheckedUpdateManyWithoutRuleNestedInput = {
-  create?: Prisma.XOR<Prisma.ConditionCreateWithoutRuleInput, Prisma.ConditionUncheckedCreateWithoutRuleInput> | Prisma.ConditionCreateWithoutRuleInput[] | Prisma.ConditionUncheckedCreateWithoutRuleInput[]
-  connectOrCreate?: Prisma.ConditionCreateOrConnectWithoutRuleInput | Prisma.ConditionCreateOrConnectWithoutRuleInput[]
-  upsert?: Prisma.ConditionUpsertWithWhereUniqueWithoutRuleInput | Prisma.ConditionUpsertWithWhereUniqueWithoutRuleInput[]
-  createMany?: Prisma.ConditionCreateManyRuleInputEnvelope
+export type ConditionUncheckedUpdateManyWithoutTrackingRuleNestedInput = {
+  create?: Prisma.XOR<Prisma.ConditionCreateWithoutTrackingRuleInput, Prisma.ConditionUncheckedCreateWithoutTrackingRuleInput> | Prisma.ConditionCreateWithoutTrackingRuleInput[] | Prisma.ConditionUncheckedCreateWithoutTrackingRuleInput[]
+  connectOrCreate?: Prisma.ConditionCreateOrConnectWithoutTrackingRuleInput | Prisma.ConditionCreateOrConnectWithoutTrackingRuleInput[]
+  upsert?: Prisma.ConditionUpsertWithWhereUniqueWithoutTrackingRuleInput | Prisma.ConditionUpsertWithWhereUniqueWithoutTrackingRuleInput[]
+  createMany?: Prisma.ConditionCreateManyTrackingRuleInputEnvelope
   set?: Prisma.ConditionWhereUniqueInput | Prisma.ConditionWhereUniqueInput[]
   disconnect?: Prisma.ConditionWhereUniqueInput | Prisma.ConditionWhereUniqueInput[]
   delete?: Prisma.ConditionWhereUniqueInput | Prisma.ConditionWhereUniqueInput[]
   connect?: Prisma.ConditionWhereUniqueInput | Prisma.ConditionWhereUniqueInput[]
-  update?: Prisma.ConditionUpdateWithWhereUniqueWithoutRuleInput | Prisma.ConditionUpdateWithWhereUniqueWithoutRuleInput[]
-  updateMany?: Prisma.ConditionUpdateManyWithWhereWithoutRuleInput | Prisma.ConditionUpdateManyWithWhereWithoutRuleInput[]
+  update?: Prisma.ConditionUpdateWithWhereUniqueWithoutTrackingRuleInput | Prisma.ConditionUpdateWithWhereUniqueWithoutTrackingRuleInput[]
+  updateMany?: Prisma.ConditionUpdateManyWithWhereWithoutTrackingRuleInput | Prisma.ConditionUpdateManyWithWhereWithoutTrackingRuleInput[]
   deleteMany?: Prisma.ConditionScalarWhereInput | Prisma.ConditionScalarWhereInput[]
 }
 
-export type ConditionCreateNestedManyWithoutEventPatternInput = {
-  create?: Prisma.XOR<Prisma.ConditionCreateWithoutEventPatternInput, Prisma.ConditionUncheckedCreateWithoutEventPatternInput> | Prisma.ConditionCreateWithoutEventPatternInput[] | Prisma.ConditionUncheckedCreateWithoutEventPatternInput[]
-  connectOrCreate?: Prisma.ConditionCreateOrConnectWithoutEventPatternInput | Prisma.ConditionCreateOrConnectWithoutEventPatternInput[]
-  createMany?: Prisma.ConditionCreateManyEventPatternInputEnvelope
+export type ConditionCreateNestedManyWithoutPatternInput = {
+  create?: Prisma.XOR<Prisma.ConditionCreateWithoutPatternInput, Prisma.ConditionUncheckedCreateWithoutPatternInput> | Prisma.ConditionCreateWithoutPatternInput[] | Prisma.ConditionUncheckedCreateWithoutPatternInput[]
+  connectOrCreate?: Prisma.ConditionCreateOrConnectWithoutPatternInput | Prisma.ConditionCreateOrConnectWithoutPatternInput[]
+  createMany?: Prisma.ConditionCreateManyPatternInputEnvelope
   connect?: Prisma.ConditionWhereUniqueInput | Prisma.ConditionWhereUniqueInput[]
 }
 
-export type ConditionUncheckedCreateNestedManyWithoutEventPatternInput = {
-  create?: Prisma.XOR<Prisma.ConditionCreateWithoutEventPatternInput, Prisma.ConditionUncheckedCreateWithoutEventPatternInput> | Prisma.ConditionCreateWithoutEventPatternInput[] | Prisma.ConditionUncheckedCreateWithoutEventPatternInput[]
-  connectOrCreate?: Prisma.ConditionCreateOrConnectWithoutEventPatternInput | Prisma.ConditionCreateOrConnectWithoutEventPatternInput[]
-  createMany?: Prisma.ConditionCreateManyEventPatternInputEnvelope
+export type ConditionUncheckedCreateNestedManyWithoutPatternInput = {
+  create?: Prisma.XOR<Prisma.ConditionCreateWithoutPatternInput, Prisma.ConditionUncheckedCreateWithoutPatternInput> | Prisma.ConditionCreateWithoutPatternInput[] | Prisma.ConditionUncheckedCreateWithoutPatternInput[]
+  connectOrCreate?: Prisma.ConditionCreateOrConnectWithoutPatternInput | Prisma.ConditionCreateOrConnectWithoutPatternInput[]
+  createMany?: Prisma.ConditionCreateManyPatternInputEnvelope
   connect?: Prisma.ConditionWhereUniqueInput | Prisma.ConditionWhereUniqueInput[]
 }
 
-export type ConditionUpdateManyWithoutEventPatternNestedInput = {
-  create?: Prisma.XOR<Prisma.ConditionCreateWithoutEventPatternInput, Prisma.ConditionUncheckedCreateWithoutEventPatternInput> | Prisma.ConditionCreateWithoutEventPatternInput[] | Prisma.ConditionUncheckedCreateWithoutEventPatternInput[]
-  connectOrCreate?: Prisma.ConditionCreateOrConnectWithoutEventPatternInput | Prisma.ConditionCreateOrConnectWithoutEventPatternInput[]
-  upsert?: Prisma.ConditionUpsertWithWhereUniqueWithoutEventPatternInput | Prisma.ConditionUpsertWithWhereUniqueWithoutEventPatternInput[]
-  createMany?: Prisma.ConditionCreateManyEventPatternInputEnvelope
+export type ConditionUpdateManyWithoutPatternNestedInput = {
+  create?: Prisma.XOR<Prisma.ConditionCreateWithoutPatternInput, Prisma.ConditionUncheckedCreateWithoutPatternInput> | Prisma.ConditionCreateWithoutPatternInput[] | Prisma.ConditionUncheckedCreateWithoutPatternInput[]
+  connectOrCreate?: Prisma.ConditionCreateOrConnectWithoutPatternInput | Prisma.ConditionCreateOrConnectWithoutPatternInput[]
+  upsert?: Prisma.ConditionUpsertWithWhereUniqueWithoutPatternInput | Prisma.ConditionUpsertWithWhereUniqueWithoutPatternInput[]
+  createMany?: Prisma.ConditionCreateManyPatternInputEnvelope
   set?: Prisma.ConditionWhereUniqueInput | Prisma.ConditionWhereUniqueInput[]
   disconnect?: Prisma.ConditionWhereUniqueInput | Prisma.ConditionWhereUniqueInput[]
   delete?: Prisma.ConditionWhereUniqueInput | Prisma.ConditionWhereUniqueInput[]
   connect?: Prisma.ConditionWhereUniqueInput | Prisma.ConditionWhereUniqueInput[]
-  update?: Prisma.ConditionUpdateWithWhereUniqueWithoutEventPatternInput | Prisma.ConditionUpdateWithWhereUniqueWithoutEventPatternInput[]
-  updateMany?: Prisma.ConditionUpdateManyWithWhereWithoutEventPatternInput | Prisma.ConditionUpdateManyWithWhereWithoutEventPatternInput[]
+  update?: Prisma.ConditionUpdateWithWhereUniqueWithoutPatternInput | Prisma.ConditionUpdateWithWhereUniqueWithoutPatternInput[]
+  updateMany?: Prisma.ConditionUpdateManyWithWhereWithoutPatternInput | Prisma.ConditionUpdateManyWithWhereWithoutPatternInput[]
   deleteMany?: Prisma.ConditionScalarWhereInput | Prisma.ConditionScalarWhereInput[]
 }
 
-export type ConditionUncheckedUpdateManyWithoutEventPatternNestedInput = {
-  create?: Prisma.XOR<Prisma.ConditionCreateWithoutEventPatternInput, Prisma.ConditionUncheckedCreateWithoutEventPatternInput> | Prisma.ConditionCreateWithoutEventPatternInput[] | Prisma.ConditionUncheckedCreateWithoutEventPatternInput[]
-  connectOrCreate?: Prisma.ConditionCreateOrConnectWithoutEventPatternInput | Prisma.ConditionCreateOrConnectWithoutEventPatternInput[]
-  upsert?: Prisma.ConditionUpsertWithWhereUniqueWithoutEventPatternInput | Prisma.ConditionUpsertWithWhereUniqueWithoutEventPatternInput[]
-  createMany?: Prisma.ConditionCreateManyEventPatternInputEnvelope
+export type ConditionUncheckedUpdateManyWithoutPatternNestedInput = {
+  create?: Prisma.XOR<Prisma.ConditionCreateWithoutPatternInput, Prisma.ConditionUncheckedCreateWithoutPatternInput> | Prisma.ConditionCreateWithoutPatternInput[] | Prisma.ConditionUncheckedCreateWithoutPatternInput[]
+  connectOrCreate?: Prisma.ConditionCreateOrConnectWithoutPatternInput | Prisma.ConditionCreateOrConnectWithoutPatternInput[]
+  upsert?: Prisma.ConditionUpsertWithWhereUniqueWithoutPatternInput | Prisma.ConditionUpsertWithWhereUniqueWithoutPatternInput[]
+  createMany?: Prisma.ConditionCreateManyPatternInputEnvelope
   set?: Prisma.ConditionWhereUniqueInput | Prisma.ConditionWhereUniqueInput[]
   disconnect?: Prisma.ConditionWhereUniqueInput | Prisma.ConditionWhereUniqueInput[]
   delete?: Prisma.ConditionWhereUniqueInput | Prisma.ConditionWhereUniqueInput[]
   connect?: Prisma.ConditionWhereUniqueInput | Prisma.ConditionWhereUniqueInput[]
-  update?: Prisma.ConditionUpdateWithWhereUniqueWithoutEventPatternInput | Prisma.ConditionUpdateWithWhereUniqueWithoutEventPatternInput[]
-  updateMany?: Prisma.ConditionUpdateManyWithWhereWithoutEventPatternInput | Prisma.ConditionUpdateManyWithWhereWithoutEventPatternInput[]
+  update?: Prisma.ConditionUpdateWithWhereUniqueWithoutPatternInput | Prisma.ConditionUpdateWithWhereUniqueWithoutPatternInput[]
+  updateMany?: Prisma.ConditionUpdateManyWithWhereWithoutPatternInput | Prisma.ConditionUpdateManyWithWhereWithoutPatternInput[]
   deleteMany?: Prisma.ConditionScalarWhereInput | Prisma.ConditionScalarWhereInput[]
 }
 
@@ -506,43 +506,43 @@ export type ConditionUncheckedUpdateManyWithoutOperatorNestedInput = {
   deleteMany?: Prisma.ConditionScalarWhereInput | Prisma.ConditionScalarWhereInput[]
 }
 
-export type ConditionCreateWithoutRuleInput = {
+export type ConditionCreateWithoutTrackingRuleInput = {
   Value: string
-  EventPattern: Prisma.EventPatternCreateNestedOneWithoutConditionsInput
+  Pattern: Prisma.PatternCreateNestedOneWithoutConditionsInput
   Operator: Prisma.OperatorCreateNestedOneWithoutConditionsInput
 }
 
-export type ConditionUncheckedCreateWithoutRuleInput = {
+export type ConditionUncheckedCreateWithoutTrackingRuleInput = {
   Id?: number
   Value: string
-  EventPatternID: number
+  PatternId: number
   OperatorID: number
 }
 
-export type ConditionCreateOrConnectWithoutRuleInput = {
+export type ConditionCreateOrConnectWithoutTrackingRuleInput = {
   where: Prisma.ConditionWhereUniqueInput
-  create: Prisma.XOR<Prisma.ConditionCreateWithoutRuleInput, Prisma.ConditionUncheckedCreateWithoutRuleInput>
+  create: Prisma.XOR<Prisma.ConditionCreateWithoutTrackingRuleInput, Prisma.ConditionUncheckedCreateWithoutTrackingRuleInput>
 }
 
-export type ConditionCreateManyRuleInputEnvelope = {
-  data: Prisma.ConditionCreateManyRuleInput | Prisma.ConditionCreateManyRuleInput[]
+export type ConditionCreateManyTrackingRuleInputEnvelope = {
+  data: Prisma.ConditionCreateManyTrackingRuleInput | Prisma.ConditionCreateManyTrackingRuleInput[]
   skipDuplicates?: boolean
 }
 
-export type ConditionUpsertWithWhereUniqueWithoutRuleInput = {
+export type ConditionUpsertWithWhereUniqueWithoutTrackingRuleInput = {
   where: Prisma.ConditionWhereUniqueInput
-  update: Prisma.XOR<Prisma.ConditionUpdateWithoutRuleInput, Prisma.ConditionUncheckedUpdateWithoutRuleInput>
-  create: Prisma.XOR<Prisma.ConditionCreateWithoutRuleInput, Prisma.ConditionUncheckedCreateWithoutRuleInput>
+  update: Prisma.XOR<Prisma.ConditionUpdateWithoutTrackingRuleInput, Prisma.ConditionUncheckedUpdateWithoutTrackingRuleInput>
+  create: Prisma.XOR<Prisma.ConditionCreateWithoutTrackingRuleInput, Prisma.ConditionUncheckedCreateWithoutTrackingRuleInput>
 }
 
-export type ConditionUpdateWithWhereUniqueWithoutRuleInput = {
+export type ConditionUpdateWithWhereUniqueWithoutTrackingRuleInput = {
   where: Prisma.ConditionWhereUniqueInput
-  data: Prisma.XOR<Prisma.ConditionUpdateWithoutRuleInput, Prisma.ConditionUncheckedUpdateWithoutRuleInput>
+  data: Prisma.XOR<Prisma.ConditionUpdateWithoutTrackingRuleInput, Prisma.ConditionUncheckedUpdateWithoutTrackingRuleInput>
 }
 
-export type ConditionUpdateManyWithWhereWithoutRuleInput = {
+export type ConditionUpdateManyWithWhereWithoutTrackingRuleInput = {
   where: Prisma.ConditionScalarWhereInput
-  data: Prisma.XOR<Prisma.ConditionUpdateManyMutationInput, Prisma.ConditionUncheckedUpdateManyWithoutRuleInput>
+  data: Prisma.XOR<Prisma.ConditionUpdateManyMutationInput, Prisma.ConditionUncheckedUpdateManyWithoutTrackingRuleInput>
 }
 
 export type ConditionScalarWhereInput = {
@@ -551,61 +551,61 @@ export type ConditionScalarWhereInput = {
   NOT?: Prisma.ConditionScalarWhereInput | Prisma.ConditionScalarWhereInput[]
   Id?: Prisma.IntFilter<"Condition"> | number
   Value?: Prisma.StringFilter<"Condition"> | string
-  RuleID?: Prisma.IntFilter<"Condition"> | number
-  EventPatternID?: Prisma.IntFilter<"Condition"> | number
+  TrackingRuleID?: Prisma.IntFilter<"Condition"> | number
+  PatternId?: Prisma.IntFilter<"Condition"> | number
   OperatorID?: Prisma.IntFilter<"Condition"> | number
 }
 
-export type ConditionCreateWithoutEventPatternInput = {
+export type ConditionCreateWithoutPatternInput = {
   Value: string
-  Rule: Prisma.RuleCreateNestedOneWithoutConditionsInput
+  TrackingRule: Prisma.TrackingRuleCreateNestedOneWithoutConditionsInput
   Operator: Prisma.OperatorCreateNestedOneWithoutConditionsInput
 }
 
-export type ConditionUncheckedCreateWithoutEventPatternInput = {
+export type ConditionUncheckedCreateWithoutPatternInput = {
   Id?: number
   Value: string
-  RuleID: number
+  TrackingRuleID: number
   OperatorID: number
 }
 
-export type ConditionCreateOrConnectWithoutEventPatternInput = {
+export type ConditionCreateOrConnectWithoutPatternInput = {
   where: Prisma.ConditionWhereUniqueInput
-  create: Prisma.XOR<Prisma.ConditionCreateWithoutEventPatternInput, Prisma.ConditionUncheckedCreateWithoutEventPatternInput>
+  create: Prisma.XOR<Prisma.ConditionCreateWithoutPatternInput, Prisma.ConditionUncheckedCreateWithoutPatternInput>
 }
 
-export type ConditionCreateManyEventPatternInputEnvelope = {
-  data: Prisma.ConditionCreateManyEventPatternInput | Prisma.ConditionCreateManyEventPatternInput[]
+export type ConditionCreateManyPatternInputEnvelope = {
+  data: Prisma.ConditionCreateManyPatternInput | Prisma.ConditionCreateManyPatternInput[]
   skipDuplicates?: boolean
 }
 
-export type ConditionUpsertWithWhereUniqueWithoutEventPatternInput = {
+export type ConditionUpsertWithWhereUniqueWithoutPatternInput = {
   where: Prisma.ConditionWhereUniqueInput
-  update: Prisma.XOR<Prisma.ConditionUpdateWithoutEventPatternInput, Prisma.ConditionUncheckedUpdateWithoutEventPatternInput>
-  create: Prisma.XOR<Prisma.ConditionCreateWithoutEventPatternInput, Prisma.ConditionUncheckedCreateWithoutEventPatternInput>
+  update: Prisma.XOR<Prisma.ConditionUpdateWithoutPatternInput, Prisma.ConditionUncheckedUpdateWithoutPatternInput>
+  create: Prisma.XOR<Prisma.ConditionCreateWithoutPatternInput, Prisma.ConditionUncheckedCreateWithoutPatternInput>
 }
 
-export type ConditionUpdateWithWhereUniqueWithoutEventPatternInput = {
+export type ConditionUpdateWithWhereUniqueWithoutPatternInput = {
   where: Prisma.ConditionWhereUniqueInput
-  data: Prisma.XOR<Prisma.ConditionUpdateWithoutEventPatternInput, Prisma.ConditionUncheckedUpdateWithoutEventPatternInput>
+  data: Prisma.XOR<Prisma.ConditionUpdateWithoutPatternInput, Prisma.ConditionUncheckedUpdateWithoutPatternInput>
 }
 
-export type ConditionUpdateManyWithWhereWithoutEventPatternInput = {
+export type ConditionUpdateManyWithWhereWithoutPatternInput = {
   where: Prisma.ConditionScalarWhereInput
-  data: Prisma.XOR<Prisma.ConditionUpdateManyMutationInput, Prisma.ConditionUncheckedUpdateManyWithoutEventPatternInput>
+  data: Prisma.XOR<Prisma.ConditionUpdateManyMutationInput, Prisma.ConditionUncheckedUpdateManyWithoutPatternInput>
 }
 
 export type ConditionCreateWithoutOperatorInput = {
   Value: string
-  Rule: Prisma.RuleCreateNestedOneWithoutConditionsInput
-  EventPattern: Prisma.EventPatternCreateNestedOneWithoutConditionsInput
+  TrackingRule: Prisma.TrackingRuleCreateNestedOneWithoutConditionsInput
+  Pattern: Prisma.PatternCreateNestedOneWithoutConditionsInput
 }
 
 export type ConditionUncheckedCreateWithoutOperatorInput = {
   Id?: number
   Value: string
-  RuleID: number
-  EventPatternID: number
+  TrackingRuleID: number
+  PatternId: number
 }
 
 export type ConditionCreateOrConnectWithoutOperatorInput = {
@@ -634,85 +634,85 @@ export type ConditionUpdateManyWithWhereWithoutOperatorInput = {
   data: Prisma.XOR<Prisma.ConditionUpdateManyMutationInput, Prisma.ConditionUncheckedUpdateManyWithoutOperatorInput>
 }
 
-export type ConditionCreateManyRuleInput = {
+export type ConditionCreateManyTrackingRuleInput = {
   Id?: number
   Value: string
-  EventPatternID: number
+  PatternId: number
   OperatorID: number
 }
 
-export type ConditionUpdateWithoutRuleInput = {
+export type ConditionUpdateWithoutTrackingRuleInput = {
   Value?: Prisma.StringFieldUpdateOperationsInput | string
-  EventPattern?: Prisma.EventPatternUpdateOneRequiredWithoutConditionsNestedInput
+  Pattern?: Prisma.PatternUpdateOneRequiredWithoutConditionsNestedInput
   Operator?: Prisma.OperatorUpdateOneRequiredWithoutConditionsNestedInput
 }
 
-export type ConditionUncheckedUpdateWithoutRuleInput = {
+export type ConditionUncheckedUpdateWithoutTrackingRuleInput = {
   Id?: Prisma.IntFieldUpdateOperationsInput | number
   Value?: Prisma.StringFieldUpdateOperationsInput | string
-  EventPatternID?: Prisma.IntFieldUpdateOperationsInput | number
+  PatternId?: Prisma.IntFieldUpdateOperationsInput | number
   OperatorID?: Prisma.IntFieldUpdateOperationsInput | number
 }
 
-export type ConditionUncheckedUpdateManyWithoutRuleInput = {
+export type ConditionUncheckedUpdateManyWithoutTrackingRuleInput = {
   Id?: Prisma.IntFieldUpdateOperationsInput | number
   Value?: Prisma.StringFieldUpdateOperationsInput | string
-  EventPatternID?: Prisma.IntFieldUpdateOperationsInput | number
+  PatternId?: Prisma.IntFieldUpdateOperationsInput | number
   OperatorID?: Prisma.IntFieldUpdateOperationsInput | number
 }
 
-export type ConditionCreateManyEventPatternInput = {
+export type ConditionCreateManyPatternInput = {
   Id?: number
   Value: string
-  RuleID: number
+  TrackingRuleID: number
   OperatorID: number
 }
 
-export type ConditionUpdateWithoutEventPatternInput = {
+export type ConditionUpdateWithoutPatternInput = {
   Value?: Prisma.StringFieldUpdateOperationsInput | string
-  Rule?: Prisma.RuleUpdateOneRequiredWithoutConditionsNestedInput
+  TrackingRule?: Prisma.TrackingRuleUpdateOneRequiredWithoutConditionsNestedInput
   Operator?: Prisma.OperatorUpdateOneRequiredWithoutConditionsNestedInput
 }
 
-export type ConditionUncheckedUpdateWithoutEventPatternInput = {
+export type ConditionUncheckedUpdateWithoutPatternInput = {
   Id?: Prisma.IntFieldUpdateOperationsInput | number
   Value?: Prisma.StringFieldUpdateOperationsInput | string
-  RuleID?: Prisma.IntFieldUpdateOperationsInput | number
+  TrackingRuleID?: Prisma.IntFieldUpdateOperationsInput | number
   OperatorID?: Prisma.IntFieldUpdateOperationsInput | number
 }
 
-export type ConditionUncheckedUpdateManyWithoutEventPatternInput = {
+export type ConditionUncheckedUpdateManyWithoutPatternInput = {
   Id?: Prisma.IntFieldUpdateOperationsInput | number
   Value?: Prisma.StringFieldUpdateOperationsInput | string
-  RuleID?: Prisma.IntFieldUpdateOperationsInput | number
+  TrackingRuleID?: Prisma.IntFieldUpdateOperationsInput | number
   OperatorID?: Prisma.IntFieldUpdateOperationsInput | number
 }
 
 export type ConditionCreateManyOperatorInput = {
   Id?: number
   Value: string
-  RuleID: number
-  EventPatternID: number
+  TrackingRuleID: number
+  PatternId: number
 }
 
 export type ConditionUpdateWithoutOperatorInput = {
   Value?: Prisma.StringFieldUpdateOperationsInput | string
-  Rule?: Prisma.RuleUpdateOneRequiredWithoutConditionsNestedInput
-  EventPattern?: Prisma.EventPatternUpdateOneRequiredWithoutConditionsNestedInput
+  TrackingRule?: Prisma.TrackingRuleUpdateOneRequiredWithoutConditionsNestedInput
+  Pattern?: Prisma.PatternUpdateOneRequiredWithoutConditionsNestedInput
 }
 
 export type ConditionUncheckedUpdateWithoutOperatorInput = {
   Id?: Prisma.IntFieldUpdateOperationsInput | number
   Value?: Prisma.StringFieldUpdateOperationsInput | string
-  RuleID?: Prisma.IntFieldUpdateOperationsInput | number
-  EventPatternID?: Prisma.IntFieldUpdateOperationsInput | number
+  TrackingRuleID?: Prisma.IntFieldUpdateOperationsInput | number
+  PatternId?: Prisma.IntFieldUpdateOperationsInput | number
 }
 
 export type ConditionUncheckedUpdateManyWithoutOperatorInput = {
   Id?: Prisma.IntFieldUpdateOperationsInput | number
   Value?: Prisma.StringFieldUpdateOperationsInput | string
-  RuleID?: Prisma.IntFieldUpdateOperationsInput | number
-  EventPatternID?: Prisma.IntFieldUpdateOperationsInput | number
+  TrackingRuleID?: Prisma.IntFieldUpdateOperationsInput | number
+  PatternId?: Prisma.IntFieldUpdateOperationsInput | number
 }
 
 
@@ -720,73 +720,73 @@ export type ConditionUncheckedUpdateManyWithoutOperatorInput = {
 export type ConditionSelect<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetSelect<{
   Id?: boolean
   Value?: boolean
-  RuleID?: boolean
-  EventPatternID?: boolean
+  TrackingRuleID?: boolean
+  PatternId?: boolean
   OperatorID?: boolean
-  Rule?: boolean | Prisma.RuleDefaultArgs<ExtArgs>
-  EventPattern?: boolean | Prisma.EventPatternDefaultArgs<ExtArgs>
+  TrackingRule?: boolean | Prisma.TrackingRuleDefaultArgs<ExtArgs>
+  Pattern?: boolean | Prisma.PatternDefaultArgs<ExtArgs>
   Operator?: boolean | Prisma.OperatorDefaultArgs<ExtArgs>
 }, ExtArgs["result"]["condition"]>
 
 export type ConditionSelectCreateManyAndReturn<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetSelect<{
   Id?: boolean
   Value?: boolean
-  RuleID?: boolean
-  EventPatternID?: boolean
+  TrackingRuleID?: boolean
+  PatternId?: boolean
   OperatorID?: boolean
-  Rule?: boolean | Prisma.RuleDefaultArgs<ExtArgs>
-  EventPattern?: boolean | Prisma.EventPatternDefaultArgs<ExtArgs>
+  TrackingRule?: boolean | Prisma.TrackingRuleDefaultArgs<ExtArgs>
+  Pattern?: boolean | Prisma.PatternDefaultArgs<ExtArgs>
   Operator?: boolean | Prisma.OperatorDefaultArgs<ExtArgs>
 }, ExtArgs["result"]["condition"]>
 
 export type ConditionSelectUpdateManyAndReturn<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetSelect<{
   Id?: boolean
   Value?: boolean
-  RuleID?: boolean
-  EventPatternID?: boolean
+  TrackingRuleID?: boolean
+  PatternId?: boolean
   OperatorID?: boolean
-  Rule?: boolean | Prisma.RuleDefaultArgs<ExtArgs>
-  EventPattern?: boolean | Prisma.EventPatternDefaultArgs<ExtArgs>
+  TrackingRule?: boolean | Prisma.TrackingRuleDefaultArgs<ExtArgs>
+  Pattern?: boolean | Prisma.PatternDefaultArgs<ExtArgs>
   Operator?: boolean | Prisma.OperatorDefaultArgs<ExtArgs>
 }, ExtArgs["result"]["condition"]>
 
 export type ConditionSelectScalar = {
   Id?: boolean
   Value?: boolean
-  RuleID?: boolean
-  EventPatternID?: boolean
+  TrackingRuleID?: boolean
+  PatternId?: boolean
   OperatorID?: boolean
 }
 
-export type ConditionOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"Id" | "Value" | "RuleID" | "EventPatternID" | "OperatorID", ExtArgs["result"]["condition"]>
+export type ConditionOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"Id" | "Value" | "TrackingRuleID" | "PatternId" | "OperatorID", ExtArgs["result"]["condition"]>
 export type ConditionInclude<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
-  Rule?: boolean | Prisma.RuleDefaultArgs<ExtArgs>
-  EventPattern?: boolean | Prisma.EventPatternDefaultArgs<ExtArgs>
+  TrackingRule?: boolean | Prisma.TrackingRuleDefaultArgs<ExtArgs>
+  Pattern?: boolean | Prisma.PatternDefaultArgs<ExtArgs>
   Operator?: boolean | Prisma.OperatorDefaultArgs<ExtArgs>
 }
 export type ConditionIncludeCreateManyAndReturn<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
-  Rule?: boolean | Prisma.RuleDefaultArgs<ExtArgs>
-  EventPattern?: boolean | Prisma.EventPatternDefaultArgs<ExtArgs>
+  TrackingRule?: boolean | Prisma.TrackingRuleDefaultArgs<ExtArgs>
+  Pattern?: boolean | Prisma.PatternDefaultArgs<ExtArgs>
   Operator?: boolean | Prisma.OperatorDefaultArgs<ExtArgs>
 }
 export type ConditionIncludeUpdateManyAndReturn<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
-  Rule?: boolean | Prisma.RuleDefaultArgs<ExtArgs>
-  EventPattern?: boolean | Prisma.EventPatternDefaultArgs<ExtArgs>
+  TrackingRule?: boolean | Prisma.TrackingRuleDefaultArgs<ExtArgs>
+  Pattern?: boolean | Prisma.PatternDefaultArgs<ExtArgs>
   Operator?: boolean | Prisma.OperatorDefaultArgs<ExtArgs>
 }
 
 export type $ConditionPayload<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   name: "Condition"
   objects: {
-    Rule: Prisma.$RulePayload<ExtArgs>
-    EventPattern: Prisma.$EventPatternPayload<ExtArgs>
+    TrackingRule: Prisma.$TrackingRulePayload<ExtArgs>
+    Pattern: Prisma.$PatternPayload<ExtArgs>
     Operator: Prisma.$OperatorPayload<ExtArgs>
   }
   scalars: runtime.Types.Extensions.GetPayloadResult<{
     Id: number
     Value: string
-    RuleID: number
-    EventPatternID: number
+    TrackingRuleID: number
+    PatternId: number
     OperatorID: number
   }, ExtArgs["result"]["condition"]>
   composites: {}
@@ -1182,8 +1182,8 @@ readonly fields: ConditionFieldRefs;
  */
 export interface Prisma__ConditionClient<T, Null = never, ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs, GlobalOmitOptions = {}> extends Prisma.PrismaPromise<T> {
   readonly [Symbol.toStringTag]: "PrismaPromise"
-  Rule<T extends Prisma.RuleDefaultArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.RuleDefaultArgs<ExtArgs>>): Prisma.Prisma__RuleClient<runtime.Types.Result.GetResult<Prisma.$RulePayload<ExtArgs>, T, "findUniqueOrThrow", GlobalOmitOptions> | Null, Null, ExtArgs, GlobalOmitOptions>
-  EventPattern<T extends Prisma.EventPatternDefaultArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.EventPatternDefaultArgs<ExtArgs>>): Prisma.Prisma__EventPatternClient<runtime.Types.Result.GetResult<Prisma.$EventPatternPayload<ExtArgs>, T, "findUniqueOrThrow", GlobalOmitOptions> | Null, Null, ExtArgs, GlobalOmitOptions>
+  TrackingRule<T extends Prisma.TrackingRuleDefaultArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.TrackingRuleDefaultArgs<ExtArgs>>): Prisma.Prisma__TrackingRuleClient<runtime.Types.Result.GetResult<Prisma.$TrackingRulePayload<ExtArgs>, T, "findUniqueOrThrow", GlobalOmitOptions> | Null, Null, ExtArgs, GlobalOmitOptions>
+  Pattern<T extends Prisma.PatternDefaultArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.PatternDefaultArgs<ExtArgs>>): Prisma.Prisma__PatternClient<runtime.Types.Result.GetResult<Prisma.$PatternPayload<ExtArgs>, T, "findUniqueOrThrow", GlobalOmitOptions> | Null, Null, ExtArgs, GlobalOmitOptions>
   Operator<T extends Prisma.OperatorDefaultArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.OperatorDefaultArgs<ExtArgs>>): Prisma.Prisma__OperatorClient<runtime.Types.Result.GetResult<Prisma.$OperatorPayload<ExtArgs>, T, "findUniqueOrThrow", GlobalOmitOptions> | Null, Null, ExtArgs, GlobalOmitOptions>
   /**
    * Attaches callbacks for the resolution and/or rejection of the Promise.
@@ -1216,8 +1216,8 @@ export interface Prisma__ConditionClient<T, Null = never, ExtArgs extends runtim
 export interface ConditionFieldRefs {
   readonly Id: Prisma.FieldRef<"Condition", 'Int'>
   readonly Value: Prisma.FieldRef<"Condition", 'String'>
-  readonly RuleID: Prisma.FieldRef<"Condition", 'Int'>
-  readonly EventPatternID: Prisma.FieldRef<"Condition", 'Int'>
+  readonly TrackingRuleID: Prisma.FieldRef<"Condition", 'Int'>
+  readonly PatternId: Prisma.FieldRef<"Condition", 'Int'>
   readonly OperatorID: Prisma.FieldRef<"Condition", 'Int'>
 }
     

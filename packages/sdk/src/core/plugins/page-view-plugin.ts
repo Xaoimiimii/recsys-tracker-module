@@ -73,7 +73,7 @@ export class PageViewPlugin extends BasePlugin {
         for (const rule of pageViewRules) {
             let matchFound = false;
             let matchData = null;
-            const selector = rule.targetElement.targetElementValue || '';
+            const selector = rule.trackingTarget?.value || '';
 
             // Determine payload extractor from rule data
             const isRegex = selector.startsWith('^');

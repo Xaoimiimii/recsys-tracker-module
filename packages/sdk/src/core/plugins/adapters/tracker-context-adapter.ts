@@ -171,12 +171,12 @@ export class TrackerContextAdapter implements IRecsysContext {
     }
 
     public config = {
-        getRules: (triggerEventId: number): TrackingRule[] => {
+        getRules: (eventTypeId: number): TrackingRule[] => {
             const config = this.tracker.getConfig();
             if (!config?.trackingRules) return [];
             
             return config.trackingRules
-                .filter(rule => rule.triggerEventId === triggerEventId);
+                .filter(rule => rule.eventTypeId === eventTypeId);
         },
     };
 

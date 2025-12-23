@@ -12,36 +12,60 @@ export interface TrackerConfig {
 export interface TrackingRule {
   id: string;
   name: string;
-  // domainId: number;
-  triggerEventId: number; // (click, rate, page view, ...)
-  // targetElementId?: number;
-  targetElement: {
-    targetEventPatternId?: number,
-    targetOperatorId?: number,
-    targetElementValue?: string
-  };
+  domainId: number;
+  eventTypeId: number; // (click, rate, page view, ...)
+  trackingTargetId: number;
+  payloadMappings: PayloadMapping[];
   conditions: Condition[];
-  payloadMappings: PayloadConfig[];
+  trackingTarget: TrackingTarget;
+}
+
+export interface PayloadMapping {
+  id: number;
+  field: string;
+  source: string;
+  value: string;
+  requestUrlPattern?: string | null;
+  requestMethod?: string | null;
+  requestBodyPath?: string | null;
+  urlPart?: string | null;
+  urlPartValue?: string | null;
+  trackingRuleId: number;
 }
 
 export interface PayloadConfig {
-  payloadPatternId: number;
-  field: number;
-  source?: string;
+  field: string;
+  source: string;
   value?: string;
+  requestUrlPattern?: string;
+  requestMethod?: string;
+  requestBodyPath?: string;
+  urlPart?: string;
+  urlPartValue?: string;
 }
 
 export interface Condition {
-  // id?: number;
-  eventPatternId: number;
+  id: number;
+  value: string;
+  trackingRuleId: number;
+  patternId: number;
   operatorId: number;
-  value?: string;
+}
+
+export interface TrackingTarget {
+  id: number;
+  value: string;
+  patternId: number;
+  operatorId: number;
 }
 
 export interface ReturnMethod {
-  slotName: string;
-  returnMethodId: number;
+  id: number;
+  domainId: number;
+  operatorId: number;
+  returnType: string;
   value: string;
+  configurationName: string;
 }
 
 export interface TrackerOptions {

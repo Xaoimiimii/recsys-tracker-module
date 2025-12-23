@@ -1,8 +1,8 @@
 import { ApiProperty } from "@nestjs/swagger";
 import { IsInt, IsNotEmpty, IsString } from "class-validator";
 
-export class ConditionDto {
-    @ApiProperty({ example: "Condition Value" })
+export class TrackingTargetDto {
+    @ApiProperty({ example: "Target Value" })
     @IsString()
     @IsNotEmpty()
     Value: string;

@@ -98,14 +98,14 @@ export class RecSysTracker {
       return;
     }
 
-    // Kiểm tra nếu có rule nào cần ClickPlugin (triggerEventId === 1)
-    const hasClickRules = this.config.trackingRules.some(rule => rule.triggerEventId === 1);
+    // Kiểm tra nếu có rule nào cần ClickPlugin (eventTypeId === 1)
+    const hasClickRules = this.config.trackingRules.some(rule => rule.eventTypeId === 1);
     
     // Kiểm tra nếu có rule nào cần PageViewPlugin (triggerEventId === 3)
-    const hasPageViewRules = this.config.trackingRules.some(rule => rule.triggerEventId === 3);
-    const hasFormRules = this.config.trackingRules.some(rule => rule.triggerEventId === 2);
-    const hasScrollRules = this.config!.trackingRules.some(rule => rule.triggerEventId === 4);
-    const hasReviewRules = this.config.trackingRules.some(rule => rule.triggerEventId === 5);
+    const hasPageViewRules = this.config.trackingRules.some(rule => rule.eventTypeId === 3);
+    const hasFormRules = this.config.trackingRules.some(rule => rule.eventTypeId === 2);
+    const hasScrollRules = this.config!.trackingRules.some(rule => rule.eventTypeId === 4);
+    const hasReviewRules = this.config.trackingRules.some(rule => rule.eventTypeId === 5);
 
     // Chỉ tự động đăng ký nếu chưa có plugin nào được đăng ký
     if (this.pluginManager.getPluginNames().length === 0) {
@@ -163,34 +163,34 @@ export class RecSysTracker {
   }
 
   // Track custom event
-  track(eventData: any): void {
-      this.errorBoundary.execute(() => {
-        if (!this.isInitialized || !this.config) {
-          return;
-        }
+  track(eventData: {
+    eventTypeId: number;
+    trackingRuleId: number;
+    userField: string;
+    userValue: string;
+    itemField: string;
+    itemValue: string;
+    ratingValue?: number;
+    reviewValue?: string;
+  }): void {
+    this.errorBoundary.execute(() => {
+      if (!this.isInitialized || !this.config) {
+        return;
+      }
 
-        // Map dữ liệu từ Adapter sang TrackedEvent (Structure mới của EventBuffer)
-        const trackedEvent: TrackedEvent = {
-          id: this.metadataNormalizer.generateEventId(),
-          timestamp: new Date().toISOString(), 
-          domainKey: this.config.domainKey,
-          
-          // Map các trường phẳng (Flat Fields)
-          eventType: eventData.eventType || 'page_view',
-          
-          userField: eventData.userField,
-          userValue: eventData.userValue,
-          
-          itemField: eventData.itemField,
-          itemValue: eventData.itemValue,
-
-          // Optional Fields
-          ratingValue: eventData.ratingValue,
-          reviewValue: eventData.reviewValue,
-
-          // Giữ lại retry logic
-          retryCount: 0
-        };
+      const trackedEvent: TrackedEvent = {
+        id: this.metadataNormalizer.generateEventId(),
+        timestamp: new Date(),
+        eventTypeId: eventData.eventTypeId,
+        trackingRuleId: eventData.trackingRuleId,
+        domainKey: this.config.domainKey,
+        userField: eventData.userField,
+        userValue: eventData.userValue,
+        itemField: eventData.itemField,
+        itemValue: eventData.itemValue,
+        ...(eventData.ratingValue !== undefined && { ratingValue: eventData.ratingValue }),
+        ...(eventData.reviewValue !== undefined && { reviewValue: eventData.reviewValue }),
+      };
 
         this.eventBuffer.add(trackedEvent);
       }, 'track');

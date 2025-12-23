@@ -1,90 +1,90 @@
 import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateEventDto } from './dto/create-event.dto';
+import { UserField, ItemField } from 'src/common/enums/event.enum';
+import { User } from 'src/generated/prisma/client';
 
 @Injectable()
 export class EventService {
     constructor(private prisma: PrismaService) { }
-    
+
     async addEvent(event: CreateEventDto) {
-        if (!(await this.prisma.domain.findUnique({
+        if (!(await this.prisma.eventType.findUnique({
             where: {
-                Key: event.DomainKey,
+                Id: event.EventTypeId,
             }
-        }))) throw new NotFoundException(`Domain key '${event.DomainKey}' does not exist.`);
+        }))) throw new NotFoundException(`Event type id '${event.EventTypeId}' does not exist.`);
 
-        if (!(await this.prisma.triggerEvent.findUnique({
+        const trackingRule = await this.prisma.trackingRule.findUnique({
             where: {
-                Id: event.TriggerTypeId,
+                Id: event.TrackingRuleId,
             }
-        }))) throw new NotFoundException(`Trigger event id '${event.TriggerTypeId}' does not exist.`);
+        })
 
-        const domainByKey = await this.prisma.domain.findUnique({
-            where: {
-                Key: event.DomainKey,
-            }
-        });
-
-        if (!domainByKey) throw new NotFoundException(`Domain key '${event.DomainKey}' does not exist.`);
-
-        if (!(await this.prisma.user.findUnique({
-            where: {
-                Username_DomainId: {
-                    Username: event.Payload.Username,
-                    DomainId: domainByKey.Id,
-                },
-            }
-        }))) {
-            const createdUser = await this.prisma.user.create({
-                data: {
-                    Username: event.Payload.Username,
-                    DomainId: domainByKey.Id,
-                    CreatedAt: new Date(),
-                } 
-            });
-        }
-
-        if (!(await this.prisma.item.findUnique({
-            where: {
-                Id: event.Payload.ItemId,
-            }
-        }))) throw new NotFoundException(`Item id '${event.Payload.ItemId}' does not exist.`);
+        if (!trackingRule) throw new NotFoundException(`Tracking rule id '${event.TrackingRuleId}' does not exist.`);
 
         const domain = await this.prisma.domain.findUnique({
             where: {
-                Key: event.DomainKey,
+                Id: trackingRule.DomainID,
             }
+        })
+
+        if (!domain) throw new NotFoundException(`Domain ID '${trackingRule.DomainID}' does not exist.`);
+
+        let user = await this.prisma.user.findUnique({
+            where:
+                event.UserField === UserField.USERNAME
+                    ? { Username_DomainId: { Username: event.UserValue, DomainId: domain.Id } }
+                    : { Id: parseInt(event.UserValue) }
         });
 
-        if (!domain) return null;
+        if (!user) {
+            user = await this.prisma.user.create({
+                data:
+                    event.UserField === UserField.USERNAME
+                        ? { Username: event.UserValue, DomainId: domain.Id, CreatedAt: new Date() }
+                        : { Id: parseInt(event.UserValue), DomainId: domain.Id, CreatedAt: new Date() }
+            });
+        }
 
-        if (event.TriggerTypeId === 2)
-        {
-            if (event.Rate?.Value === null || event.Rate?.Value === undefined) throw new BadRequestException(`Rating value is required for rating events.`);
-            if (event.Rate.Value < 1 || event.Rate.Value > 5) throw new BadRequestException(`Rating value must be between 1 and 5.`);
+        if (event.ItemField === ItemField.ITEM_ID && !(await this.prisma.item.findUnique({
+            where: {
+                Id: parseInt(event.ItemValue),
+            }
+        }))) throw new NotFoundException(`Item id '${event.ItemValue}' does not exist.`);
+
+        if (event.ItemField === ItemField.ITEM_TITLE && !(await this.prisma.item.findFirst({
+            where: {
+                Title: event.ItemValue,
+            }
+        }))) throw new NotFoundException(`Item title '${event.ItemValue}' does not exist.`);
+
+        // 2 rate 3 review
+        if (event.EventTypeId === 2 || event.EventTypeId === 3) {
+            if (event.RatingValue === null || event.RatingValue === undefined) throw new BadRequestException(`Rating value is required for rating events.`);
+            if (event.RatingValue < 1 || event.RatingValue > 5) throw new BadRequestException(`Rating value must be between 1 and 5.`);
 
             const createdEvent = await this.prisma.rating.create({
                 data: {
-                    Username: event.Payload.Username,
-                    ItemId: event.Payload.ItemId,
-                    Value: event.Rate.Value,
-                    ReviewText: event.Rate.Review,
+                    UserId: user.Id,
+                    ItemId: parseInt(event.ItemValue),
+                    Value: event.RatingValue,
+                    ReviewText: event.RatingReview,
                     CreatedAt: event.Timestamp,
                     DomainId: domain.Id,
-                } 
+                }
             });
 
             return createdEvent.Id;
         } else {
-            
             const createdEvent = await this.prisma.interaction.create({
                 data: {
-                    Username: event.Payload.Username,
-                    ItemId: event.Payload.ItemId,
-                    InteractionTypeId: event.TriggerTypeId,
+                    UserId: user.Id,
+                    ItemId: parseInt(event.ItemValue),
+                    InteractionTypeId: event.EventTypeId,
                     CreatedAt: event.Timestamp,
                     DomainId: domain.Id,
-                } 
+                }
             });
 
             return createdEvent.Id;

@@ -9,25 +9,18 @@
 export interface TrackedEvent {
   id: string;
   timestamp: string | Date;
+  eventTypeId: number;
+  trackingRuleId: number;
   domainKey: string;
-
-  // [THAY ĐỔI] Dùng String Enum thay vì Int ID để khớp cột 'EventType'
-  eventType: 'click' | 'rating' | 'review' | 'scroll' | 'page_view';
-
-  // [THAY ĐỔI] Làm phẳng dữ liệu User/Item
-  userField?: string;  // Tên trường (vd: "cookie_id", "email")
-  userValue?: string;  // Giá trị (vd: "U-123")
-  
-  itemField?: string;  // Tên trường (vd: "product_id")
-  itemValue?: string;  // Giá trị (vd: "P-456")
-
-  // [THAY ĐỔI] Tách riêng cột Rating và Review
-  ratingValue?: number; // Cột 'RatingValue' (Nullable)
-  reviewValue?: string; // Cột 'ReviewValue' (Nullable)
-
-  retryCount?: number;
-  lastRetryAt?: number;
-  nextRetryAt?: number;
+  userField: string;
+  userValue: string;
+  itemField: string;
+  itemValue: string;
+  ratingValue?: number;
+  reviewValue?: string;
+  retryCount?: number; // Cho logic SDK retry
+  lastRetryAt?: number; // Timestamp của lần retry cuối cùng
+  nextRetryAt?: number; // Timestamp của lần retry tiếp theo (exponential backoff)
 }
 
 // Interface lưu trữ để trừu tượng hóa localStorage/IndexedDB
