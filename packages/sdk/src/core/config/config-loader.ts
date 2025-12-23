@@ -71,6 +71,7 @@ export class ConfigLoader {
   async fetchRemoteConfig(): Promise<TrackerConfig | null> {
     if ((window as any).RecSysTrackerConfig || this.domainKey === 'TEST-DOMAIN-KEY') {
         console.log("⚠️ [ConfigLoader] Mock Mode detected. Skipping Server Fetch.");
+        console.log(this.config);
         return this.config;
     }
     if (!this.domainKey) {
