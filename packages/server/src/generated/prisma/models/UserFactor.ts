@@ -195,7 +195,7 @@ export type UserFactorGroupByOutputType = {
   Id: number
   UserId: number
   ModelId: number
-  UserBias: number
+  UserBias: number | null
   UserFactors: number[]
   _count: UserFactorCountAggregateOutputType | null
   _avg: UserFactorAvgAggregateOutputType | null
@@ -226,7 +226,7 @@ export type UserFactorWhereInput = {
   Id?: Prisma.IntFilter<"UserFactor"> | number
   UserId?: Prisma.IntFilter<"UserFactor"> | number
   ModelId?: Prisma.IntFilter<"UserFactor"> | number
-  UserBias?: Prisma.FloatFilter<"UserFactor"> | number
+  UserBias?: Prisma.FloatNullableFilter<"UserFactor"> | number | null
   UserFactors?: Prisma.FloatNullableListFilter<"UserFactor">
   User?: Prisma.XOR<Prisma.UserScalarRelationFilter, Prisma.UserWhereInput>
   Model?: Prisma.XOR<Prisma.ModelScalarRelationFilter, Prisma.ModelWhereInput>
@@ -236,7 +236,7 @@ export type UserFactorOrderByWithRelationInput = {
   Id?: Prisma.SortOrder
   UserId?: Prisma.SortOrder
   ModelId?: Prisma.SortOrder
-  UserBias?: Prisma.SortOrder
+  UserBias?: Prisma.SortOrderInput | Prisma.SortOrder
   UserFactors?: Prisma.SortOrder
   User?: Prisma.UserOrderByWithRelationInput
   Model?: Prisma.ModelOrderByWithRelationInput
@@ -249,7 +249,7 @@ export type UserFactorWhereUniqueInput = Prisma.AtLeast<{
   NOT?: Prisma.UserFactorWhereInput | Prisma.UserFactorWhereInput[]
   UserId?: Prisma.IntFilter<"UserFactor"> | number
   ModelId?: Prisma.IntFilter<"UserFactor"> | number
-  UserBias?: Prisma.FloatFilter<"UserFactor"> | number
+  UserBias?: Prisma.FloatNullableFilter<"UserFactor"> | number | null
   UserFactors?: Prisma.FloatNullableListFilter<"UserFactor">
   User?: Prisma.XOR<Prisma.UserScalarRelationFilter, Prisma.UserWhereInput>
   Model?: Prisma.XOR<Prisma.ModelScalarRelationFilter, Prisma.ModelWhereInput>
@@ -259,7 +259,7 @@ export type UserFactorOrderByWithAggregationInput = {
   Id?: Prisma.SortOrder
   UserId?: Prisma.SortOrder
   ModelId?: Prisma.SortOrder
-  UserBias?: Prisma.SortOrder
+  UserBias?: Prisma.SortOrderInput | Prisma.SortOrder
   UserFactors?: Prisma.SortOrder
   _count?: Prisma.UserFactorCountOrderByAggregateInput
   _avg?: Prisma.UserFactorAvgOrderByAggregateInput
@@ -275,12 +275,12 @@ export type UserFactorScalarWhereWithAggregatesInput = {
   Id?: Prisma.IntWithAggregatesFilter<"UserFactor"> | number
   UserId?: Prisma.IntWithAggregatesFilter<"UserFactor"> | number
   ModelId?: Prisma.IntWithAggregatesFilter<"UserFactor"> | number
-  UserBias?: Prisma.FloatWithAggregatesFilter<"UserFactor"> | number
+  UserBias?: Prisma.FloatNullableWithAggregatesFilter<"UserFactor"> | number | null
   UserFactors?: Prisma.FloatNullableListFilter<"UserFactor">
 }
 
 export type UserFactorCreateInput = {
-  UserBias: number
+  UserBias?: number | null
   UserFactors?: Prisma.UserFactorCreateUserFactorsInput | number[]
   User: Prisma.UserCreateNestedOneWithoutUserFactorsInput
   Model: Prisma.ModelCreateNestedOneWithoutUserFactorsInput
@@ -290,12 +290,12 @@ export type UserFactorUncheckedCreateInput = {
   Id?: number
   UserId: number
   ModelId: number
-  UserBias: number
+  UserBias?: number | null
   UserFactors?: Prisma.UserFactorCreateUserFactorsInput | number[]
 }
 
 export type UserFactorUpdateInput = {
-  UserBias?: Prisma.FloatFieldUpdateOperationsInput | number
+  UserBias?: Prisma.NullableFloatFieldUpdateOperationsInput | number | null
   UserFactors?: Prisma.UserFactorUpdateUserFactorsInput | number[]
   User?: Prisma.UserUpdateOneRequiredWithoutUserFactorsNestedInput
   Model?: Prisma.ModelUpdateOneRequiredWithoutUserFactorsNestedInput
@@ -305,7 +305,7 @@ export type UserFactorUncheckedUpdateInput = {
   Id?: Prisma.IntFieldUpdateOperationsInput | number
   UserId?: Prisma.IntFieldUpdateOperationsInput | number
   ModelId?: Prisma.IntFieldUpdateOperationsInput | number
-  UserBias?: Prisma.FloatFieldUpdateOperationsInput | number
+  UserBias?: Prisma.NullableFloatFieldUpdateOperationsInput | number | null
   UserFactors?: Prisma.UserFactorUpdateUserFactorsInput | number[]
 }
 
@@ -313,12 +313,12 @@ export type UserFactorCreateManyInput = {
   Id?: number
   UserId: number
   ModelId: number
-  UserBias: number
+  UserBias?: number | null
   UserFactors?: Prisma.UserFactorCreateUserFactorsInput | number[]
 }
 
 export type UserFactorUpdateManyMutationInput = {
-  UserBias?: Prisma.FloatFieldUpdateOperationsInput | number
+  UserBias?: Prisma.NullableFloatFieldUpdateOperationsInput | number | null
   UserFactors?: Prisma.UserFactorUpdateUserFactorsInput | number[]
 }
 
@@ -326,7 +326,7 @@ export type UserFactorUncheckedUpdateManyInput = {
   Id?: Prisma.IntFieldUpdateOperationsInput | number
   UserId?: Prisma.IntFieldUpdateOperationsInput | number
   ModelId?: Prisma.IntFieldUpdateOperationsInput | number
-  UserBias?: Prisma.FloatFieldUpdateOperationsInput | number
+  UserBias?: Prisma.NullableFloatFieldUpdateOperationsInput | number | null
   UserFactors?: Prisma.UserFactorUpdateUserFactorsInput | number[]
 }
 
@@ -472,7 +472,7 @@ export type UserFactorUpdateUserFactorsInput = {
 }
 
 export type UserFactorCreateWithoutModelInput = {
-  UserBias: number
+  UserBias?: number | null
   UserFactors?: Prisma.UserFactorCreateUserFactorsInput | number[]
   User: Prisma.UserCreateNestedOneWithoutUserFactorsInput
 }
@@ -480,7 +480,7 @@ export type UserFactorCreateWithoutModelInput = {
 export type UserFactorUncheckedCreateWithoutModelInput = {
   Id?: number
   UserId: number
-  UserBias: number
+  UserBias?: number | null
   UserFactors?: Prisma.UserFactorCreateUserFactorsInput | number[]
 }
 
@@ -517,12 +517,12 @@ export type UserFactorScalarWhereInput = {
   Id?: Prisma.IntFilter<"UserFactor"> | number
   UserId?: Prisma.IntFilter<"UserFactor"> | number
   ModelId?: Prisma.IntFilter<"UserFactor"> | number
-  UserBias?: Prisma.FloatFilter<"UserFactor"> | number
+  UserBias?: Prisma.FloatNullableFilter<"UserFactor"> | number | null
   UserFactors?: Prisma.FloatNullableListFilter<"UserFactor">
 }
 
 export type UserFactorCreateWithoutUserInput = {
-  UserBias: number
+  UserBias?: number | null
   UserFactors?: Prisma.UserFactorCreateUserFactorsInput | number[]
   Model: Prisma.ModelCreateNestedOneWithoutUserFactorsInput
 }
@@ -530,7 +530,7 @@ export type UserFactorCreateWithoutUserInput = {
 export type UserFactorUncheckedCreateWithoutUserInput = {
   Id?: number
   ModelId: number
-  UserBias: number
+  UserBias?: number | null
   UserFactors?: Prisma.UserFactorCreateUserFactorsInput | number[]
 }
 
@@ -563,12 +563,12 @@ export type UserFactorUpdateManyWithWhereWithoutUserInput = {
 export type UserFactorCreateManyModelInput = {
   Id?: number
   UserId: number
-  UserBias: number
+  UserBias?: number | null
   UserFactors?: Prisma.UserFactorCreateUserFactorsInput | number[]
 }
 
 export type UserFactorUpdateWithoutModelInput = {
-  UserBias?: Prisma.FloatFieldUpdateOperationsInput | number
+  UserBias?: Prisma.NullableFloatFieldUpdateOperationsInput | number | null
   UserFactors?: Prisma.UserFactorUpdateUserFactorsInput | number[]
   User?: Prisma.UserUpdateOneRequiredWithoutUserFactorsNestedInput
 }
@@ -576,26 +576,26 @@ export type UserFactorUpdateWithoutModelInput = {
 export type UserFactorUncheckedUpdateWithoutModelInput = {
   Id?: Prisma.IntFieldUpdateOperationsInput | number
   UserId?: Prisma.IntFieldUpdateOperationsInput | number
-  UserBias?: Prisma.FloatFieldUpdateOperationsInput | number
+  UserBias?: Prisma.NullableFloatFieldUpdateOperationsInput | number | null
   UserFactors?: Prisma.UserFactorUpdateUserFactorsInput | number[]
 }
 
 export type UserFactorUncheckedUpdateManyWithoutModelInput = {
   Id?: Prisma.IntFieldUpdateOperationsInput | number
   UserId?: Prisma.IntFieldUpdateOperationsInput | number
-  UserBias?: Prisma.FloatFieldUpdateOperationsInput | number
+  UserBias?: Prisma.NullableFloatFieldUpdateOperationsInput | number | null
   UserFactors?: Prisma.UserFactorUpdateUserFactorsInput | number[]
 }
 
 export type UserFactorCreateManyUserInput = {
   Id?: number
   ModelId: number
-  UserBias: number
+  UserBias?: number | null
   UserFactors?: Prisma.UserFactorCreateUserFactorsInput | number[]
 }
 
 export type UserFactorUpdateWithoutUserInput = {
-  UserBias?: Prisma.FloatFieldUpdateOperationsInput | number
+  UserBias?: Prisma.NullableFloatFieldUpdateOperationsInput | number | null
   UserFactors?: Prisma.UserFactorUpdateUserFactorsInput | number[]
   Model?: Prisma.ModelUpdateOneRequiredWithoutUserFactorsNestedInput
 }
@@ -603,14 +603,14 @@ export type UserFactorUpdateWithoutUserInput = {
 export type UserFactorUncheckedUpdateWithoutUserInput = {
   Id?: Prisma.IntFieldUpdateOperationsInput | number
   ModelId?: Prisma.IntFieldUpdateOperationsInput | number
-  UserBias?: Prisma.FloatFieldUpdateOperationsInput | number
+  UserBias?: Prisma.NullableFloatFieldUpdateOperationsInput | number | null
   UserFactors?: Prisma.UserFactorUpdateUserFactorsInput | number[]
 }
 
 export type UserFactorUncheckedUpdateManyWithoutUserInput = {
   Id?: Prisma.IntFieldUpdateOperationsInput | number
   ModelId?: Prisma.IntFieldUpdateOperationsInput | number
-  UserBias?: Prisma.FloatFieldUpdateOperationsInput | number
+  UserBias?: Prisma.NullableFloatFieldUpdateOperationsInput | number | null
   UserFactors?: Prisma.UserFactorUpdateUserFactorsInput | number[]
 }
 
@@ -678,7 +678,7 @@ export type $UserFactorPayload<ExtArgs extends runtime.Types.Extensions.Internal
     Id: number
     UserId: number
     ModelId: number
-    UserBias: number
+    UserBias: number | null
     UserFactors: number[]
   }, ExtArgs["result"]["userFactor"]>
   composites: {}

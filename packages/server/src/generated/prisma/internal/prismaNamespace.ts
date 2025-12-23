@@ -2174,7 +2174,8 @@ export const ModelScalarFieldEnum = {
   Description: 'Description',
   AverageRating: 'AverageRating',
   LearnableParameters: 'LearnableParameters',
-  ModifiedAt: 'ModifiedAt'
+  ModifiedAt: 'ModifiedAt',
+  DomainId: 'DomainId'
 } as const
 
 export type ModelScalarFieldEnum = (typeof ModelScalarFieldEnum)[keyof typeof ModelScalarFieldEnum]
