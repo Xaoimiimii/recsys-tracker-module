@@ -60,10 +60,12 @@ export interface TrackingTarget {
 }
 
 export interface ReturnMethod {
-  configurationName: string;
-  returnMethodId: number;
+  id: number;
+  domainId: number;
   operatorId: number;
+  returnType: string;
   value: string;
+  configurationName: string;
 }
 
 export interface TrackerOptions {

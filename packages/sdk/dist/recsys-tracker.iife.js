@@ -312,10 +312,12 @@ var RecSysTracker = (function (exports) {
             if (!returnMethodsData || !Array.isArray(returnMethodsData))
                 return [];
             return returnMethodsData.map(method => ({
-                configurationName: method.ConfigurationName || method.configurationName,
-                returnMethodId: method.ReturnMethodID || method.returnMethodId,
+                id: method.Id || method.id,
+                domainId: method.DomainID || method.domainId,
                 operatorId: method.OperatorID || method.operatorId,
+                returnType: method.ReturnType || method.returnType,
                 value: method.Value || method.value || '',
+                configurationName: method.ConfigurationName || method.configurationName,
             }));
         }
         // Lấy cấu hình hiện tại
@@ -1509,16 +1511,16 @@ var RecSysTracker = (function (exports) {
         }
         // Kích hoạt display method tương ứng
         activateDisplayMethod(method) {
-            const { returnMethodId, configurationName, value } = method;
-            switch (returnMethodId) {
-                case 1: // Popup
+            const { returnType, configurationName, value } = method;
+            switch (returnType) {
+                case 'POPUP': // Popup
                     this.initializePopup(configurationName, value);
                     break;
-                case 2: // Inline
+                case 'INLINE-INJECTION': // Inline
                     this.initializeInline(configurationName, value);
                     break;
                 default:
-                    console.warn(`[DisplayManager] Unknown returnMethodId: ${returnMethodId}`);
+                    console.warn(`[DisplayManager] Unknown returnType: ${returnType}`);
             }
         }
         // Khởi tạo Popup Display

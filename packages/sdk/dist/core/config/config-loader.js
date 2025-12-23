@@ -178,10 +178,12 @@ export class ConfigLoader {
         if (!returnMethodsData || !Array.isArray(returnMethodsData))
             return [];
         return returnMethodsData.map(method => ({
-            configurationName: method.ConfigurationName || method.configurationName,
-            returnMethodId: method.ReturnMethodID || method.returnMethodId,
+            id: method.Id || method.id,
+            domainId: method.DomainID || method.domainId,
             operatorId: method.OperatorID || method.operatorId,
+            returnType: method.ReturnType || method.returnType,
             value: method.Value || method.value || '',
+            configurationName: method.ConfigurationName || method.configurationName,
         }));
     }
     // Lấy cấu hình hiện tại

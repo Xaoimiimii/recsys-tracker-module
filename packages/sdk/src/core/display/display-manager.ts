@@ -27,19 +27,19 @@ export class DisplayManager {
 
   // Kích hoạt display method tương ứng
   private activateDisplayMethod(method: ReturnMethod): void {
-    const { returnMethodId, configurationName, value } = method;
+    const { returnType, configurationName, value } = method;
 
-    switch (returnMethodId) {
-      case 1: // Popup
+    switch (returnType) {
+      case 'POPUP': // Popup
         this.initializePopup(configurationName, value);
         break;
       
-      case 2: // Inline
+      case 'INLINE-INJECTION': // Inline
         this.initializeInline(configurationName, value);
         break;
       
       default:
-        console.warn(`[DisplayManager] Unknown returnMethodId: ${returnMethodId}`);
+        console.warn(`[DisplayManager] Unknown returnType: ${returnType}`);
     }
   }
 
