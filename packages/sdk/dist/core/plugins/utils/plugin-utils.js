@@ -38,7 +38,7 @@ export function throttle(fn, delay) {
     };
 }
 export function checkRuleCondition(url, condition) {
-    if (condition.eventPatternId === 0) {
+    if (condition.patternId === 0) {
         return true;
     }
     let urlPath;
@@ -48,7 +48,7 @@ export function checkRuleCondition(url, condition) {
     catch (e) {
         urlPath = "";
     }
-    if (condition.eventPatternId === 2 &&
+    if (condition.patternId === 2 &&
         condition.operatorId === 5 &&
         condition.value) {
         return urlPath === condition.value;

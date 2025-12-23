@@ -49,6 +49,7 @@ export class PageViewPlugin extends BasePlugin {
         }, 0);
     }
     trackCurrentPage(currentUrl) {
+        var _a;
         if (!this.context || !this.detector)
             return;
         const urlObject = new URL(currentUrl);
@@ -62,7 +63,7 @@ export class PageViewPlugin extends BasePlugin {
         for (const rule of pageViewRules) {
             let matchFound = false;
             let matchData = null;
-            const selector = rule.targetElement.targetElementValue || '';
+            const selector = ((_a = rule.trackingTarget) === null || _a === void 0 ? void 0 : _a.value) || '';
             // Determine payload extractor from rule data
             const isRegex = selector.startsWith('^');
             const extractorSource = isRegex ? 'regex_group' : 'ai_detect';

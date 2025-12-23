@@ -28,50 +28,82 @@ export type AggregateReturnMethod = {
 
 export type ReturnMethodAvgAggregateOutputType = {
   Id: number | null
+  DomainID: number | null
+  OperatorID: number | null
 }
 
 export type ReturnMethodSumAggregateOutputType = {
   Id: number | null
+  DomainID: number | null
+  OperatorID: number | null
 }
 
 export type ReturnMethodMinAggregateOutputType = {
   Id: number | null
-  Name: string | null
+  DomainID: number | null
+  OperatorID: number | null
+  ReturnType: $Enums.ReturnType | null
+  Value: string | null
+  ConfigurationName: string | null
 }
 
 export type ReturnMethodMaxAggregateOutputType = {
   Id: number | null
-  Name: string | null
+  DomainID: number | null
+  OperatorID: number | null
+  ReturnType: $Enums.ReturnType | null
+  Value: string | null
+  ConfigurationName: string | null
 }
 
 export type ReturnMethodCountAggregateOutputType = {
   Id: number
-  Name: number
+  DomainID: number
+  OperatorID: number
+  ReturnType: number
+  Value: number
+  ConfigurationName: number
   _all: number
 }
 
 
 export type ReturnMethodAvgAggregateInputType = {
   Id?: true
+  DomainID?: true
+  OperatorID?: true
 }
 
 export type ReturnMethodSumAggregateInputType = {
   Id?: true
+  DomainID?: true
+  OperatorID?: true
 }
 
 export type ReturnMethodMinAggregateInputType = {
   Id?: true
-  Name?: true
+  DomainID?: true
+  OperatorID?: true
+  ReturnType?: true
+  Value?: true
+  ConfigurationName?: true
 }
 
 export type ReturnMethodMaxAggregateInputType = {
   Id?: true
-  Name?: true
+  DomainID?: true
+  OperatorID?: true
+  ReturnType?: true
+  Value?: true
+  ConfigurationName?: true
 }
 
 export type ReturnMethodCountAggregateInputType = {
   Id?: true
-  Name?: true
+  DomainID?: true
+  OperatorID?: true
+  ReturnType?: true
+  Value?: true
+  ConfigurationName?: true
   _all?: true
 }
 
@@ -163,7 +195,11 @@ export type ReturnMethodGroupByArgs<ExtArgs extends runtime.Types.Extensions.Int
 
 export type ReturnMethodGroupByOutputType = {
   Id: number
-  Name: string
+  DomainID: number
+  OperatorID: number
+  ReturnType: $Enums.ReturnType
+  Value: string
+  ConfigurationName: string
   _count: ReturnMethodCountAggregateOutputType | null
   _avg: ReturnMethodAvgAggregateOutputType | null
   _sum: ReturnMethodSumAggregateOutputType | null
@@ -191,14 +227,24 @@ export type ReturnMethodWhereInput = {
   OR?: Prisma.ReturnMethodWhereInput[]
   NOT?: Prisma.ReturnMethodWhereInput | Prisma.ReturnMethodWhereInput[]
   Id?: Prisma.IntFilter<"ReturnMethod"> | number
-  Name?: Prisma.StringFilter<"ReturnMethod"> | string
-  DomainReturns?: Prisma.DomainReturnListRelationFilter
+  DomainID?: Prisma.IntFilter<"ReturnMethod"> | number
+  OperatorID?: Prisma.IntFilter<"ReturnMethod"> | number
+  ReturnType?: Prisma.EnumReturnTypeFilter<"ReturnMethod"> | $Enums.ReturnType
+  Value?: Prisma.StringFilter<"ReturnMethod"> | string
+  ConfigurationName?: Prisma.StringFilter<"ReturnMethod"> | string
+  Domain?: Prisma.XOR<Prisma.DomainScalarRelationFilter, Prisma.DomainWhereInput>
+  Operator?: Prisma.XOR<Prisma.OperatorScalarRelationFilter, Prisma.OperatorWhereInput>
 }
 
 export type ReturnMethodOrderByWithRelationInput = {
   Id?: Prisma.SortOrder
-  Name?: Prisma.SortOrder
-  DomainReturns?: Prisma.DomainReturnOrderByRelationAggregateInput
+  DomainID?: Prisma.SortOrder
+  OperatorID?: Prisma.SortOrder
+  ReturnType?: Prisma.SortOrder
+  Value?: Prisma.SortOrder
+  ConfigurationName?: Prisma.SortOrder
+  Domain?: Prisma.DomainOrderByWithRelationInput
+  Operator?: Prisma.OperatorOrderByWithRelationInput
 }
 
 export type ReturnMethodWhereUniqueInput = Prisma.AtLeast<{
@@ -206,13 +252,22 @@ export type ReturnMethodWhereUniqueInput = Prisma.AtLeast<{
   AND?: Prisma.ReturnMethodWhereInput | Prisma.ReturnMethodWhereInput[]
   OR?: Prisma.ReturnMethodWhereInput[]
   NOT?: Prisma.ReturnMethodWhereInput | Prisma.ReturnMethodWhereInput[]
-  Name?: Prisma.StringFilter<"ReturnMethod"> | string
-  DomainReturns?: Prisma.DomainReturnListRelationFilter
+  DomainID?: Prisma.IntFilter<"ReturnMethod"> | number
+  OperatorID?: Prisma.IntFilter<"ReturnMethod"> | number
+  ReturnType?: Prisma.EnumReturnTypeFilter<"ReturnMethod"> | $Enums.ReturnType
+  Value?: Prisma.StringFilter<"ReturnMethod"> | string
+  ConfigurationName?: Prisma.StringFilter<"ReturnMethod"> | string
+  Domain?: Prisma.XOR<Prisma.DomainScalarRelationFilter, Prisma.DomainWhereInput>
+  Operator?: Prisma.XOR<Prisma.OperatorScalarRelationFilter, Prisma.OperatorWhereInput>
 }, "Id">
 
 export type ReturnMethodOrderByWithAggregationInput = {
   Id?: Prisma.SortOrder
-  Name?: Prisma.SortOrder
+  DomainID?: Prisma.SortOrder
+  OperatorID?: Prisma.SortOrder
+  ReturnType?: Prisma.SortOrder
+  Value?: Prisma.SortOrder
+  ConfigurationName?: Prisma.SortOrder
   _count?: Prisma.ReturnMethodCountOrderByAggregateInput
   _avg?: Prisma.ReturnMethodAvgOrderByAggregateInput
   _max?: Prisma.ReturnMethodMaxOrderByAggregateInput
@@ -225,190 +280,435 @@ export type ReturnMethodScalarWhereWithAggregatesInput = {
   OR?: Prisma.ReturnMethodScalarWhereWithAggregatesInput[]
   NOT?: Prisma.ReturnMethodScalarWhereWithAggregatesInput | Prisma.ReturnMethodScalarWhereWithAggregatesInput[]
   Id?: Prisma.IntWithAggregatesFilter<"ReturnMethod"> | number
-  Name?: Prisma.StringWithAggregatesFilter<"ReturnMethod"> | string
+  DomainID?: Prisma.IntWithAggregatesFilter<"ReturnMethod"> | number
+  OperatorID?: Prisma.IntWithAggregatesFilter<"ReturnMethod"> | number
+  ReturnType?: Prisma.EnumReturnTypeWithAggregatesFilter<"ReturnMethod"> | $Enums.ReturnType
+  Value?: Prisma.StringWithAggregatesFilter<"ReturnMethod"> | string
+  ConfigurationName?: Prisma.StringWithAggregatesFilter<"ReturnMethod"> | string
 }
 
 export type ReturnMethodCreateInput = {
-  Name: string
-  DomainReturns?: Prisma.DomainReturnCreateNestedManyWithoutReturnMethodInput
+  ReturnType: $Enums.ReturnType
+  Value: string
+  ConfigurationName: string
+  Domain: Prisma.DomainCreateNestedOneWithoutReturnMethodsInput
+  Operator: Prisma.OperatorCreateNestedOneWithoutReturnMethodsInput
 }
 
 export type ReturnMethodUncheckedCreateInput = {
   Id?: number
-  Name: string
-  DomainReturns?: Prisma.DomainReturnUncheckedCreateNestedManyWithoutReturnMethodInput
+  DomainID: number
+  OperatorID: number
+  ReturnType: $Enums.ReturnType
+  Value: string
+  ConfigurationName: string
 }
 
 export type ReturnMethodUpdateInput = {
-  Name?: Prisma.StringFieldUpdateOperationsInput | string
-  DomainReturns?: Prisma.DomainReturnUpdateManyWithoutReturnMethodNestedInput
+  ReturnType?: Prisma.EnumReturnTypeFieldUpdateOperationsInput | $Enums.ReturnType
+  Value?: Prisma.StringFieldUpdateOperationsInput | string
+  ConfigurationName?: Prisma.StringFieldUpdateOperationsInput | string
+  Domain?: Prisma.DomainUpdateOneRequiredWithoutReturnMethodsNestedInput
+  Operator?: Prisma.OperatorUpdateOneRequiredWithoutReturnMethodsNestedInput
 }
 
 export type ReturnMethodUncheckedUpdateInput = {
   Id?: Prisma.IntFieldUpdateOperationsInput | number
-  Name?: Prisma.StringFieldUpdateOperationsInput | string
-  DomainReturns?: Prisma.DomainReturnUncheckedUpdateManyWithoutReturnMethodNestedInput
+  DomainID?: Prisma.IntFieldUpdateOperationsInput | number
+  OperatorID?: Prisma.IntFieldUpdateOperationsInput | number
+  ReturnType?: Prisma.EnumReturnTypeFieldUpdateOperationsInput | $Enums.ReturnType
+  Value?: Prisma.StringFieldUpdateOperationsInput | string
+  ConfigurationName?: Prisma.StringFieldUpdateOperationsInput | string
 }
 
 export type ReturnMethodCreateManyInput = {
   Id?: number
-  Name: string
+  DomainID: number
+  OperatorID: number
+  ReturnType: $Enums.ReturnType
+  Value: string
+  ConfigurationName: string
 }
 
 export type ReturnMethodUpdateManyMutationInput = {
-  Name?: Prisma.StringFieldUpdateOperationsInput | string
+  ReturnType?: Prisma.EnumReturnTypeFieldUpdateOperationsInput | $Enums.ReturnType
+  Value?: Prisma.StringFieldUpdateOperationsInput | string
+  ConfigurationName?: Prisma.StringFieldUpdateOperationsInput | string
 }
 
 export type ReturnMethodUncheckedUpdateManyInput = {
   Id?: Prisma.IntFieldUpdateOperationsInput | number
-  Name?: Prisma.StringFieldUpdateOperationsInput | string
+  DomainID?: Prisma.IntFieldUpdateOperationsInput | number
+  OperatorID?: Prisma.IntFieldUpdateOperationsInput | number
+  ReturnType?: Prisma.EnumReturnTypeFieldUpdateOperationsInput | $Enums.ReturnType
+  Value?: Prisma.StringFieldUpdateOperationsInput | string
+  ConfigurationName?: Prisma.StringFieldUpdateOperationsInput | string
 }
 
-export type ReturnMethodScalarRelationFilter = {
-  is?: Prisma.ReturnMethodWhereInput
-  isNot?: Prisma.ReturnMethodWhereInput
+export type ReturnMethodListRelationFilter = {
+  every?: Prisma.ReturnMethodWhereInput
+  some?: Prisma.ReturnMethodWhereInput
+  none?: Prisma.ReturnMethodWhereInput
+}
+
+export type ReturnMethodOrderByRelationAggregateInput = {
+  _count?: Prisma.SortOrder
 }
 
 export type ReturnMethodCountOrderByAggregateInput = {
   Id?: Prisma.SortOrder
-  Name?: Prisma.SortOrder
+  DomainID?: Prisma.SortOrder
+  OperatorID?: Prisma.SortOrder
+  ReturnType?: Prisma.SortOrder
+  Value?: Prisma.SortOrder
+  ConfigurationName?: Prisma.SortOrder
 }
 
 export type ReturnMethodAvgOrderByAggregateInput = {
   Id?: Prisma.SortOrder
+  DomainID?: Prisma.SortOrder
+  OperatorID?: Prisma.SortOrder
 }
 
 export type ReturnMethodMaxOrderByAggregateInput = {
   Id?: Prisma.SortOrder
-  Name?: Prisma.SortOrder
+  DomainID?: Prisma.SortOrder
+  OperatorID?: Prisma.SortOrder
+  ReturnType?: Prisma.SortOrder
+  Value?: Prisma.SortOrder
+  ConfigurationName?: Prisma.SortOrder
 }
 
 export type ReturnMethodMinOrderByAggregateInput = {
   Id?: Prisma.SortOrder
-  Name?: Prisma.SortOrder
+  DomainID?: Prisma.SortOrder
+  OperatorID?: Prisma.SortOrder
+  ReturnType?: Prisma.SortOrder
+  Value?: Prisma.SortOrder
+  ConfigurationName?: Prisma.SortOrder
 }
 
 export type ReturnMethodSumOrderByAggregateInput = {
   Id?: Prisma.SortOrder
+  DomainID?: Prisma.SortOrder
+  OperatorID?: Prisma.SortOrder
 }
 
-export type ReturnMethodCreateNestedOneWithoutDomainReturnsInput = {
-  create?: Prisma.XOR<Prisma.ReturnMethodCreateWithoutDomainReturnsInput, Prisma.ReturnMethodUncheckedCreateWithoutDomainReturnsInput>
-  connectOrCreate?: Prisma.ReturnMethodCreateOrConnectWithoutDomainReturnsInput
-  connect?: Prisma.ReturnMethodWhereUniqueInput
+export type ReturnMethodCreateNestedManyWithoutDomainInput = {
+  create?: Prisma.XOR<Prisma.ReturnMethodCreateWithoutDomainInput, Prisma.ReturnMethodUncheckedCreateWithoutDomainInput> | Prisma.ReturnMethodCreateWithoutDomainInput[] | Prisma.ReturnMethodUncheckedCreateWithoutDomainInput[]
+  connectOrCreate?: Prisma.ReturnMethodCreateOrConnectWithoutDomainInput | Prisma.ReturnMethodCreateOrConnectWithoutDomainInput[]
+  createMany?: Prisma.ReturnMethodCreateManyDomainInputEnvelope
+  connect?: Prisma.ReturnMethodWhereUniqueInput | Prisma.ReturnMethodWhereUniqueInput[]
 }
 
-export type ReturnMethodUpdateOneRequiredWithoutDomainReturnsNestedInput = {
-  create?: Prisma.XOR<Prisma.ReturnMethodCreateWithoutDomainReturnsInput, Prisma.ReturnMethodUncheckedCreateWithoutDomainReturnsInput>
-  connectOrCreate?: Prisma.ReturnMethodCreateOrConnectWithoutDomainReturnsInput
-  upsert?: Prisma.ReturnMethodUpsertWithoutDomainReturnsInput
-  connect?: Prisma.ReturnMethodWhereUniqueInput
-  update?: Prisma.XOR<Prisma.XOR<Prisma.ReturnMethodUpdateToOneWithWhereWithoutDomainReturnsInput, Prisma.ReturnMethodUpdateWithoutDomainReturnsInput>, Prisma.ReturnMethodUncheckedUpdateWithoutDomainReturnsInput>
+export type ReturnMethodUncheckedCreateNestedManyWithoutDomainInput = {
+  create?: Prisma.XOR<Prisma.ReturnMethodCreateWithoutDomainInput, Prisma.ReturnMethodUncheckedCreateWithoutDomainInput> | Prisma.ReturnMethodCreateWithoutDomainInput[] | Prisma.ReturnMethodUncheckedCreateWithoutDomainInput[]
+  connectOrCreate?: Prisma.ReturnMethodCreateOrConnectWithoutDomainInput | Prisma.ReturnMethodCreateOrConnectWithoutDomainInput[]
+  createMany?: Prisma.ReturnMethodCreateManyDomainInputEnvelope
+  connect?: Prisma.ReturnMethodWhereUniqueInput | Prisma.ReturnMethodWhereUniqueInput[]
 }
 
-export type ReturnMethodCreateWithoutDomainReturnsInput = {
-  Name: string
+export type ReturnMethodUpdateManyWithoutDomainNestedInput = {
+  create?: Prisma.XOR<Prisma.ReturnMethodCreateWithoutDomainInput, Prisma.ReturnMethodUncheckedCreateWithoutDomainInput> | Prisma.ReturnMethodCreateWithoutDomainInput[] | Prisma.ReturnMethodUncheckedCreateWithoutDomainInput[]
+  connectOrCreate?: Prisma.ReturnMethodCreateOrConnectWithoutDomainInput | Prisma.ReturnMethodCreateOrConnectWithoutDomainInput[]
+  upsert?: Prisma.ReturnMethodUpsertWithWhereUniqueWithoutDomainInput | Prisma.ReturnMethodUpsertWithWhereUniqueWithoutDomainInput[]
+  createMany?: Prisma.ReturnMethodCreateManyDomainInputEnvelope
+  set?: Prisma.ReturnMethodWhereUniqueInput | Prisma.ReturnMethodWhereUniqueInput[]
+  disconnect?: Prisma.ReturnMethodWhereUniqueInput | Prisma.ReturnMethodWhereUniqueInput[]
+  delete?: Prisma.ReturnMethodWhereUniqueInput | Prisma.ReturnMethodWhereUniqueInput[]
+  connect?: Prisma.ReturnMethodWhereUniqueInput | Prisma.ReturnMethodWhereUniqueInput[]
+  update?: Prisma.ReturnMethodUpdateWithWhereUniqueWithoutDomainInput | Prisma.ReturnMethodUpdateWithWhereUniqueWithoutDomainInput[]
+  updateMany?: Prisma.ReturnMethodUpdateManyWithWhereWithoutDomainInput | Prisma.ReturnMethodUpdateManyWithWhereWithoutDomainInput[]
+  deleteMany?: Prisma.ReturnMethodScalarWhereInput | Prisma.ReturnMethodScalarWhereInput[]
 }
 
-export type ReturnMethodUncheckedCreateWithoutDomainReturnsInput = {
+export type ReturnMethodUncheckedUpdateManyWithoutDomainNestedInput = {
+  create?: Prisma.XOR<Prisma.ReturnMethodCreateWithoutDomainInput, Prisma.ReturnMethodUncheckedCreateWithoutDomainInput> | Prisma.ReturnMethodCreateWithoutDomainInput[] | Prisma.ReturnMethodUncheckedCreateWithoutDomainInput[]
+  connectOrCreate?: Prisma.ReturnMethodCreateOrConnectWithoutDomainInput | Prisma.ReturnMethodCreateOrConnectWithoutDomainInput[]
+  upsert?: Prisma.ReturnMethodUpsertWithWhereUniqueWithoutDomainInput | Prisma.ReturnMethodUpsertWithWhereUniqueWithoutDomainInput[]
+  createMany?: Prisma.ReturnMethodCreateManyDomainInputEnvelope
+  set?: Prisma.ReturnMethodWhereUniqueInput | Prisma.ReturnMethodWhereUniqueInput[]
+  disconnect?: Prisma.ReturnMethodWhereUniqueInput | Prisma.ReturnMethodWhereUniqueInput[]
+  delete?: Prisma.ReturnMethodWhereUniqueInput | Prisma.ReturnMethodWhereUniqueInput[]
+  connect?: Prisma.ReturnMethodWhereUniqueInput | Prisma.ReturnMethodWhereUniqueInput[]
+  update?: Prisma.ReturnMethodUpdateWithWhereUniqueWithoutDomainInput | Prisma.ReturnMethodUpdateWithWhereUniqueWithoutDomainInput[]
+  updateMany?: Prisma.ReturnMethodUpdateManyWithWhereWithoutDomainInput | Prisma.ReturnMethodUpdateManyWithWhereWithoutDomainInput[]
+  deleteMany?: Prisma.ReturnMethodScalarWhereInput | Prisma.ReturnMethodScalarWhereInput[]
+}
+
+export type EnumReturnTypeFieldUpdateOperationsInput = {
+  set?: $Enums.ReturnType
+}
+
+export type ReturnMethodCreateNestedManyWithoutOperatorInput = {
+  create?: Prisma.XOR<Prisma.ReturnMethodCreateWithoutOperatorInput, Prisma.ReturnMethodUncheckedCreateWithoutOperatorInput> | Prisma.ReturnMethodCreateWithoutOperatorInput[] | Prisma.ReturnMethodUncheckedCreateWithoutOperatorInput[]
+  connectOrCreate?: Prisma.ReturnMethodCreateOrConnectWithoutOperatorInput | Prisma.ReturnMethodCreateOrConnectWithoutOperatorInput[]
+  createMany?: Prisma.ReturnMethodCreateManyOperatorInputEnvelope
+  connect?: Prisma.ReturnMethodWhereUniqueInput | Prisma.ReturnMethodWhereUniqueInput[]
+}
+
+export type ReturnMethodUncheckedCreateNestedManyWithoutOperatorInput = {
+  create?: Prisma.XOR<Prisma.ReturnMethodCreateWithoutOperatorInput, Prisma.ReturnMethodUncheckedCreateWithoutOperatorInput> | Prisma.ReturnMethodCreateWithoutOperatorInput[] | Prisma.ReturnMethodUncheckedCreateWithoutOperatorInput[]
+  connectOrCreate?: Prisma.ReturnMethodCreateOrConnectWithoutOperatorInput | Prisma.ReturnMethodCreateOrConnectWithoutOperatorInput[]
+  createMany?: Prisma.ReturnMethodCreateManyOperatorInputEnvelope
+  connect?: Prisma.ReturnMethodWhereUniqueInput | Prisma.ReturnMethodWhereUniqueInput[]
+}
+
+export type ReturnMethodUpdateManyWithoutOperatorNestedInput = {
+  create?: Prisma.XOR<Prisma.ReturnMethodCreateWithoutOperatorInput, Prisma.ReturnMethodUncheckedCreateWithoutOperatorInput> | Prisma.ReturnMethodCreateWithoutOperatorInput[] | Prisma.ReturnMethodUncheckedCreateWithoutOperatorInput[]
+  connectOrCreate?: Prisma.ReturnMethodCreateOrConnectWithoutOperatorInput | Prisma.ReturnMethodCreateOrConnectWithoutOperatorInput[]
+  upsert?: Prisma.ReturnMethodUpsertWithWhereUniqueWithoutOperatorInput | Prisma.ReturnMethodUpsertWithWhereUniqueWithoutOperatorInput[]
+  createMany?: Prisma.ReturnMethodCreateManyOperatorInputEnvelope
+  set?: Prisma.ReturnMethodWhereUniqueInput | Prisma.ReturnMethodWhereUniqueInput[]
+  disconnect?: Prisma.ReturnMethodWhereUniqueInput | Prisma.ReturnMethodWhereUniqueInput[]
+  delete?: Prisma.ReturnMethodWhereUniqueInput | Prisma.ReturnMethodWhereUniqueInput[]
+  connect?: Prisma.ReturnMethodWhereUniqueInput | Prisma.ReturnMethodWhereUniqueInput[]
+  update?: Prisma.ReturnMethodUpdateWithWhereUniqueWithoutOperatorInput | Prisma.ReturnMethodUpdateWithWhereUniqueWithoutOperatorInput[]
+  updateMany?: Prisma.ReturnMethodUpdateManyWithWhereWithoutOperatorInput | Prisma.ReturnMethodUpdateManyWithWhereWithoutOperatorInput[]
+  deleteMany?: Prisma.ReturnMethodScalarWhereInput | Prisma.ReturnMethodScalarWhereInput[]
+}
+
+export type ReturnMethodUncheckedUpdateManyWithoutOperatorNestedInput = {
+  create?: Prisma.XOR<Prisma.ReturnMethodCreateWithoutOperatorInput, Prisma.ReturnMethodUncheckedCreateWithoutOperatorInput> | Prisma.ReturnMethodCreateWithoutOperatorInput[] | Prisma.ReturnMethodUncheckedCreateWithoutOperatorInput[]
+  connectOrCreate?: Prisma.ReturnMethodCreateOrConnectWithoutOperatorInput | Prisma.ReturnMethodCreateOrConnectWithoutOperatorInput[]
+  upsert?: Prisma.ReturnMethodUpsertWithWhereUniqueWithoutOperatorInput | Prisma.ReturnMethodUpsertWithWhereUniqueWithoutOperatorInput[]
+  createMany?: Prisma.ReturnMethodCreateManyOperatorInputEnvelope
+  set?: Prisma.ReturnMethodWhereUniqueInput | Prisma.ReturnMethodWhereUniqueInput[]
+  disconnect?: Prisma.ReturnMethodWhereUniqueInput | Prisma.ReturnMethodWhereUniqueInput[]
+  delete?: Prisma.ReturnMethodWhereUniqueInput | Prisma.ReturnMethodWhereUniqueInput[]
+  connect?: Prisma.ReturnMethodWhereUniqueInput | Prisma.ReturnMethodWhereUniqueInput[]
+  update?: Prisma.ReturnMethodUpdateWithWhereUniqueWithoutOperatorInput | Prisma.ReturnMethodUpdateWithWhereUniqueWithoutOperatorInput[]
+  updateMany?: Prisma.ReturnMethodUpdateManyWithWhereWithoutOperatorInput | Prisma.ReturnMethodUpdateManyWithWhereWithoutOperatorInput[]
+  deleteMany?: Prisma.ReturnMethodScalarWhereInput | Prisma.ReturnMethodScalarWhereInput[]
+}
+
+export type ReturnMethodCreateWithoutDomainInput = {
+  ReturnType: $Enums.ReturnType
+  Value: string
+  ConfigurationName: string
+  Operator: Prisma.OperatorCreateNestedOneWithoutReturnMethodsInput
+}
+
+export type ReturnMethodUncheckedCreateWithoutDomainInput = {
   Id?: number
-  Name: string
+  OperatorID: number
+  ReturnType: $Enums.ReturnType
+  Value: string
+  ConfigurationName: string
 }
 
-export type ReturnMethodCreateOrConnectWithoutDomainReturnsInput = {
+export type ReturnMethodCreateOrConnectWithoutDomainInput = {
   where: Prisma.ReturnMethodWhereUniqueInput
-  create: Prisma.XOR<Prisma.ReturnMethodCreateWithoutDomainReturnsInput, Prisma.ReturnMethodUncheckedCreateWithoutDomainReturnsInput>
+  create: Prisma.XOR<Prisma.ReturnMethodCreateWithoutDomainInput, Prisma.ReturnMethodUncheckedCreateWithoutDomainInput>
 }
 
-export type ReturnMethodUpsertWithoutDomainReturnsInput = {
-  update: Prisma.XOR<Prisma.ReturnMethodUpdateWithoutDomainReturnsInput, Prisma.ReturnMethodUncheckedUpdateWithoutDomainReturnsInput>
-  create: Prisma.XOR<Prisma.ReturnMethodCreateWithoutDomainReturnsInput, Prisma.ReturnMethodUncheckedCreateWithoutDomainReturnsInput>
-  where?: Prisma.ReturnMethodWhereInput
+export type ReturnMethodCreateManyDomainInputEnvelope = {
+  data: Prisma.ReturnMethodCreateManyDomainInput | Prisma.ReturnMethodCreateManyDomainInput[]
+  skipDuplicates?: boolean
 }
 
-export type ReturnMethodUpdateToOneWithWhereWithoutDomainReturnsInput = {
-  where?: Prisma.ReturnMethodWhereInput
-  data: Prisma.XOR<Prisma.ReturnMethodUpdateWithoutDomainReturnsInput, Prisma.ReturnMethodUncheckedUpdateWithoutDomainReturnsInput>
+export type ReturnMethodUpsertWithWhereUniqueWithoutDomainInput = {
+  where: Prisma.ReturnMethodWhereUniqueInput
+  update: Prisma.XOR<Prisma.ReturnMethodUpdateWithoutDomainInput, Prisma.ReturnMethodUncheckedUpdateWithoutDomainInput>
+  create: Prisma.XOR<Prisma.ReturnMethodCreateWithoutDomainInput, Prisma.ReturnMethodUncheckedCreateWithoutDomainInput>
 }
 
-export type ReturnMethodUpdateWithoutDomainReturnsInput = {
-  Name?: Prisma.StringFieldUpdateOperationsInput | string
+export type ReturnMethodUpdateWithWhereUniqueWithoutDomainInput = {
+  where: Prisma.ReturnMethodWhereUniqueInput
+  data: Prisma.XOR<Prisma.ReturnMethodUpdateWithoutDomainInput, Prisma.ReturnMethodUncheckedUpdateWithoutDomainInput>
 }
 
-export type ReturnMethodUncheckedUpdateWithoutDomainReturnsInput = {
+export type ReturnMethodUpdateManyWithWhereWithoutDomainInput = {
+  where: Prisma.ReturnMethodScalarWhereInput
+  data: Prisma.XOR<Prisma.ReturnMethodUpdateManyMutationInput, Prisma.ReturnMethodUncheckedUpdateManyWithoutDomainInput>
+}
+
+export type ReturnMethodScalarWhereInput = {
+  AND?: Prisma.ReturnMethodScalarWhereInput | Prisma.ReturnMethodScalarWhereInput[]
+  OR?: Prisma.ReturnMethodScalarWhereInput[]
+  NOT?: Prisma.ReturnMethodScalarWhereInput | Prisma.ReturnMethodScalarWhereInput[]
+  Id?: Prisma.IntFilter<"ReturnMethod"> | number
+  DomainID?: Prisma.IntFilter<"ReturnMethod"> | number
+  OperatorID?: Prisma.IntFilter<"ReturnMethod"> | number
+  ReturnType?: Prisma.EnumReturnTypeFilter<"ReturnMethod"> | $Enums.ReturnType
+  Value?: Prisma.StringFilter<"ReturnMethod"> | string
+  ConfigurationName?: Prisma.StringFilter<"ReturnMethod"> | string
+}
+
+export type ReturnMethodCreateWithoutOperatorInput = {
+  ReturnType: $Enums.ReturnType
+  Value: string
+  ConfigurationName: string
+  Domain: Prisma.DomainCreateNestedOneWithoutReturnMethodsInput
+}
+
+export type ReturnMethodUncheckedCreateWithoutOperatorInput = {
+  Id?: number
+  DomainID: number
+  ReturnType: $Enums.ReturnType
+  Value: string
+  ConfigurationName: string
+}
+
+export type ReturnMethodCreateOrConnectWithoutOperatorInput = {
+  where: Prisma.ReturnMethodWhereUniqueInput
+  create: Prisma.XOR<Prisma.ReturnMethodCreateWithoutOperatorInput, Prisma.ReturnMethodUncheckedCreateWithoutOperatorInput>
+}
+
+export type ReturnMethodCreateManyOperatorInputEnvelope = {
+  data: Prisma.ReturnMethodCreateManyOperatorInput | Prisma.ReturnMethodCreateManyOperatorInput[]
+  skipDuplicates?: boolean
+}
+
+export type ReturnMethodUpsertWithWhereUniqueWithoutOperatorInput = {
+  where: Prisma.ReturnMethodWhereUniqueInput
+  update: Prisma.XOR<Prisma.ReturnMethodUpdateWithoutOperatorInput, Prisma.ReturnMethodUncheckedUpdateWithoutOperatorInput>
+  create: Prisma.XOR<Prisma.ReturnMethodCreateWithoutOperatorInput, Prisma.ReturnMethodUncheckedCreateWithoutOperatorInput>
+}
+
+export type ReturnMethodUpdateWithWhereUniqueWithoutOperatorInput = {
+  where: Prisma.ReturnMethodWhereUniqueInput
+  data: Prisma.XOR<Prisma.ReturnMethodUpdateWithoutOperatorInput, Prisma.ReturnMethodUncheckedUpdateWithoutOperatorInput>
+}
+
+export type ReturnMethodUpdateManyWithWhereWithoutOperatorInput = {
+  where: Prisma.ReturnMethodScalarWhereInput
+  data: Prisma.XOR<Prisma.ReturnMethodUpdateManyMutationInput, Prisma.ReturnMethodUncheckedUpdateManyWithoutOperatorInput>
+}
+
+export type ReturnMethodCreateManyDomainInput = {
+  Id?: number
+  OperatorID: number
+  ReturnType: $Enums.ReturnType
+  Value: string
+  ConfigurationName: string
+}
+
+export type ReturnMethodUpdateWithoutDomainInput = {
+  ReturnType?: Prisma.EnumReturnTypeFieldUpdateOperationsInput | $Enums.ReturnType
+  Value?: Prisma.StringFieldUpdateOperationsInput | string
+  ConfigurationName?: Prisma.StringFieldUpdateOperationsInput | string
+  Operator?: Prisma.OperatorUpdateOneRequiredWithoutReturnMethodsNestedInput
+}
+
+export type ReturnMethodUncheckedUpdateWithoutDomainInput = {
   Id?: Prisma.IntFieldUpdateOperationsInput | number
-  Name?: Prisma.StringFieldUpdateOperationsInput | string
+  OperatorID?: Prisma.IntFieldUpdateOperationsInput | number
+  ReturnType?: Prisma.EnumReturnTypeFieldUpdateOperationsInput | $Enums.ReturnType
+  Value?: Prisma.StringFieldUpdateOperationsInput | string
+  ConfigurationName?: Prisma.StringFieldUpdateOperationsInput | string
 }
 
-
-/**
- * Count Type ReturnMethodCountOutputType
- */
-
-export type ReturnMethodCountOutputType = {
-  DomainReturns: number
+export type ReturnMethodUncheckedUpdateManyWithoutDomainInput = {
+  Id?: Prisma.IntFieldUpdateOperationsInput | number
+  OperatorID?: Prisma.IntFieldUpdateOperationsInput | number
+  ReturnType?: Prisma.EnumReturnTypeFieldUpdateOperationsInput | $Enums.ReturnType
+  Value?: Prisma.StringFieldUpdateOperationsInput | string
+  ConfigurationName?: Prisma.StringFieldUpdateOperationsInput | string
 }
 
-export type ReturnMethodCountOutputTypeSelect<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
-  DomainReturns?: boolean | ReturnMethodCountOutputTypeCountDomainReturnsArgs
+export type ReturnMethodCreateManyOperatorInput = {
+  Id?: number
+  DomainID: number
+  ReturnType: $Enums.ReturnType
+  Value: string
+  ConfigurationName: string
 }
 
-/**
- * ReturnMethodCountOutputType without action
- */
-export type ReturnMethodCountOutputTypeDefaultArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
-  /**
-   * Select specific fields to fetch from the ReturnMethodCountOutputType
-   */
-  select?: Prisma.ReturnMethodCountOutputTypeSelect<ExtArgs> | null
+export type ReturnMethodUpdateWithoutOperatorInput = {
+  ReturnType?: Prisma.EnumReturnTypeFieldUpdateOperationsInput | $Enums.ReturnType
+  Value?: Prisma.StringFieldUpdateOperationsInput | string
+  ConfigurationName?: Prisma.StringFieldUpdateOperationsInput | string
+  Domain?: Prisma.DomainUpdateOneRequiredWithoutReturnMethodsNestedInput
 }
 
-/**
- * ReturnMethodCountOutputType without action
- */
-export type ReturnMethodCountOutputTypeCountDomainReturnsArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
-  where?: Prisma.DomainReturnWhereInput
+export type ReturnMethodUncheckedUpdateWithoutOperatorInput = {
+  Id?: Prisma.IntFieldUpdateOperationsInput | number
+  DomainID?: Prisma.IntFieldUpdateOperationsInput | number
+  ReturnType?: Prisma.EnumReturnTypeFieldUpdateOperationsInput | $Enums.ReturnType
+  Value?: Prisma.StringFieldUpdateOperationsInput | string
+  ConfigurationName?: Prisma.StringFieldUpdateOperationsInput | string
 }
+
+export type ReturnMethodUncheckedUpdateManyWithoutOperatorInput = {
+  Id?: Prisma.IntFieldUpdateOperationsInput | number
+  DomainID?: Prisma.IntFieldUpdateOperationsInput | number
+  ReturnType?: Prisma.EnumReturnTypeFieldUpdateOperationsInput | $Enums.ReturnType
+  Value?: Prisma.StringFieldUpdateOperationsInput | string
+  ConfigurationName?: Prisma.StringFieldUpdateOperationsInput | string
+}
+
 
 
 export type ReturnMethodSelect<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetSelect<{
   Id?: boolean
-  Name?: boolean
-  DomainReturns?: boolean | Prisma.ReturnMethod$DomainReturnsArgs<ExtArgs>
-  _count?: boolean | Prisma.ReturnMethodCountOutputTypeDefaultArgs<ExtArgs>
+  DomainID?: boolean
+  OperatorID?: boolean
+  ReturnType?: boolean
+  Value?: boolean
+  ConfigurationName?: boolean
+  Domain?: boolean | Prisma.DomainDefaultArgs<ExtArgs>
+  Operator?: boolean | Prisma.OperatorDefaultArgs<ExtArgs>
 }, ExtArgs["result"]["returnMethod"]>
 
 export type ReturnMethodSelectCreateManyAndReturn<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetSelect<{
   Id?: boolean
-  Name?: boolean
+  DomainID?: boolean
+  OperatorID?: boolean
+  ReturnType?: boolean
+  Value?: boolean
+  ConfigurationName?: boolean
+  Domain?: boolean | Prisma.DomainDefaultArgs<ExtArgs>
+  Operator?: boolean | Prisma.OperatorDefaultArgs<ExtArgs>
 }, ExtArgs["result"]["returnMethod"]>
 
 export type ReturnMethodSelectUpdateManyAndReturn<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetSelect<{
   Id?: boolean
-  Name?: boolean
+  DomainID?: boolean
+  OperatorID?: boolean
+  ReturnType?: boolean
+  Value?: boolean
+  ConfigurationName?: boolean
+  Domain?: boolean | Prisma.DomainDefaultArgs<ExtArgs>
+  Operator?: boolean | Prisma.OperatorDefaultArgs<ExtArgs>
 }, ExtArgs["result"]["returnMethod"]>
 
 export type ReturnMethodSelectScalar = {
   Id?: boolean
-  Name?: boolean
+  DomainID?: boolean
+  OperatorID?: boolean
+  ReturnType?: boolean
+  Value?: boolean
+  ConfigurationName?: boolean
 }
 
-export type ReturnMethodOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"Id" | "Name", ExtArgs["result"]["returnMethod"]>
+export type ReturnMethodOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"Id" | "DomainID" | "OperatorID" | "ReturnType" | "Value" | "ConfigurationName", ExtArgs["result"]["returnMethod"]>
 export type ReturnMethodInclude<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
-  DomainReturns?: boolean | Prisma.ReturnMethod$DomainReturnsArgs<ExtArgs>
-  _count?: boolean | Prisma.ReturnMethodCountOutputTypeDefaultArgs<ExtArgs>
+  Domain?: boolean | Prisma.DomainDefaultArgs<ExtArgs>
+  Operator?: boolean | Prisma.OperatorDefaultArgs<ExtArgs>
 }
-export type ReturnMethodIncludeCreateManyAndReturn<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {}
-export type ReturnMethodIncludeUpdateManyAndReturn<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {}
+export type ReturnMethodIncludeCreateManyAndReturn<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  Domain?: boolean | Prisma.DomainDefaultArgs<ExtArgs>
+  Operator?: boolean | Prisma.OperatorDefaultArgs<ExtArgs>
+}
+export type ReturnMethodIncludeUpdateManyAndReturn<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  Domain?: boolean | Prisma.DomainDefaultArgs<ExtArgs>
+  Operator?: boolean | Prisma.OperatorDefaultArgs<ExtArgs>
+}
 
 export type $ReturnMethodPayload<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   name: "ReturnMethod"
   objects: {
-    DomainReturns: Prisma.$DomainReturnPayload<ExtArgs>[]
+    Domain: Prisma.$DomainPayload<ExtArgs>
+    Operator: Prisma.$OperatorPayload<ExtArgs>
   }
   scalars: runtime.Types.Extensions.GetPayloadResult<{
     Id: number
-    Name: string
+    DomainID: number
+    OperatorID: number
+    ReturnType: $Enums.ReturnType
+    Value: string
+    ConfigurationName: string
   }, ExtArgs["result"]["returnMethod"]>
   composites: {}
 }
@@ -803,7 +1103,8 @@ readonly fields: ReturnMethodFieldRefs;
  */
 export interface Prisma__ReturnMethodClient<T, Null = never, ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs, GlobalOmitOptions = {}> extends Prisma.PrismaPromise<T> {
   readonly [Symbol.toStringTag]: "PrismaPromise"
-  DomainReturns<T extends Prisma.ReturnMethod$DomainReturnsArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.ReturnMethod$DomainReturnsArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$DomainReturnPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
+  Domain<T extends Prisma.DomainDefaultArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.DomainDefaultArgs<ExtArgs>>): Prisma.Prisma__DomainClient<runtime.Types.Result.GetResult<Prisma.$DomainPayload<ExtArgs>, T, "findUniqueOrThrow", GlobalOmitOptions> | Null, Null, ExtArgs, GlobalOmitOptions>
+  Operator<T extends Prisma.OperatorDefaultArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.OperatorDefaultArgs<ExtArgs>>): Prisma.Prisma__OperatorClient<runtime.Types.Result.GetResult<Prisma.$OperatorPayload<ExtArgs>, T, "findUniqueOrThrow", GlobalOmitOptions> | Null, Null, ExtArgs, GlobalOmitOptions>
   /**
    * Attaches callbacks for the resolution and/or rejection of the Promise.
    * @param onfulfilled The callback to execute when the Promise is resolved.
@@ -834,7 +1135,11 @@ export interface Prisma__ReturnMethodClient<T, Null = never, ExtArgs extends run
  */
 export interface ReturnMethodFieldRefs {
   readonly Id: Prisma.FieldRef<"ReturnMethod", 'Int'>
-  readonly Name: Prisma.FieldRef<"ReturnMethod", 'String'>
+  readonly DomainID: Prisma.FieldRef<"ReturnMethod", 'Int'>
+  readonly OperatorID: Prisma.FieldRef<"ReturnMethod", 'Int'>
+  readonly ReturnType: Prisma.FieldRef<"ReturnMethod", 'ReturnType'>
+  readonly Value: Prisma.FieldRef<"ReturnMethod", 'String'>
+  readonly ConfigurationName: Prisma.FieldRef<"ReturnMethod", 'String'>
 }
     
 
@@ -1084,6 +1389,10 @@ export type ReturnMethodCreateManyAndReturnArgs<ExtArgs extends runtime.Types.Ex
    */
   data: Prisma.ReturnMethodCreateManyInput | Prisma.ReturnMethodCreateManyInput[]
   skipDuplicates?: boolean
+  /**
+   * Choose, which related nodes to fetch as well
+   */
+  include?: Prisma.ReturnMethodIncludeCreateManyAndReturn<ExtArgs> | null
 }
 
 /**
@@ -1154,6 +1463,10 @@ export type ReturnMethodUpdateManyAndReturnArgs<ExtArgs extends runtime.Types.Ex
    * Limit how many ReturnMethods to update.
    */
   limit?: number
+  /**
+   * Choose, which related nodes to fetch as well
+   */
+  include?: Prisma.ReturnMethodIncludeUpdateManyAndReturn<ExtArgs> | null
 }
 
 /**
@@ -1220,30 +1533,6 @@ export type ReturnMethodDeleteManyArgs<ExtArgs extends runtime.Types.Extensions.
    * Limit how many ReturnMethods to delete.
    */
   limit?: number
-}
-
-/**
- * ReturnMethod.DomainReturns
- */
-export type ReturnMethod$DomainReturnsArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
-  /**
-   * Select specific fields to fetch from the DomainReturn
-   */
-  select?: Prisma.DomainReturnSelect<ExtArgs> | null
-  /**
-   * Omit specific fields from the DomainReturn
-   */
-  omit?: Prisma.DomainReturnOmit<ExtArgs> | null
-  /**
-   * Choose, which related nodes to fetch as well
-   */
-  include?: Prisma.DomainReturnInclude<ExtArgs> | null
-  where?: Prisma.DomainReturnWhereInput
-  orderBy?: Prisma.DomainReturnOrderByWithRelationInput | Prisma.DomainReturnOrderByWithRelationInput[]
-  cursor?: Prisma.DomainReturnWhereUniqueInput
-  take?: number
-  skip?: number
-  distinct?: Prisma.DomainReturnScalarFieldEnum | Prisma.DomainReturnScalarFieldEnum[]
 }
 
 /**

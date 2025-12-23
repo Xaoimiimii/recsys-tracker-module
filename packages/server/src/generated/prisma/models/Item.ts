@@ -241,7 +241,7 @@ export type ItemWhereInput = {
   ItemFactors?: Prisma.ItemFactorListRelationFilter
   Predicts?: Prisma.PredictListRelationFilter
   Ratings?: Prisma.RatingListRelationFilter
-  Interactions?: Prisma.InteractionListRelationFilter
+  interactions?: Prisma.InteractionListRelationFilter
 }
 
 export type ItemOrderByWithRelationInput = {
@@ -257,15 +257,15 @@ export type ItemOrderByWithRelationInput = {
   ItemFactors?: Prisma.ItemFactorOrderByRelationAggregateInput
   Predicts?: Prisma.PredictOrderByRelationAggregateInput
   Ratings?: Prisma.RatingOrderByRelationAggregateInput
-  Interactions?: Prisma.InteractionOrderByRelationAggregateInput
+  interactions?: Prisma.InteractionOrderByRelationAggregateInput
 }
 
 export type ItemWhereUniqueInput = Prisma.AtLeast<{
   Id?: number
-  DomainItemId?: string
   AND?: Prisma.ItemWhereInput | Prisma.ItemWhereInput[]
   OR?: Prisma.ItemWhereInput[]
   NOT?: Prisma.ItemWhereInput | Prisma.ItemWhereInput[]
+  DomainItemId?: Prisma.StringNullableFilter<"Item"> | string | null
   Title?: Prisma.StringNullableFilter<"Item"> | string | null
   DomainId?: Prisma.IntFilter<"Item"> | number
   Description?: Prisma.StringFilter<"Item"> | string
@@ -276,8 +276,8 @@ export type ItemWhereUniqueInput = Prisma.AtLeast<{
   ItemFactors?: Prisma.ItemFactorListRelationFilter
   Predicts?: Prisma.PredictListRelationFilter
   Ratings?: Prisma.RatingListRelationFilter
-  Interactions?: Prisma.InteractionListRelationFilter
-}, "Id" | "DomainItemId">
+  interactions?: Prisma.InteractionListRelationFilter
+}, "Id">
 
 export type ItemOrderByWithAggregationInput = {
   Id?: Prisma.SortOrder
@@ -318,7 +318,7 @@ export type ItemCreateInput = {
   ItemFactors?: Prisma.ItemFactorCreateNestedManyWithoutItemInput
   Predicts?: Prisma.PredictCreateNestedManyWithoutItemInput
   Ratings?: Prisma.RatingCreateNestedManyWithoutItemInput
-  Interactions?: Prisma.InteractionCreateNestedManyWithoutItemInput
+  interactions?: Prisma.InteractionCreateNestedManyWithoutItemInput
 }
 
 export type ItemUncheckedCreateInput = {
@@ -333,7 +333,7 @@ export type ItemUncheckedCreateInput = {
   ItemFactors?: Prisma.ItemFactorUncheckedCreateNestedManyWithoutItemInput
   Predicts?: Prisma.PredictUncheckedCreateNestedManyWithoutItemInput
   Ratings?: Prisma.RatingUncheckedCreateNestedManyWithoutItemInput
-  Interactions?: Prisma.InteractionUncheckedCreateNestedManyWithoutItemInput
+  interactions?: Prisma.InteractionUncheckedCreateNestedManyWithoutItemInput
 }
 
 export type ItemUpdateInput = {
@@ -347,7 +347,7 @@ export type ItemUpdateInput = {
   ItemFactors?: Prisma.ItemFactorUpdateManyWithoutItemNestedInput
   Predicts?: Prisma.PredictUpdateManyWithoutItemNestedInput
   Ratings?: Prisma.RatingUpdateManyWithoutItemNestedInput
-  Interactions?: Prisma.InteractionUpdateManyWithoutItemNestedInput
+  interactions?: Prisma.InteractionUpdateManyWithoutItemNestedInput
 }
 
 export type ItemUncheckedUpdateInput = {
@@ -362,7 +362,7 @@ export type ItemUncheckedUpdateInput = {
   ItemFactors?: Prisma.ItemFactorUncheckedUpdateManyWithoutItemNestedInput
   Predicts?: Prisma.PredictUncheckedUpdateManyWithoutItemNestedInput
   Ratings?: Prisma.RatingUncheckedUpdateManyWithoutItemNestedInput
-  Interactions?: Prisma.InteractionUncheckedUpdateManyWithoutItemNestedInput
+  interactions?: Prisma.InteractionUncheckedUpdateManyWithoutItemNestedInput
 }
 
 export type ItemCreateManyInput = {
@@ -587,7 +587,7 @@ export type ItemCreateWithoutDomainInput = {
   ItemFactors?: Prisma.ItemFactorCreateNestedManyWithoutItemInput
   Predicts?: Prisma.PredictCreateNestedManyWithoutItemInput
   Ratings?: Prisma.RatingCreateNestedManyWithoutItemInput
-  Interactions?: Prisma.InteractionCreateNestedManyWithoutItemInput
+  interactions?: Prisma.InteractionCreateNestedManyWithoutItemInput
 }
 
 export type ItemUncheckedCreateWithoutDomainInput = {
@@ -601,7 +601,7 @@ export type ItemUncheckedCreateWithoutDomainInput = {
   ItemFactors?: Prisma.ItemFactorUncheckedCreateNestedManyWithoutItemInput
   Predicts?: Prisma.PredictUncheckedCreateNestedManyWithoutItemInput
   Ratings?: Prisma.RatingUncheckedCreateNestedManyWithoutItemInput
-  Interactions?: Prisma.InteractionUncheckedCreateNestedManyWithoutItemInput
+  interactions?: Prisma.InteractionUncheckedCreateNestedManyWithoutItemInput
 }
 
 export type ItemCreateOrConnectWithoutDomainInput = {
@@ -653,7 +653,7 @@ export type ItemCreateWithoutItemCategoriesInput = {
   ItemFactors?: Prisma.ItemFactorCreateNestedManyWithoutItemInput
   Predicts?: Prisma.PredictCreateNestedManyWithoutItemInput
   Ratings?: Prisma.RatingCreateNestedManyWithoutItemInput
-  Interactions?: Prisma.InteractionCreateNestedManyWithoutItemInput
+  interactions?: Prisma.InteractionCreateNestedManyWithoutItemInput
 }
 
 export type ItemUncheckedCreateWithoutItemCategoriesInput = {
@@ -667,7 +667,7 @@ export type ItemUncheckedCreateWithoutItemCategoriesInput = {
   ItemFactors?: Prisma.ItemFactorUncheckedCreateNestedManyWithoutItemInput
   Predicts?: Prisma.PredictUncheckedCreateNestedManyWithoutItemInput
   Ratings?: Prisma.RatingUncheckedCreateNestedManyWithoutItemInput
-  Interactions?: Prisma.InteractionUncheckedCreateNestedManyWithoutItemInput
+  interactions?: Prisma.InteractionUncheckedCreateNestedManyWithoutItemInput
 }
 
 export type ItemCreateOrConnectWithoutItemCategoriesInput = {
@@ -696,7 +696,7 @@ export type ItemUpdateWithoutItemCategoriesInput = {
   ItemFactors?: Prisma.ItemFactorUpdateManyWithoutItemNestedInput
   Predicts?: Prisma.PredictUpdateManyWithoutItemNestedInput
   Ratings?: Prisma.RatingUpdateManyWithoutItemNestedInput
-  Interactions?: Prisma.InteractionUpdateManyWithoutItemNestedInput
+  interactions?: Prisma.InteractionUpdateManyWithoutItemNestedInput
 }
 
 export type ItemUncheckedUpdateWithoutItemCategoriesInput = {
@@ -710,7 +710,7 @@ export type ItemUncheckedUpdateWithoutItemCategoriesInput = {
   ItemFactors?: Prisma.ItemFactorUncheckedUpdateManyWithoutItemNestedInput
   Predicts?: Prisma.PredictUncheckedUpdateManyWithoutItemNestedInput
   Ratings?: Prisma.RatingUncheckedUpdateManyWithoutItemNestedInput
-  Interactions?: Prisma.InteractionUncheckedUpdateManyWithoutItemNestedInput
+  interactions?: Prisma.InteractionUncheckedUpdateManyWithoutItemNestedInput
 }
 
 export type ItemCreateWithoutItemFactorsInput = {
@@ -723,7 +723,7 @@ export type ItemCreateWithoutItemFactorsInput = {
   ItemCategories?: Prisma.ItemCategoryCreateNestedManyWithoutItemInput
   Predicts?: Prisma.PredictCreateNestedManyWithoutItemInput
   Ratings?: Prisma.RatingCreateNestedManyWithoutItemInput
-  Interactions?: Prisma.InteractionCreateNestedManyWithoutItemInput
+  interactions?: Prisma.InteractionCreateNestedManyWithoutItemInput
 }
 
 export type ItemUncheckedCreateWithoutItemFactorsInput = {
@@ -737,7 +737,7 @@ export type ItemUncheckedCreateWithoutItemFactorsInput = {
   ItemCategories?: Prisma.ItemCategoryUncheckedCreateNestedManyWithoutItemInput
   Predicts?: Prisma.PredictUncheckedCreateNestedManyWithoutItemInput
   Ratings?: Prisma.RatingUncheckedCreateNestedManyWithoutItemInput
-  Interactions?: Prisma.InteractionUncheckedCreateNestedManyWithoutItemInput
+  interactions?: Prisma.InteractionUncheckedCreateNestedManyWithoutItemInput
 }
 
 export type ItemCreateOrConnectWithoutItemFactorsInput = {
@@ -766,7 +766,7 @@ export type ItemUpdateWithoutItemFactorsInput = {
   ItemCategories?: Prisma.ItemCategoryUpdateManyWithoutItemNestedInput
   Predicts?: Prisma.PredictUpdateManyWithoutItemNestedInput
   Ratings?: Prisma.RatingUpdateManyWithoutItemNestedInput
-  Interactions?: Prisma.InteractionUpdateManyWithoutItemNestedInput
+  interactions?: Prisma.InteractionUpdateManyWithoutItemNestedInput
 }
 
 export type ItemUncheckedUpdateWithoutItemFactorsInput = {
@@ -780,7 +780,7 @@ export type ItemUncheckedUpdateWithoutItemFactorsInput = {
   ItemCategories?: Prisma.ItemCategoryUncheckedUpdateManyWithoutItemNestedInput
   Predicts?: Prisma.PredictUncheckedUpdateManyWithoutItemNestedInput
   Ratings?: Prisma.RatingUncheckedUpdateManyWithoutItemNestedInput
-  Interactions?: Prisma.InteractionUncheckedUpdateManyWithoutItemNestedInput
+  interactions?: Prisma.InteractionUncheckedUpdateManyWithoutItemNestedInput
 }
 
 export type ItemCreateWithoutPredictsInput = {
@@ -793,7 +793,7 @@ export type ItemCreateWithoutPredictsInput = {
   ItemCategories?: Prisma.ItemCategoryCreateNestedManyWithoutItemInput
   ItemFactors?: Prisma.ItemFactorCreateNestedManyWithoutItemInput
   Ratings?: Prisma.RatingCreateNestedManyWithoutItemInput
-  Interactions?: Prisma.InteractionCreateNestedManyWithoutItemInput
+  interactions?: Prisma.InteractionCreateNestedManyWithoutItemInput
 }
 
 export type ItemUncheckedCreateWithoutPredictsInput = {
@@ -807,7 +807,7 @@ export type ItemUncheckedCreateWithoutPredictsInput = {
   ItemCategories?: Prisma.ItemCategoryUncheckedCreateNestedManyWithoutItemInput
   ItemFactors?: Prisma.ItemFactorUncheckedCreateNestedManyWithoutItemInput
   Ratings?: Prisma.RatingUncheckedCreateNestedManyWithoutItemInput
-  Interactions?: Prisma.InteractionUncheckedCreateNestedManyWithoutItemInput
+  interactions?: Prisma.InteractionUncheckedCreateNestedManyWithoutItemInput
 }
 
 export type ItemCreateOrConnectWithoutPredictsInput = {
@@ -836,7 +836,7 @@ export type ItemUpdateWithoutPredictsInput = {
   ItemCategories?: Prisma.ItemCategoryUpdateManyWithoutItemNestedInput
   ItemFactors?: Prisma.ItemFactorUpdateManyWithoutItemNestedInput
   Ratings?: Prisma.RatingUpdateManyWithoutItemNestedInput
-  Interactions?: Prisma.InteractionUpdateManyWithoutItemNestedInput
+  interactions?: Prisma.InteractionUpdateManyWithoutItemNestedInput
 }
 
 export type ItemUncheckedUpdateWithoutPredictsInput = {
@@ -850,7 +850,7 @@ export type ItemUncheckedUpdateWithoutPredictsInput = {
   ItemCategories?: Prisma.ItemCategoryUncheckedUpdateManyWithoutItemNestedInput
   ItemFactors?: Prisma.ItemFactorUncheckedUpdateManyWithoutItemNestedInput
   Ratings?: Prisma.RatingUncheckedUpdateManyWithoutItemNestedInput
-  Interactions?: Prisma.InteractionUncheckedUpdateManyWithoutItemNestedInput
+  interactions?: Prisma.InteractionUncheckedUpdateManyWithoutItemNestedInput
 }
 
 export type ItemCreateWithoutRatingsInput = {
@@ -863,7 +863,7 @@ export type ItemCreateWithoutRatingsInput = {
   ItemCategories?: Prisma.ItemCategoryCreateNestedManyWithoutItemInput
   ItemFactors?: Prisma.ItemFactorCreateNestedManyWithoutItemInput
   Predicts?: Prisma.PredictCreateNestedManyWithoutItemInput
-  Interactions?: Prisma.InteractionCreateNestedManyWithoutItemInput
+  interactions?: Prisma.InteractionCreateNestedManyWithoutItemInput
 }
 
 export type ItemUncheckedCreateWithoutRatingsInput = {
@@ -877,7 +877,7 @@ export type ItemUncheckedCreateWithoutRatingsInput = {
   ItemCategories?: Prisma.ItemCategoryUncheckedCreateNestedManyWithoutItemInput
   ItemFactors?: Prisma.ItemFactorUncheckedCreateNestedManyWithoutItemInput
   Predicts?: Prisma.PredictUncheckedCreateNestedManyWithoutItemInput
-  Interactions?: Prisma.InteractionUncheckedCreateNestedManyWithoutItemInput
+  interactions?: Prisma.InteractionUncheckedCreateNestedManyWithoutItemInput
 }
 
 export type ItemCreateOrConnectWithoutRatingsInput = {
@@ -906,7 +906,7 @@ export type ItemUpdateWithoutRatingsInput = {
   ItemCategories?: Prisma.ItemCategoryUpdateManyWithoutItemNestedInput
   ItemFactors?: Prisma.ItemFactorUpdateManyWithoutItemNestedInput
   Predicts?: Prisma.PredictUpdateManyWithoutItemNestedInput
-  Interactions?: Prisma.InteractionUpdateManyWithoutItemNestedInput
+  interactions?: Prisma.InteractionUpdateManyWithoutItemNestedInput
 }
 
 export type ItemUncheckedUpdateWithoutRatingsInput = {
@@ -920,7 +920,7 @@ export type ItemUncheckedUpdateWithoutRatingsInput = {
   ItemCategories?: Prisma.ItemCategoryUncheckedUpdateManyWithoutItemNestedInput
   ItemFactors?: Prisma.ItemFactorUncheckedUpdateManyWithoutItemNestedInput
   Predicts?: Prisma.PredictUncheckedUpdateManyWithoutItemNestedInput
-  Interactions?: Prisma.InteractionUncheckedUpdateManyWithoutItemNestedInput
+  interactions?: Prisma.InteractionUncheckedUpdateManyWithoutItemNestedInput
 }
 
 export type ItemCreateWithoutInteractionsInput = {
@@ -1012,7 +1012,7 @@ export type ItemUpdateWithoutDomainInput = {
   ItemFactors?: Prisma.ItemFactorUpdateManyWithoutItemNestedInput
   Predicts?: Prisma.PredictUpdateManyWithoutItemNestedInput
   Ratings?: Prisma.RatingUpdateManyWithoutItemNestedInput
-  Interactions?: Prisma.InteractionUpdateManyWithoutItemNestedInput
+  interactions?: Prisma.InteractionUpdateManyWithoutItemNestedInput
 }
 
 export type ItemUncheckedUpdateWithoutDomainInput = {
@@ -1026,7 +1026,7 @@ export type ItemUncheckedUpdateWithoutDomainInput = {
   ItemFactors?: Prisma.ItemFactorUncheckedUpdateManyWithoutItemNestedInput
   Predicts?: Prisma.PredictUncheckedUpdateManyWithoutItemNestedInput
   Ratings?: Prisma.RatingUncheckedUpdateManyWithoutItemNestedInput
-  Interactions?: Prisma.InteractionUncheckedUpdateManyWithoutItemNestedInput
+  interactions?: Prisma.InteractionUncheckedUpdateManyWithoutItemNestedInput
 }
 
 export type ItemUncheckedUpdateManyWithoutDomainInput = {
@@ -1048,7 +1048,7 @@ export type ItemCountOutputType = {
   ItemFactors: number
   Predicts: number
   Ratings: number
-  Interactions: number
+  interactions: number
 }
 
 export type ItemCountOutputTypeSelect<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
@@ -1056,7 +1056,7 @@ export type ItemCountOutputTypeSelect<ExtArgs extends runtime.Types.Extensions.I
   ItemFactors?: boolean | ItemCountOutputTypeCountItemFactorsArgs
   Predicts?: boolean | ItemCountOutputTypeCountPredictsArgs
   Ratings?: boolean | ItemCountOutputTypeCountRatingsArgs
-  Interactions?: boolean | ItemCountOutputTypeCountInteractionsArgs
+  interactions?: boolean | ItemCountOutputTypeCountInteractionsArgs
 }
 
 /**
@@ -1118,7 +1118,7 @@ export type ItemSelect<ExtArgs extends runtime.Types.Extensions.InternalArgs = r
   ItemFactors?: boolean | Prisma.Item$ItemFactorsArgs<ExtArgs>
   Predicts?: boolean | Prisma.Item$PredictsArgs<ExtArgs>
   Ratings?: boolean | Prisma.Item$RatingsArgs<ExtArgs>
-  Interactions?: boolean | Prisma.Item$InteractionsArgs<ExtArgs>
+  interactions?: boolean | Prisma.Item$interactionsArgs<ExtArgs>
   _count?: boolean | Prisma.ItemCountOutputTypeDefaultArgs<ExtArgs>
 }, ExtArgs["result"]["item"]>
 
@@ -1161,7 +1161,7 @@ export type ItemInclude<ExtArgs extends runtime.Types.Extensions.InternalArgs = 
   ItemFactors?: boolean | Prisma.Item$ItemFactorsArgs<ExtArgs>
   Predicts?: boolean | Prisma.Item$PredictsArgs<ExtArgs>
   Ratings?: boolean | Prisma.Item$RatingsArgs<ExtArgs>
-  Interactions?: boolean | Prisma.Item$InteractionsArgs<ExtArgs>
+  interactions?: boolean | Prisma.Item$interactionsArgs<ExtArgs>
   _count?: boolean | Prisma.ItemCountOutputTypeDefaultArgs<ExtArgs>
 }
 export type ItemIncludeCreateManyAndReturn<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
@@ -1179,7 +1179,7 @@ export type $ItemPayload<ExtArgs extends runtime.Types.Extensions.InternalArgs =
     ItemFactors: Prisma.$ItemFactorPayload<ExtArgs>[]
     Predicts: Prisma.$PredictPayload<ExtArgs>[]
     Ratings: Prisma.$RatingPayload<ExtArgs>[]
-    Interactions: Prisma.$InteractionPayload<ExtArgs>[]
+    interactions: Prisma.$InteractionPayload<ExtArgs>[]
   }
   scalars: runtime.Types.Extensions.GetPayloadResult<{
     Id: number
@@ -1588,7 +1588,7 @@ export interface Prisma__ItemClient<T, Null = never, ExtArgs extends runtime.Typ
   ItemFactors<T extends Prisma.Item$ItemFactorsArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.Item$ItemFactorsArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$ItemFactorPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
   Predicts<T extends Prisma.Item$PredictsArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.Item$PredictsArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$PredictPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
   Ratings<T extends Prisma.Item$RatingsArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.Item$RatingsArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$RatingPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
-  Interactions<T extends Prisma.Item$InteractionsArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.Item$InteractionsArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$InteractionPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
+  interactions<T extends Prisma.Item$interactionsArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.Item$interactionsArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$InteractionPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
   /**
    * Attaches callbacks for the resolution and/or rejection of the Promise.
    * @param onfulfilled The callback to execute when the Promise is resolved.
@@ -2117,9 +2117,9 @@ export type Item$RatingsArgs<ExtArgs extends runtime.Types.Extensions.InternalAr
 }
 
 /**
- * Item.Interactions
+ * Item.interactions
  */
-export type Item$InteractionsArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+export type Item$interactionsArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   /**
    * Select specific fields to fetch from the Interaction
    */

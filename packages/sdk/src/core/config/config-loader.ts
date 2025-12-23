@@ -1,4 +1,4 @@
-import { TrackerConfig, TrackingRule, ReturnMethod } from '../../types';
+import { TrackerConfig, TrackingRule, ReturnMethod, PayloadMapping, Condition, TrackingTarget } from '../../types';
 import { OriginVerifier } from '../utils/origin-verifier';
 
 // Luồng hoạt động
@@ -127,48 +127,63 @@ export class ConfigLoader {
     return rulesData.map(rule => ({
       id: rule.Id?.toString() || rule.id?.toString(),
       name: rule.Name || rule.name,
-      // domainId: rule.DomainID || rule.domainId,
-      triggerEventId: rule.TriggerEventID || rule.triggerEventId,
-      // targetElementId: rule.TargetElementID || rule.targetElementId,
-      // targetElement: {
-      //   targetEventPatternId?: number,
-      //   targetOperatorId?: number,
-      //   targetElementValue?: string
-      // };
-      targetElement: {
-        targetEventPatternId: rule.TargetElement?.EventPatternID || rule.targetEventPatternId,
-        targetOperatorId: rule.TargetElement?.OperatorID || rule.targetOperatorId,
-        targetElementValue: rule.TargetElement?.Value || rule.targetElementValue,
-      },
+      domainId: rule.DomainID || rule.domainId,
+      eventTypeId: rule.EventTypeID || rule.eventTypeId,
+      trackingTargetId: rule.TrackingTargetId || rule.trackingTargetId,
+      payloadMappings: this.transformPayloadMappings(rule.PayloadMappings || rule.payloadMappings || []),
       conditions: this.transformConditions(rule.Conditions || rule.conditions || []),
-      payload: this.transformPayloadConfigs(rule.PayloadConfigs || rule.payload || []),
+      trackingTarget: this.transformTrackingTarget(rule.TrackingTarget || rule.trackingTarget),
     }));
   }
 
   // Transform conditions từ server format sang SDK format
-  private transformConditions(conditionsData: any[]): any[] {
+  private transformConditions(conditionsData: any[]): Condition[] {
     if (!Array.isArray(conditionsData)) return [];
     
     return conditionsData.map(condition => ({
-      // id: condition.Id || condition.id,
-      eventPatternId: condition.EventPatternID || condition.eventPatternId,
-      // ruleId: condition.RuleID || condition.ruleId,
-      operatorId: condition.OperatorID || condition.operatorId,
+      id: condition.Id || condition.id,
       value: condition.Value || condition.value,
+      trackingRuleId: condition.TrackingRuleID || condition.trackingRuleId,
+      patternId: condition.PatternId || condition.patternId,
+      operatorId: condition.OperatorID || condition.operatorId,
     }));
   }
 
-  // Transform payload configs từ server format sang SDK format
-  private transformPayloadConfigs(payloadData: any[]): any[] {
+  // Transform payload mappings từ server format sang SDK format
+  private transformPayloadMappings(payloadData: any[]): PayloadMapping[] {
     if (!Array.isArray(payloadData)) return [];
     
     return payloadData.map(payload => ({
-      payloadPatternId: payload.PayloadPatternID || payload.payloadPatternId,
-      // ruleId: payload.RuleID || payload.ruleId,
-      operatorId: payload.OperatorID || payload.operatorId,
+      id: payload.Id || payload.id,
+      field: payload.Field || payload.field,
+      source: payload.Source || payload.source,
       value: payload.Value || payload.value,
-      type: payload.Type || payload.type,
+      requestUrlPattern: payload.RequestUrlPattern || payload.requestUrlPattern || null,
+      requestMethod: payload.RequestMethod || payload.requestMethod || null,
+      requestBodyPath: payload.RequestBodyPath || payload.requestBodyPath || null,
+      urlPart: payload.UrlPart || payload.urlPart || null,
+      urlPartValue: payload.UrlPartValue || payload.urlPartValue || null,
+      trackingRuleId: payload.TrackingRuleId || payload.trackingRuleId,
     }));
+  }
+
+  // Transform tracking target từ server format sang SDK format
+  private transformTrackingTarget(targetData: any): TrackingTarget {
+    if (!targetData) {
+      return {
+        id: 0,
+        value: '',
+        patternId: 0,
+        operatorId: 0,
+      };
+    }
+    
+    return {
+      id: targetData.Id || targetData.id || 0,
+      value: targetData.Value || targetData.value || '',
+      patternId: targetData.PatternId || targetData.patternId || 0,
+      operatorId: targetData.OperatorId || targetData.operatorId || 0,
+    };
   }
 
   // Transform return methods từ server format sang SDK format
@@ -176,9 +191,12 @@ export class ConfigLoader {
     if (!returnMethodsData || !Array.isArray(returnMethodsData)) return [];
     
     return returnMethodsData.map(method => ({
-      slotName: method.SlotName || method.slotName,
-      returnMethodId: method.ReturnMethodID || method.returnMethodId,
+      id: method.Id || method.id,
+      domainId: method.DomainID || method.domainId,
+      operatorId: method.OperatorID || method.operatorId,
+      returnType: method.ReturnType || method.returnType,
       value: method.Value || method.value || '',
+      configurationName: method.ConfigurationName || method.configurationName,
     }));
   }
 

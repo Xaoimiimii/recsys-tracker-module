@@ -12,7 +12,6 @@ export class EventDispatcher {
     }
     // Gửi 1 event đơn lẻ
     async send(event) {
-        var _a, _b;
         if (!event) {
             return false;
         }
@@ -26,19 +25,16 @@ export class EventDispatcher {
         }
         // Chuyển đổi TrackedEvent sang định dạng CreateEventDto
         const payload = JSON.stringify({
-            TriggerTypeId: event.triggerTypeId,
-            DomainKey: event.domainKey,
             Timestamp: event.timestamp,
-            Payload: {
-                UserId: (_a = event.payload) === null || _a === void 0 ? void 0 : _a.UserId,
-                ItemId: (_b = event.payload) === null || _b === void 0 ? void 0 : _b.ItemId,
-            },
-            ...(event.rate && {
-                Rate: {
-                    Value: event.rate.Value,
-                    Review: event.rate.Review,
-                }
-            })
+            EventTypeId: event.eventTypeId,
+            TrackingRuleId: event.trackingRuleId,
+            DomainKey: event.domainKey,
+            UserField: event.userField,
+            UserValue: event.userValue,
+            ItemField: event.itemField,
+            ItemValue: event.itemValue,
+            RatingValue: event.ratingValue,
+            ReviewValue: event.reviewValue
         });
         // Thử từng phương thức gửi theo thứ tự ưu tiên
         const strategies = ['beacon', 'fetch'];

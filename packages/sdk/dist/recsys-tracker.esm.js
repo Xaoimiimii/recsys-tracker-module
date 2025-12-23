@@ -245,25 +245,16 @@ class ConfigLoader {
         if (!Array.isArray(rulesData))
             return [];
         return rulesData.map(rule => {
-            var _a, _b, _c, _d, _e;
+            var _a, _b;
             return ({
                 id: ((_a = rule.Id) === null || _a === void 0 ? void 0 : _a.toString()) || ((_b = rule.id) === null || _b === void 0 ? void 0 : _b.toString()),
                 name: rule.Name || rule.name,
-                // domainId: rule.DomainID || rule.domainId,
-                triggerEventId: rule.TriggerEventID || rule.triggerEventId,
-                // targetElementId: rule.TargetElementID || rule.targetElementId,
-                // targetElement: {
-                //   targetEventPatternId?: number,
-                //   targetOperatorId?: number,
-                //   targetElementValue?: string
-                // };
-                targetElement: {
-                    targetEventPatternId: ((_c = rule.TargetElement) === null || _c === void 0 ? void 0 : _c.EventPatternID) || rule.targetEventPatternId,
-                    targetOperatorId: ((_d = rule.TargetElement) === null || _d === void 0 ? void 0 : _d.OperatorID) || rule.targetOperatorId,
-                    targetElementValue: ((_e = rule.TargetElement) === null || _e === void 0 ? void 0 : _e.Value) || rule.targetElementValue,
-                },
+                domainId: rule.DomainID || rule.domainId,
+                eventTypeId: rule.EventTypeID || rule.eventTypeId,
+                trackingTargetId: rule.TrackingTargetId || rule.trackingTargetId,
+                payloadMappings: this.transformPayloadMappings(rule.PayloadMappings || rule.payloadMappings || []),
                 conditions: this.transformConditions(rule.Conditions || rule.conditions || []),
-                payload: this.transformPayloadConfigs(rule.PayloadConfigs || rule.payload || []),
+                trackingTarget: this.transformTrackingTarget(rule.TrackingTarget || rule.trackingTarget),
             });
         });
     }
@@ -272,33 +263,58 @@ class ConfigLoader {
         if (!Array.isArray(conditionsData))
             return [];
         return conditionsData.map(condition => ({
-            // id: condition.Id || condition.id,
-            eventPatternId: condition.EventPatternID || condition.eventPatternId,
-            // ruleId: condition.RuleID || condition.ruleId,
-            operatorId: condition.OperatorID || condition.operatorId,
+            id: condition.Id || condition.id,
             value: condition.Value || condition.value,
+            trackingRuleId: condition.TrackingRuleID || condition.trackingRuleId,
+            patternId: condition.PatternId || condition.patternId,
+            operatorId: condition.OperatorID || condition.operatorId,
         }));
     }
-    // Transform payload configs từ server format sang SDK format
-    transformPayloadConfigs(payloadData) {
+    // Transform payload mappings từ server format sang SDK format
+    transformPayloadMappings(payloadData) {
         if (!Array.isArray(payloadData))
             return [];
         return payloadData.map(payload => ({
-            payloadPatternId: payload.PayloadPatternID || payload.payloadPatternId,
-            // ruleId: payload.RuleID || payload.ruleId,
-            operatorId: payload.OperatorID || payload.operatorId,
+            id: payload.Id || payload.id,
+            field: payload.Field || payload.field,
+            source: payload.Source || payload.source,
             value: payload.Value || payload.value,
-            type: payload.Type || payload.type,
+            requestUrlPattern: payload.RequestUrlPattern || payload.requestUrlPattern || null,
+            requestMethod: payload.RequestMethod || payload.requestMethod || null,
+            requestBodyPath: payload.RequestBodyPath || payload.requestBodyPath || null,
+            urlPart: payload.UrlPart || payload.urlPart || null,
+            urlPartValue: payload.UrlPartValue || payload.urlPartValue || null,
+            trackingRuleId: payload.TrackingRuleId || payload.trackingRuleId,
         }));
+    }
+    // Transform tracking target từ server format sang SDK format
+    transformTrackingTarget(targetData) {
+        if (!targetData) {
+            return {
+                id: 0,
+                value: '',
+                patternId: 0,
+                operatorId: 0,
+            };
+        }
+        return {
+            id: targetData.Id || targetData.id || 0,
+            value: targetData.Value || targetData.value || '',
+            patternId: targetData.PatternId || targetData.patternId || 0,
+            operatorId: targetData.OperatorId || targetData.operatorId || 0,
+        };
     }
     // Transform return methods từ server format sang SDK format
     transformReturnMethods(returnMethodsData) {
         if (!returnMethodsData || !Array.isArray(returnMethodsData))
             return [];
         return returnMethodsData.map(method => ({
-            slotName: method.SlotName || method.slotName,
-            returnMethodId: method.ReturnMethodID || method.returnMethodId,
+            id: method.Id || method.id,
+            domainId: method.DomainID || method.domainId,
+            operatorId: method.OperatorID || method.operatorId,
+            returnType: method.ReturnType || method.returnType,
             value: method.Value || method.value || '',
+            configurationName: method.ConfigurationName || method.configurationName,
         }));
     }
     // Lấy cấu hình hiện tại
@@ -555,7 +571,6 @@ class EventDispatcher {
     }
     // Gửi 1 event đơn lẻ
     async send(event) {
-        var _a, _b;
         if (!event) {
             return false;
         }
@@ -569,19 +584,16 @@ class EventDispatcher {
         }
         // Chuyển đổi TrackedEvent sang định dạng CreateEventDto
         const payload = JSON.stringify({
-            TriggerTypeId: event.triggerTypeId,
-            DomainKey: event.domainKey,
             Timestamp: event.timestamp,
-            Payload: {
-                UserId: (_a = event.payload) === null || _a === void 0 ? void 0 : _a.UserId,
-                ItemId: (_b = event.payload) === null || _b === void 0 ? void 0 : _b.ItemId,
-            },
-            ...(event.rate && {
-                Rate: {
-                    Value: event.rate.Value,
-                    Review: event.rate.Review,
-                }
-            })
+            EventTypeId: event.eventTypeId,
+            TrackingRuleId: event.trackingRuleId,
+            DomainKey: event.domainKey,
+            UserField: event.userField,
+            UserValue: event.userValue,
+            ItemField: event.itemField,
+            ItemValue: event.itemValue,
+            RatingValue: event.ratingValue,
+            ReviewValue: event.reviewValue
         });
         // Thử từng phương thức gửi theo thứ tự ưu tiên
         const strategies = ['beacon', 'fetch'];
@@ -1496,16 +1508,16 @@ class DisplayManager {
     }
     // Kích hoạt display method tương ứng
     activateDisplayMethod(method) {
-        const { returnMethodId, slotName, value } = method;
-        switch (returnMethodId) {
-            case 1: // Popup
-                this.initializePopup(slotName, value);
+        const { returnType, configurationName, value } = method;
+        switch (returnType) {
+            case 'POPUP': // Popup
+                this.initializePopup(configurationName, value);
                 break;
-            case 2: // Inline
-                this.initializeInline(slotName, value);
+            case 'INLINE-INJECTION': // Inline
+                this.initializeInline(configurationName, value);
                 break;
             default:
-                console.warn(`[DisplayManager] Unknown returnMethodId: ${returnMethodId}`);
+                console.warn(`[DisplayManager] Unknown returnType: ${returnType}`);
         }
     }
     // Khởi tạo Popup Display
@@ -2925,19 +2937,19 @@ function getAIItemDetector() {
 class TrackerContextAdapter {
     constructor(tracker) {
         this.config = {
-            getRules: (triggerEventId) => {
+            getRules: (eventTypeId) => {
                 const config = this.tracker.getConfig();
                 if (!(config === null || config === void 0 ? void 0 : config.trackingRules))
                     return [];
                 return config.trackingRules
-                    .filter(rule => rule.triggerEventId === triggerEventId);
+                    .filter(rule => rule.eventTypeId === eventTypeId);
             },
         };
         this.payloadBuilder = {
             build: (element, rule, extraData = {}) => {
                 const userIdentityManager = getUserIdentityManager();
                 const payload = {
-                    event: rule.triggerEventId === 1 ? "item_click" : "page_view",
+                    event: rule.eventTypeId === 1 ? "item_click" : "page_view",
                     url: window.location.href,
                     timestamp: Date.now(),
                     ruleName: rule.name,
@@ -2945,7 +2957,7 @@ class TrackerContextAdapter {
                     itemId: 'N/A'
                 };
                 // Build payload extractor from rule data
-                const targetValue = rule.targetElement.targetElementValue || '';
+                const targetValue = rule.trackingTarget.value || '';
                 const isRegex = targetValue.startsWith('^');
                 const extractor = {
                     source: isRegex ? 'regex_group' : 'ai_detect',
@@ -2979,7 +2991,7 @@ class TrackerContextAdapter {
                 }
                 if (extractor.source === 'ai_detect') {
                     const detector = getAIItemDetector();
-                    if (rule.triggerEventId === 3 && element && element.id) {
+                    if (rule.eventTypeId === 3 && element && element.id) {
                         detectionResult = element;
                     }
                     else if (detector && element instanceof Element) {
@@ -3093,7 +3105,7 @@ class ClickPlugin extends BasePlugin {
         }
         // Loop qua tất cả click rules và check match
         for (const rule of clickRules) {
-            const selector = rule.targetElement.targetElementValue;
+            const selector = rule.trackingTarget.value;
             if (!selector)
                 continue;
             const matchedElement = event.target.closest(selector);
@@ -3160,6 +3172,7 @@ class PageViewPlugin extends BasePlugin {
         }, 0);
     }
     trackCurrentPage(currentUrl) {
+        var _a;
         if (!this.context || !this.detector)
             return;
         const urlObject = new URL(currentUrl);
@@ -3173,7 +3186,7 @@ class PageViewPlugin extends BasePlugin {
         for (const rule of pageViewRules) {
             let matchFound = false;
             let matchData = null;
-            const selector = rule.targetElement.targetElementValue || '';
+            const selector = ((_a = rule.trackingTarget) === null || _a === void 0 ? void 0 : _a.value) || '';
             // Determine payload extractor from rule data
             const isRegex = selector.startsWith('^');
             const extractorSource = isRegex ? 'regex_group' : 'ai_detect';
@@ -3316,7 +3329,7 @@ class FormPlugin extends BasePlugin {
         for (const rule of rateRules) {
             // Lấy selector từ cấu trúc lồng nhau (như trong index.ts bạn viết)
             // Dùng optional chaining (?.) để an toàn
-            const selector = ((_a = rule.targetElement) === null || _a === void 0 ? void 0 : _a.targetElementValue) || rule.targetElementValue;
+            const selector = ((_a = rule.trackingTarget) === null || _a === void 0 ? void 0 : _a.value) || rule.targetElementValue;
             console.log(`   👉 Checking Rule [${rule.id}]: Cần tìm selector "${selector}"`);
             if (!selector) {
                 console.log("      -> Bỏ qua: Rule không có selector");
@@ -3912,10 +3925,10 @@ class RecSysTracker {
         if (!((_a = this.config) === null || _a === void 0 ? void 0 : _a.trackingRules) || this.config.trackingRules.length === 0) {
             return;
         }
-        // Kiểm tra nếu có rule nào cần ClickPlugin (triggerEventId === 1)
-        const hasClickRules = this.config.trackingRules.some(rule => rule.triggerEventId === 1);
-        // Kiểm tra nếu có rule nào cần PageViewPlugin (triggerEventId === 3)
-        const hasPageViewRules = this.config.trackingRules.some(rule => rule.triggerEventId === 3);
+        // Kiểm tra nếu có rule nào cần ClickPlugin (eventTypeId === 1)
+        const hasClickRules = this.config.trackingRules.some(rule => rule.eventTypeId === 1);
+        // Kiểm tra nếu có rule nào cần PageViewPlugin (eventTypeId === 3)
+        const hasPageViewRules = this.config.trackingRules.some(rule => rule.eventTypeId === 5);
         // Chỉ tự động đăng ký nếu chưa có plugin nào được đăng ký
         if (this.pluginManager.getPluginNames().length === 0) {
             const pluginPromises = [];
@@ -3952,13 +3965,15 @@ class RecSysTracker {
             const trackedEvent = {
                 id: this.metadataNormalizer.generateEventId(),
                 timestamp: new Date(),
-                triggerTypeId: eventData.triggerTypeId,
+                eventTypeId: eventData.eventTypeId,
+                trackingRuleId: eventData.trackingRuleId,
                 domainKey: this.config.domainKey,
-                payload: {
-                    UserId: eventData.userId,
-                    ItemId: eventData.itemId,
-                },
-                ...(eventData.rate && { rate: eventData.rate }),
+                userField: eventData.userField,
+                userValue: eventData.userValue,
+                itemField: eventData.itemField,
+                itemValue: eventData.itemValue,
+                ...(eventData.ratingValue !== undefined && { ratingValue: eventData.ratingValue }),
+                ...(eventData.reviewValue !== undefined && { reviewValue: eventData.reviewValue }),
             };
             this.eventBuffer.add(trackedEvent);
         }, 'track');

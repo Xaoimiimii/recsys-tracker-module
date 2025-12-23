@@ -5,27 +5,22 @@ import { randomBytes } from 'crypto';
 @Injectable()
 export class DomainService {
     constructor(private prisma: PrismaService) { }
-    
+
     async getDomainByKey(key: string) {
         const domain = await this.prisma.domain.findUnique({
             where: {
                 Key: key
             },
             include: {
-                DomainReturns: {
-                    include: {
-                        ReturnMethod: true
-                    }
-                }
+                ReturnMethods: true,
+                TrackingRules: true,
             }
         });
         return domain;
     }
 
-    async generateApiKey() : Promise<string>
-    {
-        while (true)
-        {
+    async generateApiKey(): Promise<string> {
+        while (true) {
             const apiKey = randomBytes(32).toString('hex');
             const existing = await this.prisma.domain.findUnique({
                 where: {
@@ -36,8 +31,7 @@ export class DomainService {
         }
     }
 
-    async createDomain(ternantId: number, url: string, Type: number)
-    {
+    async createDomain(ternantId: number, url: string, Type: number) {
         if (!url.startsWith('http://') && !url.startsWith('https://')) return null;
 
         if (!this.prisma.ternant.findUnique({
@@ -55,13 +49,21 @@ export class DomainService {
                 Type: Type,
                 Url: url,
                 CreatedAt: new Date()
-            } 
+            }
         });
 
         return domain;
     }
 
     async getDomainsByTernantId(ternantId: number) {
+        const ternant = await this.prisma.ternant.findUnique({
+            where: {
+                Id: ternantId
+            }
+        });
+
+        if (!ternant) throw new NotFoundException('Ternant not found');
+
         const domains = await this.prisma.domain.findMany({
             where: {
                 TernantID: ternantId
@@ -70,10 +72,11 @@ export class DomainService {
         return domains;
     }
 
-    async getAllTriggerEvents() {
-        const events = await this.prisma.triggerEvent.findMany();
-        return events;
-    }
+    // async getAllTriggerEvents() {
+    //     const events = await this.prisma.triggerEvent.findMany();
+    //     return events;
+    // }
+
 
     async getAllReturnMethods() {
         const methods = await this.prisma.returnMethod.findMany();

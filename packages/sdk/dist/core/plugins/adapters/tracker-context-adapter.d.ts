@@ -4,7 +4,7 @@ export declare class TrackerContextAdapter implements IRecsysContext {
     private tracker;
     constructor(tracker: RecSysTracker);
     config: {
-        getRules: (triggerEventId: number) => TrackingRule[];
+        getRules: (eventTypeId: number) => TrackingRule[];
     };
     payloadBuilder: {
         build: (element: Element | IAIItemDetectionResult | null, rule: TrackingRule, extraData?: IPayloadExtraData) => IRecsysPayload;

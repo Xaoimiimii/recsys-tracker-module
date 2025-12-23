@@ -7,7 +7,8 @@ export declare class ConfigLoader {
     fetchRemoteConfig(): Promise<TrackerConfig | null>;
     private transformRules;
     private transformConditions;
-    private transformPayloadConfigs;
+    private transformPayloadMappings;
+    private transformTrackingTarget;
     private transformReturnMethods;
     getConfig(): TrackerConfig | null;
 }

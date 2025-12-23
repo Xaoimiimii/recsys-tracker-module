@@ -61,7 +61,7 @@ export class ClickPlugin extends BasePlugin {
 
         // Loop qua tất cả click rules và check match
         for (const rule of clickRules) {
-            const selector = rule.targetElement.targetElementValue;
+            const selector = rule.trackingTarget.value;
             if (!selector) continue;
 
             const matchedElement = (event.target as Element).closest(selector);
