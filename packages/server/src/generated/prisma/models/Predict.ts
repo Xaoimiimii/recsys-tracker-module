@@ -421,6 +421,14 @@ export type PredictUncheckedUpdateManyWithoutUserNestedInput = {
   deleteMany?: Prisma.PredictScalarWhereInput | Prisma.PredictScalarWhereInput[]
 }
 
+export type FloatFieldUpdateOperationsInput = {
+  set?: number
+  increment?: number
+  decrement?: number
+  multiply?: number
+  divide?: number
+}
+
 export type PredictCreateWithoutItemInput = {
   Value: number
   User: Prisma.UserCreateNestedOneWithoutPredictsInput

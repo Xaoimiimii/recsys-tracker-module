@@ -195,7 +195,7 @@ export type ItemFactorGroupByOutputType = {
   Id: number
   ItemId: number
   ModelId: number
-  ItemBias: number
+  ItemBias: number | null
   ItemFactors: number[]
   _count: ItemFactorCountAggregateOutputType | null
   _avg: ItemFactorAvgAggregateOutputType | null
@@ -226,7 +226,7 @@ export type ItemFactorWhereInput = {
   Id?: Prisma.IntFilter<"ItemFactor"> | number
   ItemId?: Prisma.IntFilter<"ItemFactor"> | number
   ModelId?: Prisma.IntFilter<"ItemFactor"> | number
-  ItemBias?: Prisma.FloatFilter<"ItemFactor"> | number
+  ItemBias?: Prisma.FloatNullableFilter<"ItemFactor"> | number | null
   ItemFactors?: Prisma.FloatNullableListFilter<"ItemFactor">
   Item?: Prisma.XOR<Prisma.ItemScalarRelationFilter, Prisma.ItemWhereInput>
   Model?: Prisma.XOR<Prisma.ModelScalarRelationFilter, Prisma.ModelWhereInput>
@@ -236,7 +236,7 @@ export type ItemFactorOrderByWithRelationInput = {
   Id?: Prisma.SortOrder
   ItemId?: Prisma.SortOrder
   ModelId?: Prisma.SortOrder
-  ItemBias?: Prisma.SortOrder
+  ItemBias?: Prisma.SortOrderInput | Prisma.SortOrder
   ItemFactors?: Prisma.SortOrder
   Item?: Prisma.ItemOrderByWithRelationInput
   Model?: Prisma.ModelOrderByWithRelationInput
@@ -249,7 +249,7 @@ export type ItemFactorWhereUniqueInput = Prisma.AtLeast<{
   NOT?: Prisma.ItemFactorWhereInput | Prisma.ItemFactorWhereInput[]
   ItemId?: Prisma.IntFilter<"ItemFactor"> | number
   ModelId?: Prisma.IntFilter<"ItemFactor"> | number
-  ItemBias?: Prisma.FloatFilter<"ItemFactor"> | number
+  ItemBias?: Prisma.FloatNullableFilter<"ItemFactor"> | number | null
   ItemFactors?: Prisma.FloatNullableListFilter<"ItemFactor">
   Item?: Prisma.XOR<Prisma.ItemScalarRelationFilter, Prisma.ItemWhereInput>
   Model?: Prisma.XOR<Prisma.ModelScalarRelationFilter, Prisma.ModelWhereInput>
@@ -259,7 +259,7 @@ export type ItemFactorOrderByWithAggregationInput = {
   Id?: Prisma.SortOrder
   ItemId?: Prisma.SortOrder
   ModelId?: Prisma.SortOrder
-  ItemBias?: Prisma.SortOrder
+  ItemBias?: Prisma.SortOrderInput | Prisma.SortOrder
   ItemFactors?: Prisma.SortOrder
   _count?: Prisma.ItemFactorCountOrderByAggregateInput
   _avg?: Prisma.ItemFactorAvgOrderByAggregateInput
@@ -275,12 +275,12 @@ export type ItemFactorScalarWhereWithAggregatesInput = {
   Id?: Prisma.IntWithAggregatesFilter<"ItemFactor"> | number
   ItemId?: Prisma.IntWithAggregatesFilter<"ItemFactor"> | number
   ModelId?: Prisma.IntWithAggregatesFilter<"ItemFactor"> | number
-  ItemBias?: Prisma.FloatWithAggregatesFilter<"ItemFactor"> | number
+  ItemBias?: Prisma.FloatNullableWithAggregatesFilter<"ItemFactor"> | number | null
   ItemFactors?: Prisma.FloatNullableListFilter<"ItemFactor">
 }
 
 export type ItemFactorCreateInput = {
-  ItemBias: number
+  ItemBias?: number | null
   ItemFactors?: Prisma.ItemFactorCreateItemFactorsInput | number[]
   Item: Prisma.ItemCreateNestedOneWithoutItemFactorsInput
   Model: Prisma.ModelCreateNestedOneWithoutItemFactorsInput
@@ -290,12 +290,12 @@ export type ItemFactorUncheckedCreateInput = {
   Id?: number
   ItemId: number
   ModelId: number
-  ItemBias: number
+  ItemBias?: number | null
   ItemFactors?: Prisma.ItemFactorCreateItemFactorsInput | number[]
 }
 
 export type ItemFactorUpdateInput = {
-  ItemBias?: Prisma.FloatFieldUpdateOperationsInput | number
+  ItemBias?: Prisma.NullableFloatFieldUpdateOperationsInput | number | null
   ItemFactors?: Prisma.ItemFactorUpdateItemFactorsInput | number[]
   Item?: Prisma.ItemUpdateOneRequiredWithoutItemFactorsNestedInput
   Model?: Prisma.ModelUpdateOneRequiredWithoutItemFactorsNestedInput
@@ -305,7 +305,7 @@ export type ItemFactorUncheckedUpdateInput = {
   Id?: Prisma.IntFieldUpdateOperationsInput | number
   ItemId?: Prisma.IntFieldUpdateOperationsInput | number
   ModelId?: Prisma.IntFieldUpdateOperationsInput | number
-  ItemBias?: Prisma.FloatFieldUpdateOperationsInput | number
+  ItemBias?: Prisma.NullableFloatFieldUpdateOperationsInput | number | null
   ItemFactors?: Prisma.ItemFactorUpdateItemFactorsInput | number[]
 }
 
@@ -313,12 +313,12 @@ export type ItemFactorCreateManyInput = {
   Id?: number
   ItemId: number
   ModelId: number
-  ItemBias: number
+  ItemBias?: number | null
   ItemFactors?: Prisma.ItemFactorCreateItemFactorsInput | number[]
 }
 
 export type ItemFactorUpdateManyMutationInput = {
-  ItemBias?: Prisma.FloatFieldUpdateOperationsInput | number
+  ItemBias?: Prisma.NullableFloatFieldUpdateOperationsInput | number | null
   ItemFactors?: Prisma.ItemFactorUpdateItemFactorsInput | number[]
 }
 
@@ -326,7 +326,7 @@ export type ItemFactorUncheckedUpdateManyInput = {
   Id?: Prisma.IntFieldUpdateOperationsInput | number
   ItemId?: Prisma.IntFieldUpdateOperationsInput | number
   ModelId?: Prisma.IntFieldUpdateOperationsInput | number
-  ItemBias?: Prisma.FloatFieldUpdateOperationsInput | number
+  ItemBias?: Prisma.NullableFloatFieldUpdateOperationsInput | number | null
   ItemFactors?: Prisma.ItemFactorUpdateItemFactorsInput | number[]
 }
 
@@ -472,7 +472,7 @@ export type ItemFactorUpdateItemFactorsInput = {
 }
 
 export type ItemFactorCreateWithoutItemInput = {
-  ItemBias: number
+  ItemBias?: number | null
   ItemFactors?: Prisma.ItemFactorCreateItemFactorsInput | number[]
   Model: Prisma.ModelCreateNestedOneWithoutItemFactorsInput
 }
@@ -480,7 +480,7 @@ export type ItemFactorCreateWithoutItemInput = {
 export type ItemFactorUncheckedCreateWithoutItemInput = {
   Id?: number
   ModelId: number
-  ItemBias: number
+  ItemBias?: number | null
   ItemFactors?: Prisma.ItemFactorCreateItemFactorsInput | number[]
 }
 
@@ -517,12 +517,12 @@ export type ItemFactorScalarWhereInput = {
   Id?: Prisma.IntFilter<"ItemFactor"> | number
   ItemId?: Prisma.IntFilter<"ItemFactor"> | number
   ModelId?: Prisma.IntFilter<"ItemFactor"> | number
-  ItemBias?: Prisma.FloatFilter<"ItemFactor"> | number
+  ItemBias?: Prisma.FloatNullableFilter<"ItemFactor"> | number | null
   ItemFactors?: Prisma.FloatNullableListFilter<"ItemFactor">
 }
 
 export type ItemFactorCreateWithoutModelInput = {
-  ItemBias: number
+  ItemBias?: number | null
   ItemFactors?: Prisma.ItemFactorCreateItemFactorsInput | number[]
   Item: Prisma.ItemCreateNestedOneWithoutItemFactorsInput
 }
@@ -530,7 +530,7 @@ export type ItemFactorCreateWithoutModelInput = {
 export type ItemFactorUncheckedCreateWithoutModelInput = {
   Id?: number
   ItemId: number
-  ItemBias: number
+  ItemBias?: number | null
   ItemFactors?: Prisma.ItemFactorCreateItemFactorsInput | number[]
 }
 
@@ -563,12 +563,12 @@ export type ItemFactorUpdateManyWithWhereWithoutModelInput = {
 export type ItemFactorCreateManyItemInput = {
   Id?: number
   ModelId: number
-  ItemBias: number
+  ItemBias?: number | null
   ItemFactors?: Prisma.ItemFactorCreateItemFactorsInput | number[]
 }
 
 export type ItemFactorUpdateWithoutItemInput = {
-  ItemBias?: Prisma.FloatFieldUpdateOperationsInput | number
+  ItemBias?: Prisma.NullableFloatFieldUpdateOperationsInput | number | null
   ItemFactors?: Prisma.ItemFactorUpdateItemFactorsInput | number[]
   Model?: Prisma.ModelUpdateOneRequiredWithoutItemFactorsNestedInput
 }
@@ -576,26 +576,26 @@ export type ItemFactorUpdateWithoutItemInput = {
 export type ItemFactorUncheckedUpdateWithoutItemInput = {
   Id?: Prisma.IntFieldUpdateOperationsInput | number
   ModelId?: Prisma.IntFieldUpdateOperationsInput | number
-  ItemBias?: Prisma.FloatFieldUpdateOperationsInput | number
+  ItemBias?: Prisma.NullableFloatFieldUpdateOperationsInput | number | null
   ItemFactors?: Prisma.ItemFactorUpdateItemFactorsInput | number[]
 }
 
 export type ItemFactorUncheckedUpdateManyWithoutItemInput = {
   Id?: Prisma.IntFieldUpdateOperationsInput | number
   ModelId?: Prisma.IntFieldUpdateOperationsInput | number
-  ItemBias?: Prisma.FloatFieldUpdateOperationsInput | number
+  ItemBias?: Prisma.NullableFloatFieldUpdateOperationsInput | number | null
   ItemFactors?: Prisma.ItemFactorUpdateItemFactorsInput | number[]
 }
 
 export type ItemFactorCreateManyModelInput = {
   Id?: number
   ItemId: number
-  ItemBias: number
+  ItemBias?: number | null
   ItemFactors?: Prisma.ItemFactorCreateItemFactorsInput | number[]
 }
 
 export type ItemFactorUpdateWithoutModelInput = {
-  ItemBias?: Prisma.FloatFieldUpdateOperationsInput | number
+  ItemBias?: Prisma.NullableFloatFieldUpdateOperationsInput | number | null
   ItemFactors?: Prisma.ItemFactorUpdateItemFactorsInput | number[]
   Item?: Prisma.ItemUpdateOneRequiredWithoutItemFactorsNestedInput
 }
@@ -603,14 +603,14 @@ export type ItemFactorUpdateWithoutModelInput = {
 export type ItemFactorUncheckedUpdateWithoutModelInput = {
   Id?: Prisma.IntFieldUpdateOperationsInput | number
   ItemId?: Prisma.IntFieldUpdateOperationsInput | number
-  ItemBias?: Prisma.FloatFieldUpdateOperationsInput | number
+  ItemBias?: Prisma.NullableFloatFieldUpdateOperationsInput | number | null
   ItemFactors?: Prisma.ItemFactorUpdateItemFactorsInput | number[]
 }
 
 export type ItemFactorUncheckedUpdateManyWithoutModelInput = {
   Id?: Prisma.IntFieldUpdateOperationsInput | number
   ItemId?: Prisma.IntFieldUpdateOperationsInput | number
-  ItemBias?: Prisma.FloatFieldUpdateOperationsInput | number
+  ItemBias?: Prisma.NullableFloatFieldUpdateOperationsInput | number | null
   ItemFactors?: Prisma.ItemFactorUpdateItemFactorsInput | number[]
 }
 
@@ -678,7 +678,7 @@ export type $ItemFactorPayload<ExtArgs extends runtime.Types.Extensions.Internal
     Id: number
     ItemId: number
     ModelId: number
-    ItemBias: number
+    ItemBias: number | null
     ItemFactors: number[]
   }, ExtArgs["result"]["itemFactor"]>
   composites: {}

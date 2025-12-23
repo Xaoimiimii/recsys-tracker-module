@@ -30,12 +30,14 @@ export type ModelAvgAggregateOutputType = {
   Id: number | null
   AverageRating: number | null
   LearnableParameters: number | null
+  DomainId: number | null
 }
 
 export type ModelSumAggregateOutputType = {
   Id: number | null
   AverageRating: number | null
   LearnableParameters: number[]
+  DomainId: number | null
 }
 
 export type ModelMinAggregateOutputType = {
@@ -44,6 +46,7 @@ export type ModelMinAggregateOutputType = {
   Description: string | null
   AverageRating: number | null
   ModifiedAt: Date | null
+  DomainId: number | null
 }
 
 export type ModelMaxAggregateOutputType = {
@@ -52,6 +55,7 @@ export type ModelMaxAggregateOutputType = {
   Description: string | null
   AverageRating: number | null
   ModifiedAt: Date | null
+  DomainId: number | null
 }
 
 export type ModelCountAggregateOutputType = {
@@ -61,6 +65,7 @@ export type ModelCountAggregateOutputType = {
   AverageRating: number
   LearnableParameters: number
   ModifiedAt: number
+  DomainId: number
   _all: number
 }
 
@@ -69,12 +74,14 @@ export type ModelAvgAggregateInputType = {
   Id?: true
   AverageRating?: true
   LearnableParameters?: true
+  DomainId?: true
 }
 
 export type ModelSumAggregateInputType = {
   Id?: true
   AverageRating?: true
   LearnableParameters?: true
+  DomainId?: true
 }
 
 export type ModelMinAggregateInputType = {
@@ -83,6 +90,7 @@ export type ModelMinAggregateInputType = {
   Description?: true
   AverageRating?: true
   ModifiedAt?: true
+  DomainId?: true
 }
 
 export type ModelMaxAggregateInputType = {
@@ -91,6 +99,7 @@ export type ModelMaxAggregateInputType = {
   Description?: true
   AverageRating?: true
   ModifiedAt?: true
+  DomainId?: true
 }
 
 export type ModelCountAggregateInputType = {
@@ -100,6 +109,7 @@ export type ModelCountAggregateInputType = {
   AverageRating?: true
   LearnableParameters?: true
   ModifiedAt?: true
+  DomainId?: true
   _all?: true
 }
 
@@ -193,9 +203,10 @@ export type ModelGroupByOutputType = {
   Id: number
   Name: string
   Description: string | null
-  AverageRating: number
+  AverageRating: number | null
   LearnableParameters: number[]
   ModifiedAt: Date
+  DomainId: number
   _count: ModelCountAggregateOutputType | null
   _avg: ModelAvgAggregateOutputType | null
   _sum: ModelSumAggregateOutputType | null
@@ -225,9 +236,11 @@ export type ModelWhereInput = {
   Id?: Prisma.IntFilter<"Model"> | number
   Name?: Prisma.StringFilter<"Model"> | string
   Description?: Prisma.StringNullableFilter<"Model"> | string | null
-  AverageRating?: Prisma.FloatFilter<"Model"> | number
+  AverageRating?: Prisma.FloatNullableFilter<"Model"> | number | null
   LearnableParameters?: Prisma.FloatNullableListFilter<"Model">
   ModifiedAt?: Prisma.DateTimeFilter<"Model"> | Date | string
+  DomainId?: Prisma.IntFilter<"Model"> | number
+  Domain?: Prisma.XOR<Prisma.DomainScalarRelationFilter, Prisma.DomainWhereInput>
   ItemFactors?: Prisma.ItemFactorListRelationFilter
   UserFactors?: Prisma.UserFactorListRelationFilter
 }
@@ -236,34 +249,40 @@ export type ModelOrderByWithRelationInput = {
   Id?: Prisma.SortOrder
   Name?: Prisma.SortOrder
   Description?: Prisma.SortOrderInput | Prisma.SortOrder
-  AverageRating?: Prisma.SortOrder
+  AverageRating?: Prisma.SortOrderInput | Prisma.SortOrder
   LearnableParameters?: Prisma.SortOrder
   ModifiedAt?: Prisma.SortOrder
+  DomainId?: Prisma.SortOrder
+  Domain?: Prisma.DomainOrderByWithRelationInput
   ItemFactors?: Prisma.ItemFactorOrderByRelationAggregateInput
   UserFactors?: Prisma.UserFactorOrderByRelationAggregateInput
 }
 
 export type ModelWhereUniqueInput = Prisma.AtLeast<{
   Id?: number
+  DomainId_Name?: Prisma.ModelDomainIdNameCompoundUniqueInput
   AND?: Prisma.ModelWhereInput | Prisma.ModelWhereInput[]
   OR?: Prisma.ModelWhereInput[]
   NOT?: Prisma.ModelWhereInput | Prisma.ModelWhereInput[]
   Name?: Prisma.StringFilter<"Model"> | string
   Description?: Prisma.StringNullableFilter<"Model"> | string | null
-  AverageRating?: Prisma.FloatFilter<"Model"> | number
+  AverageRating?: Prisma.FloatNullableFilter<"Model"> | number | null
   LearnableParameters?: Prisma.FloatNullableListFilter<"Model">
   ModifiedAt?: Prisma.DateTimeFilter<"Model"> | Date | string
+  DomainId?: Prisma.IntFilter<"Model"> | number
+  Domain?: Prisma.XOR<Prisma.DomainScalarRelationFilter, Prisma.DomainWhereInput>
   ItemFactors?: Prisma.ItemFactorListRelationFilter
   UserFactors?: Prisma.UserFactorListRelationFilter
-}, "Id">
+}, "Id" | "DomainId_Name">
 
 export type ModelOrderByWithAggregationInput = {
   Id?: Prisma.SortOrder
   Name?: Prisma.SortOrder
   Description?: Prisma.SortOrderInput | Prisma.SortOrder
-  AverageRating?: Prisma.SortOrder
+  AverageRating?: Prisma.SortOrderInput | Prisma.SortOrder
   LearnableParameters?: Prisma.SortOrder
   ModifiedAt?: Prisma.SortOrder
+  DomainId?: Prisma.SortOrder
   _count?: Prisma.ModelCountOrderByAggregateInput
   _avg?: Prisma.ModelAvgOrderByAggregateInput
   _max?: Prisma.ModelMaxOrderByAggregateInput
@@ -278,17 +297,19 @@ export type ModelScalarWhereWithAggregatesInput = {
   Id?: Prisma.IntWithAggregatesFilter<"Model"> | number
   Name?: Prisma.StringWithAggregatesFilter<"Model"> | string
   Description?: Prisma.StringNullableWithAggregatesFilter<"Model"> | string | null
-  AverageRating?: Prisma.FloatWithAggregatesFilter<"Model"> | number
+  AverageRating?: Prisma.FloatNullableWithAggregatesFilter<"Model"> | number | null
   LearnableParameters?: Prisma.FloatNullableListFilter<"Model">
   ModifiedAt?: Prisma.DateTimeWithAggregatesFilter<"Model"> | Date | string
+  DomainId?: Prisma.IntWithAggregatesFilter<"Model"> | number
 }
 
 export type ModelCreateInput = {
   Name: string
   Description?: string | null
-  AverageRating: number
+  AverageRating?: number | null
   LearnableParameters?: Prisma.ModelCreateLearnableParametersInput | number[]
-  ModifiedAt: Date | string
+  ModifiedAt?: Date | string
+  Domain: Prisma.DomainCreateNestedOneWithoutModelsInput
   ItemFactors?: Prisma.ItemFactorCreateNestedManyWithoutModelInput
   UserFactors?: Prisma.UserFactorCreateNestedManyWithoutModelInput
 }
@@ -297,9 +318,10 @@ export type ModelUncheckedCreateInput = {
   Id?: number
   Name: string
   Description?: string | null
-  AverageRating: number
+  AverageRating?: number | null
   LearnableParameters?: Prisma.ModelCreateLearnableParametersInput | number[]
-  ModifiedAt: Date | string
+  ModifiedAt?: Date | string
+  DomainId: number
   ItemFactors?: Prisma.ItemFactorUncheckedCreateNestedManyWithoutModelInput
   UserFactors?: Prisma.UserFactorUncheckedCreateNestedManyWithoutModelInput
 }
@@ -307,9 +329,10 @@ export type ModelUncheckedCreateInput = {
 export type ModelUpdateInput = {
   Name?: Prisma.StringFieldUpdateOperationsInput | string
   Description?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  AverageRating?: Prisma.FloatFieldUpdateOperationsInput | number
+  AverageRating?: Prisma.NullableFloatFieldUpdateOperationsInput | number | null
   LearnableParameters?: Prisma.ModelUpdateLearnableParametersInput | number[]
   ModifiedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  Domain?: Prisma.DomainUpdateOneRequiredWithoutModelsNestedInput
   ItemFactors?: Prisma.ItemFactorUpdateManyWithoutModelNestedInput
   UserFactors?: Prisma.UserFactorUpdateManyWithoutModelNestedInput
 }
@@ -318,9 +341,10 @@ export type ModelUncheckedUpdateInput = {
   Id?: Prisma.IntFieldUpdateOperationsInput | number
   Name?: Prisma.StringFieldUpdateOperationsInput | string
   Description?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  AverageRating?: Prisma.FloatFieldUpdateOperationsInput | number
+  AverageRating?: Prisma.NullableFloatFieldUpdateOperationsInput | number | null
   LearnableParameters?: Prisma.ModelUpdateLearnableParametersInput | number[]
   ModifiedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  DomainId?: Prisma.IntFieldUpdateOperationsInput | number
   ItemFactors?: Prisma.ItemFactorUncheckedUpdateManyWithoutModelNestedInput
   UserFactors?: Prisma.UserFactorUncheckedUpdateManyWithoutModelNestedInput
 }
@@ -329,15 +353,16 @@ export type ModelCreateManyInput = {
   Id?: number
   Name: string
   Description?: string | null
-  AverageRating: number
+  AverageRating?: number | null
   LearnableParameters?: Prisma.ModelCreateLearnableParametersInput | number[]
-  ModifiedAt: Date | string
+  ModifiedAt?: Date | string
+  DomainId: number
 }
 
 export type ModelUpdateManyMutationInput = {
   Name?: Prisma.StringFieldUpdateOperationsInput | string
   Description?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  AverageRating?: Prisma.FloatFieldUpdateOperationsInput | number
+  AverageRating?: Prisma.NullableFloatFieldUpdateOperationsInput | number | null
   LearnableParameters?: Prisma.ModelUpdateLearnableParametersInput | number[]
   ModifiedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
 }
@@ -346,9 +371,25 @@ export type ModelUncheckedUpdateManyInput = {
   Id?: Prisma.IntFieldUpdateOperationsInput | number
   Name?: Prisma.StringFieldUpdateOperationsInput | string
   Description?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  AverageRating?: Prisma.FloatFieldUpdateOperationsInput | number
+  AverageRating?: Prisma.NullableFloatFieldUpdateOperationsInput | number | null
   LearnableParameters?: Prisma.ModelUpdateLearnableParametersInput | number[]
   ModifiedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  DomainId?: Prisma.IntFieldUpdateOperationsInput | number
+}
+
+export type ModelListRelationFilter = {
+  every?: Prisma.ModelWhereInput
+  some?: Prisma.ModelWhereInput
+  none?: Prisma.ModelWhereInput
+}
+
+export type ModelOrderByRelationAggregateInput = {
+  _count?: Prisma.SortOrder
+}
+
+export type ModelDomainIdNameCompoundUniqueInput = {
+  DomainId: number
+  Name: string
 }
 
 export type ModelCountOrderByAggregateInput = {
@@ -358,12 +399,14 @@ export type ModelCountOrderByAggregateInput = {
   AverageRating?: Prisma.SortOrder
   LearnableParameters?: Prisma.SortOrder
   ModifiedAt?: Prisma.SortOrder
+  DomainId?: Prisma.SortOrder
 }
 
 export type ModelAvgOrderByAggregateInput = {
   Id?: Prisma.SortOrder
   AverageRating?: Prisma.SortOrder
   LearnableParameters?: Prisma.SortOrder
+  DomainId?: Prisma.SortOrder
 }
 
 export type ModelMaxOrderByAggregateInput = {
@@ -372,6 +415,7 @@ export type ModelMaxOrderByAggregateInput = {
   Description?: Prisma.SortOrder
   AverageRating?: Prisma.SortOrder
   ModifiedAt?: Prisma.SortOrder
+  DomainId?: Prisma.SortOrder
 }
 
 export type ModelMinOrderByAggregateInput = {
@@ -380,12 +424,14 @@ export type ModelMinOrderByAggregateInput = {
   Description?: Prisma.SortOrder
   AverageRating?: Prisma.SortOrder
   ModifiedAt?: Prisma.SortOrder
+  DomainId?: Prisma.SortOrder
 }
 
 export type ModelSumOrderByAggregateInput = {
   Id?: Prisma.SortOrder
   AverageRating?: Prisma.SortOrder
   LearnableParameters?: Prisma.SortOrder
+  DomainId?: Prisma.SortOrder
 }
 
 export type ModelScalarRelationFilter = {
@@ -393,12 +439,54 @@ export type ModelScalarRelationFilter = {
   isNot?: Prisma.ModelWhereInput
 }
 
+export type ModelCreateNestedManyWithoutDomainInput = {
+  create?: Prisma.XOR<Prisma.ModelCreateWithoutDomainInput, Prisma.ModelUncheckedCreateWithoutDomainInput> | Prisma.ModelCreateWithoutDomainInput[] | Prisma.ModelUncheckedCreateWithoutDomainInput[]
+  connectOrCreate?: Prisma.ModelCreateOrConnectWithoutDomainInput | Prisma.ModelCreateOrConnectWithoutDomainInput[]
+  createMany?: Prisma.ModelCreateManyDomainInputEnvelope
+  connect?: Prisma.ModelWhereUniqueInput | Prisma.ModelWhereUniqueInput[]
+}
+
+export type ModelUncheckedCreateNestedManyWithoutDomainInput = {
+  create?: Prisma.XOR<Prisma.ModelCreateWithoutDomainInput, Prisma.ModelUncheckedCreateWithoutDomainInput> | Prisma.ModelCreateWithoutDomainInput[] | Prisma.ModelUncheckedCreateWithoutDomainInput[]
+  connectOrCreate?: Prisma.ModelCreateOrConnectWithoutDomainInput | Prisma.ModelCreateOrConnectWithoutDomainInput[]
+  createMany?: Prisma.ModelCreateManyDomainInputEnvelope
+  connect?: Prisma.ModelWhereUniqueInput | Prisma.ModelWhereUniqueInput[]
+}
+
+export type ModelUpdateManyWithoutDomainNestedInput = {
+  create?: Prisma.XOR<Prisma.ModelCreateWithoutDomainInput, Prisma.ModelUncheckedCreateWithoutDomainInput> | Prisma.ModelCreateWithoutDomainInput[] | Prisma.ModelUncheckedCreateWithoutDomainInput[]
+  connectOrCreate?: Prisma.ModelCreateOrConnectWithoutDomainInput | Prisma.ModelCreateOrConnectWithoutDomainInput[]
+  upsert?: Prisma.ModelUpsertWithWhereUniqueWithoutDomainInput | Prisma.ModelUpsertWithWhereUniqueWithoutDomainInput[]
+  createMany?: Prisma.ModelCreateManyDomainInputEnvelope
+  set?: Prisma.ModelWhereUniqueInput | Prisma.ModelWhereUniqueInput[]
+  disconnect?: Prisma.ModelWhereUniqueInput | Prisma.ModelWhereUniqueInput[]
+  delete?: Prisma.ModelWhereUniqueInput | Prisma.ModelWhereUniqueInput[]
+  connect?: Prisma.ModelWhereUniqueInput | Prisma.ModelWhereUniqueInput[]
+  update?: Prisma.ModelUpdateWithWhereUniqueWithoutDomainInput | Prisma.ModelUpdateWithWhereUniqueWithoutDomainInput[]
+  updateMany?: Prisma.ModelUpdateManyWithWhereWithoutDomainInput | Prisma.ModelUpdateManyWithWhereWithoutDomainInput[]
+  deleteMany?: Prisma.ModelScalarWhereInput | Prisma.ModelScalarWhereInput[]
+}
+
+export type ModelUncheckedUpdateManyWithoutDomainNestedInput = {
+  create?: Prisma.XOR<Prisma.ModelCreateWithoutDomainInput, Prisma.ModelUncheckedCreateWithoutDomainInput> | Prisma.ModelCreateWithoutDomainInput[] | Prisma.ModelUncheckedCreateWithoutDomainInput[]
+  connectOrCreate?: Prisma.ModelCreateOrConnectWithoutDomainInput | Prisma.ModelCreateOrConnectWithoutDomainInput[]
+  upsert?: Prisma.ModelUpsertWithWhereUniqueWithoutDomainInput | Prisma.ModelUpsertWithWhereUniqueWithoutDomainInput[]
+  createMany?: Prisma.ModelCreateManyDomainInputEnvelope
+  set?: Prisma.ModelWhereUniqueInput | Prisma.ModelWhereUniqueInput[]
+  disconnect?: Prisma.ModelWhereUniqueInput | Prisma.ModelWhereUniqueInput[]
+  delete?: Prisma.ModelWhereUniqueInput | Prisma.ModelWhereUniqueInput[]
+  connect?: Prisma.ModelWhereUniqueInput | Prisma.ModelWhereUniqueInput[]
+  update?: Prisma.ModelUpdateWithWhereUniqueWithoutDomainInput | Prisma.ModelUpdateWithWhereUniqueWithoutDomainInput[]
+  updateMany?: Prisma.ModelUpdateManyWithWhereWithoutDomainInput | Prisma.ModelUpdateManyWithWhereWithoutDomainInput[]
+  deleteMany?: Prisma.ModelScalarWhereInput | Prisma.ModelScalarWhereInput[]
+}
+
 export type ModelCreateLearnableParametersInput = {
   set: number[]
 }
 
-export type FloatFieldUpdateOperationsInput = {
-  set?: number
+export type NullableFloatFieldUpdateOperationsInput = {
+  set?: number | null
   increment?: number
   decrement?: number
   multiply?: number
@@ -438,12 +526,73 @@ export type ModelUpdateOneRequiredWithoutUserFactorsNestedInput = {
   update?: Prisma.XOR<Prisma.XOR<Prisma.ModelUpdateToOneWithWhereWithoutUserFactorsInput, Prisma.ModelUpdateWithoutUserFactorsInput>, Prisma.ModelUncheckedUpdateWithoutUserFactorsInput>
 }
 
+export type ModelCreateWithoutDomainInput = {
+  Name: string
+  Description?: string | null
+  AverageRating?: number | null
+  LearnableParameters?: Prisma.ModelCreateLearnableParametersInput | number[]
+  ModifiedAt?: Date | string
+  ItemFactors?: Prisma.ItemFactorCreateNestedManyWithoutModelInput
+  UserFactors?: Prisma.UserFactorCreateNestedManyWithoutModelInput
+}
+
+export type ModelUncheckedCreateWithoutDomainInput = {
+  Id?: number
+  Name: string
+  Description?: string | null
+  AverageRating?: number | null
+  LearnableParameters?: Prisma.ModelCreateLearnableParametersInput | number[]
+  ModifiedAt?: Date | string
+  ItemFactors?: Prisma.ItemFactorUncheckedCreateNestedManyWithoutModelInput
+  UserFactors?: Prisma.UserFactorUncheckedCreateNestedManyWithoutModelInput
+}
+
+export type ModelCreateOrConnectWithoutDomainInput = {
+  where: Prisma.ModelWhereUniqueInput
+  create: Prisma.XOR<Prisma.ModelCreateWithoutDomainInput, Prisma.ModelUncheckedCreateWithoutDomainInput>
+}
+
+export type ModelCreateManyDomainInputEnvelope = {
+  data: Prisma.ModelCreateManyDomainInput | Prisma.ModelCreateManyDomainInput[]
+  skipDuplicates?: boolean
+}
+
+export type ModelUpsertWithWhereUniqueWithoutDomainInput = {
+  where: Prisma.ModelWhereUniqueInput
+  update: Prisma.XOR<Prisma.ModelUpdateWithoutDomainInput, Prisma.ModelUncheckedUpdateWithoutDomainInput>
+  create: Prisma.XOR<Prisma.ModelCreateWithoutDomainInput, Prisma.ModelUncheckedCreateWithoutDomainInput>
+}
+
+export type ModelUpdateWithWhereUniqueWithoutDomainInput = {
+  where: Prisma.ModelWhereUniqueInput
+  data: Prisma.XOR<Prisma.ModelUpdateWithoutDomainInput, Prisma.ModelUncheckedUpdateWithoutDomainInput>
+}
+
+export type ModelUpdateManyWithWhereWithoutDomainInput = {
+  where: Prisma.ModelScalarWhereInput
+  data: Prisma.XOR<Prisma.ModelUpdateManyMutationInput, Prisma.ModelUncheckedUpdateManyWithoutDomainInput>
+}
+
+export type ModelScalarWhereInput = {
+  AND?: Prisma.ModelScalarWhereInput | Prisma.ModelScalarWhereInput[]
+  OR?: Prisma.ModelScalarWhereInput[]
+  NOT?: Prisma.ModelScalarWhereInput | Prisma.ModelScalarWhereInput[]
+  Id?: Prisma.IntFilter<"Model"> | number
+  Name?: Prisma.StringFilter<"Model"> | string
+  Description?: Prisma.StringNullableFilter<"Model"> | string | null
+  AverageRating?: Prisma.FloatNullableFilter<"Model"> | number | null
+  LearnableParameters?: Prisma.FloatNullableListFilter<"Model">
+  ModifiedAt?: Prisma.DateTimeFilter<"Model"> | Date | string
+  DomainId?: Prisma.IntFilter<"Model"> | number
+}
+
 export type ModelCreateWithoutItemFactorsInput = {
   Name: string
   Description?: string | null
-  AverageRating: number
+  AverageRating?: number | null
   LearnableParameters?: Prisma.ModelCreateLearnableParametersInput | number[]
-  ModifiedAt: Date | string
+  ModifiedAt?: Date | string
+  Domain: Prisma.DomainCreateNestedOneWithoutModelsInput
   UserFactors?: Prisma.UserFactorCreateNestedManyWithoutModelInput
 }
 
@@ -451,9 +600,10 @@ export type ModelUncheckedCreateWithoutItemFactorsInput = {
   Id?: number
   Name: string
   Description?: string | null
-  AverageRating: number
+  AverageRating?: number | null
   LearnableParameters?: Prisma.ModelCreateLearnableParametersInput | number[]
-  ModifiedAt: Date | string
+  ModifiedAt?: Date | string
+  DomainId: number
   UserFactors?: Prisma.UserFactorUncheckedCreateNestedManyWithoutModelInput
 }
 
@@ -476,9 +626,10 @@ export type ModelUpdateToOneWithWhereWithoutItemFactorsInput = {
 export type ModelUpdateWithoutItemFactorsInput = {
   Name?: Prisma.StringFieldUpdateOperationsInput | string
   Description?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  AverageRating?: Prisma.FloatFieldUpdateOperationsInput | number
+  AverageRating?: Prisma.NullableFloatFieldUpdateOperationsInput | number | null
   LearnableParameters?: Prisma.ModelUpdateLearnableParametersInput | number[]
   ModifiedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  Domain?: Prisma.DomainUpdateOneRequiredWithoutModelsNestedInput
   UserFactors?: Prisma.UserFactorUpdateManyWithoutModelNestedInput
 }
 
@@ -486,18 +637,20 @@ export type ModelUncheckedUpdateWithoutItemFactorsInput = {
   Id?: Prisma.IntFieldUpdateOperationsInput | number
   Name?: Prisma.StringFieldUpdateOperationsInput | string
   Description?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  AverageRating?: Prisma.FloatFieldUpdateOperationsInput | number
+  AverageRating?: Prisma.NullableFloatFieldUpdateOperationsInput | number | null
   LearnableParameters?: Prisma.ModelUpdateLearnableParametersInput | number[]
   ModifiedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  DomainId?: Prisma.IntFieldUpdateOperationsInput | number
   UserFactors?: Prisma.UserFactorUncheckedUpdateManyWithoutModelNestedInput
 }
 
 export type ModelCreateWithoutUserFactorsInput = {
   Name: string
   Description?: string | null
-  AverageRating: number
+  AverageRating?: number | null
   LearnableParameters?: Prisma.ModelCreateLearnableParametersInput | number[]
-  ModifiedAt: Date | string
+  ModifiedAt?: Date | string
+  Domain: Prisma.DomainCreateNestedOneWithoutModelsInput
   ItemFactors?: Prisma.ItemFactorCreateNestedManyWithoutModelInput
 }
 
@@ -505,9 +658,10 @@ export type ModelUncheckedCreateWithoutUserFactorsInput = {
   Id?: number
   Name: string
   Description?: string | null
-  AverageRating: number
+  AverageRating?: number | null
   LearnableParameters?: Prisma.ModelCreateLearnableParametersInput | number[]
-  ModifiedAt: Date | string
+  ModifiedAt?: Date | string
+  DomainId: number
   ItemFactors?: Prisma.ItemFactorUncheckedCreateNestedManyWithoutModelInput
 }
 
@@ -530,9 +684,10 @@ export type ModelUpdateToOneWithWhereWithoutUserFactorsInput = {
 export type ModelUpdateWithoutUserFactorsInput = {
   Name?: Prisma.StringFieldUpdateOperationsInput | string
   Description?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  AverageRating?: Prisma.FloatFieldUpdateOperationsInput | number
+  AverageRating?: Prisma.NullableFloatFieldUpdateOperationsInput | number | null
   LearnableParameters?: Prisma.ModelUpdateLearnableParametersInput | number[]
   ModifiedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  Domain?: Prisma.DomainUpdateOneRequiredWithoutModelsNestedInput
   ItemFactors?: Prisma.ItemFactorUpdateManyWithoutModelNestedInput
 }
 
@@ -540,10 +695,50 @@ export type ModelUncheckedUpdateWithoutUserFactorsInput = {
   Id?: Prisma.IntFieldUpdateOperationsInput | number
   Name?: Prisma.StringFieldUpdateOperationsInput | string
   Description?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  AverageRating?: Prisma.FloatFieldUpdateOperationsInput | number
+  AverageRating?: Prisma.NullableFloatFieldUpdateOperationsInput | number | null
+  LearnableParameters?: Prisma.ModelUpdateLearnableParametersInput | number[]
+  ModifiedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  DomainId?: Prisma.IntFieldUpdateOperationsInput | number
+  ItemFactors?: Prisma.ItemFactorUncheckedUpdateManyWithoutModelNestedInput
+}
+
+export type ModelCreateManyDomainInput = {
+  Id?: number
+  Name: string
+  Description?: string | null
+  AverageRating?: number | null
+  LearnableParameters?: Prisma.ModelCreateLearnableParametersInput | number[]
+  ModifiedAt?: Date | string
+}
+
+export type ModelUpdateWithoutDomainInput = {
+  Name?: Prisma.StringFieldUpdateOperationsInput | string
+  Description?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  AverageRating?: Prisma.NullableFloatFieldUpdateOperationsInput | number | null
+  LearnableParameters?: Prisma.ModelUpdateLearnableParametersInput | number[]
+  ModifiedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  ItemFactors?: Prisma.ItemFactorUpdateManyWithoutModelNestedInput
+  UserFactors?: Prisma.UserFactorUpdateManyWithoutModelNestedInput
+}
+
+export type ModelUncheckedUpdateWithoutDomainInput = {
+  Id?: Prisma.IntFieldUpdateOperationsInput | number
+  Name?: Prisma.StringFieldUpdateOperationsInput | string
+  Description?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  AverageRating?: Prisma.NullableFloatFieldUpdateOperationsInput | number | null
   LearnableParameters?: Prisma.ModelUpdateLearnableParametersInput | number[]
   ModifiedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   ItemFactors?: Prisma.ItemFactorUncheckedUpdateManyWithoutModelNestedInput
+  UserFactors?: Prisma.UserFactorUncheckedUpdateManyWithoutModelNestedInput
+}
+
+export type ModelUncheckedUpdateManyWithoutDomainInput = {
+  Id?: Prisma.IntFieldUpdateOperationsInput | number
+  Name?: Prisma.StringFieldUpdateOperationsInput | string
+  Description?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  AverageRating?: Prisma.NullableFloatFieldUpdateOperationsInput | number | null
+  LearnableParameters?: Prisma.ModelUpdateLearnableParametersInput | number[]
+  ModifiedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
 }
 
 
@@ -593,6 +788,8 @@ export type ModelSelect<ExtArgs extends runtime.Types.Extensions.InternalArgs = 
   AverageRating?: boolean
   LearnableParameters?: boolean
   ModifiedAt?: boolean
+  DomainId?: boolean
+  Domain?: boolean | Prisma.DomainDefaultArgs<ExtArgs>
   ItemFactors?: boolean | Prisma.Model$ItemFactorsArgs<ExtArgs>
   UserFactors?: boolean | Prisma.Model$UserFactorsArgs<ExtArgs>
   _count?: boolean | Prisma.ModelCountOutputTypeDefaultArgs<ExtArgs>
@@ -605,6 +802,8 @@ export type ModelSelectCreateManyAndReturn<ExtArgs extends runtime.Types.Extensi
   AverageRating?: boolean
   LearnableParameters?: boolean
   ModifiedAt?: boolean
+  DomainId?: boolean
+  Domain?: boolean | Prisma.DomainDefaultArgs<ExtArgs>
 }, ExtArgs["result"]["model"]>
 
 export type ModelSelectUpdateManyAndReturn<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetSelect<{
@@ -614,6 +813,8 @@ export type ModelSelectUpdateManyAndReturn<ExtArgs extends runtime.Types.Extensi
   AverageRating?: boolean
   LearnableParameters?: boolean
   ModifiedAt?: boolean
+  DomainId?: boolean
+  Domain?: boolean | Prisma.DomainDefaultArgs<ExtArgs>
 }, ExtArgs["result"]["model"]>
 
 export type ModelSelectScalar = {
@@ -623,20 +824,27 @@ export type ModelSelectScalar = {
   AverageRating?: boolean
   LearnableParameters?: boolean
   ModifiedAt?: boolean
+  DomainId?: boolean
 }
 
-export type ModelOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"Id" | "Name" | "Description" | "AverageRating" | "LearnableParameters" | "ModifiedAt", ExtArgs["result"]["model"]>
+export type ModelOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"Id" | "Name" | "Description" | "AverageRating" | "LearnableParameters" | "ModifiedAt" | "DomainId", ExtArgs["result"]["model"]>
 export type ModelInclude<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  Domain?: boolean | Prisma.DomainDefaultArgs<ExtArgs>
   ItemFactors?: boolean | Prisma.Model$ItemFactorsArgs<ExtArgs>
   UserFactors?: boolean | Prisma.Model$UserFactorsArgs<ExtArgs>
   _count?: boolean | Prisma.ModelCountOutputTypeDefaultArgs<ExtArgs>
 }
-export type ModelIncludeCreateManyAndReturn<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {}
-export type ModelIncludeUpdateManyAndReturn<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {}
+export type ModelIncludeCreateManyAndReturn<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  Domain?: boolean | Prisma.DomainDefaultArgs<ExtArgs>
+}
+export type ModelIncludeUpdateManyAndReturn<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  Domain?: boolean | Prisma.DomainDefaultArgs<ExtArgs>
+}
 
 export type $ModelPayload<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   name: "Model"
   objects: {
+    Domain: Prisma.$DomainPayload<ExtArgs>
     ItemFactors: Prisma.$ItemFactorPayload<ExtArgs>[]
     UserFactors: Prisma.$UserFactorPayload<ExtArgs>[]
   }
@@ -644,9 +852,10 @@ export type $ModelPayload<ExtArgs extends runtime.Types.Extensions.InternalArgs 
     Id: number
     Name: string
     Description: string | null
-    AverageRating: number
+    AverageRating: number | null
     LearnableParameters: number[]
     ModifiedAt: Date
+    DomainId: number
   }, ExtArgs["result"]["model"]>
   composites: {}
 }
@@ -1041,6 +1250,7 @@ readonly fields: ModelFieldRefs;
  */
 export interface Prisma__ModelClient<T, Null = never, ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs, GlobalOmitOptions = {}> extends Prisma.PrismaPromise<T> {
   readonly [Symbol.toStringTag]: "PrismaPromise"
+  Domain<T extends Prisma.DomainDefaultArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.DomainDefaultArgs<ExtArgs>>): Prisma.Prisma__DomainClient<runtime.Types.Result.GetResult<Prisma.$DomainPayload<ExtArgs>, T, "findUniqueOrThrow", GlobalOmitOptions> | Null, Null, ExtArgs, GlobalOmitOptions>
   ItemFactors<T extends Prisma.Model$ItemFactorsArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.Model$ItemFactorsArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$ItemFactorPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
   UserFactors<T extends Prisma.Model$UserFactorsArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.Model$UserFactorsArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$UserFactorPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
   /**
@@ -1078,6 +1288,7 @@ export interface ModelFieldRefs {
   readonly AverageRating: Prisma.FieldRef<"Model", 'Float'>
   readonly LearnableParameters: Prisma.FieldRef<"Model", 'Float[]'>
   readonly ModifiedAt: Prisma.FieldRef<"Model", 'DateTime'>
+  readonly DomainId: Prisma.FieldRef<"Model", 'Int'>
 }
     
 
@@ -1327,6 +1538,10 @@ export type ModelCreateManyAndReturnArgs<ExtArgs extends runtime.Types.Extension
    */
   data: Prisma.ModelCreateManyInput | Prisma.ModelCreateManyInput[]
   skipDuplicates?: boolean
+  /**
+   * Choose, which related nodes to fetch as well
+   */
+  include?: Prisma.ModelIncludeCreateManyAndReturn<ExtArgs> | null
 }
 
 /**
@@ -1397,6 +1612,10 @@ export type ModelUpdateManyAndReturnArgs<ExtArgs extends runtime.Types.Extension
    * Limit how many Models to update.
    */
   limit?: number
+  /**
+   * Choose, which related nodes to fetch as well
+   */
+  include?: Prisma.ModelIncludeUpdateManyAndReturn<ExtArgs> | null
 }
 
 /**
