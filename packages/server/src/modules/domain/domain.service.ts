@@ -77,10 +77,6 @@ export class DomainService {
     //     return events;
     // }
 
-    async getAllEventTypes() {
-        const types = await this.prisma.eventType.findMany();
-        return types;
-    }
 
     async getAllReturnMethods() {
         const methods = await this.prisma.returnMethod.findMany();

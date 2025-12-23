@@ -15,7 +15,7 @@ export class DomainController {
     }
 
     @Post('create')
-    @ApiOperation({ summary: 'Create domain' })
+    @ApiOperation({ summary: 'Create a new domain' })
     async createDomain(@Body() body: CreateDomainDto) {
         const { ternantId, url, type } = body;
         return this.domainService.createDomain(ternantId, url, type);
@@ -25,17 +25,6 @@ export class DomainController {
     @ApiOperation({ summary: 'Get domains by ternant id' })
     async getDomainsByTernantId(@Param('id', ParseIntPipe) id: number) {
         return this.domainService.getDomainsByTernantId(id);
-    }
-
-    // @Get('trigger-event/all')
-    // async getAllTriggerEvents() {
-    //     return this.domainService.getAllTriggerEvents();
-    // }
-
-    @Get('/event-type/all')
-    @ApiOperation({ summary: 'Get all event types' })
-    async getAllEventTypes() {
-        return this.domainService.getAllEventTypes();
     }
 
     @Get('return-method/all')
