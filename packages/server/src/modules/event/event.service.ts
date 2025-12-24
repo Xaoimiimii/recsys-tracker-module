@@ -47,47 +47,72 @@ export class EventService {
             });
         }
 
-        if (event.ItemField === ItemField.ITEM_ID && !(await this.prisma.item.findUnique({
-            where: {
-                Id: parseInt(event.ItemValue),
-            }
-        }))) throw new NotFoundException(`Item id '${event.ItemValue}' does not exist.`);
-
-        if (event.ItemField === ItemField.ITEM_TITLE && !(await this.prisma.item.findFirst({
-            where: {
-                Title: event.ItemValue,
-            }
-        }))) throw new NotFoundException(`Item title '${event.ItemValue}' does not exist.`);
+        let targetItemIds: number[] = [];
+        if (event.ItemField === ItemField.ITEM_ID) {
+            const item = await this.prisma.item.findUnique({
+                where: {
+                    Id: parseInt(event.ItemValue),
+                }
+            })
+            if (!item) throw new NotFoundException(`Item id '${event.ItemValue}' does not exist.`);
+            targetItemIds.push(item.Id);
+        }
+        if (event.ItemField === ItemField.ITEM_TITLE) {
+            const items = await this.prisma.item.findMany({
+                where: {
+                    Title: event.ItemValue,
+                    DomainId: domain.Id,
+                }
+            })
+            if (!items.length) throw new NotFoundException(`Item title '${event.ItemValue}' does not exist.`);
+            targetItemIds.push(...items.map(item => item.Id));
+        }
 
         // 2 rate 3 review
         if (event.EventTypeId === 2 || event.EventTypeId === 3) {
             if (event.RatingValue === null || event.RatingValue === undefined) throw new BadRequestException(`Rating value is required for rating events.`);
             if (event.RatingValue < 1 || event.RatingValue > 5) throw new BadRequestException(`Rating value must be between 1 and 5.`);
 
-            const createdEvent = await this.prisma.rating.create({
-                data: {
-                    UserId: user.Id,
-                    ItemId: parseInt(event.ItemValue),
-                    Value: event.RatingValue,
-                    ReviewText: event.RatingReview,
-                    CreatedAt: event.Timestamp,
-                    DomainId: domain.Id,
-                }
-            });
-
-            return createdEvent.Id;
+            for (const itemId of targetItemIds) {
+                await this.prisma.rating.create({
+                    data: {
+                        UserId: user.Id,
+                        ItemId: itemId,
+                        Value: event.RatingValue,
+                        ReviewText: event.RatingReview,
+                        CreatedAt: event.Timestamp,
+                        DomainId: domain.Id,
+                    }
+                });
+            }
         } else {
-            const createdEvent = await this.prisma.interaction.create({
-                data: {
-                    UserId: user.Id,
-                    ItemId: parseInt(event.ItemValue),
-                    InteractionTypeId: event.EventTypeId,
-                    CreatedAt: event.Timestamp,
-                    DomainId: domain.Id,
-                }
-            });
-
-            return createdEvent.Id;
+            for (const itemId of targetItemIds) {
+                await this.prisma.interaction.create({
+                    data: {
+                        UserId: user.Id,
+                        ItemId: itemId,
+                        InteractionTypeId: event.EventTypeId,
+                        CreatedAt: event.Timestamp,
+                        DomainId: domain.Id,
+                    }
+                });
+            }
         }
+
+        const createdEvent = await this.prisma.event.create({
+            data: {
+                EventTypeId: event.EventTypeId,
+                UserField: event.UserField,
+                UserValue: event.UserValue,
+                ItemField: event.ItemField,
+                ItemValue: event.ItemValue,
+                RatingValue: event.RatingValue,
+                ReviewValue: event.RatingReview,
+                Timestamp: event.Timestamp,
+                TrackingRuleId: event.TrackingRuleId,
+            }
+        });
+
+        return createdEvent.Id;
     }
 }
