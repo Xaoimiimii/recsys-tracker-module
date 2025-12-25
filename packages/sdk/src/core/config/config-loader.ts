@@ -12,7 +12,7 @@ import { OriginVerifier } from '../utils/origin-verifier';
 // Class để load và quản lý cấu hình tracker
 export class ConfigLoader {
   private readonly BASE_API_URL = process.env.API_URL || 'http://localhost:3000';
-  
+
   private config: TrackerConfig | null = null;
   private domainKey: string | null = null;
 
@@ -25,7 +25,7 @@ export class ConfigLoader {
       }
 
       const domainKey = window.__RECSYS_DOMAIN_KEY__;
-      
+
       if (!domainKey || typeof domainKey !== 'string') {
         console.error('[RecSysTracker] Invalid domain key');
         return null;
@@ -52,12 +52,24 @@ export class ConfigLoader {
 
       const mockConfig = (window as any).RecSysTrackerConfig;
       if (mockConfig) {
-          console.log("⚠️ [ConfigLoader] Detect Mock Config from Window. Overriding defaults...");
-          this.config = {
-              ...this.config,
-              ...mockConfig,
-              trackingRules: mockConfig.trackingRules || [] 
-          };
+        console.log("⚠️ [ConfigLoader] Detect Mock Config from Window. Overriding defaults...");
+        this.config = {
+          ...this.config,
+          ...mockConfig,
+          trackingRules: mockConfig.trackingRules || []
+        };
+      }
+
+      // Adapt Legacy Config (__TRACKER_CONFIG__)
+      const legacyRules = this.adaptLegacyConfig();
+      if (legacyRules.length > 0 && this.config) {
+        this.config.trackingRules = [...(this.config.trackingRules || []), ...legacyRules];
+
+        // Also adapt collectorUrl if needed
+        const legacyConfig = (window as any).__TRACKER_CONFIG__;
+        if (legacyConfig?.collectorUrl && this.config.trackEndpoint === `${this.BASE_API_URL}/event`) {
+          this.config.trackEndpoint = legacyConfig.collectorUrl;
+        }
       }
 
       return this.config;
@@ -69,10 +81,10 @@ export class ConfigLoader {
 
   // Lấy cấu hình từ server (remote)
   async fetchRemoteConfig(): Promise<TrackerConfig | null> {
-    if ((window as any).RecSysTrackerConfig || this.domainKey === 'TEST-DOMAIN-KEY') {
-        console.log("⚠️ [ConfigLoader] Mock Mode detected. Skipping Server Fetch.");
-        return this.config;
-    }
+    // if ((window as any).RecSysTrackerConfig || (window as any).__TRACKER_CONFIG__ || this.domainKey === 'TEST-DOMAIN-KEY') {
+    //   console.log("⚠️ [ConfigLoader] Local Config / Mock Mode detected. Skipping Server Fetch.");
+    //   return this.config;
+    // }
     if (!this.domainKey) {
       return this.config;
     }
@@ -98,7 +110,7 @@ export class ConfigLoader {
       // Bước 2: Lấy chi tiết từng rule
       let rulesData: any[] = [];
       if (Array.isArray(rulesListData) && rulesListData.length > 0) {
-        const ruleDetailsPromises = rulesListData.map(rule => 
+        const ruleDetailsPromises = rulesListData.map(rule =>
           fetch(`${this.BASE_API_URL}/rule/${rule.id}`)
             .then(res => res.ok ? res.json() : null)
             .catch(() => null)
@@ -137,7 +149,7 @@ export class ConfigLoader {
   // Transform rules từ server format sang SDK format
   private transformRules(rulesData: any[]): TrackingRule[] {
     if (!Array.isArray(rulesData)) return [];
-    
+
     return rulesData.map(rule => ({
       id: rule.Id?.toString() || rule.id?.toString(),
       name: rule.Name || rule.name,
@@ -153,7 +165,7 @@ export class ConfigLoader {
   // Transform conditions từ server format sang SDK format
   private transformConditions(conditionsData: any[]): Condition[] {
     if (!Array.isArray(conditionsData)) return [];
-    
+
     return conditionsData.map(condition => ({
       id: condition.Id || condition.id,
       value: condition.Value || condition.value,
@@ -166,7 +178,7 @@ export class ConfigLoader {
   // Transform payload mappings từ server format sang SDK format
   private transformPayloadMappings(payloadData: any[]): PayloadMapping[] {
     if (!Array.isArray(payloadData)) return [];
-    
+
     return payloadData.map(payload => ({
       id: payload.Id || payload.id,
       field: payload.Field || payload.field,
@@ -191,7 +203,7 @@ export class ConfigLoader {
         operatorId: 0,
       };
     }
-    
+
     return {
       id: targetData.Id || targetData.id || 0,
       value: targetData.Value || targetData.value || '',
@@ -203,7 +215,7 @@ export class ConfigLoader {
   // Transform return methods từ server format sang SDK format
   private transformReturnMethods(returnMethodsData: any): ReturnMethod[] {
     if (!returnMethodsData || !Array.isArray(returnMethodsData)) return [];
-    
+
     return returnMethodsData.map(method => ({
       id: method.Id || method.id,
       domainId: method.DomainID || method.domainId,
@@ -225,4 +237,40 @@ export class ConfigLoader {
   //     this.config = { ...this.config, ...updates };
   //   }
   // }
+  // Helper to adapt legacy __TRACKER_CONFIG__ to SDK rules
+  private adaptLegacyConfig(): TrackingRule[] {
+    const legacyConfig = (window as any).__TRACKER_CONFIG__;
+    if (!legacyConfig || !legacyConfig.rules || !Array.isArray(legacyConfig.rules)) {
+      return [];
+    }
+
+    console.log("[RecSysTracker] Adapting legacy tracker configuration...");
+
+    // Generate numeric IDs from timestamp + index to satisfy number type
+    const baseId = Date.now();
+
+    return legacyConfig.rules.map((rule: any, index: number) => ({
+      id: baseId + index,
+      name: rule.label || `Legacy Rule ${index}`,
+      eventTypeId: 100, // Custom ID for Network Rules adapted from legacy
+      domainId: 0,
+      trackingTargetId: 0,
+      conditions: [],
+      trackingTarget: { id: 0, value: '', patternId: 0, operatorId: 0 },
+      payloadMappings: [
+        {
+          id: baseId + index + 1000,
+          field: 'auto_value',
+          source: 'network_request', // Explicitly use network_request for PayloadBuilder
+          requestUrlPattern: rule.apiUrl,
+          requestMethod: rule.method,
+          value: rule.bodyPath,
+          trackingRuleId: baseId + index,
+          requestBodyPath: null,
+          urlPart: null,
+          urlPartValue: null
+        }
+      ] as PayloadMapping[]
+    }));
+  }
 }
