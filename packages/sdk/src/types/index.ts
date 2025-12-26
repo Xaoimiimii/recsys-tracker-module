@@ -14,10 +14,10 @@ export interface EventType {
 }
 
 export interface TrackingRule {
-  id: string;
+  id: number;
   name: string;
   domainId: number;
-  eventTypeId: number; // (click, rate, page view, ...)
+  eventTypeId: number; 
   trackingTargetId: number;
   payloadMappings: PayloadMapping[];
   conditions: Condition[];

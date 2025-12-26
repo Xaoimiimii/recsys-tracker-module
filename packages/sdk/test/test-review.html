@@ -1,0 +1,274 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Review Plugin Test Bench (Storage Mode)</title>
+    
+    <script>
+        // 1. SETUP MOCK DATA (Giả lập dữ liệu có sẵn trong Storage/Cookie)
+        // User lưu trong LocalStorage
+        localStorage.setItem('curr_user_id', 'USER-STORAGE-888');
+        localStorage.setItem('app_settings', JSON.stringify({ theme: 'dark', last_product: 'P-JSON-999' }));
+        
+        // Item lưu trong Cookie (Giả lập)
+        document.cookie = "browsing_history_last=P-COOKIE-777; path=/";
+
+        // 2. MOCK CONFIGURATION
+        window.__RECSYS_DOMAIN_KEY__ = '079251187f351b700844164bf0ac5fddebaa305af8732fe06ae631b921eaf9e7';
+
+        // window.RecSysTrackerConfig = {
+        //     trackEndpoint: 'http://localhost:3000/track',
+        //     trackingRules: [
+        //         // --- CASE 1: STORAGE MAPPING (User & Item from Storage) ---
+        //         {
+        //             id: 'RULE-STORAGE', 
+        //             name: 'Test Storage Mapping', 
+        //             eventTypeId: 5, // 5 = REVIEW
+        //             targetElement: { 
+        //                 targetElementValue: '#form-storage', 
+        //                 targetEventPatternId: 1, // CSS Selector
+        //                 targetOperatorId: 5      // Equals
+        //             },
+        //             payloadMappings: [
+        //                 // [UPDATE] User lấy từ LocalStorage
+        //                 { 
+        //                     field: 'userId', 
+        //                     source: 'local_storage', 
+        //                     value: 'curr_user_id' 
+        //                 },
+        //                 // [UPDATE] Item lấy từ Cookie
+        //                 { 
+        //                     field: 'itemId', 
+        //                     source: 'cookie', 
+        //                     value: 'browsing_history_last' 
+        //                 },
+        //                 // Content vẫn lấy từ Element (Textarea)
+        //                 { 
+        //                     field: 'content', 
+        //                     source: 'element', 
+        //                     value: '#storage-content' 
+        //                 }
+        //             ]
+        //         },
+
+        //         // --- CASE 2: NESTED JSON STORAGE ---
+        //         // Test khả năng đọc JSON lồng nhau: app_settings.last_product
+        //         {
+        //             id: 'RULE-NESTED', 
+        //             name: 'Test Nested JSON Storage', 
+        //             eventTypeId: 5,
+        //             targetElement: { 
+        //                 targetElementValue: '#form-nested', 
+        //                 targetEventPatternId: 1, 
+        //                 targetOperatorId: 5 
+        //             },
+        //             payloadMappings: [
+        //                 { field: 'userId', source: 'local_storage', value: 'curr_user_id' },
+        //                 // Item lấy từ JSON trong LS: {"last_product": "..."}
+        //                 { field: 'itemId', source: 'local_storage', value: 'app_settings.last_product' },
+        //                 { field: 'content', source: 'element', value: '#nested-content' }
+        //             ]
+        //         },
+
+        //         // --- CASE 3: AUTO DETECT (Fallback) ---
+        //         // Không map gì cả, để SDK tự fallback (Radar/Auto Content)
+        //         {
+        //             id: 'RULE-AUTO', 
+        //             name: 'Test Auto Fallback', 
+        //             eventTypeId: 5,
+        //             targetElement: { 
+        //                 targetElementValue: '#form-auto', 
+        //                 targetEventPatternId: 1, 
+        //                 targetOperatorId: 5 
+        //             },
+        //             payloadMappings: [] // Rỗng
+        //         }
+        //     ]
+        // };
+    </script>
+    
+    <script src="http://localhost:3000/dist/loader.js"></script>
+    
+    <style>
+        body { font-family: 'Segoe UI', sans-serif; background: #f0f2f5; padding: 20px; max-width: 1000px; margin: 0 auto; color: #333; }
+        .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 20px; margin-top: 20px; }
+        .card { background: white; padding: 20px; border-radius: 8px; box-shadow: 0 4px 6px rgba(0,0,0,0.05); border-top: 4px solid #ddd; position: relative; }
+        
+        .c1 { border-top-color: #6f42c1; } /* Tím */
+        .c2 { border-top-color: #fd7e14; } /* Cam */
+        .c3 { border-top-color: #20c997; } /* Xanh Teal */
+
+        .badge { position: absolute; top: 10px; right: 10px; background: #eee; padding: 4px 8px; border-radius: 4px; font-size: 11px; font-weight: bold; color: #555; }
+        
+        input, textarea { width: 100%; padding: 10px; margin: 5px 0 15px; border: 1px solid #ddd; border-radius: 4px; box-sizing: border-box; }
+        button { width: 100%; padding: 10px; border: none; border-radius: 4px; color: white; font-weight: bold; cursor: pointer; transition: 0.3s; }
+        button:hover { opacity: 0.9; }
+        
+        .btn-submit { background: #4e73df; }
+        .info-box { background: #eef2f7; padding: 10px; border-radius: 5px; font-size: 0.85em; margin-bottom: 15px; border-left: 3px solid #4e73df; }
+
+        #console-box { background: #1e1e1e; color: #0f0; padding: 15px; border-radius: 8px; height: 350px; overflow-y: auto; font-family: monospace; font-size: 13px; margin-top: 30px; border: 1px solid #333; }
+        .log-line { border-bottom: 1px solid #333; padding: 4px 0; word-break: break-all; }
+        .log-highlight { color: #f1c40f; }
+    </style>
+</head>
+<body>
+
+    <div style="text-align: center; margin-bottom: 30px;">
+        <h1>⭐ Review Plugin Test (Storage Mode)</h1>
+        <p>Kiểm tra lấy dữ liệu từ LocalStorage, Cookie và JSON Nested.</p>
+        
+        <div style="margin-top: 10px;">
+            <button onclick="resetData()" style="width: auto; background: #e74a3b; font-size: 12px; padding: 5px 15px;">Reset Mock Data</button>
+        </div>
+    </div>
+
+    <div class="grid">
+        
+        <div class="card c1">
+            <span class="badge">LS & Cookie</span>
+            <h3>1. Storage Mapping</h3>
+            <div class="info-box">
+                <strong>UserId:</strong> <code>local_storage['curr_user_id']</code><br>
+                <strong>ItemId:</strong> <code>cookie['browsing_history_last']</code><br>
+                (Không cần hidden input)
+            </div>
+
+            <form id="form-storage" onsubmit="handleSubmit(event)">
+                <label>Review Sản phẩm (P-COOKIE-777):</label>
+                <textarea id="storage-content" placeholder="Nhập review..."></textarea>
+                <button type="submit" class="btn-submit">Gửi (Simple)</button>
+            </form>
+        </div>
+
+        <div class="card c2">
+            <span class="badge">Nested JSON</span>
+            <h3>2. JSON Object Mapping</h3>
+            <div class="info-box">
+                <strong>UserId:</strong> <code>local_storage['curr_user_id']</code><br>
+                <strong>ItemId:</strong> <code>app_settings.last_product</code><br>
+                (Parse JSON từ LS)
+            </div>
+
+            <form id="form-nested" onsubmit="handleSubmit(event)">
+                <label>Review Sản phẩm (P-JSON-999):</label>
+                <textarea id="nested-content" placeholder="Nhập review..."></textarea>
+                <button type="submit" class="btn-submit">Gửi (Nested)</button>
+            </form>
+        </div>
+
+        <div class="card c3" >
+            <span class="badge">Auto-Detect</span>
+            <h3>3. Fallback Mode</h3>
+            <div class="info-box">
+                <strong>UserId:</strong> IdentityManager (hoặc rỗng)<br>
+                <strong>ItemId:</strong> Radar Scan (từ thẻ Card)<br>
+                <strong>Content:</strong> Auto-detect textarea
+            </div>
+
+            <form id="form-auto" onsubmit="handleSubmit(event)">
+                <label>Review Sản phẩm (P-JSON-999):</label>
+                <label>Ý kiến của bạn:</label>
+                <textarea name="comment_body" placeholder="Plugin tự tìm text này..."></textarea>
+                <button type="submit" class="btn-submit">Gửi (Auto)</button>
+            </form>
+        </div>
+
+    </div>
+
+    <div id="console-box">
+        <div class="log-line">--- Ready. SDK Logs will appear here ---</div>
+    </div>
+
+    <script>
+        // --- UTILS ---
+        function resetData() {
+            localStorage.setItem('curr_user_id', 'USER-STORAGE-888');
+            localStorage.setItem('app_settings', JSON.stringify({ theme: 'dark', last_product: 'P-JSON-999' }));
+            document.cookie = "browsing_history_last=P-COOKIE-777; path=/";
+            alert("Đã reset LocalStorage và Cookie!");
+            location.reload();
+        }
+
+        function log(msg, type='info') {
+            const box = document.getElementById('console-box');
+            const div = document.createElement('div');
+            div.className = 'log-line';
+            if(type === 'highlight') div.className += ' log-highlight';
+            
+            const time = new Date().toLocaleTimeString();
+            div.innerHTML = `<span style="opacity:0.5">[${time}]</span> ${msg}`;
+            box.prepend(div);
+
+            
+        }
+
+        function handleSubmit(e) {
+            e.preventDefault(); 
+            log(`📝 Form Submitted: ${e.target.id}`, 'highlight');
+        }
+
+        // --- INTERCEPT SDK LOGS ---
+        const originalLog = console.log;
+        const originalWarn = console.warn;
+        const originalError = console.error;
+
+        // Override console.log
+        console.log = function(...args) {
+            originalLog.apply(console, args);
+            const txt = args.map(a => (typeof a === 'object' ? JSON.stringify(a) : String(a))).join(' ');
+
+            // Filter logs
+            if (txt.includes('ReviewPlugin') || txt.includes('Mapped Data') || txt.includes('PayloadBuilder') || txt.includes('Auto-detected')) {
+                let formatted = txt
+                    .replace('USER-STORAGE-888', '<b style="color:#0f0">USER-STORAGE-888</b>')
+                    .replace('P-COOKIE-777', '<b style="color:#0f0">P-COOKIE-777</b>')
+                    .replace('P-JSON-999', '<b style="color:#0f0">P-JSON-999</b>');
+                
+                // [FIX QUAN TRỌNG] Dòng này bị thiếu nên log không hiện
+                log(formatted.replace('[ReviewPlugin]', '🤖')); 
+            }
+            if (txt.includes('enqueue') || txt.includes('payload')) {
+                log(`🚀 SENT: ${txt}`, 'highlight');
+            }
+            // Log cấu hình Mock (để biết SDK đã load config)
+            if (txt.includes('Mock Mode detected')) {
+                log(txt, 'highlight');
+            }
+        };
+
+        // Override Error để bắt lỗi SDK chết
+        console.error = function(...args) {
+            originalError.apply(console, args);
+            log(`❌ ERROR: ${args.join(' ')}`, 'highlight');
+        };
+
+        // Override Warn
+        console.warn = function(...args) {
+            originalWarn.apply(console, args);
+            // Ẩn warning 500 nếu muốn, hoặc hiện ra
+            if (!args[0].toString().includes('500')) {
+                log(`⚠️ WARN: ${args.join(' ')}`);
+            }
+        };
+
+        // window.addEventListener('load', () => {
+        //     setTimeout(() => {
+        //         if (window.RecSysTracker) {
+        //             console.log("🔧 [Manual Fix] Forcing plugins to START...");
+                    
+        //             // Gọi hàm startPlugins() công khai
+        //             if (typeof window.RecSysTracker.startPlugins === 'function') {
+        //                 window.RecSysTracker.startPlugins();
+        //             } 
+        //             // Fallback: Nếu dùng PluginManager
+        //             else if (window.RecSysTracker.pluginManager) {
+        //                 window.RecSysTracker.pluginManager.startAll();
+        //             }
+        //         }
+        //     }, 1000); // Chờ 1s để đảm bảo SDK load xong
+        // });
+    </script>
+</body>
+</html>

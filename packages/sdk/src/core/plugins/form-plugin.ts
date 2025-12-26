@@ -5,6 +5,30 @@ import { TrackerContextAdapter } from './adapters/tracker-context-adapter';
 import { getAIItemDetector, AIItemDetector } from './utils/ai-item-detector';
 import { getUserIdentityManager, UserIdentityManager } from './utils/user-identity-manager';
 
+const TARGET_PATTERN = {
+    CSS_SELECTOR: 1,    
+    DOM_ATTRIBUTE: 2,
+    DATA_ATTRIBUTE: 3,
+};
+
+const CONDITION_PATTERN = {
+    URL_PARAM: 1,
+    CSS_SELECTOR: 2,    
+    DOM_ATTRIBUTE: 3,
+    DATA_ATTRIBUTE: 4,
+};
+
+const TARGET_OPERATOR = {
+    CONTAINS: 1,
+    NOT_CONTAINS: 2,
+    STARTS_WITH: 3,
+    ENDS_WITH: 4,
+    EQUALS: 5,
+    NOT_EQUALS: 6,
+    EXISTS: 7,
+    NOT_EXISTS: 8
+};
+
 export class FormPlugin extends BasePlugin {
     public readonly name = 'FormPlugin';
 
@@ -45,56 +69,6 @@ export class FormPlugin extends BasePlugin {
         }, 'FormPlugin.stop');
     }
 
-    // private handleSubmit(event: Event): void {
-    //     if (!this.context || !this.detector) return;
-
-    //     const form = event.target as HTMLFormElement;
-
-    //     // 1. Lấy rules có Trigger là RATE (Giả sử ID = 2)
-    //     const rateRules = this.context.config.getRules(2); 
-
-    //     if (rateRules.length === 0) return;
-
-    //     for (const rule of rateRules) {
-    //         // 2. Check xem Form này có khớp với Rule không (dựa vào selector)
-    //         const selector = rule.targetElement.targetElementValue || '';
-    //         if (!selector) continue;
-
-    //         // Logic check khớp selector đơn giản (giống checkTargetMatch cũ nhưng gọn hơn)
-    //         let isMatch = false;
-    //         try {
-    //             if (form.matches(selector)) isMatch = true;
-    //             // Fallback check ID nếu selector là #id
-    //             else if (selector.startsWith('#') && form.id === selector.substring(1)) isMatch = true;
-    //         } catch (e) { console.warn('Invalid selector', selector); }
-
-    //         if (isMatch) {
-    //             // 1. Detect Item Context
-    //             const structuredItem = this.detector.detectItem(form);
-
-    //             // 2. Extract Form Data
-    //             const { rateValue, reviewText } = this.extractFormData(form, rule);
-
-    //             // 3. Build Payload cơ bản
-    //             const payload = this.context.payloadBuilder.build(structuredItem, rule);
-
-    //             // 4. Override event type
-    //             payload.event = 'rate_submit';
-
-    //             // 5. Đưa dữ liệu vào METADATA (Merge với metadata cũ nếu có)
-    //             payload.metadata = {
-    //                 ...(payload.metadata || {}), 
-    //                 rateValue: rateValue,   
-    //                 reviewText: reviewText  
-    //             };
-
-    //             // 6. Gửi đi
-    //             this.context.eventBuffer.enqueue(payload);
-    //             return;
-    //         }
-    //     }
-    // }
-
     private handleSubmit(event: Event): void {
         console.log("🔥 [DEBUG] Sự kiện Submit đã được bắt!");
 
@@ -119,81 +93,179 @@ export class FormPlugin extends BasePlugin {
         }
 
         for (const rule of rateRules) {
-            // Lấy selector từ cấu trúc lồng nhau (như trong index.ts bạn viết)
-            // Dùng optional chaining (?.) để an toàn
-            const selector = rule.trackingTarget?.value || (rule as any).targetElementValue;
+            const isTargetMatch = this.checkTargetMatch(form, rule);
+            
+            if (isTargetMatch) {
+                // B. Kiểm tra Conditions (Dùng CONDITION_PATTERN)
+                const isConditionMatch = this.checkConditions(form, rule);
 
-            console.log(`   👉 Checking Rule [${rule.id}]: Cần tìm selector "${selector}"`);
+                if (isConditionMatch) {
+                    console.log(`✅ [DEBUG] Rule "${rule.name}" Matched (Target & Conditions)!`);
 
-            if (!selector) {
-                console.log("      -> Bỏ qua: Rule không có selector");
-                continue;
-            }
+                    // C. Extract & Process Data
+                    const { rateValue, reviewText, detectedId } = this.extractFormData(form, rule);
+                    let structuredItem = this.detector.detectItem(form);
 
-            // Logic check khớp
-            let isMatch = false;
-            try {
-                if (form.matches(selector)) isMatch = true;
-                else if (selector.startsWith('#') && formId === selector.substring(1)) isMatch = true;
-            } catch (e) {
-                console.warn('      -> Lỗi cú pháp selector', e);
-            }
-
-            if (isMatch) {
-                console.log("✅ [DEBUG] MATCH THÀNH CÔNG! Bắt đầu trích xuất dữ liệu...");
-
-                // 1. Detect Item Context
-                let structuredItem = this.detector.detectItem(form);
-
-                const isGarbageId = structuredItem?.id?.startsWith('pos_') ||
-                    structuredItem?.source === 'fallback_position_based' ||
-                    structuredItem?.name?.startsWith('Element at');
-
-                if (!structuredItem || !structuredItem.id || structuredItem.id === 'N/A (Failed)' || isGarbageId) {
-                    console.log("🔍 [FormPlugin] AI form failed. Scanning surrounding context...");
-                    const contextInfo = this.scanSurroundingContext(form);
-
-                    if (contextInfo.id) {
-                        // Merge kết quả tìm được
-                        structuredItem = {
+                    // Logic Tam Trụ (Hidden Input -> AI -> Radar)
+                    if (detectedId) {
+                         structuredItem = {
+                            ...(structuredItem || {}),
+                            id: detectedId,
                             confidence: 1,
-                            source: contextInfo.source,
-                            context: 'dom_context',
-                            metadata: {},
-                            ...(structuredItem || {}), // Giữ lại metadata cũ nếu có
-                            id: contextInfo.id,
-                            name: contextInfo.name || structuredItem?.name || '',
-                            type: contextInfo.type || structuredItem?.type || ''
-                        };
-                        console.log("[FormPlugin] Found Context Item:", contextInfo);
+                            source: 'form_hidden_input', 
+                            context: 'form_internal',
+                            name: structuredItem?.name || 'Unknown Item',
+                            type: structuredItem?.type || 'item'
+                         };
+                    } else {
+                        const isGarbageId = !structuredItem || !structuredItem.id || structuredItem.id === 'N/A (Failed)';
+                        if (isGarbageId) {
+                            const contextInfo = this.scanSurroundingContext(form);
+                            if (contextInfo.id) {
+                                structuredItem = {
+                                    ...(structuredItem || {}),
+                                    id: contextInfo.id,
+                                    confidence: 1,
+                                    source: contextInfo.source,
+                                    context: 'dom_context',
+                                    name: contextInfo.name || structuredItem?.name || 'Unknown Item',
+                                    type: contextInfo.type || structuredItem?.type || 'item',
+                                    metadata: structuredItem?.metadata || {}
+                                };
+                            }
+                        }
                     }
+                    // D. Build & Send Payload
+                    const payload = this.context.payloadBuilder.build(structuredItem, rule);
+                    this.enrichPayload(payload, structuredItem, { rateValue, reviewText });
+                    
+                    this.context.eventBuffer.enqueue(payload);
+                    return; 
+                } else {
+                    console.log(`⚠️ Match Target nhưng FAIL Conditions của Rule: ${rule.name}`);
                 }
-
-                // 2. Extract Form Data
-                const { rateValue, reviewText } = this.extractFormData(form, rule);
-
-                console.log("📦 [DEBUG] Dữ liệu trích xuất được:", { rateValue, reviewText });
-
-                // 3. Build Payload
-                const payload = this.context.payloadBuilder.build(structuredItem, rule);
-
-                this.enrichPayload(payload, structuredItem, { rateValue, reviewText });
-
-                payload.event = 'rate_submit';
-                payload.metadata = {
-                    ...(payload.metadata || {}),
-                    rateValue: rateValue,
-                    reviewText: reviewText
-                };
-
-                // 4. Send
-                console.log("🚀 [DEBUG] Đang gửi vào Buffer:", payload);
-                this.context.eventBuffer.enqueue(payload);
-                return;
-            } else {
-                console.log(`      ❌ KHÔNG KHỚP: Form "${formId}" != Selector "${selector}"`);
             }
         }
+    }
+
+    /**
+     * Hàm kiểm tra xem Form hiện tại có khớp với Rule không
+     * Hỗ trợ mọi Operator (Equals, Contains, Regex...) và Pattern (CSS, ID...)
+     */
+    private checkTargetMatch(form: HTMLFormElement, rule: any): boolean {
+        const target = rule.targetElement || rule.TargetElement;
+        if (!target) return false;
+
+        const patternId = target.targetEventPatternId || target.EventPatternID || 1;
+        const operatorId = target.targetOperatorId || target.OperatorID || 5;
+        const expectedValue = target.targetElementValue || target.Value || '';
+
+        let actualValue: string | null = null;
+
+        switch (patternId) {
+            case TARGET_PATTERN.CSS_SELECTOR: // 1
+                try {
+                    const isMatch = form.matches(expectedValue);
+                    if (operatorId === TARGET_OPERATOR.NOT_EQUALS || operatorId === TARGET_OPERATOR.NOT_EXISTS) return !isMatch;
+                    return isMatch;
+                } catch { return false; }
+
+            case TARGET_PATTERN.DOM_ATTRIBUTE: // 2
+                actualValue = form.id;
+                break;
+
+            case TARGET_PATTERN.DATA_ATTRIBUTE: // 3
+                actualValue = form.getAttribute('data-form-name') || form.getAttribute('name') || '';
+                break;
+            
+            // Đã xóa case REGEX_FIELDS
+
+            default: 
+                try { return form.matches(expectedValue); } catch { return false; }
+        }
+
+        return this.compareValues(actualValue, expectedValue, operatorId);
+    }
+
+    /**
+     * CHECK CONDITIONS: Dùng CONDITION_PATTERN
+     */
+    private checkConditions(form: HTMLFormElement, rule: any): boolean {
+        const conditions = rule.Conditions || rule.conditions;
+        if (!conditions || conditions.length === 0) return true;
+
+        for (const condition of conditions) {
+            const patternId = condition.EventPatternID || condition.eventPatternId || 1;
+            const operatorId = condition.OperatorID || condition.operatorId || 5;
+            const expectedValue = condition.Value || condition.value || '';
+
+            let actualValue: string | null = null;
+            let isMet = false;
+
+            switch (patternId) {
+                case CONDITION_PATTERN.URL_PARAM: // 1
+                    const urlParams = new URLSearchParams(window.location.search);
+                    if (urlParams.has(expectedValue)) {
+                        actualValue = urlParams.get(expectedValue);
+                    } else {
+                        actualValue = window.location.href;
+                    }
+                    break;
+
+                case CONDITION_PATTERN.CSS_SELECTOR: // 2
+                    try {
+                        isMet = form.matches(expectedValue);
+                        if (this.isNegativeOperator(operatorId)) {
+                            if (!isMet) continue; 
+                            return false; 
+                        }
+                        if (!isMet) return false;
+                        continue; 
+                    } catch { return false; }
+
+                case CONDITION_PATTERN.DOM_ATTRIBUTE: // 3
+                    actualValue = form.id;
+                    break;
+
+                case CONDITION_PATTERN.DATA_ATTRIBUTE: // 4
+                    actualValue = form.getAttribute(expectedValue); 
+                    break;
+
+                default:
+                    actualValue = '';
+            }
+
+            isMet = this.compareValues(actualValue, expectedValue, operatorId);
+            
+            if (!isMet) {
+                console.log(`❌ Condition Failed: Pattern ${patternId}, Expect "${expectedValue}" vs Actual "${actualValue}"`);
+                return false;
+            }
+        }
+        return true;
+    }
+
+    private compareValues(actual: string | null, expected: string, operatorId: number): boolean {
+        if (actual === null) actual = '';
+        
+        switch (operatorId) {
+            case TARGET_OPERATOR.EQUALS: return actual === expected;
+            case TARGET_OPERATOR.NOT_EQUALS: return actual !== expected;
+            case TARGET_OPERATOR.CONTAINS: return actual.includes(expected);
+            case TARGET_OPERATOR.NOT_CONTAINS: return !actual.includes(expected);
+            case TARGET_OPERATOR.STARTS_WITH: return actual.startsWith(expected);
+            case TARGET_OPERATOR.ENDS_WITH: return actual.endsWith(expected);
+            // Đã xóa case REGEX
+            case TARGET_OPERATOR.EXISTS: return actual !== '' && actual !== null;
+            case TARGET_OPERATOR.NOT_EXISTS: return actual === '' || actual === null;
+            default: return actual === expected;
+        }
+    }
+
+    private isNegativeOperator(opId: number): boolean {
+        return opId === TARGET_OPERATOR.NOT_EQUALS || 
+               opId === TARGET_OPERATOR.NOT_CONTAINS || 
+               opId === TARGET_OPERATOR.NOT_EXISTS;
     }
 
     /**
@@ -319,7 +391,7 @@ export class FormPlugin extends BasePlugin {
     }
 
     // Helper: Lấy dữ liệu từ form
-    private extractFormData(form: HTMLFormElement, rule: any): { rateValue: number, reviewText: string } {
+    private extractFormData(form: HTMLFormElement, rule: any): { rateValue: number, reviewText: string, detectedId: string } {
         const formData = new FormData(form);
         const data: Record<string, any> = {};
 
@@ -329,6 +401,7 @@ export class FormPlugin extends BasePlugin {
 
         let rateValue = 0;
         let reviewText = '';
+        let detectedId = '';
 
         // Ưu tiên config từ Rule
         if (rule.payload && rule.payload.length > 0) {
@@ -338,10 +411,19 @@ export class FormPlugin extends BasePlugin {
                 else reviewText = String(val || '');
             });
         } else {
+            const idKeywords = ['productid', 'itemid', 'item_id', 'product_id', 'id', 'objectid', 'entity_id'];
             // Auto-detect Logic
             for (const [key, val] of Object.entries(data)) {
                 const k = key.toLowerCase();
                 const vStr = String(val);
+
+                if (idKeywords.includes(k) && vStr.length > 0 && vStr.length < 50) {
+                    // Loại trừ các giá trị rác nếu cần
+                    if (vStr !== '0' && vStr !== 'undefined') {
+                        detectedId = vStr;
+                        console.log(`💡 [FormPlugin] Tìm thấy ID trong input [${key}]: ${vStr}`);
+                    }
+                }
 
                 // Detect Rating
                 if (k.includes('rate') || k.includes('star') || k.includes('score') || k.includes('rating')) {
@@ -362,6 +444,6 @@ export class FormPlugin extends BasePlugin {
             }
         }
 
-        return { rateValue, reviewText };
+        return { rateValue, reviewText, detectedId };
     }
 }

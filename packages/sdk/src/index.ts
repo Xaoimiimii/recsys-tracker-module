@@ -10,6 +10,7 @@ import {
 } from './core';
 import { TrackerConfig } from './types';
 import { DEFAULT_API_URL, DEFAULT_TRACK_ENDPOINT_PATH } from './core/constants';
+import { PayloadBuilder } from './core/payload/payload-builder';
 
 // RecSysTracker - Main SDK class
 export class RecSysTracker {
@@ -24,6 +25,7 @@ export class RecSysTracker {
   private userId: string | null = null;
   private isInitialized: boolean = false;
   private sendInterval: number | null = null;
+  public payloadBuilder: PayloadBuilder;
 
   constructor() {
     this.configLoader = new ConfigLoader();
@@ -31,6 +33,7 @@ export class RecSysTracker {
     this.eventBuffer = new EventBuffer();
     this.metadataNormalizer = new MetadataNormalizer();
     this.pluginManager = new PluginManager(this);
+    this.payloadBuilder = new PayloadBuilder();
   }
 
   // Khởi tạo SDK - tự động gọi khi tải script
@@ -100,12 +103,14 @@ export class RecSysTracker {
     // Get dynamic IDs
     const clickId = this.getEventTypeId('Click');
     const rateId = this.getEventTypeId('Rating');
+    const reviewId = this.getEventTypeId('Review');
     const pageViewId = this.getEventTypeId('Page View');
     const scrollId = this.getEventTypeId('Scroll');
 
     // Check specific rules (chỉ check nếu tìm thấy ID)
     const hasClickRules = clickId ? this.config.trackingRules.some(rule => rule.eventTypeId === clickId) : false;
     const hasRateRules = rateId ? this.config.trackingRules.some(rule => rule.eventTypeId === rateId) : false;
+    const hasReviewRules = reviewId ? this.config.trackingRules.some(rule => rule.eventTypeId === reviewId) : false;
     const hasPageViewRules = pageViewId ? this.config.trackingRules.some(rule => rule.eventTypeId === pageViewId) : false;
     const hasScrollRules = scrollId ? this.config.trackingRules.some(rule => rule.eventTypeId === scrollId) : false;
 
@@ -120,6 +125,22 @@ export class RecSysTracker {
         });
         pluginPromises.push(clickPromise);
       }
+    
+      if (hasRateRules) {
+        const formPromise = import('./core/plugins/form-plugin').then(({ FormPlugin }) => {
+          this.use(new FormPlugin());
+          console.log('[RecSysTracker] Auto-registered FormPlugin based on tracking rules');
+        });
+        pluginPromises.push(formPromise);
+      }
+
+      if (hasReviewRules) {
+          const scrollPromise = import('./core/plugins/review-plugin').then(({ ReviewPlugin }) => {
+            this.use(new ReviewPlugin());
+            console.log('[RecSysTracker] Auto-registered ScrollPlugin');
+          });
+          pluginPromises.push(scrollPromise);
+      }
 
       if (hasPageViewRules) {
         const pageViewPromise = import('./core/plugins/page-view-plugin').then(({ PageViewPlugin }) => {
@@ -129,20 +150,12 @@ export class RecSysTracker {
         pluginPromises.push(pageViewPromise);
       }
 
-      if (hasRateRules) {
-        const formPromise = import('./core/plugins/form-plugin').then(({ FormPlugin }) => {
-          this.use(new FormPlugin());
-          console.log('[RecSysTracker] Auto-registered FormPlugin based on tracking rules');
-        });
-        pluginPromises.push(formPromise);
-      }
-
-      if (hasScrollRules) {
-        const scrollPromise = import('./core/plugins/scroll-plugin').then(({ ScrollPlugin }) => {
-          this.use(new ScrollPlugin());
-          console.log('[RecSysTracker] Auto-registered ScrollPlugin based on tracking rules');
-        });
-        pluginPromises.push(scrollPromise);
+      if (hasScrollRules) { 
+          const scrollPromise = import('./core/plugins/scroll-plugin').then(({ ScrollPlugin }) => {
+            this.use(new ScrollPlugin());
+            console.log('[RecSysTracker] Auto-registered ScrollPlugin');
+          });
+          pluginPromises.push(scrollPromise);
       }
 
       // Chờ tất cả plugin được đăng ký trước khi khởi động
@@ -184,9 +197,9 @@ export class RecSysTracker {
         ...(eventData.reviewValue !== undefined && { reviewValue: eventData.reviewValue }),
       };
 
-      this.eventBuffer.add(trackedEvent);
-    }, 'track');
-  }
+        this.eventBuffer.add(trackedEvent);
+      }, 'track');
+    }
 
   // Setup batch sending of events
   private setupBatchSending(): void {
@@ -381,6 +394,7 @@ export { ClickPlugin } from './core/plugins/click-plugin';
 export { PageViewPlugin } from './core/plugins/page-view-plugin';
 export { FormPlugin } from './core/plugins/form-plugin';
 export { ScrollPlugin } from './core/plugins/scroll-plugin';
+export { ReviewPlugin } from './core/plugins/review-plugin';
 
 // Export types for TypeScript users
 export type * from './types';

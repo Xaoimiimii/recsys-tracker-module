@@ -22,11 +22,17 @@ export interface IAIItemDetectionResult {
     context?: string;
     metadata?: Record<string, any>;
 }
+export interface IPayloadMapping {
+    field: string;
+    source: string;
+    value: string;
+}
 export interface IPayloadExtraData {
     regexMatch?: RegExpMatchArray;
 }
 export interface IPayloadBuilder {
-    build: (element: Element | IAIItemDetectionResult | null, rule: TrackingRule, extraData?: IPayloadExtraData) => IRecsysPayload;
+    build(element: Element | IAIItemDetectionResult | null, rule: TrackingRule, extraData?: IPayloadExtraData): IRecsysPayload;
+    build(mappings: IPayloadMapping[], contextElement?: HTMLElement): Record<string, any>;
 }
 export interface IEventBuffer {
     enqueue: (payload: IRecsysPayload) => void;

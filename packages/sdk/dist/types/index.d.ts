@@ -12,7 +12,7 @@ export interface EventType {
     name: string;
 }
 export interface TrackingRule {
-    id: string;
+    id: number;
     name: string;
     domainId: number;
     eventTypeId: number;

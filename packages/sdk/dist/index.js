@@ -1,5 +1,6 @@
 import { ConfigLoader, ErrorBoundary, EventBuffer, EventDispatcher, MetadataNormalizer, DisplayManager, PluginManager } from './core';
 import { DEFAULT_API_URL, DEFAULT_TRACK_ENDPOINT_PATH } from './core/constants';
+import { PayloadBuilder } from './core/payload/payload-builder';
 // RecSysTracker - Main SDK class
 export class RecSysTracker {
     constructor() {
@@ -14,6 +15,7 @@ export class RecSysTracker {
         this.eventBuffer = new EventBuffer();
         this.metadataNormalizer = new MetadataNormalizer();
         this.pluginManager = new PluginManager(this);
+        this.payloadBuilder = new PayloadBuilder();
     }
     // Khởi tạo SDK - tự động gọi khi tải script
     async init() {
@@ -72,11 +74,13 @@ export class RecSysTracker {
         // Get dynamic IDs
         const clickId = this.getEventTypeId('Click');
         const rateId = this.getEventTypeId('Rating');
+        const reviewId = this.getEventTypeId('Review');
         const pageViewId = this.getEventTypeId('Page View');
         const scrollId = this.getEventTypeId('Scroll');
         // Check specific rules (chỉ check nếu tìm thấy ID)
         const hasClickRules = clickId ? this.config.trackingRules.some(rule => rule.eventTypeId === clickId) : false;
         const hasRateRules = rateId ? this.config.trackingRules.some(rule => rule.eventTypeId === rateId) : false;
+        const hasReviewRules = reviewId ? this.config.trackingRules.some(rule => rule.eventTypeId === reviewId) : false;
         const hasPageViewRules = pageViewId ? this.config.trackingRules.some(rule => rule.eventTypeId === pageViewId) : false;
         const hasScrollRules = scrollId ? this.config.trackingRules.some(rule => rule.eventTypeId === scrollId) : false;
         // Chỉ tự động đăng ký nếu chưa có plugin nào được đăng ký
@@ -89,13 +93,6 @@ export class RecSysTracker {
                 });
                 pluginPromises.push(clickPromise);
             }
-            if (hasPageViewRules) {
-                const pageViewPromise = import('./core/plugins/page-view-plugin').then(({ PageViewPlugin }) => {
-                    this.use(new PageViewPlugin());
-                    console.log('[RecSysTracker] Auto-registered PageViewPlugin based on tracking rules');
-                });
-                pluginPromises.push(pageViewPromise);
-            }
             if (hasRateRules) {
                 const formPromise = import('./core/plugins/form-plugin').then(({ FormPlugin }) => {
                     this.use(new FormPlugin());
@@ -103,10 +100,24 @@ export class RecSysTracker {
                 });
                 pluginPromises.push(formPromise);
             }
+            if (hasReviewRules) {
+                const scrollPromise = import('./core/plugins/review-plugin').then(({ ReviewPlugin }) => {
+                    this.use(new ReviewPlugin());
+                    console.log('[RecSysTracker] Auto-registered ScrollPlugin');
+                });
+                pluginPromises.push(scrollPromise);
+            }
+            if (hasPageViewRules) {
+                const pageViewPromise = import('./core/plugins/page-view-plugin').then(({ PageViewPlugin }) => {
+                    this.use(new PageViewPlugin());
+                    console.log('[RecSysTracker] Auto-registered PageViewPlugin based on tracking rules');
+                });
+                pluginPromises.push(pageViewPromise);
+            }
             if (hasScrollRules) {
                 const scrollPromise = import('./core/plugins/scroll-plugin').then(({ ScrollPlugin }) => {
                     this.use(new ScrollPlugin());
-                    console.log('[RecSysTracker] Auto-registered ScrollPlugin based on tracking rules');
+                    console.log('[RecSysTracker] Auto-registered ScrollPlugin');
                 });
                 pluginPromises.push(scrollPromise);
             }
@@ -305,4 +316,5 @@ export { ClickPlugin } from './core/plugins/click-plugin';
 export { PageViewPlugin } from './core/plugins/page-view-plugin';
 export { FormPlugin } from './core/plugins/form-plugin';
 export { ScrollPlugin } from './core/plugins/scroll-plugin';
+export { ReviewPlugin } from './core/plugins/review-plugin';
 //# sourceMappingURL=index.js.map
