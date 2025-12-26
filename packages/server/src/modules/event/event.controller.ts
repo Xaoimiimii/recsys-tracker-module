@@ -11,7 +11,6 @@ export class EventController {
     @ApiOperation({ summary: 'Create a new event' })
     async addEvent(@Body() body: CreateEventDto) {
         const result = await this.eventService.addEvent(body);
-
         return {
             statusCode: 201,
             message: 'Event was created successfully',

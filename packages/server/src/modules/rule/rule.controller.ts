@@ -67,7 +67,7 @@ export class RuleController {
             throw new NotFoundException(`No rules found for domain key '${key}'.`);
         }
 
-        const result = rules.map(r => ({ id: r.Id, name: r.Name, EventTypeName: r.EventType.Name }));
-        return result;
+        // const result = rules.map(r => ({ id: r.Id, name: r.Name, EventTypeName: r.EventType.Name }));
+        return rules;
     }
 }
