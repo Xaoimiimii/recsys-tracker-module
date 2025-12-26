@@ -489,6 +489,20 @@ class EventBuffer {
         if (this.queue.length >= this.maxQueueSize) {
             this.queue.shift();
         }
+        console.log('[EventBuffer] Payload được thêm vào queue:', {
+            id: event.id,
+            eventTypeId: event.eventTypeId,
+            trackingRuleId: event.trackingRuleId,
+            domainKey: event.domainKey,
+            userField: event.userField,
+            userValue: event.userValue,
+            itemField: event.itemField,
+            itemValue: event.itemValue,
+            ratingValue: event.ratingValue,
+            reviewValue: event.reviewValue,
+            timestamp: event.timestamp,
+            queueSize: this.queue.length + 1
+        });
         this.queue.push(event);
         this.persistToStorage();
     }
@@ -614,6 +628,21 @@ class EventDispatcher {
             try {
                 const success = await this.sendWithStrategy(payload, strategy);
                 if (success) {
+                    console.log('[EventDispatcher] Payload đã được gửi thành công:', {
+                        strategy,
+                        eventId: event.id,
+                        eventTypeId: event.eventTypeId,
+                        trackingRuleId: event.trackingRuleId,
+                        domainKey: event.domainKey,
+                        userField: event.userField,
+                        userValue: event.userValue,
+                        itemField: event.itemField,
+                        itemValue: event.itemValue,
+                        ratingValue: event.ratingValue,
+                        reviewValue: event.reviewValue,
+                        timestamp: event.timestamp,
+                        endpoint: this.endpoint
+                    });
                     return true;
                 }
             }
@@ -622,6 +651,7 @@ class EventDispatcher {
             }
         }
         // Trả về false nếu tất cả phương thức gửi đều thất bại
+        console.error('[EventDispatcher] Tất cả phương thức gửi thất bại cho event:', event.id);
         return false;
     }
     // Gửi nhiều events cùng lúc (gọi send cho từng event)
