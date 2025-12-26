@@ -217,22 +217,13 @@ var RecSysTracker = (function (exports) {
                 const rulesListData = rulesListResponse.ok ? await rulesListResponse.json() : [];
                 const returnMethodsData = returnMethodsResponse.ok ? await returnMethodsResponse.json() : [];
                 const eventTypesData = eventTypesResponse.ok ? await eventTypesResponse.json() : [];
-                // Bước 2: Lấy chi tiết từng rule
-                let rulesData = [];
-                if (Array.isArray(rulesListData) && rulesListData.length > 0) {
-                    const ruleDetailsPromises = rulesListData.map(rule => fetch(`${baseUrl}/rule/${rule.id}`)
-                        .then(res => res.ok ? res.json() : null)
-                        .catch(() => null));
-                    const ruleDetails = await Promise.all(ruleDetailsPromises);
-                    rulesData = ruleDetails.filter(rule => rule !== null);
-                }
                 // Cập nhật config với data từ server
                 if (this.config) {
                     this.config = {
                         ...this.config,
                         domainUrl: (domainData === null || domainData === void 0 ? void 0 : domainData.Url) || this.config.domainUrl,
                         domainType: (domainData === null || domainData === void 0 ? void 0 : domainData.Type) || this.config.domainType,
-                        trackingRules: this.transformRules(rulesData),
+                        trackingRules: this.transformRules(rulesListData),
                         returnMethods: this.transformReturnMethods(returnMethodsData),
                         eventTypes: this.transformEventTypes(eventTypesData),
                     };
