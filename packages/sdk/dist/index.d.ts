@@ -30,6 +30,7 @@ export declare class RecSysTracker {
     private setupUnloadHandler;
     flush(): Promise<void>;
     getConfig(): TrackerConfig | null;
+    getEventTypeId(name: string): number | undefined;
     setUserId(userId: string | null): void;
     getUserId(): string | null;
     destroy(): void;

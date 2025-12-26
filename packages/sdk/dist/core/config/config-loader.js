@@ -1,4 +1,5 @@
 import { OriginVerifier } from '../utils/origin-verifier';
+import { DEFAULT_API_URL, DEFAULT_CONFIG_ENDPOINT_PATH } from '../constants';
 // Luồng hoạt động
 // 1. SDK khởi tạo
 // 2. Gọi loadFromWindow() để lấy domainKey từ window
@@ -9,7 +10,6 @@ import { OriginVerifier } from '../utils/origin-verifier';
 // Class để load và quản lý cấu hình tracker
 export class ConfigLoader {
     constructor() {
-        this.BASE_API_URL = process.env.API_URL || 'http://localhost:3000';
         this.config = null;
         this.domainKey = null;
         // Cập nhật cấu hình thủ công
@@ -37,8 +37,6 @@ export class ConfigLoader {
                 domainKey: domainKey,
                 domainUrl: '',
                 domainType: 0,
-                trackEndpoint: `${this.BASE_API_URL}/event`,
-                configEndpoint: `${this.BASE_API_URL}/domain/${domainKey}`,
                 trackingRules: [],
                 returnMethods: [],
                 options: {
@@ -60,12 +58,14 @@ export class ConfigLoader {
         if (!this.domainKey) {
             return this.config;
         }
+        const baseUrl = process.env.API_URL || DEFAULT_API_URL;
         try {
-            // Bước 1: Gọi 3 API song song để lấy domain, list rules cơ bản, và return methods
-            const [domainResponse, rulesListResponse, returnMethodsResponse] = await Promise.all([
-                fetch(`${this.BASE_API_URL}/domain/${this.domainKey}`),
-                fetch(`${this.BASE_API_URL}/rule/domain/${this.domainKey}`),
-                fetch(`${this.BASE_API_URL}/domain/return-method/${this.domainKey}`)
+            // Bước 1: Gọi 4 API song song để lấy domain, list rules cơ bản, return methods và event types
+            const [domainResponse, rulesListResponse, returnMethodsResponse, eventTypesResponse] = await Promise.all([
+                fetch(`${baseUrl}${DEFAULT_CONFIG_ENDPOINT_PATH}/${this.domainKey}`),
+                fetch(`${baseUrl}/rule/domain/${this.domainKey}`),
+                fetch(`${baseUrl}/domain/return-method/${this.domainKey}`),
+                fetch(`${baseUrl}/rule/event-type`)
             ]);
             // Kiểm tra response
             if (!domainResponse.ok) {
@@ -75,10 +75,11 @@ export class ConfigLoader {
             const domainData = domainResponse.ok ? await domainResponse.json() : null;
             const rulesListData = rulesListResponse.ok ? await rulesListResponse.json() : [];
             const returnMethodsData = returnMethodsResponse.ok ? await returnMethodsResponse.json() : [];
+            const eventTypesData = eventTypesResponse.ok ? await eventTypesResponse.json() : [];
             // Bước 2: Lấy chi tiết từng rule
             let rulesData = [];
             if (Array.isArray(rulesListData) && rulesListData.length > 0) {
-                const ruleDetailsPromises = rulesListData.map(rule => fetch(`${this.BASE_API_URL}/rule/${rule.id}`)
+                const ruleDetailsPromises = rulesListData.map(rule => fetch(`${baseUrl}/rule/${rule.id}`)
                     .then(res => res.ok ? res.json() : null)
                     .catch(() => null));
                 const ruleDetails = await Promise.all(ruleDetailsPromises);
@@ -92,6 +93,7 @@ export class ConfigLoader {
                     domainType: (domainData === null || domainData === void 0 ? void 0 : domainData.Type) || this.config.domainType,
                     trackingRules: this.transformRules(rulesData),
                     returnMethods: this.transformReturnMethods(returnMethodsData),
+                    eventTypes: this.transformEventTypes(eventTypesData),
                 };
                 // Verify origin sau khi có domainUrl từ server
                 if (this.config.domainUrl) {
@@ -184,6 +186,15 @@ export class ConfigLoader {
             returnType: method.ReturnType || method.returnType,
             value: method.Value || method.value || '',
             configurationName: method.ConfigurationName || method.configurationName,
+        }));
+    }
+    // Transform event types từ server format sang SDK format
+    transformEventTypes(eventTypesData) {
+        if (!eventTypesData || !Array.isArray(eventTypesData))
+            return [];
+        return eventTypesData.map(type => ({
+            id: type.Id || type.id,
+            name: type.Name || type.name,
         }));
     }
     // Lấy cấu hình hiện tại

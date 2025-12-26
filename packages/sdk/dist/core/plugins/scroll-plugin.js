@@ -74,10 +74,14 @@ export class ScrollPlugin extends BasePlugin {
     }
     resolveContextFromRule() {
         var _a;
-        if (!this.context || !this.detector)
+        if (!this.context || !this.detector || !this.tracker)
             return;
-        // 1. Lấy Rule cho sự kiện SCROLL (ID = 4)
-        const scrollRules = this.context.config.getRules(4);
+        // 1. Lấy Rule cho sự kiện SCROLL (Dynamic ID)
+        const eventId = this.tracker.getEventTypeId('Scroll');
+        let scrollRules = [];
+        if (eventId) {
+            scrollRules = this.context.config.getRules(eventId);
+        }
         // Ưu tiên rule đầu tiên tìm thấy (hoặc logic complex hơn tùy bạn)
         this.activeRule = scrollRules.length > 0 ? scrollRules[0] : null;
         let targetElement = null;

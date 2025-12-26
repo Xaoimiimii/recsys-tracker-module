@@ -7,9 +7,9 @@ import { throttle } from './utils/plugin-utils';
 
 export class ClickPlugin extends BasePlugin {
     public readonly name = 'ClickPlugin';
-    
+
     private context: IRecsysContext | null = null;
-    private detector: AIItemDetector | null = null; 
+    private detector: AIItemDetector | null = null;
     private throttledHandler: (event: MouseEvent) => void;
     private readonly THROTTLE_DELAY = 300;
 
@@ -25,9 +25,9 @@ export class ClickPlugin extends BasePlugin {
     public init(tracker: RecSysTracker): void {
         this.errorBoundary.execute(() => {
             super.init(tracker);
-            
+
             this.context = new TrackerContextAdapter(tracker);
-            this.detector = getAIItemDetector(); 
+            this.detector = getAIItemDetector();
             console.log(`[ClickPlugin] initialized for Rule + AI-based tracking.`);
         }, 'ClickPlugin.init');
     }
@@ -35,9 +35,9 @@ export class ClickPlugin extends BasePlugin {
     public start(): void {
         this.errorBoundary.execute(() => {
             if (!this.ensureInitialized()) return;
-            
+
             if (this.context && this.detector) {
-                document.addEventListener("click", this.throttledHandler as any, false); 
+                document.addEventListener("click", this.throttledHandler as any, false);
                 console.log("[ClickPlugin] started Rule + AI-based listening (Throttled).");
                 this.active = true;
             }
@@ -52,9 +52,12 @@ export class ClickPlugin extends BasePlugin {
     }
 
     private handleDocumentClick(event: MouseEvent): void {
-        if (!this.context || !this.detector) return;
+        if (!this.context || !this.detector || !this.tracker) return;
 
-        const clickRules = this.context.config.getRules(1); // triggerEventId = 1 for click
+        const eventId = this.tracker.getEventTypeId('Click');
+        if (!eventId) return;
+
+        const clickRules = this.context.config.getRules(eventId);
         if (clickRules.length === 0) {
             return;
         }
@@ -68,10 +71,10 @@ export class ClickPlugin extends BasePlugin {
 
             if (matchedElement) {
                 console.log(`[ClickPlugin] Matched rule: ${rule.name}`);
-                
+
                 const payload = this.context.payloadBuilder.build(matchedElement, rule);
                 this.context.eventBuffer.enqueue(payload);
-                
+
                 // Stop after first match (hoặc có thể tiếp tục nếu muốn track nhiều rules)
                 break;
             }

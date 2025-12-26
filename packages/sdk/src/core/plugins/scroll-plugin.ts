@@ -7,24 +7,24 @@ import { getAIItemDetector, AIItemDetector } from './utils/ai-item-detector';
 
 export class ScrollPlugin extends BasePlugin {
     public readonly name = 'ScrollPlugin';
-    
+
     private context: IRecsysContext | null = null;
     private identityManager: UserIdentityManager | null = null;
     private detector: AIItemDetector | null = null;
-    
+
     // --- STATE QUẢN LÝ SCROLL & TIME ---
-    private milestones = [25, 50, 75, 100]; 
-    private sentMilestones: Set<number> = new Set(); 
-    private maxScrollDepth: number = 0; 
-    
+    private milestones = [25, 50, 75, 100];
+    private sentMilestones: Set<number> = new Set();
+    private maxScrollDepth: number = 0;
+
     // --- STATE QUẢN LÝ THỜI GIAN (VISIBILITY API) ---
     private startTime: number = Date.now();
     private totalActiveTime: number = 0;
     private isTabVisible: boolean = true;
-    
+
     // State Context (Lưu Item ID tìm được để dùng cho scroll)
     private currentItemContext: any = null;
-    private activeRule: any = null; 
+    private activeRule: any = null;
 
     // --- THROTTLE CONFIG ---
     private lastScrollProcessTime: number = 0;
@@ -84,9 +84,16 @@ export class ScrollPlugin extends BasePlugin {
     }
 
     private resolveContextFromRule(): void {
-        if (!this.context || !this.detector) return;
-        // 1. Lấy Rule cho sự kiện SCROLL (ID = 4)
-        const scrollRules = this.context.config.getRules(4);      
+        if (!this.context || !this.detector || !this.tracker) return;
+
+        // 1. Lấy Rule cho sự kiện SCROLL (Dynamic ID)
+        const eventId = this.tracker.getEventTypeId('Scroll');
+        let scrollRules: any[] = [];
+
+        if (eventId) {
+            scrollRules = this.context.config.getRules(eventId);
+        }
+
         // Ưu tiên rule đầu tiên tìm thấy (hoặc logic complex hơn tùy bạn)
         this.activeRule = scrollRules.length > 0 ? scrollRules[0] : null;
         let targetElement: HTMLElement | null = null;
@@ -97,7 +104,7 @@ export class ScrollPlugin extends BasePlugin {
                 try {
                     targetElement = document.querySelector(selector);
                     console.log(`[ScrollPlugin] Targeted element from rule: ${selector}`, targetElement);
-                } catch(e) {}
+                } catch (e) { }
             }
         }
         // 3. Nếu không có Rule hoặc Selector không tìm thấy, fallback về Body (Toàn trang)
@@ -109,14 +116,14 @@ export class ScrollPlugin extends BasePlugin {
         const detected = this.detector.detectItem(targetElement);
         // 5. Nếu AI fail, thử quét thủ công (DOM Radar phiên bản đơn giản)
         if (!detected || !detected.id || detected.id === 'N/A (Failed)') {
-             // Thử tìm data attribute trên chính nó hoặc cha gần nhất
-             const manualScan = this.scanContextSimple(targetElement);
-             if (manualScan) {
-                 this.currentItemContext = manualScan;
-             } else {
-                 // Fallback cuối cùng: Tạo Synthetic Item (Page Scroll)
-                 this.currentItemContext = this.createSyntheticItem();
-             }
+            // Thử tìm data attribute trên chính nó hoặc cha gần nhất
+            const manualScan = this.scanContextSimple(targetElement);
+            if (manualScan) {
+                this.currentItemContext = manualScan;
+            } else {
+                // Fallback cuối cùng: Tạo Synthetic Item (Page Scroll)
+                this.currentItemContext = this.createSyntheticItem();
+            }
         } else {
             this.currentItemContext = detected;
         }
@@ -127,7 +134,7 @@ export class ScrollPlugin extends BasePlugin {
      * LOGIC XỬ LÝ SCROLL (Có Throttling)
      */
     private handleScroll(): void {
-        const now = Date.now();       
+        const now = Date.now();
         // --- 1. THROTTLE CHECK ---
         // Nếu chưa đến thời gian cho phép xử lý tiếp theo -> Bỏ qua
         if (now - this.lastScrollProcessTime < this.THROTTLE_MS) {
@@ -169,8 +176,8 @@ export class ScrollPlugin extends BasePlugin {
         payload.event = 'scroll_depth';
         payload.metadata = {
             ...(payload.metadata || {}),
-            depth_percentage: depth, 
-            time_on_page: currentActiveSeconds, 
+            depth_percentage: depth,
+            time_on_page: currentActiveSeconds,
             url: window.location.href
         };
         // Gắn User Identity (tương tự FormPlugin)
@@ -219,7 +226,7 @@ export class ScrollPlugin extends BasePlugin {
         if (finalTime < 1) return;
         const rule = this.activeRule || this.createDefaultRule('summary', 'Page Summary');
         if (!this.currentItemContext) {
-            this.currentItemContext = this.createSyntheticItem(); 
+            this.currentItemContext = this.createSyntheticItem();
         }
         const payload = this.context.payloadBuilder.build(this.currentItemContext, rule);
         payload.event = 'page_summary';
@@ -279,7 +286,7 @@ export class ScrollPlugin extends BasePlugin {
             if (realUserId && !realUserId.startsWith('anon_')) {
                 payload.userId = realUserId;
             } else if (stableUserId) {
-                 if (!payload.userId || (payload.userId.startsWith('anon_') && stableUserId !== payload.userId)) {
+                if (!payload.userId || (payload.userId.startsWith('anon_') && stableUserId !== payload.userId)) {
                     payload.userId = stableUserId;
                 }
             }
@@ -297,9 +304,9 @@ export class ScrollPlugin extends BasePlugin {
             name: name,
             triggerEventId: 4,
             targetElement: {
-                targetElementValue: 'document', 
-                targetEventPatternId: 1, 
-                targetOperatorId: 5      
+                targetElementValue: 'document',
+                targetEventPatternId: 1,
+                targetOperatorId: 5
             },
             conditions: [],
             payload: []

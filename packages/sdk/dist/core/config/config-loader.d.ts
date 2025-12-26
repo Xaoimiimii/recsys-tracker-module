@@ -1,6 +1,5 @@
 import { TrackerConfig } from '../../types';
 export declare class ConfigLoader {
-    private readonly BASE_API_URL;
     private config;
     private domainKey;
     loadFromWindow(): TrackerConfig | null;
@@ -10,6 +9,7 @@ export declare class ConfigLoader {
     private transformPayloadMappings;
     private transformTrackingTarget;
     private transformReturnMethods;
+    private transformEventTypes;
     getConfig(): TrackerConfig | null;
 }
 //# sourceMappingURL=config-loader.d.ts.map

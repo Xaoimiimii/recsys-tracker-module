@@ -1,4 +1,5 @@
 import { ConfigLoader, ErrorBoundary, EventBuffer, EventDispatcher, MetadataNormalizer, DisplayManager, PluginManager } from './core';
+import { DEFAULT_API_URL, DEFAULT_TRACK_ENDPOINT_PATH } from './core/constants';
 // RecSysTracker - Main SDK class
 export class RecSysTracker {
     constructor() {
@@ -26,8 +27,9 @@ export class RecSysTracker {
                 return;
             }
             // Khởi tạo EventDispatcher
+            const baseUrl = process.env.API_URL || DEFAULT_API_URL;
             this.eventDispatcher = new EventDispatcher({
-                endpoint: this.config.trackEndpoint || '/track',
+                endpoint: `${baseUrl}${DEFAULT_TRACK_ENDPOINT_PATH}`,
             });
             // Fetch remote config và verify origin
             const remoteConfig = await this.configLoader.fetchRemoteConfig();
@@ -67,15 +69,20 @@ export class RecSysTracker {
         if (!((_a = this.config) === null || _a === void 0 ? void 0 : _a.trackingRules) || this.config.trackingRules.length === 0) {
             return;
         }
-        // Kiểm tra nếu có rule nào cần ClickPlugin (eventTypeId === 1)
-        const hasClickRules = this.config.trackingRules.some(rule => rule.eventTypeId === 1);
-        // Kiểm tra nếu có rule nào cần PageViewPlugin (eventTypeId === 3)
-        const hasPageViewRules = this.config.trackingRules.some(rule => rule.eventTypeId === 5);
+        // Get dynamic IDs
+        const clickId = this.getEventTypeId('Click');
+        const rateId = this.getEventTypeId('Rating');
+        const pageViewId = this.getEventTypeId('Page View');
+        const scrollId = this.getEventTypeId('Scroll');
+        // Check specific rules (chỉ check nếu tìm thấy ID)
+        const hasClickRules = clickId ? this.config.trackingRules.some(rule => rule.eventTypeId === clickId) : false;
+        const hasRateRules = rateId ? this.config.trackingRules.some(rule => rule.eventTypeId === rateId) : false;
+        const hasPageViewRules = pageViewId ? this.config.trackingRules.some(rule => rule.eventTypeId === pageViewId) : false;
+        const hasScrollRules = scrollId ? this.config.trackingRules.some(rule => rule.eventTypeId === scrollId) : false;
         // Chỉ tự động đăng ký nếu chưa có plugin nào được đăng ký
         if (this.pluginManager.getPluginNames().length === 0) {
             const pluginPromises = [];
             if (hasClickRules) {
-                // Import động để tránh circular dependency
                 const clickPromise = import('./core/plugins/click-plugin').then(({ ClickPlugin }) => {
                     this.use(new ClickPlugin());
                     console.log('[RecSysTracker] Auto-registered ClickPlugin based on tracking rules');
@@ -83,12 +90,25 @@ export class RecSysTracker {
                 pluginPromises.push(clickPromise);
             }
             if (hasPageViewRules) {
-                // Import động để tránh circular dependency
                 const pageViewPromise = import('./core/plugins/page-view-plugin').then(({ PageViewPlugin }) => {
                     this.use(new PageViewPlugin());
                     console.log('[RecSysTracker] Auto-registered PageViewPlugin based on tracking rules');
                 });
                 pluginPromises.push(pageViewPromise);
+            }
+            if (hasRateRules) {
+                const formPromise = import('./core/plugins/form-plugin').then(({ FormPlugin }) => {
+                    this.use(new FormPlugin());
+                    console.log('[RecSysTracker] Auto-registered FormPlugin based on tracking rules');
+                });
+                pluginPromises.push(formPromise);
+            }
+            if (hasScrollRules) {
+                const scrollPromise = import('./core/plugins/scroll-plugin').then(({ ScrollPlugin }) => {
+                    this.use(new ScrollPlugin());
+                    console.log('[RecSysTracker] Auto-registered ScrollPlugin based on tracking rules');
+                });
+                pluginPromises.push(scrollPromise);
             }
             // Chờ tất cả plugin được đăng ký trước khi khởi động
             if (pluginPromises.length > 0) {
@@ -190,6 +210,14 @@ export class RecSysTracker {
     // Lấy config hiện tại
     getConfig() {
         return this.config;
+    }
+    // Helper để lấy event type id từ name
+    getEventTypeId(name) {
+        if (!this.config || !this.config.eventTypes) {
+            return undefined;
+        }
+        const type = this.config.eventTypes.find(t => t.name === name);
+        return type ? type.id : undefined;
     }
     // Set user ID
     setUserId(userId) {
