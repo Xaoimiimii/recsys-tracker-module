@@ -82,16 +82,20 @@ export class FormPlugin extends BasePlugin {
     handleSubmit(event) {
         var _a, _b, _c;
         console.log("🔥 [DEBUG] Sự kiện Submit đã được bắt!");
-        if (!this.context || !this.detector)
+        if (!this.context || !this.detector || !this.tracker)
             return;
         const form = event.target;
         const formId = form.id;
         console.log(`📝 [DEBUG] Form đang submit có ID: "${formId}"`);
-        // 1. Lấy rules RATE (ID=2)
-        const rateRules = this.context.config.getRules(2);
+        // 1. Lấy rules RATE (Dynamic ID)
+        const eventId = this.tracker.getEventTypeId('Rating');
+        if (!eventId) {
+            console.log('[FormPlugin] Rating event type not found in config.');
+            return;
+        }
+        const rateRules = this.context.config.getRules(eventId);
         console.log(`🔎 [DEBUG] Tìm thấy ${rateRules.length} rule(s) cho sự kiện RATE.`);
         if (rateRules.length === 0) {
-            console.warn("⚠️ [DEBUG] Không có rule nào trong Config/Mock khớp TriggerID=2");
             return;
         }
         for (const rule of rateRules) {

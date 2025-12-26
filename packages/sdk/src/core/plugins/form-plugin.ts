@@ -7,7 +7,7 @@ import { getUserIdentityManager, UserIdentityManager } from './utils/user-identi
 
 export class FormPlugin extends BasePlugin {
     public readonly name = 'FormPlugin';
-    
+
     private context: IRecsysContext | null = null;
     private detector: AIItemDetector | null = null;
     private identityManager: UserIdentityManager | null = null;
@@ -49,7 +49,7 @@ export class FormPlugin extends BasePlugin {
     //     if (!this.context || !this.detector) return;
 
     //     const form = event.target as HTMLFormElement;
-        
+
     //     // 1. Lấy rules có Trigger là RATE (Giả sử ID = 2)
     //     const rateRules = this.context.config.getRules(2); 
 
@@ -77,7 +77,7 @@ export class FormPlugin extends BasePlugin {
 
     //             // 3. Build Payload cơ bản
     //             const payload = this.context.payloadBuilder.build(structuredItem, rule);
-                
+
     //             // 4. Override event type
     //             payload.event = 'rate_submit';
 
@@ -96,20 +96,25 @@ export class FormPlugin extends BasePlugin {
     // }
 
     private handleSubmit(event: Event): void {
-        console.log("🔥 [DEBUG] Sự kiện Submit đã được bắt!"); 
+        console.log("🔥 [DEBUG] Sự kiện Submit đã được bắt!");
 
-        if (!this.context || !this.detector) return;
+        if (!this.context || !this.detector || !this.tracker) return;
 
         const form = event.target as HTMLFormElement;
         const formId = form.id;
         console.log(`📝 [DEBUG] Form đang submit có ID: "${formId}"`);
 
-        // 1. Lấy rules RATE (ID=2)
-        const rateRules = this.context.config.getRules(2); 
+        // 1. Lấy rules RATE (Dynamic ID)
+        const eventId = this.tracker.getEventTypeId('Rating');
+        if (!eventId) {
+            console.log('[FormPlugin] Rating event type not found in config.');
+            return;
+        }
+
+        const rateRules = this.context.config.getRules(eventId);
         console.log(`🔎 [DEBUG] Tìm thấy ${rateRules.length} rule(s) cho sự kiện RATE.`);
 
         if (rateRules.length === 0) {
-            console.warn("⚠️ [DEBUG] Không có rule nào trong Config/Mock khớp TriggerID=2");
             return;
         }
 
@@ -130,8 +135,8 @@ export class FormPlugin extends BasePlugin {
             try {
                 if (form.matches(selector)) isMatch = true;
                 else if (selector.startsWith('#') && formId === selector.substring(1)) isMatch = true;
-            } catch (e) { 
-                console.warn('      -> Lỗi cú pháp selector', e); 
+            } catch (e) {
+                console.warn('      -> Lỗi cú pháp selector', e);
             }
 
             if (isMatch) {
@@ -140,17 +145,17 @@ export class FormPlugin extends BasePlugin {
                 // 1. Detect Item Context
                 let structuredItem = this.detector.detectItem(form);
 
-                const isGarbageId = structuredItem?.id?.startsWith('pos_') || 
-                                    structuredItem?.source === 'fallback_position_based' ||
-                                    structuredItem?.name?.startsWith('Element at');
+                const isGarbageId = structuredItem?.id?.startsWith('pos_') ||
+                    structuredItem?.source === 'fallback_position_based' ||
+                    structuredItem?.name?.startsWith('Element at');
 
                 if (!structuredItem || !structuredItem.id || structuredItem.id === 'N/A (Failed)' || isGarbageId) {
                     console.log("🔍 [FormPlugin] AI form failed. Scanning surrounding context...");
                     const contextInfo = this.scanSurroundingContext(form);
-                    
+
                     if (contextInfo.id) {
-                         // Merge kết quả tìm được
-                         structuredItem = {
+                        // Merge kết quả tìm được
+                        structuredItem = {
                             confidence: 1,
                             source: contextInfo.source,
                             context: 'dom_context',
@@ -159,32 +164,32 @@ export class FormPlugin extends BasePlugin {
                             id: contextInfo.id,
                             name: contextInfo.name || structuredItem?.name || '',
                             type: contextInfo.type || structuredItem?.type || ''
-                         };
-                         console.log("[FormPlugin] Found Context Item:", contextInfo);
+                        };
+                        console.log("[FormPlugin] Found Context Item:", contextInfo);
                     }
                 }
 
                 // 2. Extract Form Data
                 const { rateValue, reviewText } = this.extractFormData(form, rule);
-                
+
                 console.log("📦 [DEBUG] Dữ liệu trích xuất được:", { rateValue, reviewText });
 
                 // 3. Build Payload
                 const payload = this.context.payloadBuilder.build(structuredItem, rule);
 
                 this.enrichPayload(payload, structuredItem, { rateValue, reviewText });
-                
+
                 payload.event = 'rate_submit';
                 payload.metadata = {
-                    ...(payload.metadata || {}), 
-                    rateValue: rateValue,   
-                    reviewText: reviewText  
+                    ...(payload.metadata || {}),
+                    rateValue: rateValue,
+                    reviewText: reviewText
                 };
 
                 // 4. Send
                 console.log("🚀 [DEBUG] Đang gửi vào Buffer:", payload);
                 this.context.eventBuffer.enqueue(payload);
-                return; 
+                return;
             } else {
                 console.log(`      ❌ KHÔNG KHỚP: Form "${formId}" != Selector "${selector}"`);
             }
@@ -230,7 +235,7 @@ export class FormPlugin extends BasePlugin {
         while (currentParent && levels < maxLevels) {
             // Tìm tất cả các thẻ có ID trong phạm vi cha này
             const candidates = currentParent.querySelectorAll('[data-item-id], [data-product-id], [data-id]');
-            
+
             if (candidates.length > 0) {
                 // Có ứng viên! Chọn ứng viên đầu tiên không phải là chính cái form (tránh loop)
                 // (Thường querySelectorAll trả về theo thứ tự DOM, nên cái nào đứng trước/gần nhất sẽ được lấy)
@@ -255,8 +260,8 @@ export class FormPlugin extends BasePlugin {
         const urlParams = new URLSearchParams(window.location.search);
         const urlId = urlParams.get('id') || urlParams.get('productId') || urlParams.get('item_id');
         if (urlId) {
-             console.log("   => Tìm thấy ở URL Param");
-             return { id: urlId, source: 'url_param' };
+            console.log("   => Tìm thấy ở URL Param");
+            return { id: urlId, source: 'url_param' };
         }
 
         console.warn("❌ [DOM Radar] Không tìm thấy ngữ cảnh nào xung quanh.");
@@ -269,7 +274,7 @@ export class FormPlugin extends BasePlugin {
 
         // Merge Metadata (Form Data)
         payload.metadata = {
-            ...(payload.metadata || {}), 
+            ...(payload.metadata || {}),
             ...formData
         };
 
@@ -280,7 +285,7 @@ export class FormPlugin extends BasePlugin {
             payload.confidence = 1; // Khẳng định độ tin cậy
             if (itemCtx.source) payload.source = itemCtx.source;
         }
-        
+
         // Name có thể optional
         if (itemCtx.name && (!payload.itemName || payload.itemName === 'Unknown Item')) {
             payload.itemName = itemCtx.name;
@@ -295,7 +300,7 @@ export class FormPlugin extends BasePlugin {
             if (realUserId && !realUserId.startsWith('anon_')) {
                 console.log(`👤 [FormPlugin] Auto-detected Real User ID: ${realUserId}`);
                 payload.userId = realUserId;
-            } 
+            }
             // Nếu không có ID thật, dùng ID ổn định (có thể là anon cũ) để đảm bảo continuity
             else if (stableUserId) {
                 // Chỉ ghi đè nếu payload đang trống hoặc payload đang dùng anon mới tạo
@@ -317,7 +322,7 @@ export class FormPlugin extends BasePlugin {
     private extractFormData(form: HTMLFormElement, rule: any): { rateValue: number, reviewText: string } {
         const formData = new FormData(form);
         const data: Record<string, any> = {};
-        
+
         // Convert FormData to Object & Log raw data
         formData.forEach((value, key) => { data[key] = value });
         console.log("RAW FORM DATA:", data);
@@ -328,7 +333,7 @@ export class FormPlugin extends BasePlugin {
         // Ưu tiên config từ Rule
         if (rule.payload && rule.payload.length > 0) {
             rule.payload.forEach((p: any) => {
-                const val = data[p.value]; 
+                const val = data[p.value];
                 if (p.type === 'number') rateValue = Number(val) || 0;
                 else reviewText = String(val || '');
             });
@@ -346,7 +351,7 @@ export class FormPlugin extends BasePlugin {
                         rateValue = parsed;
                     }
                 }
-                
+
                 // Detect Review
                 if (k.includes('comment') || k.includes('review') || k.includes('content') || k.includes('body')) {
                     // Ưu tiên chuỗi dài hơn (tránh lấy nhầm ID)

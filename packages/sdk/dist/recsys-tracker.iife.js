@@ -133,6 +133,9 @@ var RecSysTracker = (function (exports) {
         }
     }
 
+    const DEFAULT_TRACK_ENDPOINT_PATH = '/event';
+    const DEFAULT_CONFIG_ENDPOINT_PATH = '/domain';
+
     // Luồng hoạt động
     // 1. SDK khởi tạo
     // 2. Gọi loadFromWindow() để lấy domainKey từ window
@@ -143,7 +146,6 @@ var RecSysTracker = (function (exports) {
     // Class để load và quản lý cấu hình tracker
     class ConfigLoader {
         constructor() {
-            this.BASE_API_URL = "http://localhost:3000";
             this.config = null;
             this.domainKey = null;
             // Cập nhật cấu hình thủ công
@@ -171,8 +173,6 @@ var RecSysTracker = (function (exports) {
                     domainKey: domainKey,
                     domainUrl: '',
                     domainType: 0,
-                    trackEndpoint: `${this.BASE_API_URL}/event`,
-                    configEndpoint: `${this.BASE_API_URL}/domain/${domainKey}`,
                     trackingRules: [],
                     returnMethods: [],
                     options: {
@@ -194,12 +194,14 @@ var RecSysTracker = (function (exports) {
             if (!this.domainKey) {
                 return this.config;
             }
+            const baseUrl = "http://localhost:3000";
             try {
-                // Bước 1: Gọi 3 API song song để lấy domain, list rules cơ bản, và return methods
-                const [domainResponse, rulesListResponse, returnMethodsResponse] = await Promise.all([
-                    fetch(`${this.BASE_API_URL}/domain/${this.domainKey}`),
-                    fetch(`${this.BASE_API_URL}/rule/domain/${this.domainKey}`),
-                    fetch(`${this.BASE_API_URL}/domain/return-method/${this.domainKey}`)
+                // Bước 1: Gọi 4 API song song để lấy domain, list rules cơ bản, return methods và event types
+                const [domainResponse, rulesListResponse, returnMethodsResponse, eventTypesResponse] = await Promise.all([
+                    fetch(`${baseUrl}${DEFAULT_CONFIG_ENDPOINT_PATH}/${this.domainKey}`),
+                    fetch(`${baseUrl}/rule/domain/${this.domainKey}`),
+                    fetch(`${baseUrl}/domain/return-method/${this.domainKey}`),
+                    fetch(`${baseUrl}/rule/event-type`)
                 ]);
                 // Kiểm tra response
                 if (!domainResponse.ok) {
@@ -209,10 +211,11 @@ var RecSysTracker = (function (exports) {
                 const domainData = domainResponse.ok ? await domainResponse.json() : null;
                 const rulesListData = rulesListResponse.ok ? await rulesListResponse.json() : [];
                 const returnMethodsData = returnMethodsResponse.ok ? await returnMethodsResponse.json() : [];
+                const eventTypesData = eventTypesResponse.ok ? await eventTypesResponse.json() : [];
                 // Bước 2: Lấy chi tiết từng rule
                 let rulesData = [];
                 if (Array.isArray(rulesListData) && rulesListData.length > 0) {
-                    const ruleDetailsPromises = rulesListData.map(rule => fetch(`${this.BASE_API_URL}/rule/${rule.id}`)
+                    const ruleDetailsPromises = rulesListData.map(rule => fetch(`${baseUrl}/rule/${rule.id}`)
                         .then(res => res.ok ? res.json() : null)
                         .catch(() => null));
                     const ruleDetails = await Promise.all(ruleDetailsPromises);
@@ -226,6 +229,7 @@ var RecSysTracker = (function (exports) {
                         domainType: (domainData === null || domainData === void 0 ? void 0 : domainData.Type) || this.config.domainType,
                         trackingRules: this.transformRules(rulesData),
                         returnMethods: this.transformReturnMethods(returnMethodsData),
+                        eventTypes: this.transformEventTypes(eventTypesData),
                     };
                     // Verify origin sau khi có domainUrl từ server
                     if (this.config.domainUrl) {
@@ -318,6 +322,15 @@ var RecSysTracker = (function (exports) {
                 returnType: method.ReturnType || method.returnType,
                 value: method.Value || method.value || '',
                 configurationName: method.ConfigurationName || method.configurationName,
+            }));
+        }
+        // Transform event types từ server format sang SDK format
+        transformEventTypes(eventTypesData) {
+            if (!eventTypesData || !Array.isArray(eventTypesData))
+                return [];
+            return eventTypesData.map(type => ({
+                id: type.Id || type.id,
+                name: type.Name || type.name,
             }));
         }
         // Lấy cấu hình hiện tại
@@ -3100,9 +3113,12 @@ var RecSysTracker = (function (exports) {
             }, 'ClickPlugin.stop');
         }
         handleDocumentClick(event) {
-            if (!this.context || !this.detector)
+            if (!this.context || !this.detector || !this.tracker)
                 return;
-            const clickRules = this.context.config.getRules(1); // triggerEventId = 1 for click
+            const eventId = this.tracker.getEventTypeId('Click');
+            if (!eventId)
+                return;
+            const clickRules = this.context.config.getRules(eventId);
             if (clickRules.length === 0) {
                 return;
             }
@@ -3176,11 +3192,16 @@ var RecSysTracker = (function (exports) {
         }
         trackCurrentPage(currentUrl) {
             var _a;
-            if (!this.context || !this.detector)
+            if (!this.context || !this.detector || !this.tracker)
                 return;
             const urlObject = new URL(currentUrl);
             const pathname = urlObject.pathname;
-            const pageViewRules = this.context.config.getRules(3); // triggerEventId = 3 for page_view
+            const eventId = this.tracker.getEventTypeId('Page View');
+            if (!eventId) {
+                console.log('[PageViewPlugin] Page View event type not found in config.');
+                return;
+            }
+            const pageViewRules = this.context.config.getRules(eventId);
             if (pageViewRules.length === 0) {
                 console.log('[PageViewPlugin] No page view rules configured.');
                 return;
@@ -3317,16 +3338,20 @@ var RecSysTracker = (function (exports) {
         handleSubmit(event) {
             var _a, _b, _c;
             console.log("🔥 [DEBUG] Sự kiện Submit đã được bắt!");
-            if (!this.context || !this.detector)
+            if (!this.context || !this.detector || !this.tracker)
                 return;
             const form = event.target;
             const formId = form.id;
             console.log(`📝 [DEBUG] Form đang submit có ID: "${formId}"`);
-            // 1. Lấy rules RATE (ID=2)
-            const rateRules = this.context.config.getRules(2);
+            // 1. Lấy rules RATE (Dynamic ID)
+            const eventId = this.tracker.getEventTypeId('Rating');
+            if (!eventId) {
+                console.log('[FormPlugin] Rating event type not found in config.');
+                return;
+            }
+            const rateRules = this.context.config.getRules(eventId);
             console.log(`🔎 [DEBUG] Tìm thấy ${rateRules.length} rule(s) cho sự kiện RATE.`);
             if (rateRules.length === 0) {
-                console.warn("⚠️ [DEBUG] Không có rule nào trong Config/Mock khớp TriggerID=2");
                 return;
             }
             for (const rule of rateRules) {
@@ -3549,6 +3574,11 @@ var RecSysTracker = (function (exports) {
         }
     }
 
+    var formPlugin = /*#__PURE__*/Object.freeze({
+        __proto__: null,
+        FormPlugin: FormPlugin
+    });
+
     class ScrollPlugin extends BasePlugin {
         constructor() {
             super(...arguments);
@@ -3621,10 +3651,14 @@ var RecSysTracker = (function (exports) {
         }
         resolveContextFromRule() {
             var _a;
-            if (!this.context || !this.detector)
+            if (!this.context || !this.detector || !this.tracker)
                 return;
-            // 1. Lấy Rule cho sự kiện SCROLL (ID = 4)
-            const scrollRules = this.context.config.getRules(4);
+            // 1. Lấy Rule cho sự kiện SCROLL (Dynamic ID)
+            const eventId = this.tracker.getEventTypeId('Scroll');
+            let scrollRules = [];
+            if (eventId) {
+                scrollRules = this.context.config.getRules(eventId);
+            }
             // Ưu tiên rule đầu tiên tìm thấy (hoặc logic complex hơn tùy bạn)
             this.activeRule = scrollRules.length > 0 ? scrollRules[0] : null;
             let targetElement = null;
@@ -3860,6 +3894,11 @@ var RecSysTracker = (function (exports) {
         }
     }
 
+    var scrollPlugin = /*#__PURE__*/Object.freeze({
+        __proto__: null,
+        ScrollPlugin: ScrollPlugin
+    });
+
     // RecSysTracker - Main SDK class
     class RecSysTracker {
         constructor() {
@@ -3887,8 +3926,9 @@ var RecSysTracker = (function (exports) {
                     return;
                 }
                 // Khởi tạo EventDispatcher
+                const baseUrl = "http://localhost:3000";
                 this.eventDispatcher = new EventDispatcher({
-                    endpoint: this.config.trackEndpoint || '/track',
+                    endpoint: `${baseUrl}${DEFAULT_TRACK_ENDPOINT_PATH}`,
                 });
                 // Fetch remote config và verify origin
                 const remoteConfig = await this.configLoader.fetchRemoteConfig();
@@ -3928,15 +3968,20 @@ var RecSysTracker = (function (exports) {
             if (!((_a = this.config) === null || _a === void 0 ? void 0 : _a.trackingRules) || this.config.trackingRules.length === 0) {
                 return;
             }
-            // Kiểm tra nếu có rule nào cần ClickPlugin (eventTypeId === 1)
-            const hasClickRules = this.config.trackingRules.some(rule => rule.eventTypeId === 1);
-            // Kiểm tra nếu có rule nào cần PageViewPlugin (eventTypeId === 3)
-            const hasPageViewRules = this.config.trackingRules.some(rule => rule.eventTypeId === 5);
+            // Get dynamic IDs
+            const clickId = this.getEventTypeId('Click');
+            const rateId = this.getEventTypeId('Rating');
+            const pageViewId = this.getEventTypeId('Page View');
+            const scrollId = this.getEventTypeId('Scroll');
+            // Check specific rules (chỉ check nếu tìm thấy ID)
+            const hasClickRules = clickId ? this.config.trackingRules.some(rule => rule.eventTypeId === clickId) : false;
+            const hasRateRules = rateId ? this.config.trackingRules.some(rule => rule.eventTypeId === rateId) : false;
+            const hasPageViewRules = pageViewId ? this.config.trackingRules.some(rule => rule.eventTypeId === pageViewId) : false;
+            const hasScrollRules = scrollId ? this.config.trackingRules.some(rule => rule.eventTypeId === scrollId) : false;
             // Chỉ tự động đăng ký nếu chưa có plugin nào được đăng ký
             if (this.pluginManager.getPluginNames().length === 0) {
                 const pluginPromises = [];
                 if (hasClickRules) {
-                    // Import động để tránh circular dependency
                     const clickPromise = Promise.resolve().then(function () { return clickPlugin; }).then(({ ClickPlugin }) => {
                         this.use(new ClickPlugin());
                         console.log('[RecSysTracker] Auto-registered ClickPlugin based on tracking rules');
@@ -3944,12 +3989,25 @@ var RecSysTracker = (function (exports) {
                     pluginPromises.push(clickPromise);
                 }
                 if (hasPageViewRules) {
-                    // Import động để tránh circular dependency
                     const pageViewPromise = Promise.resolve().then(function () { return pageViewPlugin; }).then(({ PageViewPlugin }) => {
                         this.use(new PageViewPlugin());
                         console.log('[RecSysTracker] Auto-registered PageViewPlugin based on tracking rules');
                     });
                     pluginPromises.push(pageViewPromise);
+                }
+                if (hasRateRules) {
+                    const formPromise = Promise.resolve().then(function () { return formPlugin; }).then(({ FormPlugin }) => {
+                        this.use(new FormPlugin());
+                        console.log('[RecSysTracker] Auto-registered FormPlugin based on tracking rules');
+                    });
+                    pluginPromises.push(formPromise);
+                }
+                if (hasScrollRules) {
+                    const scrollPromise = Promise.resolve().then(function () { return scrollPlugin; }).then(({ ScrollPlugin }) => {
+                        this.use(new ScrollPlugin());
+                        console.log('[RecSysTracker] Auto-registered ScrollPlugin based on tracking rules');
+                    });
+                    pluginPromises.push(scrollPromise);
                 }
                 // Chờ tất cả plugin được đăng ký trước khi khởi động
                 if (pluginPromises.length > 0) {
@@ -4051,6 +4109,14 @@ var RecSysTracker = (function (exports) {
         // Lấy config hiện tại
         getConfig() {
             return this.config;
+        }
+        // Helper để lấy event type id từ name
+        getEventTypeId(name) {
+            if (!this.config || !this.config.eventTypes) {
+                return undefined;
+            }
+            const type = this.config.eventTypes.find(t => t.name === name);
+            return type ? type.id : undefined;
         }
         // Set user ID
         setUserId(userId) {

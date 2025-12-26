@@ -15,7 +15,3 @@
     : "recsys-tracker.iife.js";
   d.head.appendChild(s);
 })(document, window);
-
-// Example loader script
-// <script>window.__RECSYS_DOMAIN_KEY__ = "your-domain-key";</script>
-// <script src="https://cdn.jsdelivr.net/gh/Xaoimiimii/recsys-tracker-module/packages/sdk/dist/loader.js"></script>

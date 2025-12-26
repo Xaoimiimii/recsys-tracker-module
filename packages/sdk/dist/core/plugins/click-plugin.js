@@ -38,9 +38,12 @@ export class ClickPlugin extends BasePlugin {
         }, 'ClickPlugin.stop');
     }
     handleDocumentClick(event) {
-        if (!this.context || !this.detector)
+        if (!this.context || !this.detector || !this.tracker)
             return;
-        const clickRules = this.context.config.getRules(1); // triggerEventId = 1 for click
+        const eventId = this.tracker.getEventTypeId('Click');
+        if (!eventId)
+            return;
+        const clickRules = this.context.config.getRules(eventId);
         if (clickRules.length === 0) {
             return;
         }
