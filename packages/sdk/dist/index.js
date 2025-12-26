@@ -95,11 +95,11 @@ export class RecSysTracker {
                 pluginPromises.push(clickPromise);
             }
             if (hasRateRules) {
-                const formPromise = import('./core/plugins/form-plugin').then(({ FormPlugin }) => {
-                    this.use(new FormPlugin());
-                    console.log('[RecSysTracker] Auto-registered FormPlugin based on tracking rules');
+                const ratingPromise = import('./core/plugins/rating-plugin').then(({ RatingPlugin }) => {
+                    this.use(new RatingPlugin());
+                    console.log('[RecSysTracker] Auto-registered RatingPlugin based on tracking rules');
                 });
-                pluginPromises.push(formPromise);
+                pluginPromises.push(ratingPromise);
             }
             if (hasReviewRules) {
                 const scrollPromise = import('./core/plugins/review-plugin').then(({ ReviewPlugin }) => {
@@ -324,7 +324,7 @@ export { BasePlugin } from './core/plugins/base-plugin';
 // Export built-in plugins
 export { ClickPlugin } from './core/plugins/click-plugin';
 export { PageViewPlugin } from './core/plugins/page-view-plugin';
-export { FormPlugin } from './core/plugins/form-plugin';
+export { RatingPlugin } from './core/plugins/rating-plugin';
 export { ScrollPlugin } from './core/plugins/scroll-plugin';
 export { ReviewPlugin } from './core/plugins/review-plugin';
 export { NetworkPlugin } from './core/plugins/network-plugin';

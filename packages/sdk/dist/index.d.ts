@@ -47,7 +47,7 @@ export { ConfigLoader, PluginManager, DisplayManager } from './core';
 export { IPlugin, BasePlugin } from './core/plugins/base-plugin';
 export { ClickPlugin } from './core/plugins/click-plugin';
 export { PageViewPlugin } from './core/plugins/page-view-plugin';
-export { FormPlugin } from './core/plugins/form-plugin';
+export { RatingPlugin } from './core/plugins/rating-plugin';
 export { ScrollPlugin } from './core/plugins/scroll-plugin';
 export { ReviewPlugin } from './core/plugins/review-plugin';
 export { NetworkPlugin } from './core/plugins/network-plugin';

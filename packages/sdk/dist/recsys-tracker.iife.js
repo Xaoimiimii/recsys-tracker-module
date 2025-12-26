@@ -3558,13 +3558,13 @@ var RecSysTracker = (function (exports) {
     //     DOM_ATTRIBUTE: 2,
     //     DATA_ATTRIBUTE: 3
     // };
-    const CONDITION_PATTERN$1 = {
+    const CONDITION_PATTERN = {
         URL_PARAM: 1,
         CSS_SELECTOR: 2,
         DOM_ATTRIBUTE: 3,
         DATA_ATTRIBUTE: 4,
     };
-    const TARGET_OPERATOR$1 = {
+    const TARGET_OPERATOR = {
         CONTAINS: 1,
         NOT_CONTAINS: 2,
         STARTS_WITH: 3,
@@ -3746,14 +3746,14 @@ var RecSysTracker = (function (exports) {
                 let actualValue = null;
                 let isMet = false;
                 switch (patternId) {
-                    case CONDITION_PATTERN$1.URL_PARAM: // 1
+                    case CONDITION_PATTERN.URL_PARAM: // 1
                         const urlParams = new URLSearchParams(window.location.search);
                         if (urlParams.has(expectedValue))
                             actualValue = urlParams.get(expectedValue);
                         else
                             actualValue = window.location.href;
                         break;
-                    case CONDITION_PATTERN$1.CSS_SELECTOR: // 2
+                    case CONDITION_PATTERN.CSS_SELECTOR: // 2
                         try {
                             isMet = element.matches(expectedValue);
                             if (this.isNegativeOperator(operatorId)) {
@@ -3768,10 +3768,10 @@ var RecSysTracker = (function (exports) {
                         catch {
                             return false;
                         }
-                    case CONDITION_PATTERN$1.DOM_ATTRIBUTE: // 3
+                    case CONDITION_PATTERN.DOM_ATTRIBUTE: // 3
                         actualValue = element.id;
                         break;
-                    case CONDITION_PATTERN$1.DATA_ATTRIBUTE: // 4
+                    case CONDITION_PATTERN.DATA_ATTRIBUTE: // 4
                         actualValue = element.getAttribute(expectedValue);
                         break;
                     default: actualValue = '';
@@ -3786,19 +3786,19 @@ var RecSysTracker = (function (exports) {
             if (actual === null)
                 actual = '';
             switch (operatorId) {
-                case TARGET_OPERATOR$1.EQUALS: return actual === expected;
-                case TARGET_OPERATOR$1.NOT_EQUALS: return actual !== expected;
-                case TARGET_OPERATOR$1.CONTAINS: return actual.includes(expected);
-                case TARGET_OPERATOR$1.NOT_CONTAINS: return !actual.includes(expected);
-                case TARGET_OPERATOR$1.STARTS_WITH: return actual.startsWith(expected);
-                case TARGET_OPERATOR$1.ENDS_WITH: return actual.endsWith(expected);
-                case TARGET_OPERATOR$1.EXISTS: return actual !== '' && actual !== null;
-                case TARGET_OPERATOR$1.NOT_EXISTS: return actual === '' || actual === null;
+                case TARGET_OPERATOR.EQUALS: return actual === expected;
+                case TARGET_OPERATOR.NOT_EQUALS: return actual !== expected;
+                case TARGET_OPERATOR.CONTAINS: return actual.includes(expected);
+                case TARGET_OPERATOR.NOT_CONTAINS: return !actual.includes(expected);
+                case TARGET_OPERATOR.STARTS_WITH: return actual.startsWith(expected);
+                case TARGET_OPERATOR.ENDS_WITH: return actual.endsWith(expected);
+                case TARGET_OPERATOR.EXISTS: return actual !== '' && actual !== null;
+                case TARGET_OPERATOR.NOT_EXISTS: return actual === '' || actual === null;
                 default: return actual === expected;
             }
         }
         isNegativeOperator(opId) {
-            return opId === TARGET_OPERATOR$1.NOT_EQUALS || opId === TARGET_OPERATOR$1.NOT_CONTAINS || opId === TARGET_OPERATOR$1.NOT_EXISTS;
+            return opId === TARGET_OPERATOR.NOT_EQUALS || opId === TARGET_OPERATOR.NOT_CONTAINS || opId === TARGET_OPERATOR.NOT_EXISTS;
         }
         // --- DOM RADAR (Full Version - Port từ FormPlugin) ---
         scanSurroundingContext(element) {
@@ -4237,417 +4237,299 @@ var RecSysTracker = (function (exports) {
         }
     }
 
-    const TARGET_PATTERN = {
-        CSS_SELECTOR: 1,
-        DOM_ATTRIBUTE: 2,
-        DATA_ATTRIBUTE: 3,
-    };
-    const CONDITION_PATTERN = {
-        URL_PARAM: 1,
-        CSS_SELECTOR: 2,
-        DOM_ATTRIBUTE: 3,
-        DATA_ATTRIBUTE: 4,
-    };
-    const TARGET_OPERATOR = {
-        CONTAINS: 1,
-        NOT_CONTAINS: 2,
-        STARTS_WITH: 3,
-        ENDS_WITH: 4,
-        EQUALS: 5,
-        NOT_EQUALS: 6,
-        EXISTS: 7,
-        NOT_EXISTS: 8
-    };
-    class FormPlugin extends BasePlugin {
+    class RatingUtils {
+        /**
+         * Hàm Main: Phân tích DOM để lấy rating
+         */
+        static processRating(container, triggerElement, eventType) {
+            let rawValue = 0;
+            let maxValue = 5;
+            // BƯỚC 1: TRÍCH XUẤT GIÁ TRỊ (EXTRACTION)
+            // Chiến thuật 1: Nếu click trực tiếp vào item (sao/nút), ưu tiên lấy value từ chính nó
+            if (eventType === 'click') {
+                rawValue = this.extractValueFromTarget(container, triggerElement);
+            }
+            // Chiến thuật 2: Nếu là submit form hoặc Chiến thuật 1 thất bại (click vào viền chẳng hạn)
+            // Quét toàn bộ container xem cái nào đang "checked" hoặc "active"
+            if (rawValue === 0) {
+                rawValue = this.extractValueFromContainerState(container);
+            }
+            // BƯỚC 2: PHÁT HIỆN THANG ĐIỂM (SCALE DETECTION)
+            const isBinary = this.detectBinaryContext(container, triggerElement);
+            if (isBinary) {
+                maxValue = 1; // Hệ nhị phân
+                // Nếu click nút Like/Upvote thì rawValue = 1
+                if (eventType === 'click' && this.isPositiveAction(triggerElement)) {
+                    rawValue = 1;
+                }
+                // Nếu submit form, rawValue đã được lấy ở bước 1 (từ input checked)
+            }
+            else {
+                // Hệ chấm điểm (5, 10, 100)
+                maxValue = this.detectMaxScale(container, rawValue);
+            }
+            // BƯỚC 3: LẤY REVIEW TEXT
+            const reviewText = this.extractReviewText(container);
+            // BƯỚC 4: CHUẨN HÓA
+            const normalized = this.normalizeScore(rawValue, maxValue, isBinary);
+            return {
+                originalValue: rawValue,
+                maxValue: maxValue,
+                normalizedValue: normalized,
+                reviewText: reviewText,
+                type: isBinary ? 'binary' : (maxValue > 5 ? 'numeric' : 'star'),
+                captureMethod: eventType === 'submit' ? 'form_submit' : 'click_item'
+            };
+        }
+        // --- CÁC HÀM "THÁM TỬ" (HEURISTICS) ---
+        static extractValueFromTarget(container, target) {
+            var _a;
+            let current = target;
+            // Leo ngược từ target lên container (tối đa 5 cấp để tránh loop vô hạn)
+            let depth = 0;
+            while (current && current !== container.parentElement && depth < 5) {
+                // Check 1: Data Attributes (Phổ biến nhất)
+                const val = current.getAttribute('data-value') || current.getAttribute('value') || current.getAttribute('aria-valuenow');
+                if (val) {
+                    const num = parseFloat(val);
+                    if (!isNaN(num))
+                        return num;
+                }
+                // Check 2: Index (Sao thứ mấy trong danh sách?)
+                // Áp dụng nếu element hiện tại là item trong list (li, span, button)
+                if (['LI', 'SPAN', 'DIV', 'BUTTON', 'I', 'SVG'].includes(current.tagName)) {
+                    const siblings = Array.from(((_a = current.parentElement) === null || _a === void 0 ? void 0 : _a.children) || []).filter(el => el.tagName === current.tagName || el.className.includes('star') || el.className.includes('rate'));
+                    // Nếu có ít nhất 2 anh em giống nhau, khả năng cao là list sao
+                    if (siblings.length >= 2 && siblings.length <= 12) {
+                        const index = siblings.indexOf(current);
+                        if (index !== -1)
+                            return index + 1;
+                    }
+                }
+                // Check 3: Accessibility Attribute (aria-posinset="4")
+                const pos = current.getAttribute('aria-posinset');
+                if (pos)
+                    return parseFloat(pos);
+                current = current.parentElement;
+                depth++;
+            }
+            return 0;
+        }
+        static extractValueFromContainerState(container) {
+            // 1. Tìm Input Radio/Checkbox đang checked (Chuẩn HTML)
+            const checked = container.querySelector('input[type="radio"]:checked, input[type="checkbox"]:checked');
+            if (checked && checked.value) {
+                const val = parseFloat(checked.value);
+                // Một số web để value="on", ta bỏ qua
+                if (!isNaN(val))
+                    return val;
+            }
+            // 2. Tìm Class Active/Selected (Chuẩn CSS Custom)
+            // Tìm các class thường dùng để highlight sao
+            const activeSelectors = ['.active', '.selected', '.checked', '.filled', '.highlighted', '[aria-checked="true"]'];
+            const activeItems = container.querySelectorAll(activeSelectors.join(', '));
+            if (activeItems.length > 0) {
+                // Logic: Nếu 4 sao sáng -> 4 điểm
+                // Nhưng cẩn thận: check xem item cuối cùng có data-value="8" không?
+                const lastItem = activeItems[activeItems.length - 1];
+                const dataVal = lastItem.getAttribute('data-value');
+                if (dataVal) {
+                    const val = parseFloat(dataVal);
+                    if (!isNaN(val))
+                        return val;
+                }
+                return activeItems.length;
+            }
+            // 3. Dropdown Select
+            const select = container.querySelector('select');
+            if (select && select.value)
+                return parseFloat(select.value);
+            return 0;
+        }
+        static extractReviewText(container) {
+            // Tìm textarea hoặc input text có tên liên quan review/comment
+            const inputs = container.querySelectorAll('textarea, input[type="text"]');
+            for (const input of Array.from(inputs)) {
+                const name = (input.name || '').toLowerCase();
+                const id = (input.id || '').toLowerCase();
+                const placeholder = (input.placeholder || '').toLowerCase();
+                // Nếu tên trường có chữ review, comment, detail, đánh giá...
+                if (['review', 'comment', 'detail', 'message', 'body', 'content', 'đánh giá', 'nhận xét'].some(k => name.includes(k) || id.includes(k) || placeholder.includes(k))) {
+                    return input.value || '';
+                }
+            }
+            // Fallback: Lấy textarea đầu tiên tìm thấy
+            const firstTextarea = container.querySelector('textarea');
+            return firstTextarea ? (firstTextarea.value || '') : '';
+        }
+        static detectMaxScale(container, currentVal) {
+            // 1. Check aria-valuemax (Chuẩn nhất)
+            const ariaMax = container.getAttribute('aria-valuemax');
+            if (ariaMax)
+                return parseFloat(ariaMax);
+            const childMax = container.querySelector('[aria-valuemax]');
+            if (childMax)
+                return parseFloat(childMax.getAttribute('aria-valuemax') || '5');
+            // 2. Đếm số lượng item con (Stars)
+            // Lọc các element con có class chứa 'star' hoặc 'rate' hoặc là svg/img
+            const stars = container.querySelectorAll('.star, .fa-star, [class*="rating-item"], [role="radio"]');
+            if (stars.length >= 3 && stars.length <= 10)
+                return stars.length;
+            // 3. Fallback theo logic số học
+            if (currentVal > 5) {
+                if (currentVal <= 10)
+                    return 10;
+                if (currentVal <= 20)
+                    return 20; // Thang 20 điểm
+                return 100; // Thang 100 điểm
+            }
+            return 5; // Mặc định an toàn
+        }
+        static detectBinaryContext(container, target) {
+            // Gom tất cả text/class để scan keyword
+            const contextStr = (container.className + ' ' + target.className + ' ' + (target.getAttribute('aria-label') || '') + ' ' + (target.id || '')).toLowerCase();
+            // Keywords đặc trưng của Binary Rating
+            const keywords = ['like', 'dislike', 'thumb', 'vote', 'useful', 'hữu ích', 'thích'];
+            // Check nếu container chỉ có đúng 2 nút bấm -> Khả năng cao là binary
+            const buttons = container.querySelectorAll('button, a[role="button"], input[type="button"]');
+            const isTwoButtons = buttons.length === 2;
+            return keywords.some(k => contextStr.includes(k)) || (isTwoButtons && contextStr.includes('rate'));
+        }
+        static isPositiveAction(target) {
+            const str = (target.className + ' ' + target.textContent + ' ' + target.id + ' ' + (target.getAttribute('aria-label') || '')).toLowerCase();
+            // Nếu có chữ 'dis' (dislike) hoặc 'down' (thumb-down) -> Negative
+            if (str.includes('dis') || str.includes('down') || str.includes('không'))
+                return false;
+            // Nếu có chữ 'up', 'like', 'good', 'yes' -> Positive
+            return str.includes('up') || str.includes('like') || str.includes('good') || str.includes('yes') || str.includes('hữu ích');
+        }
+        static normalizeScore(raw, max, isBinary) {
+            if (raw <= 0)
+                return 0;
+            if (isBinary) {
+                // Binary: Positive = 5 sao, Negative = 1 sao
+                return raw >= 1 ? 5 : 1;
+            }
+            // Range Normalization: (Value / Max) * 5
+            let normalized = (raw / max) * 5;
+            // Làm tròn đến 0.5 (vd: 4.3 -> 4.5, 4.2 -> 4.0)
+            normalized = Math.round(normalized * 2) / 2;
+            // Kẹp giá trị trong khoảng 1-5
+            return Math.min(5, Math.max(1, normalized));
+        }
+    }
+
+    class RatingPlugin extends BasePlugin {
         constructor() {
-            super(...arguments);
-            this.name = 'FormPlugin';
+            super();
+            this.name = 'RatingPlugin';
             this.context = null;
             this.detector = null;
-            this.identityManager = null;
-            this.handleSubmitBound = this.handleSubmit.bind(this);
+            // Delay 500ms cho click: User click sao liên tục thì chỉ lấy cái cuối sau khi dừng tay
+            this.throttledClickHandler = throttle(this.wrapHandler(this.handleInteraction.bind(this, 'click'), 'handleClick'), 500);
+            this.submitHandler = this.wrapHandler(this.handleInteraction.bind(this, 'submit'), 'handleSubmit');
         }
         init(tracker) {
             this.errorBoundary.execute(() => {
                 super.init(tracker);
                 this.context = new TrackerContextAdapter(tracker);
                 this.detector = getAIItemDetector();
-                this.identityManager = getUserIdentityManager();
-                this.identityManager.initialize();
-                if (this.context) {
-                    this.identityManager.setTrackerContext(this.context);
-                }
-                console.log(`[FormPlugin] initialized with UserIdentityManager.`);
-                console.log(`[FormPlugin] initialized.`);
-            }, 'FormPlugin.init');
+                console.log(`[RatingPlugin] initialized.`);
+            }, 'RatingPlugin.init');
         }
         start() {
             this.errorBoundary.execute(() => {
                 if (!this.ensureInitialized())
                     return;
-                // Lắng nghe sự kiện submit toàn cục
-                document.addEventListener('submit', this.handleSubmitBound, { capture: true });
-                console.log("[FormPlugin] started listening for form submissions.");
+                // 1. Lắng nghe Click (Interactive Rating: Stars, Likes)
+                // Sử dụng capture = true để bắt sự kiện sớm, trước khi các framework (React/Vue) chặn propagation
+                document.addEventListener("click", this.throttledClickHandler, true);
+                // 2. Lắng nghe Submit (Traditional Forms)
+                document.addEventListener("submit", this.submitHandler, true);
+                console.log("[RatingPlugin] started listening (Universal Mode).");
                 this.active = true;
-            }, 'FormPlugin.start');
+            }, 'RatingPlugin.start');
         }
         stop() {
             this.errorBoundary.execute(() => {
-                document.removeEventListener('submit', this.handleSubmitBound, { capture: true });
+                document.removeEventListener("click", this.throttledClickHandler, true);
+                document.removeEventListener("submit", this.submitHandler, true);
                 super.stop();
-            }, 'FormPlugin.stop');
-        }
-        handleSubmit(event) {
-            console.log("🔥 [DEBUG] Sự kiện Submit đã được bắt!");
-            if (!this.context || !this.detector || !this.tracker)
-                return;
-            const form = event.target;
-            const formId = form.id;
-            console.log(`📝 [DEBUG] Form đang submit có ID: "${formId}"`);
-            // 1. Lấy rules RATE (Dynamic ID)
-            const eventId = this.tracker.getEventTypeId('Rating');
-            if (!eventId) {
-                console.log('[FormPlugin] Rating event type not found in config.');
-                return;
-            }
-            const rateRules = this.context.config.getRules(eventId);
-            console.log(`🔎 [DEBUG] Tìm thấy ${rateRules.length} rule(s) cho sự kiện RATE.`);
-            if (rateRules.length === 0) {
-                return;
-            }
-            for (const rule of rateRules) {
-                const isTargetMatch = this.checkTargetMatch(form, rule);
-                if (isTargetMatch) {
-                    // B. Kiểm tra Conditions (Dùng CONDITION_PATTERN)
-                    const isConditionMatch = this.checkConditions(form, rule);
-                    if (isConditionMatch) {
-                        console.log(`✅ [DEBUG] Rule "${rule.name}" Matched (Target & Conditions)!`);
-                        // C. Extract & Process Data
-                        const { rateValue, reviewText, detectedId } = this.extractFormData(form, rule);
-                        let structuredItem = this.detector.detectItem(form);
-                        // Logic Tam Trụ (Hidden Input -> AI -> Radar)
-                        if (detectedId) {
-                            structuredItem = {
-                                ...(structuredItem || {}),
-                                id: detectedId,
-                                confidence: 1,
-                                source: 'form_hidden_input',
-                                context: 'form_internal',
-                                name: (structuredItem === null || structuredItem === void 0 ? void 0 : structuredItem.name) || 'Unknown Item',
-                                type: (structuredItem === null || structuredItem === void 0 ? void 0 : structuredItem.type) || 'item'
-                            };
-                        }
-                        else {
-                            const isGarbageId = !structuredItem || !structuredItem.id || structuredItem.id === 'N/A (Failed)';
-                            if (isGarbageId) {
-                                const contextInfo = this.scanSurroundingContext(form);
-                                if (contextInfo.id) {
-                                    structuredItem = {
-                                        ...(structuredItem || {}),
-                                        id: contextInfo.id,
-                                        confidence: 1,
-                                        source: contextInfo.source,
-                                        context: 'dom_context',
-                                        name: contextInfo.name || (structuredItem === null || structuredItem === void 0 ? void 0 : structuredItem.name) || 'Unknown Item',
-                                        type: contextInfo.type || (structuredItem === null || structuredItem === void 0 ? void 0 : structuredItem.type) || 'item',
-                                        metadata: (structuredItem === null || structuredItem === void 0 ? void 0 : structuredItem.metadata) || {}
-                                    };
-                                }
-                            }
-                        }
-                        // D. Build & Send Payload
-                        const payload = this.context.payloadBuilder.build(structuredItem, rule);
-                        this.enrichPayload(payload, structuredItem, { rateValue, reviewText });
-                        this.context.eventBuffer.enqueue(payload);
-                        return;
-                    }
-                    else {
-                        console.log(`⚠️ Match Target nhưng FAIL Conditions của Rule: ${rule.name}`);
-                    }
-                }
-            }
+            }, 'RatingPlugin.stop');
         }
         /**
-         * Hàm kiểm tra xem Form hiện tại có khớp với Rule không
-         * Hỗ trợ mọi Operator (Equals, Contains, Regex...) và Pattern (CSS, ID...)
+         * Hàm xử lý trung tâm
          */
-        checkTargetMatch(form, rule) {
-            const target = rule.targetElement || rule.TargetElement;
-            if (!target)
-                return false;
-            const patternId = target.targetEventPatternId || target.EventPatternID || 1;
-            const operatorId = target.targetOperatorId || target.OperatorID || 5;
-            const expectedValue = target.targetElementValue || target.Value || '';
-            let actualValue = null;
-            switch (patternId) {
-                case TARGET_PATTERN.CSS_SELECTOR: // 1
-                    try {
-                        const isMatch = form.matches(expectedValue);
-                        if (operatorId === TARGET_OPERATOR.NOT_EQUALS || operatorId === TARGET_OPERATOR.NOT_EXISTS)
-                            return !isMatch;
-                        return isMatch;
-                    }
-                    catch {
-                        return false;
-                    }
-                case TARGET_PATTERN.DOM_ATTRIBUTE: // 2
-                    actualValue = form.id;
-                    break;
-                case TARGET_PATTERN.DATA_ATTRIBUTE: // 3
-                    actualValue = form.getAttribute('data-form-name') || form.getAttribute('name') || '';
-                    break;
-                // Đã xóa case REGEX_FIELDS
-                default:
-                    try {
-                        return form.matches(expectedValue);
-                    }
-                    catch {
-                        return false;
-                    }
-            }
-            return this.compareValues(actualValue, expectedValue, operatorId);
-        }
-        /**
-         * CHECK CONDITIONS: Dùng CONDITION_PATTERN
-         */
-        checkConditions(form, rule) {
-            const conditions = rule.Conditions || rule.conditions;
-            if (!conditions || conditions.length === 0)
-                return true;
-            for (const condition of conditions) {
-                const patternId = condition.EventPatternID || condition.eventPatternId || 1;
-                const operatorId = condition.OperatorID || condition.operatorId || 5;
-                const expectedValue = condition.Value || condition.value || '';
-                let actualValue = null;
-                let isMet = false;
-                switch (patternId) {
-                    case CONDITION_PATTERN.URL_PARAM: // 1
-                        const urlParams = new URLSearchParams(window.location.search);
-                        if (urlParams.has(expectedValue)) {
-                            actualValue = urlParams.get(expectedValue);
-                        }
-                        else {
-                            actualValue = window.location.href;
-                        }
-                        break;
-                    case CONDITION_PATTERN.CSS_SELECTOR: // 2
-                        try {
-                            isMet = form.matches(expectedValue);
-                            if (this.isNegativeOperator(operatorId)) {
-                                if (!isMet)
-                                    continue;
-                                return false;
-                            }
-                            if (!isMet)
-                                return false;
+        handleInteraction(eventType, event) {
+            var _a;
+            try {
+                if (!this.context || !this.detector)
+                    return;
+                // Trigger ID = 2 cho Rating (Lấy từ server config)
+                const rules = this.context.config.getRules(2);
+                if (rules.length === 0)
+                    return;
+                const target = event.target;
+                if (!target)
+                    return;
+                for (const rule of rules) {
+                    const selector = rule.trackingTarget.value;
+                    if (!selector)
+                        continue;
+                    // Kiểm tra xem user có tương tác đúng khu vực quy định không
+                    // closest() giúp tìm ngược lên trên nếu click vào phần tử con (vd click vào path trong svg)
+                    const matchedElement = target.closest(selector);
+                    if (matchedElement) {
+                        // Xác định "Container" bao quanh toàn bộ widget đánh giá để quét ngữ cảnh
+                        // Logic: Tìm Form cha, hoặc Div bao quanh, hoặc chính là parent của nút bấm
+                        const container = matchedElement.closest('form') ||
+                            matchedElement.closest('.rating-container') ||
+                            matchedElement.closest('.review-box') ||
+                            matchedElement.parentElement ||
+                            document.body;
+                        // Gọi Utils để "thám thính"
+                        const result = RatingUtils.processRating(container, matchedElement, eventType);
+                        // Lọc rác: Nếu không bắt được điểm và cũng không có text -> Bỏ qua
+                        if (result.originalValue === 0 && !result.reviewText) {
                             continue;
                         }
-                        catch {
-                            return false;
+                        console.log(`[RatingPlugin] 🎯 Captured [${eventType}]: Raw=${result.originalValue}/${result.maxValue} -> Norm=${result.normalizedValue}`);
+                        // Detect Item ID (Sản phẩm nào đang được đánh giá?)
+                        // Dùng AI quét Container trước vì nó gần nhất, chính xác hơn quét cả body
+                        let structuredItem = null;
+                        if (!((_a = rule.trackingTarget.value) === null || _a === void 0 ? void 0 : _a.startsWith('^'))) {
+                            structuredItem = this.detector.detectItem(container);
                         }
-                    case CONDITION_PATTERN.DOM_ATTRIBUTE: // 3
-                        actualValue = form.id;
+                        // Build Payload
+                        const payload = this.context.payloadBuilder.build(structuredItem || matchedElement, rule);
+                        payload.event = 'rate_submit';
+                        payload.metadata = {
+                            ...payload.metadata,
+                            // Dữ liệu quan trọng nhất
+                            rateValue: result.normalizedValue,
+                            reviewText: result.reviewText,
+                            // Dữ liệu phụ để debug/analytics
+                            rawRateValue: result.originalValue,
+                            rateMax: result.maxValue,
+                            rateType: result.type,
+                            captureMethod: result.captureMethod
+                        };
+                        this.context.eventBuffer.enqueue(payload);
+                        // Break ngay sau khi khớp rule đầu tiên để tránh duplicate event
                         break;
-                    case CONDITION_PATTERN.DATA_ATTRIBUTE: // 4
-                        actualValue = form.getAttribute(expectedValue);
-                        break;
-                    default:
-                        actualValue = '';
-                }
-                isMet = this.compareValues(actualValue, expectedValue, operatorId);
-                if (!isMet) {
-                    console.log(`❌ Condition Failed: Pattern ${patternId}, Expect "${expectedValue}" vs Actual "${actualValue}"`);
-                    return false;
-                }
-            }
-            return true;
-        }
-        compareValues(actual, expected, operatorId) {
-            if (actual === null)
-                actual = '';
-            switch (operatorId) {
-                case TARGET_OPERATOR.EQUALS: return actual === expected;
-                case TARGET_OPERATOR.NOT_EQUALS: return actual !== expected;
-                case TARGET_OPERATOR.CONTAINS: return actual.includes(expected);
-                case TARGET_OPERATOR.NOT_CONTAINS: return !actual.includes(expected);
-                case TARGET_OPERATOR.STARTS_WITH: return actual.startsWith(expected);
-                case TARGET_OPERATOR.ENDS_WITH: return actual.endsWith(expected);
-                // Đã xóa case REGEX
-                case TARGET_OPERATOR.EXISTS: return actual !== '' && actual !== null;
-                case TARGET_OPERATOR.NOT_EXISTS: return actual === '' || actual === null;
-                default: return actual === expected;
-            }
-        }
-        isNegativeOperator(opId) {
-            return opId === TARGET_OPERATOR.NOT_EQUALS ||
-                opId === TARGET_OPERATOR.NOT_CONTAINS ||
-                opId === TARGET_OPERATOR.NOT_EXISTS;
-        }
-        /**
-         * DOM RADAR: Quét ngữ cảnh xung quanh theo phương pháp lan truyền
-         * 1. Check bản thân -> 2. Check tổ tiên -> 3. Check phạm vi (Parent Scope)
-         */
-        scanSurroundingContext(element) {
-            // Helper lấy data attribute
-            const getAttrs = (el) => {
-                if (!el)
-                    return null;
-                const id = el.getAttribute('data-item-id') || el.getAttribute('data-product-id') || el.getAttribute('data-id');
-                if (id) {
-                    return {
-                        id,
-                        name: el.getAttribute('data-item-name') || el.getAttribute('data-name') || undefined,
-                        type: el.getAttribute('data-item-type') || undefined
-                    };
-                }
-                return null;
-            };
-            console.log("📡 [DOM Radar] Bắt đầu quét xung quanh form...");
-            // BƯỚC 1: Quét Tổ Tiên (Ancestors - Form nằm trong thẻ Item)
-            // Dùng closest để tìm ngược lên trên
-            const ancestor = element.closest('[data-item-id], [data-product-id], [data-id]');
-            const ancestorData = getAttrs(ancestor);
-            if (ancestorData) {
-                console.log("   => Tìm thấy ở Tổ tiên (Ancestor)");
-                return { ...ancestorData, source: 'ancestor' };
-            }
-            // BƯỚC 2: Quét Phạm Vi Gần (Scope Scan - Form nằm cạnh thẻ Item)
-            // Đi ngược lên Parent từng cấp (Max 5 cấp) để tìm "hàng xóm" có data
-            let currentParent = element.parentElement;
-            let levels = 0;
-            const maxLevels = 5; // Chỉ quét tối đa 5 cấp cha để tránh performance kém
-            while (currentParent && levels < maxLevels) {
-                // Tìm tất cả các thẻ có ID trong phạm vi cha này
-                const candidates = currentParent.querySelectorAll('[data-item-id], [data-product-id], [data-id]');
-                if (candidates.length > 0) {
-                    // Có ứng viên! Chọn ứng viên đầu tiên không phải là chính cái form (tránh loop)
-                    // (Thường querySelectorAll trả về theo thứ tự DOM, nên cái nào đứng trước/gần nhất sẽ được lấy)
-                    for (let i = 0; i < candidates.length; i++) {
-                        const candidate = candidates[i];
-                        if (!element.contains(candidate)) { // Đảm bảo không tìm lại con của form (nếu có)
-                            const data = getAttrs(candidate);
-                            if (data) {
-                                console.log(`   => Tìm thấy ở Hàng xóm (Scope Level ${levels + 1})`);
-                                return { ...data, source: `scope_level_${levels + 1}` };
-                            }
-                        }
-                    }
-                }
-                // Tiếp tục leo lên cấp cao hơn
-                currentParent = currentParent.parentElement;
-                levels++;
-            }
-            // BƯỚC 3: Fallback URL (Cứu cánh cuối cùng)
-            const urlParams = new URLSearchParams(window.location.search);
-            const urlId = urlParams.get('id') || urlParams.get('productId') || urlParams.get('item_id');
-            if (urlId) {
-                console.log("   => Tìm thấy ở URL Param");
-                return { id: urlId, source: 'url_param' };
-            }
-            console.warn("❌ [DOM Radar] Không tìm thấy ngữ cảnh nào xung quanh.");
-            return { id: undefined, source: 'none' };
-        }
-        enrichPayload(payload, itemCtx, formData) {
-            // Gán Event Type chuẩn
-            payload.event = 'rate_submit';
-            // Merge Metadata (Form Data)
-            payload.metadata = {
-                ...(payload.metadata || {}),
-                ...formData
-            };
-            // Override Item Info (Quan trọng: Đảm bảo công sức của Radar được ghi nhận)
-            // Chỉ ghi đè nếu Builder thất bại ("N/A") hoặc ID rỗng
-            if (itemCtx.id && (!payload.itemId || payload.itemId === 'N/A (Failed)')) {
-                payload.itemId = itemCtx.id;
-                payload.confidence = 1; // Khẳng định độ tin cậy
-                if (itemCtx.source)
-                    payload.source = itemCtx.source;
-            }
-            // Name có thể optional
-            if (itemCtx.name && (!payload.itemName || payload.itemName === 'Unknown Item')) {
-                payload.itemName = itemCtx.name;
-            }
-            if (this.identityManager) {
-                // Lấy ID thật (nếu có đăng nhập), bỏ qua anon_
-                const realUserId = this.identityManager.getRealUserId();
-                const stableUserId = this.identityManager.getStableUserId();
-                // Ưu tiên ID thật (User ID từ DB)
-                if (realUserId && !realUserId.startsWith('anon_')) {
-                    console.log(`👤 [FormPlugin] Auto-detected Real User ID: ${realUserId}`);
-                    payload.userId = realUserId;
-                }
-                // Nếu không có ID thật, dùng ID ổn định (có thể là anon cũ) để đảm bảo continuity
-                else if (stableUserId) {
-                    // Chỉ ghi đè nếu payload đang trống hoặc payload đang dùng anon mới tạo
-                    if (!payload.userId || (payload.userId.startsWith('anon_') && stableUserId !== payload.userId)) {
-                        payload.userId = stableUserId;
-                    }
-                }
-                // [MẸO] Gắn thêm SessionID để tracking phiên làm việc chuẩn xác hơn
-                const userInfo = this.identityManager.getUserInfo();
-                if (userInfo.sessionId) {
-                    payload.sessionId = userInfo.sessionId; // Đảm bảo backend có trường này hoặc để vào metadata
-                    payload.metadata.sessionId = userInfo.sessionId;
-                }
-            }
-        }
-        // Helper: Lấy dữ liệu từ form
-        extractFormData(form, rule) {
-            const formData = new FormData(form);
-            const data = {};
-            // Convert FormData to Object & Log raw data
-            formData.forEach((value, key) => { data[key] = value; });
-            console.log("RAW FORM DATA:", data);
-            let rateValue = 0;
-            let reviewText = '';
-            let detectedId = '';
-            // Ưu tiên config từ Rule
-            if (rule.payload && rule.payload.length > 0) {
-                rule.payload.forEach((p) => {
-                    const val = data[p.value];
-                    if (p.type === 'number')
-                        rateValue = Number(val) || 0;
-                    else
-                        reviewText = String(val || '');
-                });
-            }
-            else {
-                const idKeywords = ['productid', 'itemid', 'item_id', 'product_id', 'id', 'objectid', 'entity_id'];
-                // Auto-detect Logic
-                for (const [key, val] of Object.entries(data)) {
-                    const k = key.toLowerCase();
-                    const vStr = String(val);
-                    if (idKeywords.includes(k) && vStr.length > 0 && vStr.length < 50) {
-                        // Loại trừ các giá trị rác nếu cần
-                        if (vStr !== '0' && vStr !== 'undefined') {
-                            detectedId = vStr;
-                            console.log(`💡 [FormPlugin] Tìm thấy ID trong input [${key}]: ${vStr}`);
-                        }
-                    }
-                    // Detect Rating
-                    if (k.includes('rate') || k.includes('star') || k.includes('score') || k.includes('rating')) {
-                        // Chỉ nhận nếu là số hợp lệ và > 0
-                        const parsed = Number(val);
-                        if (!isNaN(parsed) && parsed > 0) {
-                            rateValue = parsed;
-                        }
-                    }
-                    // Detect Review
-                    if (k.includes('comment') || k.includes('review') || k.includes('content') || k.includes('body')) {
-                        // Ưu tiên chuỗi dài hơn (tránh lấy nhầm ID)
-                        if (vStr.length > reviewText.length) {
-                            reviewText = vStr;
-                        }
                     }
                 }
             }
-            return { rateValue, reviewText, detectedId };
+            catch (error) {
+                // Safety guard: Không bao giờ để lỗi plugin làm ảnh hưởng trải nghiệm user
+                console.warn('[RatingPlugin] Error processing interaction:', error);
+            }
         }
     }
 
-    var formPlugin = /*#__PURE__*/Object.freeze({
+    var ratingPlugin = /*#__PURE__*/Object.freeze({
         __proto__: null,
-        FormPlugin: FormPlugin
+        RatingPlugin: RatingPlugin
     });
 
     class PathMatcher {
@@ -4981,11 +4863,11 @@ var RecSysTracker = (function (exports) {
                     pluginPromises.push(clickPromise);
                 }
                 if (hasRateRules) {
-                    const formPromise = Promise.resolve().then(function () { return formPlugin; }).then(({ FormPlugin }) => {
-                        this.use(new FormPlugin());
-                        console.log('[RecSysTracker] Auto-registered FormPlugin based on tracking rules');
+                    const ratingPromise = Promise.resolve().then(function () { return ratingPlugin; }).then(({ RatingPlugin }) => {
+                        this.use(new RatingPlugin());
+                        console.log('[RecSysTracker] Auto-registered RatingPlugin based on tracking rules');
                     });
-                    pluginPromises.push(formPromise);
+                    pluginPromises.push(ratingPromise);
                 }
                 if (hasReviewRules) {
                     const scrollPromise = Promise.resolve().then(function () { return reviewPlugin; }).then(({ ReviewPlugin }) => {
@@ -5206,10 +5088,10 @@ var RecSysTracker = (function (exports) {
     exports.ClickPlugin = ClickPlugin;
     exports.ConfigLoader = ConfigLoader;
     exports.DisplayManager = DisplayManager;
-    exports.FormPlugin = FormPlugin;
     exports.NetworkPlugin = NetworkPlugin;
     exports.PageViewPlugin = PageViewPlugin;
     exports.PluginManager = PluginManager;
+    exports.RatingPlugin = RatingPlugin;
     exports.RecSysTracker = RecSysTracker;
     exports.ReviewPlugin = ReviewPlugin;
     exports.ScrollPlugin = ScrollPlugin;
