@@ -1,3 +1,4 @@
+import { OriginVerifier } from '../utils/origin-verifier';
 import { DEFAULT_API_URL, DEFAULT_CONFIG_ENDPOINT_PATH } from '../constants';
 // Luồng hoạt động
 // 1. SDK khởi tạo
@@ -45,15 +46,6 @@ export class ConfigLoader {
                     offlineStorage: true,
                 },
             };
-            const mockConfig = window.RecSysTrackerConfig;
-            if (mockConfig) {
-                console.log("⚠️ [ConfigLoader] Detect Mock Config from Window. Overriding defaults...");
-                this.config = {
-                    ...this.config,
-                    ...mockConfig,
-                    trackingRules: mockConfig.trackingRules || []
-                };
-            }
             return this.config;
         }
         catch (error) {
@@ -63,11 +55,6 @@ export class ConfigLoader {
     }
     // Lấy cấu hình từ server (remote)
     async fetchRemoteConfig() {
-        if (window.RecSysTrackerConfig || this.domainKey === 'TEST-DOMAIN-KEY') {
-            console.log("⚠️ [ConfigLoader] Mock Mode detected. Skipping Server Fetch.");
-            console.log(this.config);
-            return this.config;
-        }
         if (!this.domainKey) {
             return this.config;
         }
@@ -100,14 +87,14 @@ export class ConfigLoader {
                     eventTypes: this.transformEventTypes(eventTypesData),
                 };
                 // Verify origin sau khi có domainUrl từ server
-                // if (this.config.domainUrl) {
-                //   const isOriginValid = OriginVerifier.verify(this.config.domainUrl);
-                //   if (!isOriginValid) {
-                //     console.error('[RecSysTracker] Origin verification failed. SDK will not function.');
-                //     this.config = null;
-                //     return null;
-                //   }
-                // }
+                if (this.config.domainUrl) {
+                    const isOriginValid = OriginVerifier.verify(this.config.domainUrl);
+                    if (!isOriginValid) {
+                        console.error('[RecSysTracker] Origin verification failed. SDK will not function.');
+                        this.config = null;
+                        return null;
+                    }
+                }
             }
             return this.config;
         }

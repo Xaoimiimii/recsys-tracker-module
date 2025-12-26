@@ -24,5 +24,15 @@ export declare class PayloadBuilder {
     private extractFromCookie;
     private getNestedValue;
     private isValidValue;
+    /**
+     * [NEW] Extract info from Network Request/Response
+     * Context: { reqBody: any, resBody: any, method: string }
+     * Path format: "request.field" or "response.field" or just "field" (infer)
+     */
+    private extractFromNetwork;
+    /**
+     * [NEW] Helper to traverse generic object (for Network Plugin)
+     */
+    private traverseObject;
 }
 //# sourceMappingURL=payload-builder.d.ts.map

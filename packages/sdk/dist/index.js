@@ -41,6 +41,7 @@ export class RecSysTracker {
                 if (this.eventDispatcher && this.config.domainUrl) {
                     this.eventDispatcher.setDomainUrl(this.config.domainUrl);
                 }
+                console.log(this.config);
                 // Khởi tạo Display Manager nếu có returnMethods
                 if (this.config.returnMethods && this.config.returnMethods.length > 0) {
                     const apiBaseUrl = process.env.API_URL || 'http://localhost:3000';
@@ -120,6 +121,15 @@ export class RecSysTracker {
                     console.log('[RecSysTracker] Auto-registered ScrollPlugin');
                 });
                 pluginPromises.push(scrollPromise);
+            }
+            // Check for Network Rules
+            const hasNetworkRules = this.config.trackingRules.some(rule => rule.payloadMappings && rule.payloadMappings.some(m => m.source == "RequestBody"));
+            if (hasNetworkRules) {
+                const networkPromise = import('./core/plugins/network-plugin').then(({ NetworkPlugin }) => {
+                    this.use(new NetworkPlugin());
+                    console.log('[RecSysTracker] Auto-registered NetworkPlugin');
+                });
+                pluginPromises.push(networkPromise);
             }
             // Chờ tất cả plugin được đăng ký trước khi khởi động
             if (pluginPromises.length > 0) {
@@ -317,4 +327,5 @@ export { PageViewPlugin } from './core/plugins/page-view-plugin';
 export { FormPlugin } from './core/plugins/form-plugin';
 export { ScrollPlugin } from './core/plugins/scroll-plugin';
 export { ReviewPlugin } from './core/plugins/review-plugin';
+export { NetworkPlugin } from './core/plugins/network-plugin';
 //# sourceMappingURL=index.js.map

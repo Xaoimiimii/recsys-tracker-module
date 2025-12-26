@@ -1,4 +1,5 @@
 import { TrackerConfig, TrackingRule, ReturnMethod, PayloadMapping, Condition, TrackingTarget } from '../../types';
+import { OriginVerifier } from '../utils/origin-verifier';
 import { DEFAULT_API_URL, DEFAULT_CONFIG_ENDPOINT_PATH } from '../constants';
 
 // Luồng hoạt động
@@ -46,16 +47,6 @@ export class ConfigLoader {
         },
       };
 
-      const mockConfig = (window as any).RecSysTrackerConfig;
-      if (mockConfig) {
-          console.log("⚠️ [ConfigLoader] Detect Mock Config from Window. Overriding defaults...");
-          this.config = {
-              ...this.config,
-              ...mockConfig,
-              trackingRules: mockConfig.trackingRules || [] 
-          };
-      }
-
       return this.config;
     } catch (error) {
       console.error('[RecSysTracker] Error loading config:', error);
@@ -65,11 +56,6 @@ export class ConfigLoader {
 
   // Lấy cấu hình từ server (remote)
   async fetchRemoteConfig(): Promise<TrackerConfig | null> {
-    if ((window as any).RecSysTrackerConfig || this.domainKey === 'TEST-DOMAIN-KEY') {
-        console.log("⚠️ [ConfigLoader] Mock Mode detected. Skipping Server Fetch.");
-        console.log(this.config);
-        return this.config;
-    }
     if (!this.domainKey) {
       return this.config;
     }
@@ -108,14 +94,14 @@ export class ConfigLoader {
         };
 
         // Verify origin sau khi có domainUrl từ server
-        // if (this.config.domainUrl) {
-        //   const isOriginValid = OriginVerifier.verify(this.config.domainUrl);
-        //   if (!isOriginValid) {
-        //     console.error('[RecSysTracker] Origin verification failed. SDK will not function.');
-        //     this.config = null;
-        //     return null;
-        //   }
-        // }
+        if (this.config.domainUrl) {
+          const isOriginValid = OriginVerifier.verify(this.config.domainUrl);
+          if (!isOriginValid) {
+            console.error('[RecSysTracker] Origin verification failed. SDK will not function.');
+            this.config = null;
+            return null;
+          }
+        }
       }
 
       return this.config;

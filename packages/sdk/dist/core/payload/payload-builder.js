@@ -14,12 +14,14 @@ export class PayloadBuilder {
     build(arg1, arg2, arg3) {
         // KIỂM TRA: Nếu tham số đầu tiên là Mảng -> Chạy logic Mapping (New)
         if (Array.isArray(arg1)) {
+            // Check if context is network data (NetworkPlugin) or HTMLElement (Click/Form Plugin)
+            // arg2 could be HTMLElement OR { req, res }
             return this.buildFromMappings(arg1, arg2);
         }
         // NGƯỢC LẠI: Chạy logic Legacy (FormPlugin, ScrollPlugin...)
         return this.buildLegacy(arg1, arg2, arg3);
     }
-    buildFromMappings(mappings, contextElement) {
+    buildFromMappings(mappings, contextData) {
         const result = {};
         if (!mappings || !Array.isArray(mappings))
             return result;
@@ -41,9 +43,13 @@ export class PayloadBuilder {
                     extractedValue = this.extractFromUrl(map.value);
                     break;
                 case 'element':
-                    if (contextElement) {
-                        extractedValue = this.extractFromElement(contextElement, map.value);
+                    if (contextData && contextData instanceof HTMLElement) {
+                        extractedValue = this.extractFromElement(contextData, map.value);
                     }
+                    break;
+                case 'network_request':
+                    // Context data should be { reqBody, resBody }
+                    extractedValue = this.extractFromNetwork(contextData, map.value);
                     break;
             }
             if (this.isValidValue(extractedValue)) {
@@ -194,6 +200,72 @@ export class PayloadBuilder {
     }
     isValidValue(val) {
         return val !== null && val !== undefined && val !== '' && val !== 'null' && val !== 'undefined';
+    }
+    /**
+     * [NEW] Extract info from Network Request/Response
+     * Context: { reqBody: any, resBody: any, method: string }
+     * Path format: "request.field" or "response.field" or just "field" (infer)
+     */
+    extractFromNetwork(context, pathConfig) {
+        try {
+            if (!context || !pathConfig)
+                return null;
+            const { reqBody, resBody, method } = context;
+            // Logic similar to tracker.js 'inferSource' but guided by pathConfig if possible
+            // pathConfig example: "response.userId" or "request.payload.id"
+            // If pathConfig doesn't start with request/response, try both.
+            let val = null;
+            if (pathConfig.startsWith('request.')) {
+                val = this.traverseObject(reqBody, pathConfig.replace('request.', ''));
+            }
+            else if (pathConfig.startsWith('response.')) {
+                val = this.traverseObject(resBody, pathConfig.replace('response.', ''));
+            }
+            else {
+                // Unknown source, try inference based on Method like tracker.js
+                // GET -> Response
+                // POST/PUT -> Request ?? Response
+                if (method === 'GET') {
+                    val = this.traverseObject(resBody, pathConfig);
+                }
+                else {
+                    // Try request first
+                    val = this.traverseObject(reqBody, pathConfig);
+                    if (!this.isValidValue(val)) {
+                        val = this.traverseObject(resBody, pathConfig);
+                    }
+                }
+            }
+            return val;
+        }
+        catch {
+            return null;
+        }
+    }
+    /**
+     * [NEW] Helper to traverse generic object (for Network Plugin)
+     */
+    traverseObject(obj, path) {
+        if (!obj)
+            return null;
+        try {
+            const keys = path.split('.');
+            let current = obj;
+            for (const key of keys) {
+                if (current && typeof current === 'object' && key in current) {
+                    current = current[key];
+                }
+                else {
+                    return null;
+                }
+            }
+            if (current === null || current === undefined)
+                return null;
+            return (typeof current === 'object') ? JSON.stringify(current) : String(current);
+        }
+        catch {
+            return null;
+        }
     }
 }
 //# sourceMappingURL=payload-builder.js.map

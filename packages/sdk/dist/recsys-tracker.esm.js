@@ -1,3 +1,144 @@
+class OriginVerifier {
+    /**
+     * Kiểm tra xem origin hiện tại có khớp với domainUrl đã đăng ký không
+     * Thứ tự ưu tiên: 1. origin, 2. referrer
+     * @param domainUrl - URL domain đã đăng ký (từ config)
+     * @returns true nếu origin hoặc referrer khớp, false nếu không khớp
+     */
+    static verify(domainUrl) {
+        try {
+            if (!domainUrl) {
+                console.warn('[RecSysTracker] Cannot verify: domainUrl is missing');
+                return false;
+            }
+            // bỏ qua verification nếu đang ở local
+            if (this.isDevelopment()) {
+                return true;
+            }
+            // Bỏ qua verification khi test với file:// protocol
+            if (typeof window !== 'undefined' && window.location) {
+                const protocol = window.location.protocol;
+                const origin = window.location.origin;
+                // Cho phép localhost để test
+                if ((origin === null || origin === void 0 ? void 0 : origin.startsWith('https://localhost')) || (origin === null || origin === void 0 ? void 0 : origin.startsWith('http://localhost'))) {
+                    console.warn('[RecSysTracker] Skipping origin verification for localhost (testing mode)');
+                    return true;
+                }
+                if (protocol === 'file:' || origin === 'null' || origin === 'file://') {
+                    console.warn('[RecSysTracker] Skipping origin verification for file:// protocol (testing mode)');
+                    return true;
+                }
+            }
+            // 1. Thử verify bằng origin trước
+            const originValid = this.verifyByOrigin(domainUrl);
+            if (originValid) {
+                return true;
+            }
+            // 2. Fallback: verify bằng referrer
+            const referrerValid = this.verifyByReferrer(domainUrl);
+            if (referrerValid) {
+                return true;
+            }
+            // Không có origin hoặc referrer, hoặc cả 2 đều không khớp
+            console.warn('[RecSysTracker] Origin verification failed: no valid origin or referrer');
+            return false;
+        }
+        catch (error) {
+            console.error('[RecSysTracker] Error during origin verification:', error);
+            return false;
+        }
+    }
+    // Verify bằng window.location.origin
+    static verifyByOrigin(domainUrl) {
+        if (typeof window === 'undefined' || !window.location || !window.location.origin) {
+            return false;
+        }
+        const currentOrigin = window.location.origin;
+        const normalizedCurrent = this.normalizeUrl(currentOrigin);
+        const normalizedDomain = this.normalizeUrl(domainUrl);
+        const isValid = normalizedCurrent === normalizedDomain;
+        if (!isValid) {
+            console.warn('[RecSysTracker] Origin mismatch:', {
+                current: normalizedCurrent,
+                expected: normalizedDomain
+            });
+        }
+        return isValid;
+    }
+    // Verify bằng document.referrer
+    // Hỗ trợ so khớp host chính xác hoặc nhiều path (referrer.startsWith(domainUrl))
+    static verifyByReferrer(domainUrl) {
+        if (typeof document === 'undefined' || !document.referrer) {
+            return false;
+        }
+        try {
+            const referrerUrl = new URL(document.referrer);
+            const domainUrlObj = new URL(domainUrl);
+            // So khớp origin (protocol + host + port)
+            const referrerOrigin = this.normalizeUrl(referrerUrl.origin);
+            const domainOrigin = this.normalizeUrl(domainUrlObj.origin);
+            if (referrerOrigin === domainOrigin) {
+                return true;
+            }
+            // Fallback: Hỗ trợ nhiều path - kiểm tra referrer có bắt đầu với domainUrl không
+            const normalizedReferrer = this.normalizeUrl(document.referrer);
+            const normalizedDomain = this.normalizeUrl(domainUrl);
+            if (normalizedReferrer.startsWith(normalizedDomain)) {
+                return true;
+            }
+            console.warn('[RecSysTracker] Referrer mismatch:', {
+                referrer: normalizedReferrer,
+                expected: normalizedDomain
+            });
+            return false;
+        }
+        catch (error) {
+            console.warn('[RecSysTracker] Failed to parse referrer:', error);
+            return false;
+        }
+    }
+    // Normalize URL để so sánh (loại bỏ trailing slash, lowercase)
+    // Giữ nguyên path nếu có
+    static normalizeUrl(url) {
+        try {
+            const urlObj = new URL(url);
+            // Tạo URL chuẩn: protocol + hostname + port (nếu có) + pathname
+            let normalized = `${urlObj.protocol}//${urlObj.hostname}`;
+            // Thêm port nếu không phải port mặc định
+            if (urlObj.port &&
+                !((urlObj.protocol === 'http:' && urlObj.port === '80') ||
+                    (urlObj.protocol === 'https:' && urlObj.port === '443'))) {
+                normalized += `:${urlObj.port}`;
+            }
+            // Thêm pathname (loại bỏ trailing slash)
+            if (urlObj.pathname && urlObj.pathname !== '/') {
+                normalized += urlObj.pathname.replace(/\/$/, '');
+            }
+            return normalized.toLowerCase();
+        }
+        catch {
+            // Nếu không parse được URL, trả về chuỗi gốc lowercase, loại bỏ trailing slash
+            return url.toLowerCase().replace(/\/$/, '');
+        }
+    }
+    /**
+     * Kiểm tra xem có đang ở môi trường development không
+     * (localhost, 127.0.0.1, etc.)
+     */
+    static isDevelopment() {
+        var _a;
+        if (typeof window === 'undefined') {
+            return false;
+        }
+        const hostname = ((_a = window.location) === null || _a === void 0 ? void 0 : _a.hostname) || '';
+        return (hostname === 'localhost' ||
+            hostname === '127.0.0.1' ||
+            hostname.startsWith('192.168.') ||
+            hostname.startsWith('10.') ||
+            hostname.endsWith('.local'));
+    }
+}
+
 const DEFAULT_TRACK_ENDPOINT_PATH = '/event';
 const DEFAULT_CONFIG_ENDPOINT_PATH = '/domain';
 
@@ -47,15 +188,6 @@ class ConfigLoader {
                     offlineStorage: true,
                 },
             };
-            const mockConfig = window.RecSysTrackerConfig;
-            if (mockConfig) {
-                console.log("⚠️ [ConfigLoader] Detect Mock Config from Window. Overriding defaults...");
-                this.config = {
-                    ...this.config,
-                    ...mockConfig,
-                    trackingRules: mockConfig.trackingRules || []
-                };
-            }
             return this.config;
         }
         catch (error) {
@@ -65,11 +197,6 @@ class ConfigLoader {
     }
     // Lấy cấu hình từ server (remote)
     async fetchRemoteConfig() {
-        if (window.RecSysTrackerConfig || this.domainKey === 'TEST-DOMAIN-KEY') {
-            console.log("⚠️ [ConfigLoader] Mock Mode detected. Skipping Server Fetch.");
-            console.log(this.config);
-            return this.config;
-        }
         if (!this.domainKey) {
             return this.config;
         }
@@ -102,14 +229,14 @@ class ConfigLoader {
                     eventTypes: this.transformEventTypes(eventTypesData),
                 };
                 // Verify origin sau khi có domainUrl từ server
-                // if (this.config.domainUrl) {
-                //   const isOriginValid = OriginVerifier.verify(this.config.domainUrl);
-                //   if (!isOriginValid) {
-                //     console.error('[RecSysTracker] Origin verification failed. SDK will not function.');
-                //     this.config = null;
-                //     return null;
-                //   }
-                // }
+                if (this.config.domainUrl) {
+                    const isOriginValid = OriginVerifier.verify(this.config.domainUrl);
+                    if (!isOriginValid) {
+                        console.error('[RecSysTracker] Origin verification failed. SDK will not function.');
+                        this.config = null;
+                        return null;
+                    }
+                }
             }
             return this.config;
         }
@@ -455,143 +582,6 @@ class EventBuffer {
         catch (error) {
             // Load from storage failed
         }
-    }
-}
-
-class OriginVerifier {
-    /**
-     * Kiểm tra xem origin hiện tại có khớp với domainUrl đã đăng ký không
-     * Thứ tự ưu tiên: 1. origin, 2. referrer
-     * @param domainUrl - URL domain đã đăng ký (từ config)
-     * @returns true nếu origin hoặc referrer khớp, false nếu không khớp
-     */
-    static verify(domainUrl) {
-        try {
-            if (!domainUrl) {
-                console.warn('[RecSysTracker] Cannot verify: domainUrl is missing');
-                return false;
-            }
-            // Bỏ qua verification khi test với file:// protocol
-            if (typeof window !== 'undefined' && window.location) {
-                const protocol = window.location.protocol;
-                const origin = window.location.origin;
-                // Cho phép localhost:5173 để test
-                if ((origin === null || origin === void 0 ? void 0 : origin.startsWith('https://localhost')) || (origin === null || origin === void 0 ? void 0 : origin.startsWith('http://localhost'))) {
-                    console.warn('[RecSysTracker] Skipping origin verification for localhost (testing mode)');
-                    return true;
-                }
-                if (protocol === 'file:' || origin === 'null' || origin === 'file://') {
-                    console.warn('[RecSysTracker] Skipping origin verification for file:// protocol (testing mode)');
-                    return true;
-                }
-            }
-            // 1. Thử verify bằng origin trước
-            const originValid = this.verifyByOrigin(domainUrl);
-            if (originValid) {
-                return true;
-            }
-            // 2. Fallback: verify bằng referrer
-            const referrerValid = this.verifyByReferrer(domainUrl);
-            if (referrerValid) {
-                return true;
-            }
-            // Không có origin hoặc referrer, hoặc cả 2 đều không khớp
-            console.warn('[RecSysTracker] Origin verification failed: no valid origin or referrer');
-            return false;
-        }
-        catch (error) {
-            console.error('[RecSysTracker] Error during origin verification:', error);
-            return false;
-        }
-    }
-    // Verify bằng window.location.origin
-    static verifyByOrigin(domainUrl) {
-        if (typeof window === 'undefined' || !window.location || !window.location.origin) {
-            return false;
-        }
-        const currentOrigin = window.location.origin;
-        const normalizedCurrent = this.normalizeUrl(currentOrigin);
-        const normalizedDomain = this.normalizeUrl(domainUrl);
-        const isValid = normalizedCurrent === normalizedDomain;
-        if (!isValid) {
-            console.warn('[RecSysTracker] Origin mismatch:', {
-                current: normalizedCurrent,
-                expected: normalizedDomain
-            });
-        }
-        return isValid;
-    }
-    // Verify bằng document.referrer
-    // Hỗ trợ so khớp host chính xác hoặc nhiều path (referrer.startsWith(domainUrl))
-    static verifyByReferrer(domainUrl) {
-        if (typeof document === 'undefined' || !document.referrer) {
-            return false;
-        }
-        try {
-            const referrerUrl = new URL(document.referrer);
-            const domainUrlObj = new URL(domainUrl);
-            // So khớp origin (protocol + host + port)
-            const referrerOrigin = this.normalizeUrl(referrerUrl.origin);
-            const domainOrigin = this.normalizeUrl(domainUrlObj.origin);
-            if (referrerOrigin === domainOrigin) {
-                return true;
-            }
-            // Fallback: Hỗ trợ nhiều path - kiểm tra referrer có bắt đầu với domainUrl không
-            const normalizedReferrer = this.normalizeUrl(document.referrer);
-            const normalizedDomain = this.normalizeUrl(domainUrl);
-            if (normalizedReferrer.startsWith(normalizedDomain)) {
-                return true;
-            }
-            console.warn('[RecSysTracker] Referrer mismatch:', {
-                referrer: normalizedReferrer,
-                expected: normalizedDomain
-            });
-            return false;
-        }
-        catch (error) {
-            console.warn('[RecSysTracker] Failed to parse referrer:', error);
-            return false;
-        }
-    }
-    // Normalize URL để so sánh (loại bỏ trailing slash, lowercase)
-    // Giữ nguyên path nếu có
-    static normalizeUrl(url) {
-        try {
-            const urlObj = new URL(url);
-            // Tạo URL chuẩn: protocol + hostname + port (nếu có) + pathname
-            let normalized = `${urlObj.protocol}//${urlObj.hostname}`;
-            // Thêm port nếu không phải port mặc định
-            if (urlObj.port &&
-                !((urlObj.protocol === 'http:' && urlObj.port === '80') ||
-                    (urlObj.protocol === 'https:' && urlObj.port === '443'))) {
-                normalized += `:${urlObj.port}`;
-            }
-            // Thêm pathname (loại bỏ trailing slash)
-            if (urlObj.pathname && urlObj.pathname !== '/') {
-                normalized += urlObj.pathname.replace(/\/$/, '');
-            }
-            return normalized.toLowerCase();
-        }
-        catch {
-            // Nếu không parse được URL, trả về chuỗi gốc lowercase, loại bỏ trailing slash
-            return url.toLowerCase().replace(/\/$/, '');
-        }
-    }
-    /**
-     * Kiểm tra xem có đang ở môi trường development không
-     * (localhost, 127.0.0.1, etc.)
-     */
-    static isDevelopment() {
-        var _a;
-        if (typeof window === 'undefined') {
-            return false;
-        }
-        const hostname = ((_a = window.location) === null || _a === void 0 ? void 0 : _a.hostname) || '';
-        return (hostname === 'localhost' ||
-            hostname === '127.0.0.1' ||
-            hostname.startsWith('192.168.') ||
-            hostname.startsWith('10.') ||
-            hostname.endsWith('.local'));
     }
 }
 
@@ -3989,12 +3979,14 @@ class PayloadBuilder {
     build(arg1, arg2, arg3) {
         // KIỂM TRA: Nếu tham số đầu tiên là Mảng -> Chạy logic Mapping (New)
         if (Array.isArray(arg1)) {
+            // Check if context is network data (NetworkPlugin) or HTMLElement (Click/Form Plugin)
+            // arg2 could be HTMLElement OR { req, res }
             return this.buildFromMappings(arg1, arg2);
         }
         // NGƯỢC LẠI: Chạy logic Legacy (FormPlugin, ScrollPlugin...)
         return this.buildLegacy(arg1, arg2, arg3);
     }
-    buildFromMappings(mappings, contextElement) {
+    buildFromMappings(mappings, contextData) {
         const result = {};
         if (!mappings || !Array.isArray(mappings))
             return result;
@@ -4016,9 +4008,13 @@ class PayloadBuilder {
                     extractedValue = this.extractFromUrl(map.value);
                     break;
                 case 'element':
-                    if (contextElement) {
-                        extractedValue = this.extractFromElement(contextElement, map.value);
+                    if (contextData && contextData instanceof HTMLElement) {
+                        extractedValue = this.extractFromElement(contextData, map.value);
                     }
+                    break;
+                case 'network_request':
+                    // Context data should be { reqBody, resBody }
+                    extractedValue = this.extractFromNetwork(contextData, map.value);
                     break;
             }
             if (this.isValidValue(extractedValue)) {
@@ -4169,6 +4165,72 @@ class PayloadBuilder {
     }
     isValidValue(val) {
         return val !== null && val !== undefined && val !== '' && val !== 'null' && val !== 'undefined';
+    }
+    /**
+     * [NEW] Extract info from Network Request/Response
+     * Context: { reqBody: any, resBody: any, method: string }
+     * Path format: "request.field" or "response.field" or just "field" (infer)
+     */
+    extractFromNetwork(context, pathConfig) {
+        try {
+            if (!context || !pathConfig)
+                return null;
+            const { reqBody, resBody, method } = context;
+            // Logic similar to tracker.js 'inferSource' but guided by pathConfig if possible
+            // pathConfig example: "response.userId" or "request.payload.id"
+            // If pathConfig doesn't start with request/response, try both.
+            let val = null;
+            if (pathConfig.startsWith('request.')) {
+                val = this.traverseObject(reqBody, pathConfig.replace('request.', ''));
+            }
+            else if (pathConfig.startsWith('response.')) {
+                val = this.traverseObject(resBody, pathConfig.replace('response.', ''));
+            }
+            else {
+                // Unknown source, try inference based on Method like tracker.js
+                // GET -> Response
+                // POST/PUT -> Request ?? Response
+                if (method === 'GET') {
+                    val = this.traverseObject(resBody, pathConfig);
+                }
+                else {
+                    // Try request first
+                    val = this.traverseObject(reqBody, pathConfig);
+                    if (!this.isValidValue(val)) {
+                        val = this.traverseObject(resBody, pathConfig);
+                    }
+                }
+            }
+            return val;
+        }
+        catch {
+            return null;
+        }
+    }
+    /**
+     * [NEW] Helper to traverse generic object (for Network Plugin)
+     */
+    traverseObject(obj, path) {
+        if (!obj)
+            return null;
+        try {
+            const keys = path.split('.');
+            let current = obj;
+            for (const key of keys) {
+                if (current && typeof current === 'object' && key in current) {
+                    current = current[key];
+                }
+                else {
+                    return null;
+                }
+            }
+            if (current === null || current === undefined)
+                return null;
+            return (typeof current === 'object') ? JSON.stringify(current) : String(current);
+        }
+        catch {
+            return null;
+        }
     }
 }
 
@@ -4585,6 +4647,243 @@ var formPlugin = /*#__PURE__*/Object.freeze({
     FormPlugin: FormPlugin
 });
 
+class PathMatcher {
+    /**
+     * Parse pattern like '/api/user/:id' into regex and segment config
+     */
+    static compile(pattern) {
+        const keys = [];
+        const cleanPattern = pattern.split('?')[0];
+        // Escape generic regex chars except ':'
+        const escaped = cleanPattern.replace(/[.+^${}()|[\]\\]/g, '\\$&');
+        // Replace :param with capture group
+        const regexString = escaped.replace(/:([a-zA-Z0-9_]+)/g, (_, key) => {
+            keys.push(key);
+            return '([^/]+)';
+        });
+        // Match start to end, allow query params at end
+        return {
+            regex: new RegExp(`^${regexString}(?:\\?.*)?$`),
+            keys
+        };
+    }
+    static match(url, pattern) {
+        // Normalize Path from URL
+        let path = url.split('?')[0];
+        try {
+            if (path.startsWith('http')) {
+                const urlObj = new URL(path);
+                path = urlObj.pathname;
+            }
+        }
+        catch { }
+        // Ensure path starts with /
+        if (!path.startsWith('/'))
+            path = '/' + path;
+        // Compile Pattern
+        // If pattern is not absolute URL, ensure it starts with / for consistency with path
+        let effectivePattern = pattern;
+        if (!effectivePattern.startsWith('http') && !effectivePattern.startsWith('/')) {
+            effectivePattern = '/' + effectivePattern;
+        }
+        const { regex } = PathMatcher.compile(effectivePattern);
+        return regex.test(path);
+    }
+    // Logic specifically from tracker.js (optional, but robust)
+    static matchStaticSegments(url, pattern) {
+        // tracker.js logic:
+        // const segments = rule.apiUrl.split('/').filter(Boolean);
+        // _staticSegments: segments.filter(seg => !seg.startsWith(':'))
+        // return rule._staticSegments.every(seg => segments.includes(seg));
+        const patternSegments = pattern.split('/').filter(Boolean);
+        const staticSegments = patternSegments.filter(s => !s.startsWith(':'));
+        const urlSegments = url.split('?')[0].split('/').filter(Boolean);
+        return staticSegments.every(seg => urlSegments.includes(seg));
+    }
+}
+
+// Hàm tiện ích: Parse JSON an toàn (tránh văng lỗi nếu chuỗi không hợp lệ)
+function safeParse(data) {
+    try {
+        if (typeof data === 'string')
+            return JSON.parse(data);
+        return data;
+    }
+    catch (e) {
+        return data;
+    }
+}
+/**
+ * NetworkPlugin: Plugin chịu trách nhiệm theo dõi các yêu cầu mạng (XHR & Fetch).
+ * Nó tự động chặn (intercept) các request, so sánh với Rules cấu hình,
+ * và trích xuất dữ liệu nếu trùng khớp.
+ */
+class NetworkPlugin extends BasePlugin {
+    constructor() {
+        super();
+        this.name = 'NetworkPlugin';
+    }
+    /**
+     * Khởi động plugin.
+     * Bắt đầu ghi đè (hook) XHR và Fetch để lắng nghe request.
+     */
+    start() {
+        if (this.active)
+            return;
+        this.hookXhr();
+        this.hookFetch();
+        this.active = true;
+        console.log(`[${this.name}] Started - Intercepting Network Requests`);
+    }
+    /**
+     * Dừng plugin.
+     * Khôi phục (restore) lại XHR và Fetch gốc của trình duyệt.
+     */
+    stop() {
+        if (!this.active)
+            return;
+        this.restoreXhr();
+        this.restoreFetch();
+        this.active = false;
+        console.log(`[${this.name}] Stopped`);
+    }
+    /**
+     * Ghi đè XMLHttpRequest để theo dõi request cũ.
+     */
+    hookXhr() {
+        this.originalXmlOpen = XMLHttpRequest.prototype.open;
+        this.originalXmlSend = XMLHttpRequest.prototype.send;
+        const plugin = this;
+        // Ghi đè phương thức open để lấy thông tin method và url
+        XMLHttpRequest.prototype.open = function (method, url) {
+            this._networkTrackInfo = { method, url, startTime: Date.now() };
+            return plugin.originalXmlOpen.apply(this, arguments);
+        };
+        // Ghi đè phương thức send để lấy body gửi đi và body trả về
+        XMLHttpRequest.prototype.send = function (body) {
+            const info = this._networkTrackInfo;
+            if (info) {
+                // Lắng nghe sự kiện load để bắt response
+                this.addEventListener('load', () => {
+                    plugin.handleRequest(info.url, info.method, body, this.response);
+                });
+            }
+            return plugin.originalXmlSend.apply(this, arguments);
+        };
+    }
+    /**
+     * Khôi phục XMLHttpRequest về nguyên bản.
+     */
+    restoreXhr() {
+        if (this.originalXmlOpen)
+            XMLHttpRequest.prototype.open = this.originalXmlOpen;
+        if (this.originalXmlSend)
+            XMLHttpRequest.prototype.send = this.originalXmlSend;
+    }
+    /**
+     * Ghi đè window.fetch để theo dõi request hiện đại.
+     */
+    hookFetch() {
+        this.originalFetch = window.fetch;
+        const plugin = this;
+        window.fetch = async function (...args) {
+            var _a;
+            const [resource, config] = args;
+            const url = typeof resource === 'string' ? resource : resource.url;
+            const method = ((_a = config === null || config === void 0 ? void 0 : config.method) === null || _a === void 0 ? void 0 : _a.toUpperCase()) || 'GET';
+            const body = config === null || config === void 0 ? void 0 : config.body;
+            // Gọi fetch gốc
+            const response = await plugin.originalFetch.apply(this, args);
+            // Clone response để đọc dữ liệu mà không làm hỏng luồng chính
+            const clone = response.clone();
+            clone.text().then((text) => {
+                plugin.handleRequest(url, method, body, text);
+            }).catch(() => { });
+            return response;
+        };
+    }
+    /**
+     * Khôi phục window.fetch về nguyên bản.
+     */
+    restoreFetch() {
+        if (this.originalFetch)
+            window.fetch = this.originalFetch;
+    }
+    /**
+     * Xử lý thông tin request đã chặn được.
+     * So khớp URL với các Rule trong Config và trích xuất dữ liệu.
+     * @param url URL của request
+     * @param method Phương thức (GET, POST, ...)
+     * @param reqBody Body gửi đi (nếu có)
+     * @param resBody Body trả về (nếu có)
+     */
+    handleRequest(url, method, reqBody, resBody) {
+        this.errorBoundary.execute(() => {
+            if (!this.tracker)
+                return;
+            const config = this.tracker.getConfig();
+            if (!config || !config.trackingRules)
+                return;
+            const reqData = safeParse(reqBody);
+            const resData = safeParse(resBody);
+            // Context để PayloadBuilder sử dụng trích xuất dữ liệu
+            const networkContext = {
+                reqBody: reqData,
+                resBody: resData,
+                method: method
+            };
+            for (const rule of config.trackingRules) {
+                if (!rule.payloadMappings)
+                    continue;
+                // Lọc các mapping phù hợp với URL hiện tại
+                const applicableMappings = rule.payloadMappings.filter(mapping => {
+                    if (!mapping.requestUrlPattern)
+                        return false;
+                    if (mapping.requestMethod && mapping.requestMethod.toUpperCase() !== method.toUpperCase()) {
+                        return false;
+                    }
+                    // Debug log
+                    console.log(`[NetworkPlugin] Checking ${url} against ${mapping.requestUrlPattern}`);
+                    if (!PathMatcher.matchStaticSegments(url, mapping.requestUrlPattern)) {
+                        console.log(`[NetworkPlugin] Static segments mismatch`);
+                        return false;
+                    }
+                    if (!PathMatcher.match(url, mapping.requestUrlPattern)) {
+                        // Double check match failure
+                        console.log(`[NetworkPlugin] PathMatcher failed for ${url} vs ${mapping.requestUrlPattern}`);
+                        return false;
+                    }
+                    return true;
+                });
+                if (applicableMappings.length > 0) {
+                    // Ép kiểu source thành 'network_request' để đảm bảo PayloadBuilder dùng logic trích xuất mạng
+                    const mappingsForBuilder = applicableMappings.map(m => ({
+                        ...m,
+                        source: 'network_request',
+                        value: m.value || m.requestBodyPath // Ensure value is set (PayloadBuilder relies on 'value')
+                    }));
+                    // Trích xuất dữ liệu thông qua PayloadBuilder
+                    const extractedData = this.tracker.payloadBuilder.build(mappingsForBuilder, networkContext);
+                    console.log(`[NetworkPlugin] Match found for ${rule.name}. Extracted:`, extractedData);
+                    // Nếu có dữ liệu trích xuất được, tiến hành gửi tracking event
+                    if (Object.keys(extractedData).length > 0) {
+                        // *logic gửi dữ liệu gì gì đó*
+                        console.groupCollapsed(`%c[TRACKER] Network Match: (${method} ${url})`, "color: orange");
+                        console.log("Rule:", rule.name);
+                        console.log("Extracted:", extractedData);
+                        console.groupEnd();
+                    }
+                }
+            }
+        }, 'NetworkPlugin.handleRequest');
+    }
+}
+
+var networkPlugin = /*#__PURE__*/Object.freeze({
+    __proto__: null,
+    NetworkPlugin: NetworkPlugin
+});
+
 // RecSysTracker - Main SDK class
 class RecSysTracker {
     constructor() {
@@ -4625,6 +4924,7 @@ class RecSysTracker {
                 if (this.eventDispatcher && this.config.domainUrl) {
                     this.eventDispatcher.setDomainUrl(this.config.domainUrl);
                 }
+                console.log(this.config);
                 // Khởi tạo Display Manager nếu có returnMethods
                 if (this.config.returnMethods && this.config.returnMethods.length > 0) {
                     const apiBaseUrl = "http://localhost:3000";
@@ -4704,6 +5004,15 @@ class RecSysTracker {
                     console.log('[RecSysTracker] Auto-registered ScrollPlugin');
                 });
                 pluginPromises.push(scrollPromise);
+            }
+            // Check for Network Rules
+            const hasNetworkRules = this.config.trackingRules.some(rule => rule.payloadMappings && rule.payloadMappings.some(m => m.source == "RequestBody"));
+            if (hasNetworkRules) {
+                const networkPromise = Promise.resolve().then(function () { return networkPlugin; }).then(({ NetworkPlugin }) => {
+                    this.use(new NetworkPlugin());
+                    console.log('[RecSysTracker] Auto-registered NetworkPlugin');
+                });
+                pluginPromises.push(networkPromise);
             }
             // Chờ tất cả plugin được đăng ký trước khi khởi động
             if (pluginPromises.length > 0) {
@@ -4890,5 +5199,5 @@ if (typeof window !== 'undefined') {
     }
 }
 
-export { BasePlugin, ClickPlugin, ConfigLoader, DisplayManager, FormPlugin, PageViewPlugin, PluginManager, RecSysTracker, ReviewPlugin, ScrollPlugin, RecSysTracker as default };
+export { BasePlugin, ClickPlugin, ConfigLoader, DisplayManager, FormPlugin, NetworkPlugin, PageViewPlugin, PluginManager, RecSysTracker, ReviewPlugin, ScrollPlugin, RecSysTracker as default };
 //# sourceMappingURL=recsys-tracker.esm.js.map

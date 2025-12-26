@@ -3,9 +3,9 @@
 import { IAIItemDetectionResult, IPayloadExtraData, IRecsysPayload, TrackingRule } from "../plugins/interfaces/recsys-context.interface";
 
 export interface IPayloadMapping {
-    field: string;        
-    source: string;       
-    value: string;        
+    field: string;
+    source: string;
+    value: string;
 }
 
 export class PayloadBuilder {
@@ -13,7 +13,7 @@ export class PayloadBuilder {
         'user', 'userInfo', 'userData', 'profile', 'auth', 'session', 'account', 'identity',
         'customer', 'member', 'state'
     ];
-    
+
     /**
      * Hàm build đa năng: Hỗ trợ cả 2 kiểu gọi (Legacy & Mapping)
      * Để đơn giản hóa trong context này, ta tập trung vào logic Mapping.
@@ -22,14 +22,16 @@ export class PayloadBuilder {
     public build(arg1: any, arg2?: any, arg3?: any): any {
         // KIỂM TRA: Nếu tham số đầu tiên là Mảng -> Chạy logic Mapping (New)
         if (Array.isArray(arg1)) {
-            return this.buildFromMappings(arg1 as IPayloadMapping[], arg2 as HTMLElement);
+            // Check if context is network data (NetworkPlugin) or HTMLElement (Click/Form Plugin)
+            // arg2 could be HTMLElement OR { req, res }
+            return this.buildFromMappings(arg1 as IPayloadMapping[], arg2);
         }
 
         // NGƯỢC LẠI: Chạy logic Legacy (FormPlugin, ScrollPlugin...)
         return this.buildLegacy(arg1, arg2, arg3);
     }
 
-    private buildFromMappings(mappings: IPayloadMapping[], contextElement?: HTMLElement): Record<string, any> {
+    private buildFromMappings(mappings: IPayloadMapping[], contextData?: any): Record<string, any> {
         const result: Record<string, any> = {};
 
         if (!mappings || !Array.isArray(mappings)) return result;
@@ -53,9 +55,13 @@ export class PayloadBuilder {
                     extractedValue = this.extractFromUrl(map.value);
                     break;
                 case 'element':
-                    if (contextElement) {
-                        extractedValue = this.extractFromElement(contextElement, map.value);
+                    if (contextData && contextData instanceof HTMLElement) {
+                        extractedValue = this.extractFromElement(contextData, map.value);
                     }
+                    break;
+                case 'network_request':
+                    // Context data should be { reqBody, resBody }
+                    extractedValue = this.extractFromNetwork(contextData, map.value);
                     break;
             }
 
@@ -109,7 +115,7 @@ export class PayloadBuilder {
     private extractFromElement(context: HTMLElement, selector: string): string | null {
         try {
             if (!selector) return null;
-            
+
             // Tìm element: Ưu tiên trong form, fallback ra toàn trang
             let targetEl = context.querySelector(selector) as HTMLElement;
             if (!targetEl) {
@@ -119,8 +125,8 @@ export class PayloadBuilder {
             if (!targetEl) return null;
 
             // 1. Nếu là Input/Textarea/Select -> Lấy value
-            if (targetEl instanceof HTMLInputElement || 
-                targetEl instanceof HTMLTextAreaElement || 
+            if (targetEl instanceof HTMLInputElement ||
+                targetEl instanceof HTMLTextAreaElement ||
                 targetEl instanceof HTMLSelectElement) {
                 return targetEl.value;
             }
@@ -148,7 +154,7 @@ export class PayloadBuilder {
             if (this.isValidValue(directVal)) return directVal;
 
             // 2. Smart Container Lookup (Fallback)
-            if (!cleanKey.includes('.')) { 
+            if (!cleanKey.includes('.')) {
                 for (const container of this.COMMON_CONTAINERS) {
                     const fallbackPath = `${container}.${cleanKey}`;
                     const fallbackVal = this.lookupPath(storage, fallbackPath);
@@ -169,7 +175,7 @@ export class PayloadBuilder {
     }
 
     private extractFromCookie(path: string): string | null {
-         try {
+        try {
             if (!document.cookie || !path) return null;
             const cleanPath = path.trim().replace(/^\.+|\.+$/g, '');
             if (!cleanPath) return null;
@@ -191,7 +197,7 @@ export class PayloadBuilder {
                 if (obj && Object.prototype.hasOwnProperty.call(obj, key)) {
                     obj = obj[key];
                 } else {
-                    return null; 
+                    return null;
                 }
             }
             return (typeof obj === 'object') ? JSON.stringify(obj) : String(obj);
@@ -201,4 +207,68 @@ export class PayloadBuilder {
     private isValidValue(val: any): boolean {
         return val !== null && val !== undefined && val !== '' && val !== 'null' && val !== 'undefined';
     }
+
+    /**
+     * [NEW] Extract info from Network Request/Response
+     * Context: { reqBody: any, resBody: any, method: string }
+     * Path format: "request.field" or "response.field" or just "field" (infer)
+     */
+    private extractFromNetwork(context: any, pathConfig: string): any {
+        try {
+            if (!context || !pathConfig) return null;
+
+            const { reqBody, resBody, method } = context;
+
+            // Logic similar to tracker.js 'inferSource' but guided by pathConfig if possible
+            // pathConfig example: "response.userId" or "request.payload.id"
+            // If pathConfig doesn't start with request/response, try both.
+
+            let val = null;
+            if (pathConfig.startsWith('request.')) {
+                val = this.traverseObject(reqBody, pathConfig.replace('request.', ''));
+            } else if (pathConfig.startsWith('response.')) {
+                val = this.traverseObject(resBody, pathConfig.replace('response.', ''));
+            } else {
+                // Unknown source, try inference based on Method like tracker.js
+                // GET -> Response
+                // POST/PUT -> Request ?? Response
+
+                if (method === 'GET') {
+                    val = this.traverseObject(resBody, pathConfig);
+                } else {
+                    // Try request first
+                    val = this.traverseObject(reqBody, pathConfig);
+                    if (!this.isValidValue(val)) {
+                        val = this.traverseObject(resBody, pathConfig);
+                    }
+                }
+            }
+
+            return val;
+
+        } catch { return null; }
+    }
+
+    /**
+     * [NEW] Helper to traverse generic object (for Network Plugin)
+     */
+    private traverseObject(obj: any, path: string): string | null {
+        if (!obj) return null;
+        try {
+            const keys = path.split('.');
+            let current = obj;
+
+            for (const key of keys) {
+                if (current && typeof current === 'object' && key in current) {
+                    current = current[key];
+                } else {
+                    return null;
+                }
+            }
+
+            if (current === null || current === undefined) return null;
+            return (typeof current === 'object') ? JSON.stringify(current) : String(current);
+        } catch { return null; }
+    }
 }
+
