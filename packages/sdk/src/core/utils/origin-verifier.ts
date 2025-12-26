@@ -12,13 +12,13 @@ export class OriginVerifier {
         return false;
       }
 
-      // Bỏ qua verification khi test với file:// protocol hoặc localhost:5173
+      // Bỏ qua verification khi test với file:// protocol
       if (typeof window !== 'undefined' && window.location) {
         const protocol = window.location.protocol;
         const origin = window.location.origin;
         
         // Cho phép localhost:5173 để test
-        if (origin?.startsWith('https://localhost')) {
+        if (origin?.startsWith('https://localhost') || origin?.startsWith('http://localhost')) {
           console.warn('[RecSysTracker] Skipping origin verification for localhost (testing mode)');
           return true;
         }
