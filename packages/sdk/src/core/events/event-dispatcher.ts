@@ -71,6 +71,21 @@ export class EventDispatcher {
       try {
         const success = await this.sendWithStrategy(payload, strategy);
         if (success) {
+          console.log('[EventDispatcher] Payload đã được gửi thành công:', {
+            strategy,
+            eventId: event.id,
+            eventTypeId: event.eventTypeId,
+            trackingRuleId: event.trackingRuleId,
+            domainKey: event.domainKey,
+            userField: event.userField,
+            userValue: event.userValue,
+            itemField: event.itemField,
+            itemValue: event.itemValue,
+            ratingValue: event.ratingValue,
+            reviewValue: event.reviewValue,
+            timestamp: event.timestamp,
+            endpoint: this.endpoint
+          });
           return true;
         }
       } catch (error) {
@@ -79,6 +94,7 @@ export class EventDispatcher {
     }
 
     // Trả về false nếu tất cả phương thức gửi đều thất bại
+    console.error('[EventDispatcher] Tất cả phương thức gửi thất bại cho event:', event.id);
     return false;
   }
 
