@@ -261,6 +261,7 @@ export type InteractionOrderByWithRelationInput = {
 
 export type InteractionWhereUniqueInput = Prisma.AtLeast<{
   Id?: number
+  UserId_ItemId_InteractionTypeId?: Prisma.InteractionUserIdItemIdInteractionTypeIdCompoundUniqueInput
   AND?: Prisma.InteractionWhereInput | Prisma.InteractionWhereInput[]
   OR?: Prisma.InteractionWhereInput[]
   NOT?: Prisma.InteractionWhereInput | Prisma.InteractionWhereInput[]
@@ -273,7 +274,7 @@ export type InteractionWhereUniqueInput = Prisma.AtLeast<{
   Item?: Prisma.XOR<Prisma.ItemScalarRelationFilter, Prisma.ItemWhereInput>
   InteractionType?: Prisma.XOR<Prisma.EventTypeScalarRelationFilter, Prisma.EventTypeWhereInput>
   Domain?: Prisma.XOR<Prisma.DomainScalarRelationFilter, Prisma.DomainWhereInput>
-}, "Id">
+}, "Id" | "UserId_ItemId_InteractionTypeId">
 
 export type InteractionOrderByWithAggregationInput = {
   Id?: Prisma.SortOrder
@@ -365,6 +366,12 @@ export type InteractionListRelationFilter = {
 
 export type InteractionOrderByRelationAggregateInput = {
   _count?: Prisma.SortOrder
+}
+
+export type InteractionUserIdItemIdInteractionTypeIdCompoundUniqueInput = {
+  UserId: number
+  ItemId: number
+  InteractionTypeId: number
 }
 
 export type InteractionCountOrderByAggregateInput = {

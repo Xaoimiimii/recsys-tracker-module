@@ -2,7 +2,6 @@ import { BadRequestException, Injectable, NotFoundException } from '@nestjs/comm
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateEventDto } from './dto/create-event.dto';
 import { UserField, ItemField } from 'src/common/enums/event.enum';
-import { User } from 'src/generated/prisma/client';
 
 @Injectable()
 export class EventService {
@@ -73,7 +72,20 @@ export class EventService {
             if (event.RatingValue === null || event.RatingValue === undefined) throw new BadRequestException(`Rating value is required for rating events.`);
             if (event.RatingValue < 1 || event.RatingValue > 5) throw new BadRequestException(`Rating value must be between 1 and 5.`);
 
+            let validItemIds: number[] = [];
             for (const itemId of targetItemIds) {
+                const exist = await this.prisma.rating.findUnique({
+                    where: {
+                        UserId_ItemId: {
+                            UserId: user.Id,
+                            ItemId: itemId,
+                        }
+                    }
+                })
+                if (!exist) validItemIds.push(itemId);
+            }
+
+            for (const itemId of validItemIds) {
                 await this.prisma.rating.create({
                     data: {
                         UserId: user.Id,
@@ -86,7 +98,21 @@ export class EventService {
                 });
             }
         } else {
+            let validItemIds: number[] = [];
             for (const itemId of targetItemIds) {
+                const exist = await this.prisma.interaction.findUnique({
+                    where: {
+                        UserId_ItemId_InteractionTypeId: {
+                            UserId: user.Id,
+                            ItemId: itemId,
+                            InteractionTypeId: event.EventTypeId,
+                        }
+                    }
+                })
+                if (!exist) validItemIds.push(itemId);
+            }
+
+            for (const itemId of validItemIds) {
                 await this.prisma.interaction.create({
                     data: {
                         UserId: user.Id,

@@ -273,7 +273,7 @@ model Event {
 
 model Category {
   Id   Int    @id @default(autoincrement())
-  Name String
+  Name String @unique
 
   ItemCategories ItemCategory[]
 }
@@ -334,6 +334,8 @@ model ItemFactor {
 
   ItemBias    Float?
   ItemFactors Float[]
+
+  @@unique([ItemId, ModelId])
 }
 
 model User {
@@ -367,6 +369,8 @@ model UserFactor {
 
   UserBias    Float?
   UserFactors Float[]
+
+  @@unique([UserId, ModelId])
 }
 
 model Predict {
@@ -415,4 +419,6 @@ model Interaction {
   Domain   Domain @relation(fields: [DomainId], references: [Id])
 
   CreatedAt DateTime @default(now())
+
+  @@unique([UserId, ItemId, InteractionTypeId])
 }

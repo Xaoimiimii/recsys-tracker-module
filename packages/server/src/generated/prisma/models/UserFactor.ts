@@ -244,6 +244,7 @@ export type UserFactorOrderByWithRelationInput = {
 
 export type UserFactorWhereUniqueInput = Prisma.AtLeast<{
   Id?: number
+  UserId_ModelId?: Prisma.UserFactorUserIdModelIdCompoundUniqueInput
   AND?: Prisma.UserFactorWhereInput | Prisma.UserFactorWhereInput[]
   OR?: Prisma.UserFactorWhereInput[]
   NOT?: Prisma.UserFactorWhereInput | Prisma.UserFactorWhereInput[]
@@ -253,7 +254,7 @@ export type UserFactorWhereUniqueInput = Prisma.AtLeast<{
   UserFactors?: Prisma.FloatNullableListFilter<"UserFactor">
   User?: Prisma.XOR<Prisma.UserScalarRelationFilter, Prisma.UserWhereInput>
   Model?: Prisma.XOR<Prisma.ModelScalarRelationFilter, Prisma.ModelWhereInput>
-}, "Id">
+}, "Id" | "UserId_ModelId">
 
 export type UserFactorOrderByWithAggregationInput = {
   Id?: Prisma.SortOrder
@@ -338,6 +339,11 @@ export type UserFactorListRelationFilter = {
 
 export type UserFactorOrderByRelationAggregateInput = {
   _count?: Prisma.SortOrder
+}
+
+export type UserFactorUserIdModelIdCompoundUniqueInput = {
+  UserId: number
+  ModelId: number
 }
 
 export type UserFactorCountOrderByAggregateInput = {
