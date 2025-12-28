@@ -11,10 +11,19 @@ class OriginVerifier {
                 console.warn('[RecSysTracker] Cannot verify: domainUrl is missing');
                 return false;
             }
+            // bỏ qua verification nếu đang ở local
+            if (this.isDevelopment()) {
+                return true;
+            }
             // Bỏ qua verification khi test với file:// protocol
             if (typeof window !== 'undefined' && window.location) {
                 const protocol = window.location.protocol;
                 const origin = window.location.origin;
+                // Cho phép localhost để test
+                if ((origin === null || origin === void 0 ? void 0 : origin.startsWith('https://localhost')) || (origin === null || origin === void 0 ? void 0 : origin.startsWith('http://localhost'))) {
+                    console.warn('[RecSysTracker] Skipping origin verification for localhost (testing mode)');
+                    return true;
+                }
                 if (protocol === 'file:' || origin === 'null' || origin === 'file://') {
                     console.warn('[RecSysTracker] Skipping origin verification for file:// protocol (testing mode)');
                     return true;
@@ -130,6 +139,9 @@ class OriginVerifier {
     }
 }
 
+const DEFAULT_TRACK_ENDPOINT_PATH = '/event';
+const DEFAULT_CONFIG_ENDPOINT_PATH = '/domain';
+
 // Luồng hoạt động
 // 1. SDK khởi tạo
 // 2. Gọi loadFromWindow() để lấy domainKey từ window
@@ -140,7 +152,6 @@ class OriginVerifier {
 // Class để load và quản lý cấu hình tracker
 class ConfigLoader {
     constructor() {
-        this.BASE_API_URL = "http://localhost:3000";
         this.config = null;
         this.domainKey = null;
         // Cập nhật cấu hình thủ công
@@ -168,8 +179,6 @@ class ConfigLoader {
                 domainKey: domainKey,
                 domainUrl: '',
                 domainType: 0,
-                trackEndpoint: `${this.BASE_API_URL}/event`,
-                configEndpoint: `${this.BASE_API_URL}/domain/${domainKey}`,
                 trackingRules: [],
                 returnMethods: [],
                 options: {
@@ -191,12 +200,14 @@ class ConfigLoader {
         if (!this.domainKey) {
             return this.config;
         }
+        const baseUrl = "http://localhost:3000";
         try {
-            // Bước 1: Gọi 3 API song song để lấy domain, list rules cơ bản, và return methods
-            const [domainResponse, rulesListResponse, returnMethodsResponse] = await Promise.all([
-                fetch(`${this.BASE_API_URL}/domain/${this.domainKey}`),
-                fetch(`${this.BASE_API_URL}/rule/domain/${this.domainKey}`),
-                fetch(`${this.BASE_API_URL}/domain/return-method/${this.domainKey}`)
+            // Bước 1: Gọi 4 API song song để lấy domain, list rules cơ bản, return methods và event types
+            const [domainResponse, rulesListResponse, returnMethodsResponse, eventTypesResponse] = await Promise.all([
+                fetch(`${baseUrl}${DEFAULT_CONFIG_ENDPOINT_PATH}/${this.domainKey}`),
+                fetch(`${baseUrl}/rule/domain/${this.domainKey}`),
+                fetch(`${baseUrl}/domain/return-method/${this.domainKey}`),
+                fetch(`${baseUrl}/rule/event-type`)
             ]);
             // Kiểm tra response
             if (!domainResponse.ok) {
@@ -206,23 +217,16 @@ class ConfigLoader {
             const domainData = domainResponse.ok ? await domainResponse.json() : null;
             const rulesListData = rulesListResponse.ok ? await rulesListResponse.json() : [];
             const returnMethodsData = returnMethodsResponse.ok ? await returnMethodsResponse.json() : [];
-            // Bước 2: Lấy chi tiết từng rule
-            let rulesData = [];
-            if (Array.isArray(rulesListData) && rulesListData.length > 0) {
-                const ruleDetailsPromises = rulesListData.map(rule => fetch(`${this.BASE_API_URL}/rule/${rule.id}`)
-                    .then(res => res.ok ? res.json() : null)
-                    .catch(() => null));
-                const ruleDetails = await Promise.all(ruleDetailsPromises);
-                rulesData = ruleDetails.filter(rule => rule !== null);
-            }
+            const eventTypesData = eventTypesResponse.ok ? await eventTypesResponse.json() : [];
             // Cập nhật config với data từ server
             if (this.config) {
                 this.config = {
                     ...this.config,
                     domainUrl: (domainData === null || domainData === void 0 ? void 0 : domainData.Url) || this.config.domainUrl,
                     domainType: (domainData === null || domainData === void 0 ? void 0 : domainData.Type) || this.config.domainType,
-                    trackingRules: this.transformRules(rulesData),
+                    trackingRules: this.transformRules(rulesListData),
                     returnMethods: this.transformReturnMethods(returnMethodsData),
+                    eventTypes: this.transformEventTypes(eventTypesData),
                 };
                 // Verify origin sau khi có domainUrl từ server
                 if (this.config.domainUrl) {
@@ -315,6 +319,15 @@ class ConfigLoader {
             returnType: method.ReturnType || method.returnType,
             value: method.Value || method.value || '',
             configurationName: method.ConfigurationName || method.configurationName,
+        }));
+    }
+    // Transform event types từ server format sang SDK format
+    transformEventTypes(eventTypesData) {
+        if (!eventTypesData || !Array.isArray(eventTypesData))
+            return [];
+        return eventTypesData.map(type => ({
+            id: type.Id || type.id,
+            name: type.Name || type.name,
         }));
     }
     // Lấy cấu hình hiện tại
@@ -476,6 +489,20 @@ class EventBuffer {
         if (this.queue.length >= this.maxQueueSize) {
             this.queue.shift();
         }
+        console.log('[EventBuffer] Payload được thêm vào queue:', {
+            id: event.id,
+            eventTypeId: event.eventTypeId,
+            trackingRuleId: event.trackingRuleId,
+            domainKey: event.domainKey,
+            userField: event.userField,
+            userValue: event.userValue,
+            itemField: event.itemField,
+            itemValue: event.itemValue,
+            ratingValue: event.ratingValue,
+            reviewValue: event.reviewValue,
+            timestamp: event.timestamp,
+            queueSize: this.queue.length + 1
+        });
         this.queue.push(event);
         this.persistToStorage();
     }
@@ -601,6 +628,21 @@ class EventDispatcher {
             try {
                 const success = await this.sendWithStrategy(payload, strategy);
                 if (success) {
+                    console.log('[EventDispatcher] Payload đã được gửi thành công:', {
+                        strategy,
+                        eventId: event.id,
+                        eventTypeId: event.eventTypeId,
+                        trackingRuleId: event.trackingRuleId,
+                        domainKey: event.domainKey,
+                        userField: event.userField,
+                        userValue: event.userValue,
+                        itemField: event.itemField,
+                        itemValue: event.itemValue,
+                        ratingValue: event.ratingValue,
+                        reviewValue: event.reviewValue,
+                        timestamp: event.timestamp,
+                        endpoint: this.endpoint
+                    });
                     return true;
                 }
             }
@@ -609,6 +651,7 @@ class EventDispatcher {
             }
         }
         // Trả về false nếu tất cả phương thức gửi đều thất bại
+        console.error('[EventDispatcher] Tất cả phương thức gửi thất bại cho event:', event.id);
         return false;
     }
     // Gửi nhiều events cùng lúc (gọi send cho từng event)
@@ -1730,531 +1773,94 @@ class PluginManager {
     }
 }
 
-const STORAGE_KEYS = {
-    ANON_USER_ID: 'recsys_anon_id',
-    USER_ID: 'recsys_user_id',
-    SESSION_ID: 'recsys_session',
-    IDENTIFIERS: 'recsys_identifiers',
-    LAST_USER_ID: 'recsys_last_user_id'
-};
-function throttle(fn, delay) {
-    let lastCall = 0;
-    let timeoutId = null;
-    let lastArgs = null;
-    return function (...args) {
-        const now = Date.now();
-        lastArgs = args;
-        const remaining = delay - (now - lastCall);
-        const context = this;
-        if (remaining <= 0) {
-            if (timeoutId) {
-                clearTimeout(timeoutId);
-                timeoutId = null;
-            }
-            lastCall = now;
-            fn.apply(context, args);
-        }
-        else if (!timeoutId) {
-            timeoutId = window.setTimeout(() => {
-                lastCall = Date.now();
-                timeoutId = null;
-                fn.apply(context, lastArgs);
-            }, remaining);
-        }
-    };
-}
-const CUSTOM_ROUTE_EVENT = "recsys_route_change";
-
-let identityManagerInstance = null;
-class UserIdentityManager {
-    constructor() {
-        this.identifiers = {};
-        this.sessionId = '';
-        this.currentUserId = null;
-        this.isLoggedIn = false;
-        this.initialized = false;
-        this.authRequests = new Set();
-        this.trackerContext = null;
-        if (identityManagerInstance) {
-            return identityManagerInstance;
-        }
-        this.identifiers = this.loadIdentifiers();
-        this.sessionId = this.generateSessionId();
-        identityManagerInstance = this;
-        window.identityManager = this;
-        window.recsysIdentityManager = this;
-    }
-    setTrackerContext(context) {
-        this.trackerContext = context;
-        this.setupIdentitySynchronization();
-    }
-    initialize() {
-        if (this.initialized)
-            return;
-        const persistedUserId = this.getPersistedUserId();
-        if (persistedUserId && !persistedUserId.startsWith('anon_')) {
-            this.currentUserId = persistedUserId;
-            this.isLoggedIn = true;
-            console.log(`[RECSYS] Restored logged-in user: ${persistedUserId}`);
-            this.identifiers.detectedUserId = persistedUserId;
-            this.saveIdentifiers();
-        }
-        else {
-            this.currentUserId = this.findOrCreateUserId();
-        }
-        this.setupEnhancedNetworkMonitoring();
-        this.startMonitoring();
-        this.initialized = true;
-        console.log(`[RECSYS] Identity Manager initialized. Current user: ${this.currentUserId}, Logged in: ${this.isLoggedIn}`);
-    }
-    getPersistedUserId() {
-        if (this.identifiers.detectedUserId && typeof this.identifiers.detectedUserId === 'string' && !this.identifiers.detectedUserId.startsWith('anon_')) {
-            return this.identifiers.detectedUserId;
-        }
-        const storedUserId = localStorage.getItem(STORAGE_KEYS.USER_ID);
-        if (storedUserId && storedUserId !== 'undefined' && storedUserId !== 'null' && !storedUserId.startsWith('anon_')) {
-            return storedUserId;
-        }
-        const anonId = localStorage.getItem(STORAGE_KEYS.ANON_USER_ID);
-        if (anonId) {
-            return anonId;
-        }
-        return null;
-    }
-    findOrCreateUserId() {
-        const userId = this.extractUserIdFromCookies() ||
-            this.extractUserIdFromLocalStorage() ||
-            this.extractUserIdFromJWT(localStorage.getItem('token'));
-        if (userId && !userId.startsWith('anon_')) {
-            this.handleDetectedUserId(userId, 'initial_lookup');
-            this.isLoggedIn = true;
-            return userId;
-        }
-        let anonId = localStorage.getItem(STORAGE_KEYS.ANON_USER_ID);
-        if (!anonId) {
-            anonId = 'anon_' + Date.now() + '_' + Math.random().toString(36).substring(2, 9);
-            localStorage.setItem(STORAGE_KEYS.ANON_USER_ID, anonId);
-        }
-        this.isLoggedIn = false;
-        return anonId;
-    }
-    getUserId() {
-        if (this.currentUserId) {
-            return this.currentUserId;
-        }
-        return this.findOrCreateUserId();
-    }
-    getStableUserId() {
-        return this.currentUserId || this.getUserId();
-    }
-    getRealUserId() {
-        if (this.currentUserId && !this.currentUserId.startsWith('anon_')) {
-            return this.currentUserId;
-        }
-        return this.getUserId();
-    }
-    refreshUserId() {
-        const oldUserId = this.currentUserId;
-        const newUserId = this.findOrCreateUserId();
-        if (oldUserId !== newUserId) {
-            const wasLoggedIn = this.isLoggedIn;
-            this.isLoggedIn = !newUserId.startsWith('anon_');
-            console.log(`[RECSYS] User ID changed: ${oldUserId} -> ${newUserId}, Login status: ${wasLoggedIn} -> ${this.isLoggedIn}`);
-            this.currentUserId = newUserId;
-            window.dispatchEvent(new CustomEvent('recsys:userIdChanged', {
-                detail: {
-                    oldUserId,
-                    newUserId,
-                    wasLoggedIn,
-                    isNowLoggedIn: this.isLoggedIn,
-                    sessionId: this.sessionId
-                }
-            }));
-        }
-        return newUserId;
-    }
-    setupEnhancedNetworkMonitoring() {
-        const self = this;
-        const originalFetch = window.fetch;
-        window.fetch = async (...args) => {
-            const [resource] = args;
-            const url = typeof resource === 'string' ? resource : resource.url;
-            if (url && (url.includes('/auth') || url.includes('/login') || url.includes('/signin'))) {
-                self.authRequests.add(url);
-            }
-            try {
-                const response = await originalFetch(...args);
-                const clonedResponse = response.clone();
-                if (url && self.authRequests.has(url)) {
-                    setTimeout(() => { self.processAuthResponse(url, clonedResponse); }, 100);
-                }
-                return response;
-            }
-            catch (error) {
-                console.log('❌ Fetch error:', error);
-                throw error;
-            }
+// import { IRecsysContext, TrackingRule, IRecsysPayload, IAIItemDetectionResult, IPayloadExtraData, IPayloadBuilder } from '../interfaces/recsys-context.interface';
+// import { getUserIdentityManager } from '../utils/user-identity-manager';
+// import { getAIItemDetector } from '../utils/ai-item-detector';
+// import { RecSysTracker } from '../../..';
+// import { PayloadExtractor } from '../../../types';
+class TrackerContextAdapter {
+    constructor(tracker) {
+        this.config = {
+            getRules: (eventTypeId) => {
+                const config = this.tracker.getConfig();
+                if (!(config === null || config === void 0 ? void 0 : config.trackingRules))
+                    return [];
+                return config.trackingRules
+                    .filter(rule => rule.eventTypeId === eventTypeId);
+            },
         };
-        if (window.XMLHttpRequest) {
-            const originalOpen = XMLHttpRequest.prototype.open;
-            const originalSend = XMLHttpRequest.prototype.send;
-            XMLHttpRequest.prototype.open = function (method, url) {
-                this._url = url;
-                this._method = method;
-                if (url && (url.includes('/auth') || url.includes('/login') || url.includes('/signin'))) {
-                    this._isAuthRequest = true;
+        /**
+         * [FIX QUAN TRỌNG]
+         * Thay vì hard-code logic build payload ở đây, ta trỏ nó về
+         * instance payloadBuilder của tracker (Class PayloadBuilder xịn đã viết).
+         * Dùng getter và ép kiểu để TypeScript hiểu nó hỗ trợ Overload.
+         */
+        this.eventBuffer = {
+            enqueue: (payload) => {
+                // 1. Map Event Type từ Plugin sang ENUM của Database
+                let eventType = 'page_view';
+                switch (payload.event) {
+                    case 'item_click':
+                        eventType = 'click';
+                        break;
+                    case 'rate_submit':
+                        eventType = 'rating';
+                        break; // FormPlugin cũ
+                    case 'review':
+                        eventType = 'review';
+                        break; // ReviewPlugin mới
+                    case 'scroll_depth':
+                        eventType = 'scroll';
+                        break;
+                    case 'page_view':
+                        eventType = 'page_view';
+                        break;
+                    default: eventType = 'page_view';
                 }
-                return originalOpen.apply(this, arguments);
-            };
-            XMLHttpRequest.prototype.send = function (_body) {
-                const xhr = this;
-                xhr.addEventListener('load', () => {
-                    if (xhr.status >= 200 && xhr.status < 300) {
-                        if (xhr._isAuthRequest) {
-                            setTimeout(() => { self.processXHRAuthResponse(xhr); }, 100);
-                        }
-                        setTimeout(() => { self.checkResponseForUserData(xhr); }, 150);
+                // 2. Chuẩn bị object phẳng (Flat Data)
+                const trackData = {
+                    eventType,
+                    // Map User/Item Value
+                    userValue: String(payload.userId || ''),
+                    userField: 'user_id', // Mặc định hoặc lấy từ metadata nếu cần
+                    itemValue: String(payload.itemId || ''),
+                    itemField: 'item_id', // Mặc định
+                };
+                // 3. Map Rating & Review Value từ Metadata
+                if (payload.metadata) {
+                    // Trường hợp 1: Review Plugin mới (Review nằm trong content)
+                    if (eventType === 'review' && payload.metadata.content) {
+                        trackData.reviewValue = String(payload.metadata.content);
                     }
-                });
-                return originalSend.apply(this, arguments);
-            };
-        }
-        this.setupLocalStorageMonitor();
-        this.setupCookieMonitor();
-    }
-    async processAuthResponse(_url, response) {
-        try {
-            const data = await response.json();
-            const userId = this.extractUserIdFromObject(data);
-            if (userId) {
-                this.handleDetectedUserId(userId, 'auth_response');
-            }
-            else {
-                setTimeout(() => { this.checkAllSourcesForUserId(); }, 1000);
-            }
-        }
-        catch (e) { }
-    }
-    processXHRAuthResponse(xhr) {
-        try {
-            const data = JSON.parse(xhr.responseText);
-            const userId = this.extractUserIdFromObject(data);
-            if (userId) {
-                this.handleDetectedUserId(userId, 'xhr_auth_response');
-            }
-        }
-        catch (e) { }
-    }
-    checkResponseForUserData(xhr) {
-        try {
-            const data = JSON.parse(xhr.responseText);
-            const userId = this.extractUserIdFromObject(data);
-            if (userId && !this.authRequests.has(xhr._url)) {
-                this.handleDetectedUserId(userId, 'api_response');
-            }
-        }
-        catch (e) { /* Ignore */ }
-    }
-    // --- LOGIN HANDLERS ---
-    // Đã đổi tên 'source' thành '_source'
-    handleDetectedUserId(userId, _source) {
-        if (this.currentUserId && !this.currentUserId.startsWith('anon_')) {
-            console.log(`[RECSYS] User already authenticated as ${this.currentUserId}. Ignoring ${userId} from ${_source}`);
-            return;
-        }
-        if (userId && !userId.startsWith('anon_')) {
-            const oldUserId = this.currentUserId;
-            const wasAnonymous = oldUserId && oldUserId.startsWith('anon_');
-            if (wasAnonymous) {
-                console.log(`[RECSYS CAPTURE] User logged in: ${oldUserId} -> ${userId} (Source: ${_source})`);
-                this.onUserLoginDetected(oldUserId, userId, _source);
-            }
-            else if (oldUserId !== userId) {
-                console.log(`[RECSYS CAPTURE] User ID updated: ${oldUserId} -> ${userId} (Source: ${_source})`);
-            }
-            this.currentUserId = userId;
-            this.isLoggedIn = true;
-            localStorage.setItem(STORAGE_KEYS.USER_ID, userId);
-            this.identifiers.detectedUserId = userId;
-            this.identifiers.detectionMethod = _source;
-            this.identifiers.detectionTime = new Date().toISOString();
-            this.saveIdentifiers();
-        }
-    }
-    // Đã đổi tên 'source' thành '_source'
-    onUserLoginDetected(anonymousId, userId, _source) {
-        this.sendLoginEvent(anonymousId, userId, _source);
-        window.dispatchEvent(new CustomEvent('recsys:userLoggedIn', {
-            detail: {
-                userId: userId,
-                anonymousId: anonymousId,
-                detectionMethod: _source,
-                sessionId: this.sessionId,
-                timestamp: new Date().toISOString()
-            }
-        }));
-    }
-    sendLoginEvent(anonymousId, userId, _source) {
-        console.log(`[RECSYS CAPTURE] Login event prepared for User ID: ${userId} (from ${anonymousId}).`);
-    }
-    checkAllSourcesForUserId() {
-        const cookieUserId = this.extractUserIdFromCookies();
-        if (cookieUserId) {
-            this.handleDetectedUserId(cookieUserId, 'cookies_after_login');
-            return;
-        }
-        const lsUserId = this.extractUserIdFromLocalStorage();
-        if (lsUserId) {
-            this.handleDetectedUserId(lsUserId, 'localStorage_after_login');
-            return;
-        }
-        setTimeout(() => { this.checkCommonUserEndpoints(); }, 2000);
-        this.startPostLoginPolling();
-    }
-    startPostLoginPolling() {
-        let attempts = 0;
-        const maxAttempts = 10;
-        const poll = () => {
-            attempts++;
-            const cookieId = this.extractUserIdFromCookies();
-            const lsId = this.extractUserIdFromLocalStorage();
-            if (cookieId) {
-                this.handleDetectedUserId(cookieId, 'polling_cookies');
-                return;
-            }
-            if (lsId) {
-                this.handleDetectedUserId(lsId, 'polling_localStorage');
-                return;
-            }
-            if (attempts < maxAttempts) {
-                setTimeout(poll, 1000);
-            }
-        };
-        setTimeout(poll, 1000);
-    }
-    checkCommonUserEndpoints() {
-        const endpoints = ['/user/profile', '/api/me', '/user/me', '/account/info'];
-        endpoints.forEach(endpoint => {
-            fetch(endpoint, { method: 'GET', credentials: 'include' })
-                .then(res => res.json())
-                .then(data => {
-                const userId = this.extractUserIdFromObject(data);
-                if (userId) {
-                    this.handleDetectedUserId(userId, `endpoint_${endpoint}`);
-                }
-            }).catch(() => { });
-        });
-    }
-    setupLocalStorageMonitor() {
-        const self = this;
-        const originalSetItem = localStorage.setItem;
-        localStorage.setItem = function (key, value) {
-            originalSetItem.call(this, key, value);
-            if (self.isUserRelatedKey(key)) {
-                window.dispatchEvent(new CustomEvent('storage', {
-                    detail: { key, newValue: value, storageArea: this }
-                }));
-            }
-        };
-        window.addEventListener('storage', ((e) => {
-            if (this.isUserRelatedKey(e.key)) {
-                setTimeout(() => {
-                    const userId = this.extractUserIdFromLocalStorage();
-                    if (userId && !userId.startsWith('anon_')) {
-                        this.handleDetectedUserId(userId, 'localStorage_event');
-                    }
-                }, 100);
-            }
-        }));
-    }
-    setupCookieMonitor() {
-        let lastCookieString = document.cookie;
-        setInterval(() => {
-            const currentCookieString = document.cookie;
-            if (currentCookieString !== lastCookieString) {
-                lastCookieString = currentCookieString;
-                const userId = this.extractUserIdFromCookies();
-                if (userId && !userId.startsWith('anon_')) {
-                    this.handleDetectedUserId(userId, 'cookies_polling');
-                }
-            }
-        }, 2000);
-    }
-    isUserRelatedKey(key) {
-        if (!key)
-            return false;
-        const keywords = ['user', 'auth', 'token', 'session', 'login', 'profile', 'id', 'account'];
-        return keywords.some(kw => key.toLowerCase().includes(kw.toLowerCase()));
-    }
-    extractUserIdFromCookies() {
-        const cookies = document.cookie.split(';');
-        const cookieMap = {};
-        cookies.forEach(cookie => {
-            const parts = cookie.trim().split('=');
-            const key = parts[0];
-            const value = parts.slice(1).join('=');
-            if (key && value)
-                cookieMap[key] = decodeURIComponent(value);
-        });
-        const possibleKeys = ['userId', 'user_id', 'uid', 'user-id', 'auth_user_id', STORAGE_KEYS.USER_ID];
-        for (const key of possibleKeys) {
-            if (cookieMap[key] && cookieMap[key] !== 'undefined') {
-                return cookieMap[key];
-            }
-        }
-        const jwtKeys = ['token', 'access_token', 'jwt', 'auth_token'];
-        for (const key of jwtKeys) {
-            if (cookieMap[key]) {
-                const userId = this.extractUserIdFromJWT(cookieMap[key]);
-                if (userId)
-                    return userId;
-            }
-        }
-        return null;
-    }
-    extractUserIdFromLocalStorage() {
-        try {
-            const possibleKeys = [
-                'user_id', 'userId', 'uid', 'customer_id',
-                'user', 'userData', 'auth', 'currentUser', 'userInfo', 'profile', 'account',
-                STORAGE_KEYS.USER_ID
-            ];
-            for (const key of possibleKeys) {
-                const value = localStorage.getItem(key);
-                if (value) {
-                    try {
-                        const parsed = JSON.parse(value);
-                        const id = this.extractUserIdFromObject(parsed);
-                        if (id)
-                            return id;
-                    }
-                    catch (e) {
-                        if (value.length < 100 && !value.includes('.')) {
-                            return value;
+                    // Trường hợp 2: Form Plugin cũ (Rate + Review chung)
+                    // Map vào RatingValue
+                    if (payload.metadata.rateValue !== undefined) {
+                        const rateVal = Number(payload.metadata.rateValue);
+                        if (!isNaN(rateVal)) {
+                            trackData.ratingValue = rateVal;
                         }
                     }
+                    // Map vào ReviewValue (nếu form đó có cả review text)
+                    if (payload.metadata.reviewText) {
+                        trackData.reviewValue = String(payload.metadata.reviewText);
+                    }
                 }
-            }
-            const tokenKeys = ['token', 'access_token', 'jwt', 'auth_token'];
-            for (const key of tokenKeys) {
-                const token = localStorage.getItem(key);
-                if (token) {
-                    const userId = this.extractUserIdFromJWT(token);
-                    if (userId)
-                        return userId;
+                // 4. Chỉ gửi nếu có ItemID hợp lệ (tùy logic bên bạn)
+                if (trackData.itemValue && !trackData.itemValue.startsWith('N/A')) {
+                    this.tracker.track(trackData);
                 }
-            }
-        }
-        catch (e) {
-            return null;
-        }
-        return null;
-    }
-    extractUserIdFromJWT(token) {
-        if (!token || !token.includes('.'))
-            return null;
-        try {
-            const payload = token.split('.')[1];
-            const decoded = JSON.parse(atob(payload.replace(/-/g, '+').replace(/_/g, '/')));
-            return decoded.sub || decoded.userId || decoded.id || decoded.user_id || decoded.UserId;
-        }
-        catch (e) {
-            return null;
-        }
-    }
-    extractUserIdFromObject(obj) {
-        if (!obj || typeof obj !== 'object')
-            return null;
-        const idKeys = ['id', 'userId', 'user_id', 'uid', '_id', 'userID', 'UserId', 'UserID'];
-        for (const key of idKeys) {
-            if (obj[key] && obj[key] !== 'undefined' && obj[key] !== 'null') {
-                return String(obj[key]);
-            }
-        }
-        for (const key in obj) {
-            if (typeof obj[key] === 'object' && obj[key] !== null) {
-                const found = this.extractUserIdFromObject(obj[key]);
-                if (found)
-                    return found;
-            }
-        }
-        return null;
-    }
-    generateSessionId() {
-        return 'sess_' + Date.now() + '_' + Math.random().toString(36).substring(2, 11);
-    }
-    loadIdentifiers() {
-        try {
-            const stored = localStorage.getItem(STORAGE_KEYS.IDENTIFIERS);
-            return stored ? JSON.parse(stored) : {};
-        }
-        catch (e) {
-            return {};
-        }
-    }
-    saveIdentifiers() {
-        try {
-            localStorage.setItem(STORAGE_KEYS.IDENTIFIERS, JSON.stringify(this.identifiers));
-        }
-        catch (e) { /* Ignore */ }
-    }
-    startMonitoring() {
-        setInterval(() => {
-            if (!this.isLoggedIn || (this.currentUserId && this.currentUserId.startsWith('anon_'))) {
-                const newUserId = this.findOrCreateUserId();
-                if (newUserId !== this.currentUserId && !newUserId.startsWith('anon_')) {
-                    console.log(`[RECSYS] Monitoring detected login: ${this.currentUserId} -> ${newUserId}`);
-                    this.handleDetectedUserId(newUserId, 'monitoring');
-                }
-            }
-        }, 5000);
-    }
-    getUserInfo() {
-        return {
-            userId: this.currentUserId,
-            isLoggedIn: this.isLoggedIn,
-            sessionId: this.sessionId,
-            detectionMethod: this.identifiers.detectionMethod,
-            detectionTime: this.identifiers.detectionTime,
-            isAnonymous: this.currentUserId ? this.currentUserId.startsWith('anon_') : true
+            },
         };
+        this.tracker = tracker;
     }
-    logout() {
-        const oldUserId = this.currentUserId;
-        this.currentUserId = null;
-        this.isLoggedIn = false;
-        localStorage.removeItem(STORAGE_KEYS.USER_ID);
-        const newAnonId = 'anon_' + Date.now() + '_' + Math.random().toString(36).substring(2, 9);
-        localStorage.setItem(STORAGE_KEYS.ANON_USER_ID, newAnonId);
-        this.currentUserId = newAnonId;
-        console.log(`[RECSYS] User logged out: ${oldUserId} -> ${newAnonId}`);
-        window.dispatchEvent(new CustomEvent('recsys:userLoggedOut', {
-            detail: {
-                oldUserId,
-                newUserId: newAnonId,
-                sessionId: this.sessionId
-            }
-        }));
+    get payloadBuilder() {
+        // Dùng (this.tracker as any) để tránh lỗi nếu RecSysTracker chưa kịp cập nhật type
+        return this.tracker.payloadBuilder;
     }
-    setupIdentitySynchronization() {
-        if (!this.trackerContext)
-            return;
-        window.addEventListener('recsys:userLoggedIn', ((event) => {
-            const customEvent = event;
-            const newUserId = customEvent.detail.userId;
-            const source = customEvent.detail.detectionMethod;
-            if (newUserId) {
-                this.trackerContext.updateIdentity(newUserId);
-                console.log(`[Context Sync] User ID synced from IdentityManager (${source}).`);
-            }
-        }));
+    updateIdentity(newUserId) {
+        console.log(`[TrackerContext] Identity updated to: ${newUserId}`);
+        this.tracker.setUserId(newUserId);
     }
-}
-function getUserIdentityManager() {
-    if (!identityManagerInstance) {
-        identityManagerInstance = new UserIdentityManager();
-    }
-    return identityManagerInstance;
 }
 
 let aiItemDetectorInstance = null;
@@ -2934,132 +2540,40 @@ function getAIItemDetector() {
     return aiItemDetectorInstance;
 }
 
-class TrackerContextAdapter {
-    constructor(tracker) {
-        this.config = {
-            getRules: (eventTypeId) => {
-                const config = this.tracker.getConfig();
-                if (!(config === null || config === void 0 ? void 0 : config.trackingRules))
-                    return [];
-                return config.trackingRules
-                    .filter(rule => rule.eventTypeId === eventTypeId);
-            },
-        };
-        this.payloadBuilder = {
-            build: (element, rule, extraData = {}) => {
-                const userIdentityManager = getUserIdentityManager();
-                const payload = {
-                    event: rule.eventTypeId === 1 ? "item_click" : "page_view",
-                    url: window.location.href,
-                    timestamp: Date.now(),
-                    ruleName: rule.name,
-                    userId: userIdentityManager.getRealUserId(),
-                    itemId: 'N/A'
-                };
-                // Build payload extractor from rule data
-                const targetValue = rule.trackingTarget.value || '';
-                const isRegex = targetValue.startsWith('^');
-                const extractor = {
-                    source: isRegex ? 'regex_group' : 'ai_detect',
-                    groupIndex: isRegex ? 1 : undefined,
-                };
-                let detectionResult = null;
-                if (!extractor || typeof extractor.source === 'undefined') {
-                    console.error(`[PayloadBuilder Error] Rule '${rule.name}' is missing a valid payloadExtractor or source.`);
-                    return {
-                        ...payload,
-                        itemId: 'N/A (Invalid Rule Config)',
-                        itemName: 'Invalid Rule',
-                        confidence: 0,
-                        source: 'invalid_rule_config'
-                    };
-                }
-                if (extractor.source === 'regex_group' && extraData.regexMatch) {
-                    const match = extraData.regexMatch;
-                    const groupIndex = extractor.groupIndex;
-                    if (groupIndex !== undefined && match.length > groupIndex) {
-                        const itemId = match[groupIndex];
-                        return {
-                            ...payload,
-                            itemId: itemId,
-                            itemName: itemId,
-                            itemType: 'song',
-                            confidence: 1.0,
-                            source: 'regex_url'
-                        };
-                    }
-                }
-                if (extractor.source === 'ai_detect') {
-                    const detector = getAIItemDetector();
-                    if (rule.eventTypeId === 3 && element && element.id) {
-                        detectionResult = element;
-                    }
-                    else if (detector && element instanceof Element) {
-                        detectionResult = detector.detectItem(element);
-                    }
-                    if (detectionResult && detectionResult.id && detectionResult.id !== 'N/A (AI Failed)') {
-                        return {
-                            ...payload,
-                            itemId: detectionResult.id,
-                            itemName: detectionResult.name || 'Unknown',
-                            itemType: detectionResult.type || 'content',
-                            confidence: detectionResult.confidence || 0,
-                            source: detectionResult.source || 'dom_based',
-                            metadata: detectionResult.metadata || {}
-                        };
-                    }
-                    else {
-                        return {
-                            ...payload,
-                            itemId: 'N/A (Failed)',
-                            itemName: 'Unknown Item',
-                            confidence: 0,
-                            source: 'rule_match_no_ai_id'
-                        };
-                    }
-                }
-                return payload;
-            },
-        };
-        this.eventBuffer = {
-            enqueue: (payload) => {
-                let triggerTypeId = 2;
-                switch (payload.event) {
-                    case 'item_click':
-                        triggerTypeId = 1;
-                        break;
-                    case 'rate_submit':
-                        triggerTypeId = 2;
-                        break;
-                    case 'page_view':
-                        triggerTypeId = 3;
-                        break;
-                    default:
-                        triggerTypeId = 3;
-                }
-                const trackData = {
-                    triggerTypeId,
-                    userId: parseInt(payload.userId) || 0,
-                    itemId: parseInt(payload.itemId) || 0, // Lưu ý: server nhận int
-                };
-                if (payload.metadata && payload.metadata.rateValue !== undefined) {
-                    trackData.rate = {
-                        Value: Number(payload.metadata.rateValue),
-                        Review: String(payload.metadata.reviewText || '')
-                    };
-                }
-                if (payload.itemId && !payload.itemId.toString().startsWith('N/A')) {
-                    this.tracker.track(trackData);
-                }
-            },
-        };
-        this.tracker = tracker;
-    }
-    updateIdentity(newUserId) {
-        console.log(`[TrackerContext] Identity updated to: ${newUserId}`);
-        this.tracker.setUserId(newUserId);
-    }
+const STORAGE_KEYS = {
+    ANON_USER_ID: 'recsys_anon_id',
+    USER_ID: 'recsys_user_id',
+    SESSION_ID: 'recsys_session',
+    IDENTIFIERS: 'recsys_identifiers',
+    LAST_USER_ID: 'recsys_last_user_id'
+};
+function throttle(fn, delay) {
+    let lastCall = 0;
+    let timeoutId = null;
+    let lastArgs = null;
+    return function (...args) {
+        const now = Date.now();
+        lastArgs = args;
+        const remaining = delay - (now - lastCall);
+        const context = this;
+        if (remaining <= 0) {
+            if (timeoutId) {
+                clearTimeout(timeoutId);
+                timeoutId = null;
+            }
+            lastCall = now;
+            fn.apply(context, args);
+        }
+        else if (!timeoutId) {
+            timeoutId = window.setTimeout(() => {
+                lastCall = Date.now();
+                timeoutId = null;
+                fn.apply(context, lastArgs);
+            }, remaining);
+        }
+    };
 }
+const CUSTOM_ROUTE_EVENT = "recsys_route_change";
 
 class ClickPlugin extends BasePlugin {
     constructor() {
@@ -3097,9 +2611,12 @@ class ClickPlugin extends BasePlugin {
         }, 'ClickPlugin.stop');
     }
     handleDocumentClick(event) {
-        if (!this.context || !this.detector)
+        if (!this.context || !this.detector || !this.tracker)
             return;
-        const clickRules = this.context.config.getRules(1); // triggerEventId = 1 for click
+        const eventId = this.tracker.getEventTypeId('Click');
+        if (!eventId)
+            return;
+        const clickRules = this.context.config.getRules(eventId);
         if (clickRules.length === 0) {
             return;
         }
@@ -3173,11 +2690,16 @@ class PageViewPlugin extends BasePlugin {
     }
     trackCurrentPage(currentUrl) {
         var _a;
-        if (!this.context || !this.detector)
+        if (!this.context || !this.detector || !this.tracker)
             return;
         const urlObject = new URL(currentUrl);
         const pathname = urlObject.pathname;
-        const pageViewRules = this.context.config.getRules(3); // triggerEventId = 3 for page_view
+        const eventId = this.tracker.getEventTypeId('Page View');
+        if (!eventId) {
+            console.log('[PageViewPlugin] Page View event type not found in config.');
+            return;
+        }
+        const pageViewRules = this.context.config.getRules(eventId);
         if (pageViewRules.length === 0) {
             console.log('[PageViewPlugin] No page view rules configured.');
             return;
@@ -3234,10 +2756,520 @@ var pageViewPlugin = /*#__PURE__*/Object.freeze({
     PageViewPlugin: PageViewPlugin
 });
 
-class FormPlugin extends BasePlugin {
+let identityManagerInstance = null;
+class UserIdentityManager {
+    constructor() {
+        this.identifiers = {};
+        this.sessionId = '';
+        this.currentUserId = null;
+        this.isLoggedIn = false;
+        this.initialized = false;
+        this.authRequests = new Set();
+        this.trackerContext = null;
+        if (identityManagerInstance) {
+            return identityManagerInstance;
+        }
+        this.identifiers = this.loadIdentifiers();
+        this.sessionId = this.generateSessionId();
+        identityManagerInstance = this;
+        window.identityManager = this;
+        window.recsysIdentityManager = this;
+    }
+    setTrackerContext(context) {
+        this.trackerContext = context;
+        this.setupIdentitySynchronization();
+    }
+    initialize() {
+        if (this.initialized)
+            return;
+        const persistedUserId = this.getPersistedUserId();
+        if (persistedUserId && !persistedUserId.startsWith('anon_')) {
+            this.currentUserId = persistedUserId;
+            this.isLoggedIn = true;
+            console.log(`[RECSYS] Restored logged-in user: ${persistedUserId}`);
+            this.identifiers.detectedUserId = persistedUserId;
+            this.saveIdentifiers();
+        }
+        else {
+            this.currentUserId = this.findOrCreateUserId();
+        }
+        this.setupEnhancedNetworkMonitoring();
+        this.startMonitoring();
+        this.initialized = true;
+        console.log(`[RECSYS] Identity Manager initialized. Current user: ${this.currentUserId}, Logged in: ${this.isLoggedIn}`);
+    }
+    getPersistedUserId() {
+        if (this.identifiers.detectedUserId && typeof this.identifiers.detectedUserId === 'string' && !this.identifiers.detectedUserId.startsWith('anon_')) {
+            return this.identifiers.detectedUserId;
+        }
+        const storedUserId = localStorage.getItem(STORAGE_KEYS.USER_ID);
+        if (storedUserId && storedUserId !== 'undefined' && storedUserId !== 'null' && !storedUserId.startsWith('anon_')) {
+            return storedUserId;
+        }
+        const anonId = localStorage.getItem(STORAGE_KEYS.ANON_USER_ID);
+        if (anonId) {
+            return anonId;
+        }
+        return null;
+    }
+    findOrCreateUserId() {
+        const userId = this.extractUserIdFromCookies() ||
+            this.extractUserIdFromLocalStorage() ||
+            this.extractUserIdFromJWT(localStorage.getItem('token'));
+        if (userId && !userId.startsWith('anon_')) {
+            this.handleDetectedUserId(userId, 'initial_lookup');
+            this.isLoggedIn = true;
+            return userId;
+        }
+        let anonId = localStorage.getItem(STORAGE_KEYS.ANON_USER_ID);
+        if (!anonId) {
+            anonId = 'anon_' + Date.now() + '_' + Math.random().toString(36).substring(2, 9);
+            localStorage.setItem(STORAGE_KEYS.ANON_USER_ID, anonId);
+        }
+        this.isLoggedIn = false;
+        return anonId;
+    }
+    getUserId() {
+        if (this.currentUserId) {
+            return this.currentUserId;
+        }
+        return this.findOrCreateUserId();
+    }
+    getStableUserId() {
+        return this.currentUserId || this.getUserId();
+    }
+    getRealUserId() {
+        if (this.currentUserId && !this.currentUserId.startsWith('anon_')) {
+            return this.currentUserId;
+        }
+        return this.getUserId();
+    }
+    refreshUserId() {
+        const oldUserId = this.currentUserId;
+        const newUserId = this.findOrCreateUserId();
+        if (oldUserId !== newUserId) {
+            const wasLoggedIn = this.isLoggedIn;
+            this.isLoggedIn = !newUserId.startsWith('anon_');
+            console.log(`[RECSYS] User ID changed: ${oldUserId} -> ${newUserId}, Login status: ${wasLoggedIn} -> ${this.isLoggedIn}`);
+            this.currentUserId = newUserId;
+            window.dispatchEvent(new CustomEvent('recsys:userIdChanged', {
+                detail: {
+                    oldUserId,
+                    newUserId,
+                    wasLoggedIn,
+                    isNowLoggedIn: this.isLoggedIn,
+                    sessionId: this.sessionId
+                }
+            }));
+        }
+        return newUserId;
+    }
+    setupEnhancedNetworkMonitoring() {
+        const self = this;
+        const originalFetch = window.fetch;
+        window.fetch = async (...args) => {
+            const [resource] = args;
+            const url = typeof resource === 'string' ? resource : resource.url;
+            if (url && (url.includes('/auth') || url.includes('/login') || url.includes('/signin'))) {
+                self.authRequests.add(url);
+            }
+            try {
+                const response = await originalFetch(...args);
+                const clonedResponse = response.clone();
+                if (url && self.authRequests.has(url)) {
+                    setTimeout(() => { self.processAuthResponse(url, clonedResponse); }, 100);
+                }
+                return response;
+            }
+            catch (error) {
+                console.log('❌ Fetch error:', error);
+                throw error;
+            }
+        };
+        if (window.XMLHttpRequest) {
+            const originalOpen = XMLHttpRequest.prototype.open;
+            const originalSend = XMLHttpRequest.prototype.send;
+            XMLHttpRequest.prototype.open = function (method, url) {
+                this._url = url;
+                this._method = method;
+                if (url && (url.includes('/auth') || url.includes('/login') || url.includes('/signin'))) {
+                    this._isAuthRequest = true;
+                }
+                return originalOpen.apply(this, arguments);
+            };
+            XMLHttpRequest.prototype.send = function (_body) {
+                const xhr = this;
+                xhr.addEventListener('load', () => {
+                    if (xhr.status >= 200 && xhr.status < 300) {
+                        if (xhr._isAuthRequest) {
+                            setTimeout(() => { self.processXHRAuthResponse(xhr); }, 100);
+                        }
+                        setTimeout(() => { self.checkResponseForUserData(xhr); }, 150);
+                    }
+                });
+                return originalSend.apply(this, arguments);
+            };
+        }
+        this.setupLocalStorageMonitor();
+        this.setupCookieMonitor();
+    }
+    async processAuthResponse(_url, response) {
+        try {
+            const data = await response.json();
+            const userId = this.extractUserIdFromObject(data);
+            if (userId) {
+                this.handleDetectedUserId(userId, 'auth_response');
+            }
+            else {
+                setTimeout(() => { this.checkAllSourcesForUserId(); }, 1000);
+            }
+        }
+        catch (e) { }
+    }
+    processXHRAuthResponse(xhr) {
+        try {
+            const data = JSON.parse(xhr.responseText);
+            const userId = this.extractUserIdFromObject(data);
+            if (userId) {
+                this.handleDetectedUserId(userId, 'xhr_auth_response');
+            }
+        }
+        catch (e) { }
+    }
+    checkResponseForUserData(xhr) {
+        try {
+            const data = JSON.parse(xhr.responseText);
+            const userId = this.extractUserIdFromObject(data);
+            if (userId && !this.authRequests.has(xhr._url)) {
+                this.handleDetectedUserId(userId, 'api_response');
+            }
+        }
+        catch (e) { /* Ignore */ }
+    }
+    // --- LOGIN HANDLERS ---
+    // Đã đổi tên 'source' thành '_source'
+    handleDetectedUserId(userId, _source) {
+        if (this.currentUserId && !this.currentUserId.startsWith('anon_')) {
+            console.log(`[RECSYS] User already authenticated as ${this.currentUserId}. Ignoring ${userId} from ${_source}`);
+            return;
+        }
+        if (userId && !userId.startsWith('anon_')) {
+            const oldUserId = this.currentUserId;
+            const wasAnonymous = oldUserId && oldUserId.startsWith('anon_');
+            if (wasAnonymous) {
+                console.log(`[RECSYS CAPTURE] User logged in: ${oldUserId} -> ${userId} (Source: ${_source})`);
+                this.onUserLoginDetected(oldUserId, userId, _source);
+            }
+            else if (oldUserId !== userId) {
+                console.log(`[RECSYS CAPTURE] User ID updated: ${oldUserId} -> ${userId} (Source: ${_source})`);
+            }
+            this.currentUserId = userId;
+            this.isLoggedIn = true;
+            localStorage.setItem(STORAGE_KEYS.USER_ID, userId);
+            this.identifiers.detectedUserId = userId;
+            this.identifiers.detectionMethod = _source;
+            this.identifiers.detectionTime = new Date().toISOString();
+            this.saveIdentifiers();
+        }
+    }
+    // Đã đổi tên 'source' thành '_source'
+    onUserLoginDetected(anonymousId, userId, _source) {
+        this.sendLoginEvent(anonymousId, userId, _source);
+        window.dispatchEvent(new CustomEvent('recsys:userLoggedIn', {
+            detail: {
+                userId: userId,
+                anonymousId: anonymousId,
+                detectionMethod: _source,
+                sessionId: this.sessionId,
+                timestamp: new Date().toISOString()
+            }
+        }));
+    }
+    sendLoginEvent(anonymousId, userId, _source) {
+        console.log(`[RECSYS CAPTURE] Login event prepared for User ID: ${userId} (from ${anonymousId}).`);
+    }
+    checkAllSourcesForUserId() {
+        const cookieUserId = this.extractUserIdFromCookies();
+        if (cookieUserId) {
+            this.handleDetectedUserId(cookieUserId, 'cookies_after_login');
+            return;
+        }
+        const lsUserId = this.extractUserIdFromLocalStorage();
+        if (lsUserId) {
+            this.handleDetectedUserId(lsUserId, 'localStorage_after_login');
+            return;
+        }
+        setTimeout(() => { this.checkCommonUserEndpoints(); }, 2000);
+        this.startPostLoginPolling();
+    }
+    startPostLoginPolling() {
+        let attempts = 0;
+        const maxAttempts = 10;
+        const poll = () => {
+            attempts++;
+            const cookieId = this.extractUserIdFromCookies();
+            const lsId = this.extractUserIdFromLocalStorage();
+            if (cookieId) {
+                this.handleDetectedUserId(cookieId, 'polling_cookies');
+                return;
+            }
+            if (lsId) {
+                this.handleDetectedUserId(lsId, 'polling_localStorage');
+                return;
+            }
+            if (attempts < maxAttempts) {
+                setTimeout(poll, 1000);
+            }
+        };
+        setTimeout(poll, 1000);
+    }
+    checkCommonUserEndpoints() {
+        const endpoints = ['/user/profile', '/api/me', '/user/me', '/account/info'];
+        endpoints.forEach(endpoint => {
+            fetch(endpoint, { method: 'GET', credentials: 'include' })
+                .then(res => res.json())
+                .then(data => {
+                const userId = this.extractUserIdFromObject(data);
+                if (userId) {
+                    this.handleDetectedUserId(userId, `endpoint_${endpoint}`);
+                }
+            }).catch(() => { });
+        });
+    }
+    setupLocalStorageMonitor() {
+        const self = this;
+        const originalSetItem = localStorage.setItem;
+        localStorage.setItem = function (key, value) {
+            originalSetItem.call(this, key, value);
+            if (self.isUserRelatedKey(key)) {
+                window.dispatchEvent(new CustomEvent('storage', {
+                    detail: { key, newValue: value, storageArea: this }
+                }));
+            }
+        };
+        window.addEventListener('storage', ((e) => {
+            if (this.isUserRelatedKey(e.key)) {
+                setTimeout(() => {
+                    const userId = this.extractUserIdFromLocalStorage();
+                    if (userId && !userId.startsWith('anon_')) {
+                        this.handleDetectedUserId(userId, 'localStorage_event');
+                    }
+                }, 100);
+            }
+        }));
+    }
+    setupCookieMonitor() {
+        let lastCookieString = document.cookie;
+        setInterval(() => {
+            const currentCookieString = document.cookie;
+            if (currentCookieString !== lastCookieString) {
+                lastCookieString = currentCookieString;
+                const userId = this.extractUserIdFromCookies();
+                if (userId && !userId.startsWith('anon_')) {
+                    this.handleDetectedUserId(userId, 'cookies_polling');
+                }
+            }
+        }, 2000);
+    }
+    isUserRelatedKey(key) {
+        if (!key)
+            return false;
+        const keywords = ['user', 'auth', 'token', 'session', 'login', 'profile', 'id', 'account'];
+        return keywords.some(kw => key.toLowerCase().includes(kw.toLowerCase()));
+    }
+    extractUserIdFromCookies() {
+        const cookies = document.cookie.split(';');
+        const cookieMap = {};
+        cookies.forEach(cookie => {
+            const parts = cookie.trim().split('=');
+            const key = parts[0];
+            const value = parts.slice(1).join('=');
+            if (key && value)
+                cookieMap[key] = decodeURIComponent(value);
+        });
+        const possibleKeys = ['userId', 'user_id', 'uid', 'user-id', 'auth_user_id', STORAGE_KEYS.USER_ID];
+        for (const key of possibleKeys) {
+            if (cookieMap[key] && cookieMap[key] !== 'undefined') {
+                return cookieMap[key];
+            }
+        }
+        const jwtKeys = ['token', 'access_token', 'jwt', 'auth_token'];
+        for (const key of jwtKeys) {
+            if (cookieMap[key]) {
+                const userId = this.extractUserIdFromJWT(cookieMap[key]);
+                if (userId)
+                    return userId;
+            }
+        }
+        return null;
+    }
+    extractUserIdFromLocalStorage() {
+        try {
+            const possibleKeys = [
+                'user_id', 'userId', 'uid', 'customer_id',
+                'user', 'userData', 'auth', 'currentUser', 'userInfo', 'profile', 'account',
+                STORAGE_KEYS.USER_ID
+            ];
+            for (const key of possibleKeys) {
+                const value = localStorage.getItem(key);
+                if (value) {
+                    try {
+                        const parsed = JSON.parse(value);
+                        const id = this.extractUserIdFromObject(parsed);
+                        if (id)
+                            return id;
+                    }
+                    catch (e) {
+                        if (value.length < 100 && !value.includes('.')) {
+                            return value;
+                        }
+                    }
+                }
+            }
+            const tokenKeys = ['token', 'access_token', 'jwt', 'auth_token'];
+            for (const key of tokenKeys) {
+                const token = localStorage.getItem(key);
+                if (token) {
+                    const userId = this.extractUserIdFromJWT(token);
+                    if (userId)
+                        return userId;
+                }
+            }
+        }
+        catch (e) {
+            return null;
+        }
+        return null;
+    }
+    extractUserIdFromJWT(token) {
+        if (!token || !token.includes('.'))
+            return null;
+        try {
+            const payload = token.split('.')[1];
+            const decoded = JSON.parse(atob(payload.replace(/-/g, '+').replace(/_/g, '/')));
+            return decoded.sub || decoded.userId || decoded.id || decoded.user_id || decoded.UserId;
+        }
+        catch (e) {
+            return null;
+        }
+    }
+    extractUserIdFromObject(obj) {
+        if (!obj || typeof obj !== 'object')
+            return null;
+        const idKeys = ['id', 'userId', 'user_id', 'uid', '_id', 'userID', 'UserId', 'UserID'];
+        for (const key of idKeys) {
+            if (obj[key] && obj[key] !== 'undefined' && obj[key] !== 'null') {
+                return String(obj[key]);
+            }
+        }
+        for (const key in obj) {
+            if (typeof obj[key] === 'object' && obj[key] !== null) {
+                const found = this.extractUserIdFromObject(obj[key]);
+                if (found)
+                    return found;
+            }
+        }
+        return null;
+    }
+    generateSessionId() {
+        return 'sess_' + Date.now() + '_' + Math.random().toString(36).substring(2, 11);
+    }
+    loadIdentifiers() {
+        try {
+            const stored = localStorage.getItem(STORAGE_KEYS.IDENTIFIERS);
+            return stored ? JSON.parse(stored) : {};
+        }
+        catch (e) {
+            return {};
+        }
+    }
+    saveIdentifiers() {
+        try {
+            localStorage.setItem(STORAGE_KEYS.IDENTIFIERS, JSON.stringify(this.identifiers));
+        }
+        catch (e) { /* Ignore */ }
+    }
+    startMonitoring() {
+        setInterval(() => {
+            if (!this.isLoggedIn || (this.currentUserId && this.currentUserId.startsWith('anon_'))) {
+                const newUserId = this.findOrCreateUserId();
+                if (newUserId !== this.currentUserId && !newUserId.startsWith('anon_')) {
+                    console.log(`[RECSYS] Monitoring detected login: ${this.currentUserId} -> ${newUserId}`);
+                    this.handleDetectedUserId(newUserId, 'monitoring');
+                }
+            }
+        }, 5000);
+    }
+    getUserInfo() {
+        return {
+            userId: this.currentUserId,
+            isLoggedIn: this.isLoggedIn,
+            sessionId: this.sessionId,
+            detectionMethod: this.identifiers.detectionMethod,
+            detectionTime: this.identifiers.detectionTime,
+            isAnonymous: this.currentUserId ? this.currentUserId.startsWith('anon_') : true
+        };
+    }
+    logout() {
+        const oldUserId = this.currentUserId;
+        this.currentUserId = null;
+        this.isLoggedIn = false;
+        localStorage.removeItem(STORAGE_KEYS.USER_ID);
+        const newAnonId = 'anon_' + Date.now() + '_' + Math.random().toString(36).substring(2, 9);
+        localStorage.setItem(STORAGE_KEYS.ANON_USER_ID, newAnonId);
+        this.currentUserId = newAnonId;
+        console.log(`[RECSYS] User logged out: ${oldUserId} -> ${newAnonId}`);
+        window.dispatchEvent(new CustomEvent('recsys:userLoggedOut', {
+            detail: {
+                oldUserId,
+                newUserId: newAnonId,
+                sessionId: this.sessionId
+            }
+        }));
+    }
+    setupIdentitySynchronization() {
+        if (!this.trackerContext)
+            return;
+        window.addEventListener('recsys:userLoggedIn', ((event) => {
+            const customEvent = event;
+            const newUserId = customEvent.detail.userId;
+            const source = customEvent.detail.detectionMethod;
+            if (newUserId) {
+                this.trackerContext.updateIdentity(newUserId);
+                console.log(`[Context Sync] User ID synced from IdentityManager (${source}).`);
+            }
+        }));
+    }
+}
+function getUserIdentityManager() {
+    if (!identityManagerInstance) {
+        identityManagerInstance = new UserIdentityManager();
+    }
+    return identityManagerInstance;
+}
+
+// Target Element chỉ cho phép CSS Selector
+const TARGET_PATTERN_ID = { CSS_SELECTOR: 1 };
+// Condition Patterns
+const CONDITION_PATTERN_ID = {
+    URL_PARAM: 1,
+    CSS_SELECTOR: 2,
+    DOM_ATTRIBUTE: 3,
+    DATA_ATTRIBUTE: 4
+};
+const OPERATOR_ID = {
+    CONTAINS: 1,
+    NOT_CONTAINS: 2,
+    STARTS_WITH: 3,
+    ENDS_WITH: 4,
+    EQUALS: 5,
+    EXISTS: 7,
+    NOT_EXISTS: 8
+};
+class ReviewPlugin extends BasePlugin {
     constructor() {
         super(...arguments);
-        this.name = 'FormPlugin';
+        this.name = 'ReviewPlugin';
         this.context = null;
         this.detector = null;
         this.identityManager = null;
@@ -3250,302 +3282,295 @@ class FormPlugin extends BasePlugin {
             this.detector = getAIItemDetector();
             this.identityManager = getUserIdentityManager();
             this.identityManager.initialize();
-            if (this.context) {
+            if (this.context)
                 this.identityManager.setTrackerContext(this.context);
-            }
-            console.log(`[FormPlugin] initialized with UserIdentityManager.`);
-            console.log(`[FormPlugin] initialized.`);
-        }, 'FormPlugin.init');
+            console.log(`[ReviewPlugin] initialized.`);
+        }, 'ReviewPlugin.init');
     }
     start() {
         this.errorBoundary.execute(() => {
             if (!this.ensureInitialized())
                 return;
-            // Lắng nghe sự kiện submit toàn cục
             document.addEventListener('submit', this.handleSubmitBound, { capture: true });
-            console.log("[FormPlugin] started listening for form submissions.");
             this.active = true;
-        }, 'FormPlugin.start');
+        }, 'ReviewPlugin.start');
     }
     stop() {
         this.errorBoundary.execute(() => {
             document.removeEventListener('submit', this.handleSubmitBound, { capture: true });
             super.stop();
-        }, 'FormPlugin.stop');
+        }, 'ReviewPlugin.stop');
     }
-    // private handleSubmit(event: Event): void {
-    //     if (!this.context || !this.detector) return;
-    //     const form = event.target as HTMLFormElement;
-    //     // 1. Lấy rules có Trigger là RATE (Giả sử ID = 2)
-    //     const rateRules = this.context.config.getRules(2); 
-    //     if (rateRules.length === 0) return;
-    //     for (const rule of rateRules) {
-    //         // 2. Check xem Form này có khớp với Rule không (dựa vào selector)
-    //         const selector = rule.targetElement.targetElementValue || '';
-    //         if (!selector) continue;
-    //         // Logic check khớp selector đơn giản (giống checkTargetMatch cũ nhưng gọn hơn)
-    //         let isMatch = false;
-    //         try {
-    //             if (form.matches(selector)) isMatch = true;
-    //             // Fallback check ID nếu selector là #id
-    //             else if (selector.startsWith('#') && form.id === selector.substring(1)) isMatch = true;
-    //         } catch (e) { console.warn('Invalid selector', selector); }
-    //         if (isMatch) {
-    //             // 1. Detect Item Context
-    //             const structuredItem = this.detector.detectItem(form);
-    //             // 2. Extract Form Data
-    //             const { rateValue, reviewText } = this.extractFormData(form, rule);
-    //             // 3. Build Payload cơ bản
-    //             const payload = this.context.payloadBuilder.build(structuredItem, rule);
-    //             // 4. Override event type
-    //             payload.event = 'rate_submit';
-    //             // 5. Đưa dữ liệu vào METADATA (Merge với metadata cũ nếu có)
-    //             payload.metadata = {
-    //                 ...(payload.metadata || {}), 
-    //                 rateValue: rateValue,   
-    //                 reviewText: reviewText  
-    //             };
-    //             // 6. Gửi đi
-    //             this.context.eventBuffer.enqueue(payload);
-    //             return;
-    //         }
-    //     }
-    // }
     handleSubmit(event) {
-        var _a, _b, _c;
-        console.log("🔥 [DEBUG] Sự kiện Submit đã được bắt!");
-        if (!this.context || !this.detector)
+        console.log("🔥 [ReviewPlugin] Detected SUBMIT event!");
+        if (!this.context || !this.tracker)
             return;
         const form = event.target;
-        const formId = form.id;
-        console.log(`📝 [DEBUG] Form đang submit có ID: "${formId}"`);
-        // 1. Lấy rules RATE (ID=2)
-        const rateRules = this.context.config.getRules(2);
-        console.log(`🔎 [DEBUG] Tìm thấy ${rateRules.length} rule(s) cho sự kiện RATE.`);
-        if (rateRules.length === 0) {
-            console.warn("⚠️ [DEBUG] Không có rule nào trong Config/Mock khớp TriggerID=2");
+        console.log(`📝 [ReviewPlugin] Checking form: #${form.id} (Classes: ${form.className})`);
+        // Giả sử Trigger ID cho Review là 5
+        const reviewRules = this.context.config.getRules(5);
+        console.log(`🔎 [ReviewPlugin] Found ${reviewRules.length} rules for TriggerID=5`);
+        if (reviewRules.length === 0) {
+            console.warn("⚠️ [ReviewPlugin] No rules found! Check ConfigLoader or TriggerID.");
             return;
         }
-        for (const rule of rateRules) {
-            // Lấy selector từ cấu trúc lồng nhau (như trong index.ts bạn viết)
-            // Dùng optional chaining (?.) để an toàn
-            const selector = ((_a = rule.trackingTarget) === null || _a === void 0 ? void 0 : _a.value) || rule.targetElementValue;
-            console.log(`   👉 Checking Rule [${rule.id}]: Cần tìm selector "${selector}"`);
-            if (!selector) {
-                console.log("      -> Bỏ qua: Rule không có selector");
+        for (const rule of reviewRules) {
+            // 1. Check Target (Bắt buộc CSS Selector)
+            if (!this.checkTargetMatch(form, rule))
                 continue;
-            }
-            // Logic check khớp
-            let isMatch = false;
-            try {
-                if (form.matches(selector))
-                    isMatch = true;
-                else if (selector.startsWith('#') && formId === selector.substring(1))
-                    isMatch = true;
-            }
-            catch (e) {
-                console.warn('      -> Lỗi cú pháp selector', e);
-            }
-            if (isMatch) {
-                console.log("✅ [DEBUG] MATCH THÀNH CÔNG! Bắt đầu trích xuất dữ liệu...");
-                // 1. Detect Item Context
-                let structuredItem = this.detector.detectItem(form);
-                const isGarbageId = ((_b = structuredItem === null || structuredItem === void 0 ? void 0 : structuredItem.id) === null || _b === void 0 ? void 0 : _b.startsWith('pos_')) ||
-                    (structuredItem === null || structuredItem === void 0 ? void 0 : structuredItem.source) === 'fallback_position_based' ||
-                    ((_c = structuredItem === null || structuredItem === void 0 ? void 0 : structuredItem.name) === null || _c === void 0 ? void 0 : _c.startsWith('Element at'));
-                if (!structuredItem || !structuredItem.id || structuredItem.id === 'N/A (Failed)' || isGarbageId) {
-                    console.log("🔍 [FormPlugin] AI form failed. Scanning surrounding context...");
-                    const contextInfo = this.scanSurroundingContext(form);
-                    if (contextInfo.id) {
-                        // Merge kết quả tìm được
-                        structuredItem = {
-                            confidence: 1,
-                            source: contextInfo.source,
-                            context: 'dom_context',
-                            metadata: {},
-                            ...(structuredItem || {}), // Giữ lại metadata cũ nếu có
-                            id: contextInfo.id,
-                            name: contextInfo.name || (structuredItem === null || structuredItem === void 0 ? void 0 : structuredItem.name) || '',
-                            type: contextInfo.type || (structuredItem === null || structuredItem === void 0 ? void 0 : structuredItem.type) || ''
-                        };
-                        console.log("[FormPlugin] Found Context Item:", contextInfo);
-                    }
-                }
-                // 2. Extract Form Data
-                const { rateValue, reviewText } = this.extractFormData(form, rule);
-                console.log("📦 [DEBUG] Dữ liệu trích xuất được:", { rateValue, reviewText });
-                // 3. Build Payload
-                const payload = this.context.payloadBuilder.build(structuredItem, rule);
-                this.enrichPayload(payload, structuredItem, { rateValue, reviewText });
-                payload.event = 'rate_submit';
-                payload.metadata = {
-                    ...(payload.metadata || {}),
-                    rateValue: rateValue,
-                    reviewText: reviewText
-                };
-                // 4. Send
-                console.log("🚀 [DEBUG] Đang gửi vào Buffer:", payload);
-                this.context.eventBuffer.enqueue(payload);
-                return;
-            }
-            else {
-                console.log(`      ❌ KHÔNG KHỚP: Form "${formId}" != Selector "${selector}"`);
-            }
+            // 2. Check Condition (Optional)
+            if (!this.checkConditions(form, rule))
+                continue;
+            console.log(`✅ [ReviewPlugin] Match Rule: "${rule.name}"`);
+            // 3. XÂY DỰNG PAYLOAD (Core Logic)
+            const payload = this.constructPayload(form, rule);
+            // 4. Gửi Event
+            this.tracker.track(payload);
+            console.log(payload);
+            return;
         }
+        console.log("❌ [ReviewPlugin] No rules matched the current form.");
     }
     /**
-     * DOM RADAR: Quét ngữ cảnh xung quanh theo phương pháp lan truyền
-     * 1. Check bản thân -> 2. Check tổ tiên -> 3. Check phạm vi (Parent Scope)
+     * Logic xây dựng Payload theo thứ tự ưu tiên:
+     * Config (PayloadBuilder) -> Fallback (AI/Radar/Identity)
      */
+    constructPayload(form, rule) {
+        const mappedData = this.context.payloadBuilder.build(rule.payloadMappings || [], form);
+        console.log("🧩 [ReviewPlugin] Mapped Data from Config:", mappedData);
+        // Khởi tạo payload cơ bản
+        const payload = {
+            eventTypeId: 5,
+            trackingRuleId: Number(rule.id),
+            userField: 'UserId',
+            userValue: '',
+            itemField: 'ItemId',
+            itemValue: '',
+            ratingValue: undefined,
+            reviewValue: ''
+        };
+        const potentialUserKeys = ['userId', 'userName', 'userUID'];
+        const potentialItemKeys = ['itemId', 'itemName', 'itemUID'];
+        // B. Mapping dữ liệu từ Config vào Payload
+        // if (mappedData.userId) payload.userId = mappedData.userId;
+        // if (mappedData.itemId) payload.itemId = mappedData.itemId;
+        for (const key of potentialUserKeys) {
+            if (mappedData[key]) {
+                payload.userField = key;
+                payload.userValue = mappedData[key];
+                break;
+            }
+        }
+        for (const key of potentialItemKeys) {
+            if (mappedData[key]) {
+                payload.itemField = key;
+                payload.itemValue = mappedData[key];
+                break;
+            }
+        }
+        // [FIX] Xử lý review_text
+        const content = mappedData.review_text || mappedData.content || mappedData.value || mappedData.review;
+        if (content) {
+            payload.reviewValue = content;
+        }
+        // C. [PRIORITY 2] Fallback Logic (Chỉ chạy khi thiếu dữ liệu)
+        // --- FALLBACK ITEM ID ---
+        if (!payload.itemValue) {
+            console.log("⚠️ [ReviewPlugin] Missing ItemId from config. Trying Auto-detect...");
+            const radarScan = this.scanSurroundingContext(form);
+            if (radarScan.id) {
+                payload.itemValue = radarScan.id;
+            }
+            else if (this.detector) {
+                const aiItem = this.detector.detectItem(form);
+                if (aiItem && aiItem.id && aiItem.id !== 'N/A (Failed)') {
+                    payload.itemValue = aiItem.id;
+                }
+            }
+        }
+        // --- FALLBACK USER ID ---
+        if (!payload.userValue && this.identityManager) {
+            console.log("⚠️ [ReviewPlugin] Missing UserId from config. Trying IdentityManager...");
+            const realId = this.identityManager.getRealUserId();
+            const stableId = this.identityManager.getStableUserId();
+            if (realId && !realId.startsWith('anon_')) {
+                payload.userValue = realId;
+            }
+            else if (stableId) {
+                payload.userValue = stableId;
+            }
+        }
+        // --- FALLBACK REVIEW CONTENT ---
+        // Nếu user quên map field review_text, thử tự tìm
+        if (!payload.reviewValue) {
+            const autoContent = this.autoDetectReviewContent(form);
+            if (autoContent) {
+                console.log("⚠️ [ReviewPlugin] Auto-detected review content from form fields.");
+                payload.reviewValue = autoContent;
+            }
+        }
+        return payload;
+    }
+    checkTargetMatch(form, rule) {
+        const target = rule.targetElement;
+        if (!target)
+            return false;
+        const patternId = Number(target.targetEventPatternId);
+        if (patternId !== TARGET_PATTERN_ID.CSS_SELECTOR)
+            return false;
+        try {
+            return form.matches(target.targetElementValue);
+        }
+        catch {
+            return false;
+        }
+    }
+    checkConditions(form, rule) {
+        const conditions = rule.conditions;
+        if (!conditions || conditions.length === 0)
+            return true;
+        for (const cond of conditions) {
+            const pattern = Number(cond.eventPatternId);
+            const operator = Number(cond.operatorId);
+            const val = cond.value;
+            let actual = null;
+            let isMet = false;
+            switch (pattern) {
+                case CONDITION_PATTERN_ID.URL_PARAM:
+                    const p = new URLSearchParams(location.search);
+                    actual = p.get(val);
+                    break;
+                case CONDITION_PATTERN_ID.CSS_SELECTOR:
+                    try {
+                        isMet = form.matches(val);
+                        if (operator === OPERATOR_ID.EXISTS && !isMet)
+                            return false;
+                        if (operator === OPERATOR_ID.NOT_EXISTS && isMet)
+                            return false;
+                        actual = isMet ? 'true' : 'false';
+                    }
+                    catch {
+                        return false;
+                    }
+                    break;
+                case CONDITION_PATTERN_ID.DOM_ATTRIBUTE:
+                    actual = form.id;
+                    break;
+                case CONDITION_PATTERN_ID.DATA_ATTRIBUTE:
+                    actual = form.getAttribute(val);
+                    break;
+            }
+            if (pattern === CONDITION_PATTERN_ID.CSS_SELECTOR && (operator === OPERATOR_ID.EXISTS || operator === OPERATOR_ID.NOT_EXISTS))
+                continue;
+            if (!this.compareValues(actual, val, operator))
+                return false;
+        }
+        return true;
+    }
+    autoDetectReviewContent(form) {
+        const formData = new FormData(form);
+        let content = '';
+        // Cast any để tránh lỗi TS iterator nếu không có type lib mới
+        for (const [key, val] of formData) {
+            const k = key.toLowerCase();
+            const vStr = String(val);
+            // Tìm các input có tên chứa 'review', 'comment', 'body' và lấy chuỗi dài nhất
+            if (k.includes('review') || k.includes('comment') || k.includes('body') || k.includes('content')) {
+                if (vStr.length > content.length)
+                    content = vStr;
+            }
+        }
+        return content;
+    }
     scanSurroundingContext(element) {
-        // Helper lấy data attribute
-        const getAttrs = (el) => {
-            if (!el)
-                return null;
-            const id = el.getAttribute('data-item-id') || el.getAttribute('data-product-id') || el.getAttribute('data-id');
-            if (id) {
+        // 1. ANCESTOR SCAN (Ưu tiên cao nhất: Tìm attribute chuẩn)
+        const ancestor = element.closest('[data-item-id], [data-product-id]');
+        if (ancestor) {
+            return {
+                id: ancestor.getAttribute('data-item-id') || ancestor.getAttribute('data-product-id'),
+                name: ancestor.getAttribute('data-item-name') || ancestor.getAttribute('data-name'),
+                source: 'ancestor_attribute'
+            };
+        }
+        // 2. [MỚI] TEXT HEURISTIC SCAN (Tìm trong Label/Title của Form)
+        // Tìm các thẻ chứa text tiềm năng bên trong form
+        const textContainers = Array.from(element.querySelectorAll('label, legend, h3, h4, .product-title'));
+        for (const container of textContainers) {
+            const text = container.textContent || '';
+            // Regex 1: Tìm pattern nằm trong ngoặc đơn, ví dụ: (P-JSON-999)
+            // Giải thích Regex: \( trùng ngoặc mở, (P-[A-Z0-9-]+) bắt nhóm ID bắt đầu bằng P-, \) trùng ngoặc đóng
+            const idMatch = text.match(/\((P-[A-Z0-9-]+)\)/i);
+            if (idMatch && idMatch[1]) {
+                console.log(`🧠 [ReviewPlugin] Found ID inside text "${text}"`);
                 return {
-                    id,
-                    name: el.getAttribute('data-item-name') || el.getAttribute('data-name') || undefined,
-                    type: el.getAttribute('data-item-type') || undefined
+                    id: idMatch[1],
+                    source: 'text_heuristic_brackets'
                 };
             }
-            return null;
-        };
-        console.log("📡 [DOM Radar] Bắt đầu quét xung quanh form...");
-        // BƯỚC 1: Quét Tổ Tiên (Ancestors - Form nằm trong thẻ Item)
-        // Dùng closest để tìm ngược lên trên
-        const ancestor = element.closest('[data-item-id], [data-product-id], [data-id]');
-        const ancestorData = getAttrs(ancestor);
-        if (ancestorData) {
-            console.log("   => Tìm thấy ở Tổ tiên (Ancestor)");
-            return { ...ancestorData, source: 'ancestor' };
-        }
-        // BƯỚC 2: Quét Phạm Vi Gần (Scope Scan - Form nằm cạnh thẻ Item)
-        // Đi ngược lên Parent từng cấp (Max 5 cấp) để tìm "hàng xóm" có data
-        let currentParent = element.parentElement;
-        let levels = 0;
-        const maxLevels = 5; // Chỉ quét tối đa 5 cấp cha để tránh performance kém
-        while (currentParent && levels < maxLevels) {
-            // Tìm tất cả các thẻ có ID trong phạm vi cha này
-            const candidates = currentParent.querySelectorAll('[data-item-id], [data-product-id], [data-id]');
-            if (candidates.length > 0) {
-                // Có ứng viên! Chọn ứng viên đầu tiên không phải là chính cái form (tránh loop)
-                // (Thường querySelectorAll trả về theo thứ tự DOM, nên cái nào đứng trước/gần nhất sẽ được lấy)
-                for (let i = 0; i < candidates.length; i++) {
-                    const candidate = candidates[i];
-                    if (!element.contains(candidate)) { // Đảm bảo không tìm lại con của form (nếu có)
-                        const data = getAttrs(candidate);
-                        if (data) {
-                            console.log(`   => Tìm thấy ở Hàng xóm (Scope Level ${levels + 1})`);
-                            return { ...data, source: `scope_level_${levels + 1}` };
-                        }
-                    }
-                }
+            // Regex 2: Tìm pattern sau dấu hai chấm, ví dụ: "Mã SP: SP123"
+            const codeMatch = text.match(/(?:code|sku|id|mã)[:\s]+([A-Z0-9-]+)/i);
+            if (codeMatch && codeMatch[1]) {
+                return {
+                    id: codeMatch[1],
+                    source: 'text_heuristic_label'
+                };
             }
-            // Tiếp tục leo lên cấp cao hơn
-            currentParent = currentParent.parentElement;
-            levels++;
         }
-        // BƯỚC 3: Fallback URL (Cứu cánh cuối cùng)
-        const urlParams = new URLSearchParams(window.location.search);
-        const urlId = urlParams.get('id') || urlParams.get('productId') || urlParams.get('item_id');
-        if (urlId) {
-            console.log("   => Tìm thấy ở URL Param");
+        // 3. URL SCAN (Cuối cùng mới tìm trên URL)
+        const params = new URLSearchParams(window.location.search);
+        const urlId = params.get('id') || params.get('productId') || params.get('product_id');
+        if (urlId)
             return { id: urlId, source: 'url_param' };
-        }
-        console.warn("❌ [DOM Radar] Không tìm thấy ngữ cảnh nào xung quanh.");
-        return { id: undefined, source: 'none' };
+        return {};
     }
-    enrichPayload(payload, itemCtx, formData) {
-        // Gán Event Type chuẩn
-        payload.event = 'rate_submit';
-        // Merge Metadata (Form Data)
-        payload.metadata = {
-            ...(payload.metadata || {}),
-            ...formData
-        };
-        // Override Item Info (Quan trọng: Đảm bảo công sức của Radar được ghi nhận)
-        // Chỉ ghi đè nếu Builder thất bại ("N/A") hoặc ID rỗng
-        if (itemCtx.id && (!payload.itemId || payload.itemId === 'N/A (Failed)')) {
-            payload.itemId = itemCtx.id;
-            payload.confidence = 1; // Khẳng định độ tin cậy
-            if (itemCtx.source)
-                payload.source = itemCtx.source;
-        }
-        // Name có thể optional
-        if (itemCtx.name && (!payload.itemName || payload.itemName === 'Unknown Item')) {
-            payload.itemName = itemCtx.name;
-        }
-        if (this.identityManager) {
-            // Lấy ID thật (nếu có đăng nhập), bỏ qua anon_
-            const realUserId = this.identityManager.getRealUserId();
-            const stableUserId = this.identityManager.getStableUserId();
-            // Ưu tiên ID thật (User ID từ DB)
-            if (realUserId && !realUserId.startsWith('anon_')) {
-                console.log(`👤 [FormPlugin] Auto-detected Real User ID: ${realUserId}`);
-                payload.userId = realUserId;
-            }
-            // Nếu không có ID thật, dùng ID ổn định (có thể là anon cũ) để đảm bảo continuity
-            else if (stableUserId) {
-                // Chỉ ghi đè nếu payload đang trống hoặc payload đang dùng anon mới tạo
-                if (!payload.userId || (payload.userId.startsWith('anon_') && stableUserId !== payload.userId)) {
-                    payload.userId = stableUserId;
-                }
-            }
-            // [MẸO] Gắn thêm SessionID để tracking phiên làm việc chuẩn xác hơn
-            const userInfo = this.identityManager.getUserInfo();
-            if (userInfo.sessionId) {
-                payload.sessionId = userInfo.sessionId; // Đảm bảo backend có trường này hoặc để vào metadata
-                payload.metadata.sessionId = userInfo.sessionId;
-            }
-        }
-    }
-    // Helper: Lấy dữ liệu từ form
-    extractFormData(form, rule) {
-        const formData = new FormData(form);
-        const data = {};
-        // Convert FormData to Object & Log raw data
-        formData.forEach((value, key) => { data[key] = value; });
-        console.log("RAW FORM DATA:", data);
-        let rateValue = 0;
-        let reviewText = '';
-        // Ưu tiên config từ Rule
-        if (rule.payload && rule.payload.length > 0) {
-            rule.payload.forEach((p) => {
-                const val = data[p.value];
-                if (p.type === 'number')
-                    rateValue = Number(val) || 0;
-                else
-                    reviewText = String(val || '');
-            });
-        }
-        else {
-            // Auto-detect Logic
-            for (const [key, val] of Object.entries(data)) {
-                const k = key.toLowerCase();
-                const vStr = String(val);
-                // Detect Rating
-                if (k.includes('rate') || k.includes('star') || k.includes('score') || k.includes('rating')) {
-                    // Chỉ nhận nếu là số hợp lệ và > 0
-                    const parsed = Number(val);
-                    if (!isNaN(parsed) && parsed > 0) {
-                        rateValue = parsed;
-                    }
-                }
-                // Detect Review
-                if (k.includes('comment') || k.includes('review') || k.includes('content') || k.includes('body')) {
-                    // Ưu tiên chuỗi dài hơn (tránh lấy nhầm ID)
-                    if (vStr.length > reviewText.length) {
-                        reviewText = vStr;
-                    }
-                }
-            }
-        }
-        return { rateValue, reviewText };
+    compareValues(actual, expected, op) {
+        if (!actual)
+            actual = '';
+        if (op === OPERATOR_ID.EQUALS)
+            return actual == expected;
+        if (op === OPERATOR_ID.CONTAINS)
+            return actual.includes(expected);
+        if (op === OPERATOR_ID.NOT_CONTAINS)
+            return !actual.includes(expected);
+        if (op === OPERATOR_ID.STARTS_WITH)
+            return actual.startsWith(expected);
+        if (op === OPERATOR_ID.ENDS_WITH)
+            return actual.endsWith(expected);
+        if (op === OPERATOR_ID.EXISTS)
+            return actual !== '' && actual !== null;
+        if (op === OPERATOR_ID.NOT_EXISTS)
+            return actual === '' || actual === null;
+        return false;
     }
 }
 
+var reviewPlugin = /*#__PURE__*/Object.freeze({
+    __proto__: null,
+    ReviewPlugin: ReviewPlugin
+});
+
+// [1] Copy ENUMS từ FormPlugin sang để dùng chung chuẩn
+// const TARGET_PATTERN = {
+//     CSS_SELECTOR: 1,    
+//     DOM_ATTRIBUTE: 2,
+//     DATA_ATTRIBUTE: 3
+// };
+const CONDITION_PATTERN = {
+    URL_PARAM: 1,
+    CSS_SELECTOR: 2,
+    DOM_ATTRIBUTE: 3,
+    DATA_ATTRIBUTE: 4,
+};
+const TARGET_OPERATOR = {
+    CONTAINS: 1,
+    NOT_CONTAINS: 2,
+    STARTS_WITH: 3,
+    ENDS_WITH: 4,
+    EQUALS: 5,
+    NOT_EQUALS: 6,
+    EXISTS: 8,
+    NOT_EXISTS: 9
+};
 class ScrollPlugin extends BasePlugin {
     constructor() {
         super(...arguments);
@@ -3557,17 +3582,17 @@ class ScrollPlugin extends BasePlugin {
         this.milestones = [25, 50, 75, 100];
         this.sentMilestones = new Set();
         this.maxScrollDepth = 0;
-        // --- STATE QUẢN LÝ THỜI GIAN (VISIBILITY API) ---
+        // --- STATE QUẢN LÝ THỜI GIAN ---
         this.startTime = Date.now();
         this.totalActiveTime = 0;
         this.isTabVisible = true;
-        // State Context (Lưu Item ID tìm được để dùng cho scroll)
+        // State Context
         this.currentItemContext = null;
         this.activeRule = null;
+        this.targetScrollElement = null; // Element đang được track scroll
         // --- THROTTLE CONFIG ---
         this.lastScrollProcessTime = 0;
-        this.THROTTLE_MS = 200; // Chỉ xử lý scroll tối đa 1 lần mỗi 200ms
-        // Bind functions để giữ 'this' context khi truyền vào event listener
+        this.THROTTLE_MS = 200;
         this.handleScrollBound = this.handleScroll.bind(this);
         this.handleVisibilityChangeBound = this.handleVisibilityChange.bind(this);
         this.handleUnloadBound = this.handleUnload.bind(this);
@@ -3590,18 +3615,26 @@ class ScrollPlugin extends BasePlugin {
             if (!this.ensureInitialized())
                 return;
             this.resetState();
-            this.resolveContextFromRule();
-            // Lắng nghe sự kiện
-            window.addEventListener('scroll', this.handleScrollBound, { passive: true });
-            document.addEventListener('visibilitychange', this.handleVisibilityChangeBound);
-            window.addEventListener('beforeunload', this.handleUnloadBound);
-            console.log("[ScrollPlugin] started tracking scroll & time.");
-            this.active = true;
+            // [NÂNG CẤP] Logic chọn Rule thông minh hơn
+            const isResolved = this.resolveContextFromRules();
+            if (isResolved) {
+                // Chỉ lắng nghe nếu tìm thấy Rule phù hợp
+                const target = this.targetScrollElement || window;
+                target.addEventListener('scroll', this.handleScrollBound, { passive: true }); // passive để mượt
+                document.addEventListener('visibilitychange', this.handleVisibilityChangeBound);
+                window.addEventListener('beforeunload', this.handleUnloadBound);
+                console.log(`[ScrollPlugin] Started. Target:`, this.targetScrollElement ? 'Specific Element' : 'Window');
+                this.active = true;
+            }
+            else {
+                console.log(`[ScrollPlugin] No matching rule found for this page. Idle.`);
+            }
         }, 'ScrollPlugin.start');
     }
     stop() {
         this.errorBoundary.execute(() => {
-            window.removeEventListener('scroll', this.handleScrollBound);
+            const target = this.targetScrollElement || window;
+            target.removeEventListener('scroll', this.handleScrollBound);
             document.removeEventListener('visibilitychange', this.handleVisibilityChangeBound);
             window.removeEventListener('beforeunload', this.handleUnloadBound);
             super.stop();
@@ -3615,43 +3648,81 @@ class ScrollPlugin extends BasePlugin {
         this.isTabVisible = document.visibilityState === 'visible';
         this.currentItemContext = null;
         this.activeRule = null;
+        this.targetScrollElement = null;
     }
-    resolveContextFromRule() {
-        var _a;
+    /**
+     * [NÂNG CẤP] Duyệt qua danh sách Rule để tìm Rule phù hợp nhất
+     * Check Target Match & Check Conditions
+     */
+    resolveContextFromRules() {
         if (!this.context || !this.detector)
-            return;
-        // 1. Lấy Rule cho sự kiện SCROLL (ID = 4)
+            return false;
+        // 1. Lấy tất cả Rule SCROLL (ID = 4)
         const scrollRules = this.context.config.getRules(4);
-        // Ưu tiên rule đầu tiên tìm thấy (hoặc logic complex hơn tùy bạn)
-        this.activeRule = scrollRules.length > 0 ? scrollRules[0] : null;
-        let targetElement = null;
-        // 2. Nếu Rule có chỉ định Element cụ thể (VD: #product-detail)
-        if (this.activeRule) {
-            const selector = ((_a = this.activeRule.targetElement) === null || _a === void 0 ? void 0 : _a.targetElementValue) || this.activeRule.targetElementValue;
-            if (selector) {
-                try {
-                    targetElement = document.querySelector(selector);
-                    console.log(`[ScrollPlugin] Targeted element from rule: ${selector}`, targetElement);
+        if (scrollRules.length === 0)
+            return false;
+        console.log(`📜 [ScrollPlugin] Checking ${scrollRules.length} rules...`);
+        // Tìm Rule đầu tiên thỏa mãn cả Target và Condition
+        for (const rule of scrollRules) {
+            // A. Check xem Element đích có tồn tại không
+            // Với Scroll, Target Element chính là container cần track cuộn (hoặc body)
+            const element = this.findTargetElement(rule);
+            if (element) {
+                // B. Check Conditions (URL, Param, State...)
+                // Lưu ý: checkConditions cần truyền 1 HTMLElement để check attribute/class
+                // Nếu track window, ta dùng document.body làm đại diện để check
+                const representativeEl = (element instanceof Window) ? document.body : element;
+                if (this.checkConditions(representativeEl, rule)) {
+                    this.activeRule = rule;
+                    this.targetScrollElement = (element instanceof Window) ? null : element;
+                    console.log(`✅ [ScrollPlugin] Rule Matched: "${rule.name}"`);
+                    // C. Sau khi chốt Rule, bắt đầu Detect Item ID dựa trên Element đó
+                    this.detectContextForItem(representativeEl);
+                    return true;
                 }
-                catch (e) { }
             }
         }
-        // 3. Nếu không có Rule hoặc Selector không tìm thấy, fallback về Body (Toàn trang)
-        if (!targetElement) {
-            targetElement = document.body;
+        return false;
+    }
+    // Helper: Tìm Element dựa trên Rule Config
+    findTargetElement(rule) {
+        const target = rule.targetElement || rule.TargetElement;
+        // Nếu không config target, hoặc target là "document"/"window" -> Track Window
+        if (!target || !target.targetElementValue || target.targetElementValue === 'document' || target.targetElementValue === 'window') {
+            return window;
         }
-        // 4. Dùng AI Detector để quét Item ID trên element đó
-        // (Đây là sự tái sử dụng tuyệt vời logic của FormPlugin)
-        const detected = this.detector.detectItem(targetElement);
-        // 5. Nếu AI fail, thử quét thủ công (DOM Radar phiên bản đơn giản)
+        // Nếu có selector cụ thể (VD: .scrollable-sidebar)
+        const selector = target.targetElementValue || target.Value;
+        try {
+            const el = document.querySelector(selector);
+            return el; // Trả về null nếu không thấy
+        }
+        catch {
+            return null;
+        }
+    }
+    // [NÂNG CẤP] Detect Item ID (Dùng lại logic Tam Trụ của FormPlugin)
+    detectContextForItem(element) {
+        var _a;
+        // 1. Dùng AI
+        let detected = (_a = this.detector) === null || _a === void 0 ? void 0 : _a.detectItem(element);
+        // 2. Nếu AI fail, dùng Radar (Full version)
         if (!detected || !detected.id || detected.id === 'N/A (Failed)') {
-            // Thử tìm data attribute trên chính nó hoặc cha gần nhất
-            const manualScan = this.scanContextSimple(targetElement);
-            if (manualScan) {
-                this.currentItemContext = manualScan;
+            console.log("🔍 [ScrollPlugin] AI failed. Scanning radar...");
+            // Dùng hàm quét full (Ancestors + Siblings + URL)
+            const contextInfo = this.scanSurroundingContext(element);
+            if (contextInfo.id) {
+                this.currentItemContext = {
+                    id: contextInfo.id,
+                    name: contextInfo.name || 'Unknown Item',
+                    type: contextInfo.type || 'item',
+                    confidence: 1,
+                    source: contextInfo.source,
+                    context: 'dom_context'
+                };
             }
             else {
-                // Fallback cuối cùng: Tạo Synthetic Item (Page Scroll)
+                // Fallback: Tạo Synthetic Item
                 this.currentItemContext = this.createSyntheticItem();
             }
         }
@@ -3660,48 +3731,148 @@ class ScrollPlugin extends BasePlugin {
         }
         console.log("🎯 [ScrollPlugin] Resolved Context:", this.currentItemContext);
     }
-    /**
-     * LOGIC XỬ LÝ SCROLL (Có Throttling)
-     */
+    // --- LOGIC CHECK CONDITIONS (Port từ FormPlugin sang) ---
+    checkConditions(element, rule) {
+        const conditions = rule.Conditions || rule.conditions;
+        if (!conditions || conditions.length === 0)
+            return true;
+        for (const condition of conditions) {
+            const patternId = condition.EventPatternID || condition.eventPatternId || 1;
+            const operatorId = condition.OperatorID || condition.operatorId || 5;
+            const expectedValue = condition.Value || condition.value || '';
+            let actualValue = null;
+            let isMet = false;
+            switch (patternId) {
+                case CONDITION_PATTERN.URL_PARAM: // 1
+                    const urlParams = new URLSearchParams(window.location.search);
+                    if (urlParams.has(expectedValue))
+                        actualValue = urlParams.get(expectedValue);
+                    else
+                        actualValue = window.location.href;
+                    break;
+                case CONDITION_PATTERN.CSS_SELECTOR: // 2
+                    try {
+                        isMet = element.matches(expectedValue);
+                        if (this.isNegativeOperator(operatorId)) {
+                            if (!isMet)
+                                continue;
+                            return false;
+                        }
+                        if (!isMet)
+                            return false;
+                        continue;
+                    }
+                    catch {
+                        return false;
+                    }
+                case CONDITION_PATTERN.DOM_ATTRIBUTE: // 3
+                    actualValue = element.id;
+                    break;
+                case CONDITION_PATTERN.DATA_ATTRIBUTE: // 4
+                    actualValue = element.getAttribute(expectedValue);
+                    break;
+                default: actualValue = '';
+            }
+            isMet = this.compareValues(actualValue, expectedValue, operatorId);
+            if (!isMet)
+                return false;
+        }
+        return true;
+    }
+    compareValues(actual, expected, operatorId) {
+        if (actual === null)
+            actual = '';
+        switch (operatorId) {
+            case TARGET_OPERATOR.EQUALS: return actual === expected;
+            case TARGET_OPERATOR.NOT_EQUALS: return actual !== expected;
+            case TARGET_OPERATOR.CONTAINS: return actual.includes(expected);
+            case TARGET_OPERATOR.NOT_CONTAINS: return !actual.includes(expected);
+            case TARGET_OPERATOR.STARTS_WITH: return actual.startsWith(expected);
+            case TARGET_OPERATOR.ENDS_WITH: return actual.endsWith(expected);
+            case TARGET_OPERATOR.EXISTS: return actual !== '' && actual !== null;
+            case TARGET_OPERATOR.NOT_EXISTS: return actual === '' || actual === null;
+            default: return actual === expected;
+        }
+    }
+    isNegativeOperator(opId) {
+        return opId === TARGET_OPERATOR.NOT_EQUALS || opId === TARGET_OPERATOR.NOT_CONTAINS || opId === TARGET_OPERATOR.NOT_EXISTS;
+    }
+    // --- DOM RADAR (Full Version - Port từ FormPlugin) ---
+    scanSurroundingContext(element) {
+        const getAttrs = (el) => {
+            if (!el)
+                return null;
+            const id = el.getAttribute('data-item-id') || el.getAttribute('data-product-id') || el.getAttribute('data-id');
+            if (id)
+                return { id, name: el.getAttribute('data-item-name') || undefined, type: el.getAttribute('data-item-type') || undefined };
+            return null;
+        };
+        // 1. Ancestors
+        const ancestor = element.closest('[data-item-id], [data-product-id], [data-id]');
+        const ancestorData = getAttrs(ancestor);
+        if (ancestorData)
+            return { ...ancestorData, source: 'ancestor' };
+        // 2. Siblings (Scope Scan)
+        let currentParent = element.parentElement;
+        let levels = 0;
+        while (currentParent && levels < 5) {
+            const candidates = currentParent.querySelectorAll('[data-item-id], [data-product-id], [data-id]');
+            if (candidates.length > 0) {
+                for (let i = 0; i < candidates.length; i++) {
+                    const candidate = candidates[i];
+                    if (!element.contains(candidate)) {
+                        const data = getAttrs(candidate);
+                        if (data)
+                            return { ...data, source: `scope_level_${levels + 1}` };
+                    }
+                }
+            }
+            currentParent = currentParent.parentElement;
+            levels++;
+        }
+        // 3. URL
+        const urlParams = new URLSearchParams(window.location.search);
+        const urlId = urlParams.get('id') || urlParams.get('productId');
+        if (urlId)
+            return { id: urlId, source: 'url_param' };
+        return { id: undefined, source: 'none' };
+    }
+    // --- SCROLL HANDLER (Giữ nguyên logic cũ) ---
     handleScroll() {
         const now = Date.now();
-        // --- 1. THROTTLE CHECK ---
-        // Nếu chưa đến thời gian cho phép xử lý tiếp theo -> Bỏ qua
-        if (now - this.lastScrollProcessTime < this.THROTTLE_MS) {
+        if (now - this.lastScrollProcessTime < this.THROTTLE_MS)
             return;
-        }
         this.lastScrollProcessTime = now;
-        // --- 2. TÍNH TOÁN % SCROLL ---
-        const scrollTop = window.scrollY || document.documentElement.scrollTop;
-        const windowHeight = window.innerHeight;
-        const docHeight = document.documentElement.scrollHeight;
-        // Công thức: (Vị trí hiện tại + Chiều cao màn hình) / Tổng chiều cao * 100
-        // Math.min để đảm bảo không quá 100% (do sai số browser)
-        const currentPercent = Math.min(100, Math.round(((scrollTop + windowHeight) / docHeight) * 100));
-        // Cập nhật độ sâu kỷ lục
-        if (currentPercent > this.maxScrollDepth) {
-            this.maxScrollDepth = currentPercent;
+        // Xử lý scroll trên Window hoặc Element cụ thể
+        let scrollTop, docHeight, clientHeight;
+        if (this.targetScrollElement instanceof HTMLElement) {
+            // Scroll trên div
+            scrollTop = this.targetScrollElement.scrollTop;
+            docHeight = this.targetScrollElement.scrollHeight;
+            clientHeight = this.targetScrollElement.clientHeight;
         }
-        // --- 3. CHECK MILESTONES (25, 50, 75, 100) ---
+        else {
+            // Scroll trên window
+            scrollTop = window.scrollY || document.documentElement.scrollTop;
+            docHeight = document.documentElement.scrollHeight;
+            clientHeight = window.innerHeight;
+        }
+        const currentPercent = Math.min(100, Math.round(((scrollTop + clientHeight) / docHeight) * 100));
+        if (currentPercent > this.maxScrollDepth)
+            this.maxScrollDepth = currentPercent;
         this.milestones.forEach(milestone => {
-            // Nếu đã vượt qua mốc này VÀ chưa gửi event mốc này
             if (currentPercent >= milestone && !this.sentMilestones.has(milestone)) {
                 this.sendScrollEvent(milestone);
-                this.sentMilestones.add(milestone); // Đánh dấu đã gửi
+                this.sentMilestones.add(milestone);
             }
         });
     }
-    /**
-     * Gửi Event Scroll Depth
-     */
+    // --- CÁC HÀM GỬI EVENT (Update type safety) ---
     sendScrollEvent(depth) {
         if (!this.context)
             return;
-        const rule = this.activeRule || this.createDefaultRule('default-scroll', 'Default Scroll Tracking');
-        // Tính thời gian Active tính đến lúc này
+        const rule = this.activeRule || this.createDefaultRule('default-scroll', 'Default Scroll');
         const currentActiveSeconds = this.calculateActiveTime();
-        // Build Payload
-        // Lưu ý: Scroll không có Item Context cụ thể (trừ khi bạn muốn gắn), nên để null hoặc object rỗng
         const payload = this.context.payloadBuilder.build(this.currentItemContext, rule);
         payload.event = 'scroll_depth';
         payload.metadata = {
@@ -3710,44 +3881,9 @@ class ScrollPlugin extends BasePlugin {
             time_on_page: currentActiveSeconds,
             url: window.location.href
         };
-        // Gắn User Identity (tương tự FormPlugin)
-        if (this.currentItemContext.id && (!payload.itemId || payload.itemId === 'N/A (Failed)')) {
-            payload.itemId = this.currentItemContext.id;
-            if (this.currentItemContext.name)
-                payload.itemName = this.currentItemContext.name;
-        }
         this.enrichUserIdentity(payload);
         this.context.eventBuffer.enqueue(payload);
-        console.log(`📜 [ScrollPlugin] Reached ${depth}% depth after ${currentActiveSeconds}s active.`);
     }
-    /**
-     * LOGIC TÍNH TIME ON PAGE (Xử lý ẩn/hiện Tab)
-     */
-    handleVisibilityChange() {
-        if (document.visibilityState === 'hidden') {
-            // User vừa ẩn tab: Cộng dồn thời gian từ lúc start đến giờ vào tổng
-            this.totalActiveTime += Date.now() - this.startTime;
-            this.isTabVisible = false;
-        }
-        else {
-            // User vừa mở lại tab: Reset mốc thời gian bắt đầu tính
-            this.startTime = Date.now();
-            this.isTabVisible = true;
-        }
-    }
-    calculateActiveTime() {
-        let currentSessionTime = 0;
-        // Nếu tab đang hiện, tính thời gian trôi qua từ lúc mở lại tab đến giờ
-        if (this.isTabVisible) {
-            currentSessionTime = Date.now() - this.startTime;
-        }
-        // Tổng = Thời gian đã tích lũy (lúc ẩn) + Thời gian phiên hiện tại (nếu đang hiện)
-        const totalMs = this.totalActiveTime + currentSessionTime;
-        return parseFloat((totalMs / 1000).toFixed(1)); // Trả về giây, làm tròn 1 số thập phân
-    }
-    /**
-     * Xử lý khi user tắt tab/chuyển trang: Gửi báo cáo tổng kết
-     */
     handleUnload() {
         if (!this.context)
             return;
@@ -3757,9 +3893,8 @@ class ScrollPlugin extends BasePlugin {
         if (finalTime < 1)
             return;
         const rule = this.activeRule || this.createDefaultRule('summary', 'Page Summary');
-        if (!this.currentItemContext) {
+        if (!this.currentItemContext)
             this.currentItemContext = this.createSyntheticItem();
-        }
         const payload = this.context.payloadBuilder.build(this.currentItemContext, rule);
         payload.event = 'page_summary';
         payload.metadata = {
@@ -3767,13 +3902,37 @@ class ScrollPlugin extends BasePlugin {
             total_time_on_page: finalTime,
             is_bounce: this.maxScrollDepth < 25 && finalTime < 5
         };
-        if (this.currentItemContext.id && (!payload.itemId || payload.itemId === 'N/A (Failed)')) {
-            payload.itemId = this.currentItemContext.id;
-        }
         this.enrichUserIdentity(payload);
-        this.debugPersistent('PAGE_SUMMARY_EVENT', payload);
+        this.debugPersistent('PAGE_SUMMARY', payload);
         this.context.eventBuffer.enqueue(payload);
-        console.log("🚀 [DEBUG] Đang gửi vào Buffer:", payload);
+    }
+    // --- HELPERS (Giữ nguyên) ---
+    handleVisibilityChange() {
+        if (document.visibilityState === 'hidden') {
+            this.totalActiveTime += Date.now() - this.startTime;
+            this.isTabVisible = false;
+        }
+        else {
+            this.startTime = Date.now();
+            this.isTabVisible = true;
+        }
+    }
+    calculateActiveTime() {
+        let currentSessionTime = 0;
+        if (this.isTabVisible)
+            currentSessionTime = Date.now() - this.startTime;
+        const totalMs = this.totalActiveTime + currentSessionTime;
+        return parseFloat((totalMs / 1000).toFixed(1));
+    }
+    enrichUserIdentity(payload) {
+        if (this.identityManager) {
+            const uid = this.identityManager.getRealUserId() || this.identityManager.getStableUserId();
+            if (uid && !uid.startsWith('anon_'))
+                payload.userId = uid;
+            const uInfo = this.identityManager.getUserInfo();
+            if (uInfo.sessionId)
+                payload.sessionId = uInfo.sessionId;
+        }
     }
     createSyntheticItem() {
         return {
@@ -3784,78 +3943,828 @@ class ScrollPlugin extends BasePlugin {
             source: 'synthetic_page'
         };
     }
-    scanContextSimple(el) {
-        const target = el.closest('[data-item-id], [data-product-id]');
-        if (target) {
-            return {
-                id: target.getAttribute('data-item-id') || target.getAttribute('data-product-id'),
-                name: target.getAttribute('data-item-name'),
-                type: target.getAttribute('data-item-type') || 'unknown',
-                confidence: 1,
-                source: 'dom_attribute'
-            };
-        }
-        const urlParams = new URLSearchParams(window.location.search);
-        const urlId = urlParams.get('id') || urlParams.get('productId');
-        if (urlId) {
-            return {
-                id: urlId,
-                name: document.title,
-                type: 'url_param',
-                confidence: 1,
-                source: 'url'
-            };
-        }
-        return null;
-    }
-    // Helper: Gắn User ID (Copy logic từ FormPlugin sang cho đồng bộ)
-    enrichUserIdentity(payload) {
-        if (this.identityManager) {
-            const realUserId = this.identityManager.getRealUserId();
-            const stableUserId = this.identityManager.getStableUserId();
-            if (realUserId && !realUserId.startsWith('anon_')) {
-                payload.userId = realUserId;
-            }
-            else if (stableUserId) {
-                if (!payload.userId || (payload.userId.startsWith('anon_') && stableUserId !== payload.userId)) {
-                    payload.userId = stableUserId;
-                }
-            }
-            const userInfo = this.identityManager.getUserInfo();
-            if (userInfo.sessionId) {
-                payload.sessionId = userInfo.sessionId;
-                payload.metadata.sessionId = userInfo.sessionId;
-            }
-        }
-    }
     createDefaultRule(id, name) {
         return {
-            id: id,
-            name: name,
-            triggerEventId: 4,
-            targetElement: {
-                targetElementValue: 'document',
-                targetEventPatternId: 1,
-                targetOperatorId: 5
-            },
-            conditions: [],
-            payload: []
+            id, name, triggerEventId: 4,
+            targetElement: { targetElementValue: 'document', targetEventPatternId: 1, targetOperatorId: 5 },
+            conditions: [], payload: []
         };
     }
     debugPersistent(tag, data) {
-        const logEntry = {
-            time: new Date().toISOString(),
-            tag: tag,
-            data: data,
-            url: window.location.href
-        };
-        // Lưu vào LocalStorage (chỉ giữ lại 10 log gần nhất để không bị đầy)
+        const logEntry = { time: new Date().toISOString(), tag, data, url: window.location.href };
         const history = JSON.parse(localStorage.getItem('SDK_DEBUG_LOGS') || '[]');
         history.unshift(logEntry);
         localStorage.setItem('SDK_DEBUG_LOGS', JSON.stringify(history.slice(0, 10)));
-        console.log(`💾 [Saved to Storage] ${tag}`, data);
     }
 }
+
+var scrollPlugin = /*#__PURE__*/Object.freeze({
+    __proto__: null,
+    ScrollPlugin: ScrollPlugin
+});
+
+// packages/sdk/src/core/services/payload-builder.ts
+class PayloadBuilder {
+    constructor() {
+        this.COMMON_CONTAINERS = [
+            'user', 'userInfo', 'userData', 'profile', 'auth', 'session', 'account', 'identity',
+            'customer', 'member', 'state'
+        ];
+    }
+    /**
+     * Hàm build đa năng: Hỗ trợ cả 2 kiểu gọi (Legacy & Mapping)
+     * Để đơn giản hóa trong context này, ta tập trung vào logic Mapping.
+     * Trong thực tế cần implement cả logic Legacy nếu các plugin cũ vẫn dùng.
+     */
+    build(arg1, arg2, arg3) {
+        // KIỂM TRA: Nếu tham số đầu tiên là Mảng -> Chạy logic Mapping (New)
+        if (Array.isArray(arg1)) {
+            // Check if context is network data (NetworkPlugin) or HTMLElement (Click/Form Plugin)
+            // arg2 could be HTMLElement OR { req, res }
+            return this.buildFromMappings(arg1, arg2);
+        }
+        // NGƯỢC LẠI: Chạy logic Legacy (FormPlugin, ScrollPlugin...)
+        return this.buildLegacy(arg1, arg2, arg3);
+    }
+    buildFromMappings(mappings, contextData) {
+        const result = {};
+        if (!mappings || !Array.isArray(mappings))
+            return result;
+        for (const map of mappings) {
+            let extractedValue = null;
+            // Chuẩn hóa key source về chữ thường để so sánh
+            const source = (map.source || '').toLowerCase();
+            switch (source) {
+                case 'cookie':
+                    extractedValue = this.extractFromCookie(map.value);
+                    break;
+                case 'local_storage':
+                    extractedValue = this.extractFromStorage(window.localStorage, map.value);
+                    break;
+                case 'session_storage':
+                    extractedValue = this.extractFromStorage(window.sessionStorage, map.value);
+                    break;
+                case 'url_param':
+                    extractedValue = this.extractFromUrl(map.value);
+                    break;
+                case 'element':
+                    if (contextData && contextData instanceof HTMLElement) {
+                        extractedValue = this.extractFromElement(contextData, map.value);
+                    }
+                    break;
+                case 'network_request':
+                    // Context data should be { reqBody, resBody }
+                    extractedValue = this.extractFromNetwork(contextData, map.value);
+                    break;
+            }
+            if (this.isValidValue(extractedValue)) {
+                result[map.field] = extractedValue;
+            }
+        }
+        return result;
+    }
+    // --- [LEGACY LOGIC] Xử lý Rule & AI Detection (Cho Form/Scroll Plugin) ---
+    buildLegacy(element, rule, _extraData) {
+        // Tạo payload cơ bản
+        const payload = {
+            event: 'unknown', // Sẽ được plugin ghi đè (vd: rate_submit)
+            url: window.location.href,
+            timestamp: Date.now(),
+            ruleName: (rule === null || rule === void 0 ? void 0 : rule.name) || 'unknown_rule',
+            userId: '', // Sẽ được enrich bởi IdentityManager sau
+            itemId: 'N/A (Failed)',
+            metadata: {}
+        };
+        // Gán thông tin từ AI Detection (nếu có)
+        if (element && typeof element === 'object' && 'id' in element) {
+            const aiResult = element;
+            if (aiResult.id && aiResult.id !== 'N/A (Failed)') {
+                payload.itemId = aiResult.id;
+                payload.itemName = aiResult.name;
+                payload.itemType = aiResult.type;
+                payload.confidence = aiResult.confidence;
+                payload.source = aiResult.source;
+                if (aiResult.metadata)
+                    payload.metadata = { ...payload.metadata, ...aiResult.metadata };
+            }
+        }
+        return payload;
+    }
+    // --- CÁC HÀM TRÍCH XUẤT ---
+    /**
+     * [NEW] Lấy dữ liệu từ DOM Element (CSS Selector)
+     * Selector được tìm trong phạm vi contextElement (Form) trước, nếu không thấy thì tìm toàn document
+     */
+    extractFromElement(context, selector) {
+        try {
+            if (!selector)
+                return null;
+            // Tìm element: Ưu tiên trong form, fallback ra toàn trang
+            let targetEl = context.querySelector(selector);
+            if (!targetEl) {
+                targetEl = document.querySelector(selector);
+            }
+            if (!targetEl)
+                return null;
+            // 1. Nếu là Input/Textarea/Select -> Lấy value
+            if (targetEl instanceof HTMLInputElement ||
+                targetEl instanceof HTMLTextAreaElement ||
+                targetEl instanceof HTMLSelectElement) {
+                return targetEl.value;
+            }
+            // 2. Nếu là thẻ thường -> Lấy text content
+            return targetEl.innerText || targetEl.textContent || null;
+        }
+        catch {
+            return null;
+        }
+    }
+    extractFromUrl(paramName) {
+        try {
+            const params = new URLSearchParams(window.location.search);
+            return params.get(paramName);
+        }
+        catch {
+            return null;
+        }
+    }
+    extractFromStorage(storage, keyConfig) {
+        try {
+            if (!keyConfig)
+                return null;
+            const cleanKey = keyConfig.trim().replace(/^\.+|\.+$/g, ''); // Sanitization
+            if (!cleanKey)
+                return null;
+            // 1. Direct Lookup
+            const directVal = this.lookupPath(storage, cleanKey);
+            if (this.isValidValue(directVal))
+                return directVal;
+            // 2. Smart Container Lookup (Fallback)
+            if (!cleanKey.includes('.')) {
+                for (const container of this.COMMON_CONTAINERS) {
+                    const fallbackPath = `${container}.${cleanKey}`;
+                    const fallbackVal = this.lookupPath(storage, fallbackPath);
+                    if (this.isValidValue(fallbackVal))
+                        return fallbackVal;
+                }
+            }
+            return null;
+        }
+        catch {
+            return null;
+        }
+    }
+    lookupPath(storage, path) {
+        const parts = path.split('.');
+        const rootKey = parts[0];
+        const rawItem = storage.getItem(rootKey);
+        if (!rawItem)
+            return null;
+        if (parts.length === 1)
+            return rawItem;
+        return this.getNestedValue(rawItem, parts.slice(1).join('.'));
+    }
+    extractFromCookie(path) {
+        try {
+            if (!document.cookie || !path)
+                return null;
+            const cleanPath = path.trim().replace(/^\.+|\.+$/g, '');
+            if (!cleanPath)
+                return null;
+            const parts = cleanPath.split('.');
+            const cookieName = parts[0];
+            const match = document.cookie.match(new RegExp('(^| )' + cookieName + '=([^;]+)'));
+            if (!match)
+                return null;
+            const cookieValue = decodeURIComponent(match[2]);
+            if (parts.length === 1)
+                return cookieValue;
+            return this.getNestedValue(cookieValue, parts.slice(1).join('.'));
+        }
+        catch {
+            return null;
+        }
+    }
+    getNestedValue(jsonString, path) {
+        try {
+            let obj = JSON.parse(jsonString);
+            const keys = path.split('.');
+            for (const key of keys) {
+                if (obj && Object.prototype.hasOwnProperty.call(obj, key)) {
+                    obj = obj[key];
+                }
+                else {
+                    return null;
+                }
+            }
+            return (typeof obj === 'object') ? JSON.stringify(obj) : String(obj);
+        }
+        catch {
+            return null;
+        }
+    }
+    isValidValue(val) {
+        return val !== null && val !== undefined && val !== '' && val !== 'null' && val !== 'undefined';
+    }
+    /**
+     * [NEW] Extract info from Network Request/Response
+     * Context: { reqBody: any, resBody: any, method: string }
+     * Path format: "request.field" or "response.field" or just "field" (infer)
+     */
+    extractFromNetwork(context, pathConfig) {
+        try {
+            if (!context || !pathConfig)
+                return null;
+            const { reqBody, resBody, method } = context;
+            // Logic similar to tracker.js 'inferSource' but guided by pathConfig if possible
+            // pathConfig example: "response.userId" or "request.payload.id"
+            // If pathConfig doesn't start with request/response, try both.
+            let val = null;
+            if (pathConfig.startsWith('request.')) {
+                val = this.traverseObject(reqBody, pathConfig.replace('request.', ''));
+            }
+            else if (pathConfig.startsWith('response.')) {
+                val = this.traverseObject(resBody, pathConfig.replace('response.', ''));
+            }
+            else {
+                // Unknown source, try inference based on Method like tracker.js
+                // GET -> Response
+                // POST/PUT -> Request ?? Response
+                if (method === 'GET') {
+                    val = this.traverseObject(resBody, pathConfig);
+                }
+                else {
+                    // Try request first
+                    val = this.traverseObject(reqBody, pathConfig);
+                    if (!this.isValidValue(val)) {
+                        val = this.traverseObject(resBody, pathConfig);
+                    }
+                }
+            }
+            return val;
+        }
+        catch {
+            return null;
+        }
+    }
+    /**
+     * [NEW] Helper to traverse generic object (for Network Plugin)
+     */
+    traverseObject(obj, path) {
+        if (!obj)
+            return null;
+        try {
+            const keys = path.split('.');
+            let current = obj;
+            for (const key of keys) {
+                if (current && typeof current === 'object' && key in current) {
+                    current = current[key];
+                }
+                else {
+                    return null;
+                }
+            }
+            if (current === null || current === undefined)
+                return null;
+            return (typeof current === 'object') ? JSON.stringify(current) : String(current);
+        }
+        catch {
+            return null;
+        }
+    }
+}
+
+class RatingUtils {
+    /**
+     * Hàm Main: Phân tích DOM để lấy rating
+     */
+    static processRating(container, triggerElement, eventType) {
+        let rawValue = 0;
+        let maxValue = 5;
+        // BƯỚC 1: TRÍCH XUẤT GIÁ TRỊ (EXTRACTION)
+        // Chiến thuật 1: Nếu click trực tiếp vào item (sao/nút), ưu tiên lấy value từ chính nó
+        if (eventType === 'click') {
+            rawValue = this.extractValueFromTarget(container, triggerElement);
+        }
+        // Chiến thuật 2: Nếu là submit form hoặc Chiến thuật 1 thất bại (click vào viền chẳng hạn)
+        // Quét toàn bộ container xem cái nào đang "checked" hoặc "active"
+        if (rawValue === 0) {
+            rawValue = this.extractValueFromContainerState(container);
+        }
+        // BƯỚC 2: PHÁT HIỆN THANG ĐIỂM (SCALE DETECTION)
+        const isBinary = this.detectBinaryContext(container, triggerElement);
+        if (isBinary) {
+            maxValue = 1; // Hệ nhị phân
+            // Nếu click nút Like/Upvote thì rawValue = 1
+            if (eventType === 'click' && this.isPositiveAction(triggerElement)) {
+                rawValue = 1;
+            }
+            // Nếu submit form, rawValue đã được lấy ở bước 1 (từ input checked)
+        }
+        else {
+            // Hệ chấm điểm (5, 10, 100)
+            maxValue = this.detectMaxScale(container, rawValue);
+        }
+        // BƯỚC 3: LẤY REVIEW TEXT
+        const reviewText = this.extractReviewText(container);
+        // BƯỚC 4: CHUẨN HÓA
+        const normalized = this.normalizeScore(rawValue, maxValue, isBinary);
+        return {
+            originalValue: rawValue,
+            maxValue: maxValue,
+            normalizedValue: normalized,
+            reviewText: reviewText,
+            type: isBinary ? 'binary' : (maxValue > 5 ? 'numeric' : 'star'),
+            captureMethod: eventType === 'submit' ? 'form_submit' : 'click_item'
+        };
+    }
+    // --- CÁC HÀM "THÁM TỬ" (HEURISTICS) ---
+    static extractValueFromTarget(container, target) {
+        var _a;
+        let current = target;
+        // Leo ngược từ target lên container (tối đa 5 cấp để tránh loop vô hạn)
+        let depth = 0;
+        while (current && current !== container.parentElement && depth < 5) {
+            // Check 1: Data Attributes (Phổ biến nhất)
+            const val = current.getAttribute('data-value') || current.getAttribute('value') || current.getAttribute('aria-valuenow');
+            if (val) {
+                const num = parseFloat(val);
+                if (!isNaN(num))
+                    return num;
+            }
+            // Check 2: Index (Sao thứ mấy trong danh sách?)
+            // Áp dụng nếu element hiện tại là item trong list (li, span, button)
+            if (['LI', 'SPAN', 'DIV', 'BUTTON', 'I', 'SVG'].includes(current.tagName)) {
+                const siblings = Array.from(((_a = current.parentElement) === null || _a === void 0 ? void 0 : _a.children) || []).filter(el => el.tagName === current.tagName || el.className.includes('star') || el.className.includes('rate'));
+                // Nếu có ít nhất 2 anh em giống nhau, khả năng cao là list sao
+                if (siblings.length >= 2 && siblings.length <= 12) {
+                    const index = siblings.indexOf(current);
+                    if (index !== -1)
+                        return index + 1;
+                }
+            }
+            // Check 3: Accessibility Attribute (aria-posinset="4")
+            const pos = current.getAttribute('aria-posinset');
+            if (pos)
+                return parseFloat(pos);
+            current = current.parentElement;
+            depth++;
+        }
+        return 0;
+    }
+    static extractValueFromContainerState(container) {
+        // 1. Tìm Input Radio/Checkbox đang checked (Chuẩn HTML)
+        const checked = container.querySelector('input[type="radio"]:checked, input[type="checkbox"]:checked');
+        if (checked && checked.value) {
+            const val = parseFloat(checked.value);
+            // Một số web để value="on", ta bỏ qua
+            if (!isNaN(val))
+                return val;
+        }
+        // 2. Tìm Class Active/Selected (Chuẩn CSS Custom)
+        // Tìm các class thường dùng để highlight sao
+        const activeSelectors = ['.active', '.selected', '.checked', '.filled', '.highlighted', '[aria-checked="true"]'];
+        const activeItems = container.querySelectorAll(activeSelectors.join(', '));
+        if (activeItems.length > 0) {
+            // Logic: Nếu 4 sao sáng -> 4 điểm
+            // Nhưng cẩn thận: check xem item cuối cùng có data-value="8" không?
+            const lastItem = activeItems[activeItems.length - 1];
+            const dataVal = lastItem.getAttribute('data-value');
+            if (dataVal) {
+                const val = parseFloat(dataVal);
+                if (!isNaN(val))
+                    return val;
+            }
+            return activeItems.length;
+        }
+        // 3. Dropdown Select
+        const select = container.querySelector('select');
+        if (select && select.value)
+            return parseFloat(select.value);
+        return 0;
+    }
+    static extractReviewText(container) {
+        // Tìm textarea hoặc input text có tên liên quan review/comment
+        const inputs = container.querySelectorAll('textarea, input[type="text"]');
+        for (const input of Array.from(inputs)) {
+            const name = (input.name || '').toLowerCase();
+            const id = (input.id || '').toLowerCase();
+            const placeholder = (input.placeholder || '').toLowerCase();
+            // Nếu tên trường có chữ review, comment, detail, đánh giá...
+            if (['review', 'comment', 'detail', 'message', 'body', 'content', 'đánh giá', 'nhận xét'].some(k => name.includes(k) || id.includes(k) || placeholder.includes(k))) {
+                return input.value || '';
+            }
+        }
+        // Fallback: Lấy textarea đầu tiên tìm thấy
+        const firstTextarea = container.querySelector('textarea');
+        return firstTextarea ? (firstTextarea.value || '') : '';
+    }
+    static detectMaxScale(container, currentVal) {
+        // 1. Check aria-valuemax (Chuẩn nhất)
+        const ariaMax = container.getAttribute('aria-valuemax');
+        if (ariaMax)
+            return parseFloat(ariaMax);
+        const childMax = container.querySelector('[aria-valuemax]');
+        if (childMax)
+            return parseFloat(childMax.getAttribute('aria-valuemax') || '5');
+        // 2. Đếm số lượng item con (Stars)
+        // Lọc các element con có class chứa 'star' hoặc 'rate' hoặc là svg/img
+        const stars = container.querySelectorAll('.star, .fa-star, [class*="rating-item"], [role="radio"]');
+        if (stars.length >= 3 && stars.length <= 10)
+            return stars.length;
+        // 3. Fallback theo logic số học
+        if (currentVal > 5) {
+            if (currentVal <= 10)
+                return 10;
+            if (currentVal <= 20)
+                return 20; // Thang 20 điểm
+            return 100; // Thang 100 điểm
+        }
+        return 5; // Mặc định an toàn
+    }
+    static detectBinaryContext(container, target) {
+        // Gom tất cả text/class để scan keyword
+        const contextStr = (container.className + ' ' + target.className + ' ' + (target.getAttribute('aria-label') || '') + ' ' + (target.id || '')).toLowerCase();
+        // Keywords đặc trưng của Binary Rating
+        const keywords = ['like', 'dislike', 'thumb', 'vote', 'useful', 'hữu ích', 'thích'];
+        // Check nếu container chỉ có đúng 2 nút bấm -> Khả năng cao là binary
+        const buttons = container.querySelectorAll('button, a[role="button"], input[type="button"]');
+        const isTwoButtons = buttons.length === 2;
+        return keywords.some(k => contextStr.includes(k)) || (isTwoButtons && contextStr.includes('rate'));
+    }
+    static isPositiveAction(target) {
+        const str = (target.className + ' ' + target.textContent + ' ' + target.id + ' ' + (target.getAttribute('aria-label') || '')).toLowerCase();
+        // Nếu có chữ 'dis' (dislike) hoặc 'down' (thumb-down) -> Negative
+        if (str.includes('dis') || str.includes('down') || str.includes('không'))
+            return false;
+        // Nếu có chữ 'up', 'like', 'good', 'yes' -> Positive
+        return str.includes('up') || str.includes('like') || str.includes('good') || str.includes('yes') || str.includes('hữu ích');
+    }
+    static normalizeScore(raw, max, isBinary) {
+        if (raw <= 0)
+            return 0;
+        if (isBinary) {
+            // Binary: Positive = 5 sao, Negative = 1 sao
+            return raw >= 1 ? 5 : 1;
+        }
+        // Range Normalization: (Value / Max) * 5
+        let normalized = (raw / max) * 5;
+        // Làm tròn đến 0.5 (vd: 4.3 -> 4.5, 4.2 -> 4.0)
+        normalized = Math.round(normalized * 2) / 2;
+        // Kẹp giá trị trong khoảng 1-5
+        return Math.min(5, Math.max(1, normalized));
+    }
+}
+
+class RatingPlugin extends BasePlugin {
+    constructor() {
+        super();
+        this.name = 'RatingPlugin';
+        this.context = null;
+        this.detector = null;
+        // Delay 500ms cho click: User click sao liên tục thì chỉ lấy cái cuối sau khi dừng tay
+        this.throttledClickHandler = throttle(this.wrapHandler(this.handleInteraction.bind(this, 'click'), 'handleClick'), 500);
+        this.submitHandler = this.wrapHandler(this.handleInteraction.bind(this, 'submit'), 'handleSubmit');
+    }
+    init(tracker) {
+        this.errorBoundary.execute(() => {
+            super.init(tracker);
+            this.context = new TrackerContextAdapter(tracker);
+            this.detector = getAIItemDetector();
+            console.log(`[RatingPlugin] initialized.`);
+        }, 'RatingPlugin.init');
+    }
+    start() {
+        this.errorBoundary.execute(() => {
+            if (!this.ensureInitialized())
+                return;
+            // 1. Lắng nghe Click (Interactive Rating: Stars, Likes)
+            // Sử dụng capture = true để bắt sự kiện sớm, trước khi các framework (React/Vue) chặn propagation
+            document.addEventListener("click", this.throttledClickHandler, true);
+            // 2. Lắng nghe Submit (Traditional Forms)
+            document.addEventListener("submit", this.submitHandler, true);
+            console.log("[RatingPlugin] started listening (Universal Mode).");
+            this.active = true;
+        }, 'RatingPlugin.start');
+    }
+    stop() {
+        this.errorBoundary.execute(() => {
+            document.removeEventListener("click", this.throttledClickHandler, true);
+            document.removeEventListener("submit", this.submitHandler, true);
+            super.stop();
+        }, 'RatingPlugin.stop');
+    }
+    /**
+     * Hàm xử lý trung tâm
+     */
+    handleInteraction(eventType, event) {
+        var _a;
+        try {
+            if (!this.context || !this.detector)
+                return;
+            // Trigger ID = 2 cho Rating (Lấy từ server config)
+            const rules = this.context.config.getRules(2);
+            if (rules.length === 0)
+                return;
+            const target = event.target;
+            if (!target)
+                return;
+            for (const rule of rules) {
+                const selector = rule.trackingTarget.value;
+                if (!selector)
+                    continue;
+                // Kiểm tra xem user có tương tác đúng khu vực quy định không
+                // closest() giúp tìm ngược lên trên nếu click vào phần tử con (vd click vào path trong svg)
+                const matchedElement = target.closest(selector);
+                if (matchedElement) {
+                    // Xác định "Container" bao quanh toàn bộ widget đánh giá để quét ngữ cảnh
+                    // Logic: Tìm Form cha, hoặc Div bao quanh, hoặc chính là parent của nút bấm
+                    const container = matchedElement.closest('form') ||
+                        matchedElement.closest('.rating-container') ||
+                        matchedElement.closest('.review-box') ||
+                        matchedElement.parentElement ||
+                        document.body;
+                    // Gọi Utils để "thám thính"
+                    const result = RatingUtils.processRating(container, matchedElement, eventType);
+                    // Lọc rác: Nếu không bắt được điểm và cũng không có text -> Bỏ qua
+                    if (result.originalValue === 0 && !result.reviewText) {
+                        continue;
+                    }
+                    console.log(`[RatingPlugin] 🎯 Captured [${eventType}]: Raw=${result.originalValue}/${result.maxValue} -> Norm=${result.normalizedValue}`);
+                    // Detect Item ID (Sản phẩm nào đang được đánh giá?)
+                    // Dùng AI quét Container trước vì nó gần nhất, chính xác hơn quét cả body
+                    let structuredItem = null;
+                    if (!((_a = rule.trackingTarget.value) === null || _a === void 0 ? void 0 : _a.startsWith('^'))) {
+                        structuredItem = this.detector.detectItem(container);
+                    }
+                    // Build Payload
+                    const payload = this.context.payloadBuilder.build(structuredItem || matchedElement, rule);
+                    payload.event = 'rate_submit';
+                    payload.metadata = {
+                        ...payload.metadata,
+                        // Dữ liệu quan trọng nhất
+                        rateValue: result.normalizedValue,
+                        reviewText: result.reviewText,
+                        // Dữ liệu phụ để debug/analytics
+                        rawRateValue: result.originalValue,
+                        rateMax: result.maxValue,
+                        rateType: result.type,
+                        captureMethod: result.captureMethod
+                    };
+                    this.context.eventBuffer.enqueue(payload);
+                    // Break ngay sau khi khớp rule đầu tiên để tránh duplicate event
+                    break;
+                }
+            }
+        }
+        catch (error) {
+            // Safety guard: Không bao giờ để lỗi plugin làm ảnh hưởng trải nghiệm user
+            console.warn('[RatingPlugin] Error processing interaction:', error);
+        }
+    }
+}
+
+var ratingPlugin = /*#__PURE__*/Object.freeze({
+    __proto__: null,
+    RatingPlugin: RatingPlugin
+});
+
+class PathMatcher {
+    /**
+     * Parse pattern like '/api/user/:id' into regex and segment config
+     */
+    static compile(pattern) {
+        const keys = [];
+        const cleanPattern = pattern.split('?')[0];
+        // Escape generic regex chars except ':'
+        const escaped = cleanPattern.replace(/[.+^${}()|[\]\\]/g, '\\$&');
+        // Replace :param with capture group
+        const regexString = escaped.replace(/:([a-zA-Z0-9_]+)/g, (_, key) => {
+            keys.push(key);
+            return '([^/]+)';
+        });
+        // Match start to end, allow query params at end
+        return {
+            regex: new RegExp(`^${regexString}(?:\\?.*)?$`),
+            keys
+        };
+    }
+    static match(url, pattern) {
+        // Normalize Path from URL
+        let path = url.split('?')[0];
+        try {
+            if (path.startsWith('http')) {
+                const urlObj = new URL(path);
+                path = urlObj.pathname;
+            }
+        }
+        catch { }
+        // Ensure path starts with /
+        if (!path.startsWith('/'))
+            path = '/' + path;
+        // Compile Pattern
+        // If pattern is not absolute URL, ensure it starts with / for consistency with path
+        let effectivePattern = pattern;
+        if (!effectivePattern.startsWith('http') && !effectivePattern.startsWith('/')) {
+            effectivePattern = '/' + effectivePattern;
+        }
+        const { regex } = PathMatcher.compile(effectivePattern);
+        return regex.test(path);
+    }
+    // Logic specifically from tracker.js (optional, but robust)
+    static matchStaticSegments(url, pattern) {
+        // tracker.js logic:
+        // const segments = rule.apiUrl.split('/').filter(Boolean);
+        // _staticSegments: segments.filter(seg => !seg.startsWith(':'))
+        // return rule._staticSegments.every(seg => segments.includes(seg));
+        const patternSegments = pattern.split('/').filter(Boolean);
+        const staticSegments = patternSegments.filter(s => !s.startsWith(':'));
+        const urlSegments = url.split('?')[0].split('/').filter(Boolean);
+        return staticSegments.every(seg => urlSegments.includes(seg));
+    }
+}
+
+// Hàm tiện ích: Parse JSON an toàn (tránh văng lỗi nếu chuỗi không hợp lệ)
+function safeParse(data) {
+    try {
+        if (typeof data === 'string')
+            return JSON.parse(data);
+        return data;
+    }
+    catch (e) {
+        return data;
+    }
+}
+/**
+ * NetworkPlugin: Plugin chịu trách nhiệm theo dõi các yêu cầu mạng (XHR & Fetch).
+ * Nó tự động chặn (intercept) các request, so sánh với Rules cấu hình,
+ * và trích xuất dữ liệu nếu trùng khớp.
+ */
+class NetworkPlugin extends BasePlugin {
+    constructor() {
+        super();
+        this.name = 'NetworkPlugin';
+    }
+    /**
+     * Khởi động plugin.
+     * Bắt đầu ghi đè (hook) XHR và Fetch để lắng nghe request.
+     */
+    start() {
+        if (this.active)
+            return;
+        this.hookXhr();
+        this.hookFetch();
+        this.active = true;
+        console.log(`[${this.name}] Started - Intercepting Network Requests`);
+    }
+    /**
+     * Dừng plugin.
+     * Khôi phục (restore) lại XHR và Fetch gốc của trình duyệt.
+     */
+    stop() {
+        if (!this.active)
+            return;
+        this.restoreXhr();
+        this.restoreFetch();
+        this.active = false;
+        console.log(`[${this.name}] Stopped`);
+    }
+    /**
+     * Ghi đè XMLHttpRequest để theo dõi request cũ.
+     */
+    hookXhr() {
+        this.originalXmlOpen = XMLHttpRequest.prototype.open;
+        this.originalXmlSend = XMLHttpRequest.prototype.send;
+        const plugin = this;
+        // Ghi đè phương thức open để lấy thông tin method và url
+        XMLHttpRequest.prototype.open = function (method, url) {
+            this._networkTrackInfo = { method, url, startTime: Date.now() };
+            return plugin.originalXmlOpen.apply(this, arguments);
+        };
+        // Ghi đè phương thức send để lấy body gửi đi và body trả về
+        XMLHttpRequest.prototype.send = function (body) {
+            const info = this._networkTrackInfo;
+            if (info) {
+                // Lắng nghe sự kiện load để bắt response
+                this.addEventListener('load', () => {
+                    plugin.handleRequest(info.url, info.method, body, this.response);
+                });
+            }
+            return plugin.originalXmlSend.apply(this, arguments);
+        };
+    }
+    /**
+     * Khôi phục XMLHttpRequest về nguyên bản.
+     */
+    restoreXhr() {
+        if (this.originalXmlOpen)
+            XMLHttpRequest.prototype.open = this.originalXmlOpen;
+        if (this.originalXmlSend)
+            XMLHttpRequest.prototype.send = this.originalXmlSend;
+    }
+    /**
+     * Ghi đè window.fetch để theo dõi request hiện đại.
+     */
+    hookFetch() {
+        this.originalFetch = window.fetch;
+        const plugin = this;
+        window.fetch = async function (...args) {
+            var _a;
+            const [resource, config] = args;
+            const url = typeof resource === 'string' ? resource : resource.url;
+            const method = ((_a = config === null || config === void 0 ? void 0 : config.method) === null || _a === void 0 ? void 0 : _a.toUpperCase()) || 'GET';
+            const body = config === null || config === void 0 ? void 0 : config.body;
+            // Gọi fetch gốc
+            const response = await plugin.originalFetch.apply(this, args);
+            // Clone response để đọc dữ liệu mà không làm hỏng luồng chính
+            const clone = response.clone();
+            clone.text().then((text) => {
+                plugin.handleRequest(url, method, body, text);
+            }).catch(() => { });
+            return response;
+        };
+    }
+    /**
+     * Khôi phục window.fetch về nguyên bản.
+     */
+    restoreFetch() {
+        if (this.originalFetch)
+            window.fetch = this.originalFetch;
+    }
+    /**
+     * Xử lý thông tin request đã chặn được.
+     * So khớp URL với các Rule trong Config và trích xuất dữ liệu.
+     * @param url URL của request
+     * @param method Phương thức (GET, POST, ...)
+     * @param reqBody Body gửi đi (nếu có)
+     * @param resBody Body trả về (nếu có)
+     */
+    handleRequest(url, method, reqBody, resBody) {
+        this.errorBoundary.execute(() => {
+            if (!this.tracker)
+                return;
+            const config = this.tracker.getConfig();
+            if (!config || !config.trackingRules)
+                return;
+            const reqData = safeParse(reqBody);
+            const resData = safeParse(resBody);
+            // Context để PayloadBuilder sử dụng trích xuất dữ liệu
+            const networkContext = {
+                reqBody: reqData,
+                resBody: resData,
+                method: method
+            };
+            for (const rule of config.trackingRules) {
+                if (!rule.payloadMappings)
+                    continue;
+                // Lọc các mapping phù hợp với URL hiện tại
+                const applicableMappings = rule.payloadMappings.filter(mapping => {
+                    if (!mapping.requestUrlPattern)
+                        return false;
+                    if (mapping.requestMethod && mapping.requestMethod.toUpperCase() !== method.toUpperCase()) {
+                        return false;
+                    }
+                    // Debug log
+                    console.log(`[NetworkPlugin] Checking ${url} against ${mapping.requestUrlPattern}`);
+                    if (!PathMatcher.matchStaticSegments(url, mapping.requestUrlPattern)) {
+                        console.log(`[NetworkPlugin] Static segments mismatch`);
+                        return false;
+                    }
+                    if (!PathMatcher.match(url, mapping.requestUrlPattern)) {
+                        // Double check match failure
+                        console.log(`[NetworkPlugin] PathMatcher failed for ${url} vs ${mapping.requestUrlPattern}`);
+                        return false;
+                    }
+                    return true;
+                });
+                if (applicableMappings.length > 0) {
+                    // Ép kiểu source thành 'network_request' để đảm bảo PayloadBuilder dùng logic trích xuất mạng
+                    const mappingsForBuilder = applicableMappings.map(m => ({
+                        ...m,
+                        source: 'network_request',
+                        value: m.value || m.requestBodyPath // Ensure value is set (PayloadBuilder relies on 'value')
+                    }));
+                    // Trích xuất dữ liệu thông qua PayloadBuilder
+                    const extractedData = this.tracker.payloadBuilder.build(mappingsForBuilder, networkContext);
+                    console.log(`[NetworkPlugin] Match found for ${rule.name}. Extracted:`, extractedData);
+                    // Nếu có dữ liệu trích xuất được, tiến hành gửi tracking event
+                    if (Object.keys(extractedData).length > 0) {
+                        // *logic gửi dữ liệu gì gì đó*
+                        console.groupCollapsed(`%c[TRACKER] Network Match: (${method} ${url})`, "color: orange");
+                        console.log("Rule:", rule.name);
+                        console.log("Extracted:", extractedData);
+                        console.groupEnd();
+                    }
+                }
+            }
+        }, 'NetworkPlugin.handleRequest');
+    }
+}
+
+var networkPlugin = /*#__PURE__*/Object.freeze({
+    __proto__: null,
+    NetworkPlugin: NetworkPlugin
+});
 
 // RecSysTracker - Main SDK class
 class RecSysTracker {
@@ -3871,6 +4780,7 @@ class RecSysTracker {
         this.eventBuffer = new EventBuffer();
         this.metadataNormalizer = new MetadataNormalizer();
         this.pluginManager = new PluginManager(this);
+        this.payloadBuilder = new PayloadBuilder();
     }
     // Khởi tạo SDK - tự động gọi khi tải script
     async init() {
@@ -3884,8 +4794,9 @@ class RecSysTracker {
                 return;
             }
             // Khởi tạo EventDispatcher
+            const baseUrl = "http://localhost:3000";
             this.eventDispatcher = new EventDispatcher({
-                endpoint: this.config.trackEndpoint || '/track',
+                endpoint: `${baseUrl}${DEFAULT_TRACK_ENDPOINT_PATH}`,
             });
             // Fetch remote config và verify origin
             const remoteConfig = await this.configLoader.fetchRemoteConfig();
@@ -3895,6 +4806,7 @@ class RecSysTracker {
                 if (this.eventDispatcher && this.config.domainUrl) {
                     this.eventDispatcher.setDomainUrl(this.config.domainUrl);
                 }
+                console.log(this.config);
                 // Khởi tạo Display Manager nếu có returnMethods
                 if (this.config.returnMethods && this.config.returnMethods.length > 0) {
                     const apiBaseUrl = "http://localhost:3000";
@@ -3925,28 +4837,64 @@ class RecSysTracker {
         if (!((_a = this.config) === null || _a === void 0 ? void 0 : _a.trackingRules) || this.config.trackingRules.length === 0) {
             return;
         }
-        // Kiểm tra nếu có rule nào cần ClickPlugin (eventTypeId === 1)
-        const hasClickRules = this.config.trackingRules.some(rule => rule.eventTypeId === 1);
-        // Kiểm tra nếu có rule nào cần PageViewPlugin (eventTypeId === 3)
-        const hasPageViewRules = this.config.trackingRules.some(rule => rule.eventTypeId === 5);
+        // Get dynamic IDs
+        const clickId = this.getEventTypeId('Click');
+        const rateId = this.getEventTypeId('Rating');
+        const reviewId = this.getEventTypeId('Review');
+        const pageViewId = this.getEventTypeId('Page View');
+        const scrollId = this.getEventTypeId('Scroll');
+        // Check specific rules (chỉ check nếu tìm thấy ID)
+        const hasClickRules = clickId ? this.config.trackingRules.some(rule => rule.eventTypeId === clickId) : false;
+        const hasRateRules = rateId ? this.config.trackingRules.some(rule => rule.eventTypeId === rateId) : false;
+        const hasReviewRules = reviewId ? this.config.trackingRules.some(rule => rule.eventTypeId === reviewId) : false;
+        const hasPageViewRules = pageViewId ? this.config.trackingRules.some(rule => rule.eventTypeId === pageViewId) : false;
+        const hasScrollRules = scrollId ? this.config.trackingRules.some(rule => rule.eventTypeId === scrollId) : false;
         // Chỉ tự động đăng ký nếu chưa có plugin nào được đăng ký
         if (this.pluginManager.getPluginNames().length === 0) {
             const pluginPromises = [];
             if (hasClickRules) {
-                // Import động để tránh circular dependency
                 const clickPromise = Promise.resolve().then(function () { return clickPlugin; }).then(({ ClickPlugin }) => {
                     this.use(new ClickPlugin());
                     console.log('[RecSysTracker] Auto-registered ClickPlugin based on tracking rules');
                 });
                 pluginPromises.push(clickPromise);
             }
+            if (hasRateRules) {
+                const ratingPromise = Promise.resolve().then(function () { return ratingPlugin; }).then(({ RatingPlugin }) => {
+                    this.use(new RatingPlugin());
+                    console.log('[RecSysTracker] Auto-registered RatingPlugin based on tracking rules');
+                });
+                pluginPromises.push(ratingPromise);
+            }
+            if (hasReviewRules) {
+                const scrollPromise = Promise.resolve().then(function () { return reviewPlugin; }).then(({ ReviewPlugin }) => {
+                    this.use(new ReviewPlugin());
+                    console.log('[RecSysTracker] Auto-registered ScrollPlugin');
+                });
+                pluginPromises.push(scrollPromise);
+            }
             if (hasPageViewRules) {
-                // Import động để tránh circular dependency
                 const pageViewPromise = Promise.resolve().then(function () { return pageViewPlugin; }).then(({ PageViewPlugin }) => {
                     this.use(new PageViewPlugin());
                     console.log('[RecSysTracker] Auto-registered PageViewPlugin based on tracking rules');
                 });
                 pluginPromises.push(pageViewPromise);
+            }
+            if (hasScrollRules) {
+                const scrollPromise = Promise.resolve().then(function () { return scrollPlugin; }).then(({ ScrollPlugin }) => {
+                    this.use(new ScrollPlugin());
+                    console.log('[RecSysTracker] Auto-registered ScrollPlugin');
+                });
+                pluginPromises.push(scrollPromise);
+            }
+            // Check for Network Rules
+            const hasNetworkRules = this.config.trackingRules.some(rule => rule.payloadMappings && rule.payloadMappings.some(m => m.source == "RequestBody"));
+            if (hasNetworkRules) {
+                const networkPromise = Promise.resolve().then(function () { return networkPlugin; }).then(({ NetworkPlugin }) => {
+                    this.use(new NetworkPlugin());
+                    console.log('[RecSysTracker] Auto-registered NetworkPlugin');
+                });
+                pluginPromises.push(networkPromise);
             }
             // Chờ tất cả plugin được đăng ký trước khi khởi động
             if (pluginPromises.length > 0) {
@@ -4049,6 +4997,14 @@ class RecSysTracker {
     getConfig() {
         return this.config;
     }
+    // Helper để lấy event type id từ name
+    getEventTypeId(name) {
+        if (!this.config || !this.config.eventTypes) {
+            return undefined;
+        }
+        const type = this.config.eventTypes.find(t => t.name === name);
+        return type ? type.id : undefined;
+    }
     // Set user ID
     setUserId(userId) {
         this.userId = userId;
@@ -4125,5 +5081,5 @@ if (typeof window !== 'undefined') {
     }
 }
 
-export { BasePlugin, ClickPlugin, ConfigLoader, DisplayManager, FormPlugin, PageViewPlugin, PluginManager, RecSysTracker, ScrollPlugin, RecSysTracker as default };
+export { BasePlugin, ClickPlugin, ConfigLoader, DisplayManager, NetworkPlugin, PageViewPlugin, PluginManager, RatingPlugin, RecSysTracker, ReviewPlugin, ScrollPlugin, RecSysTracker as default };
 //# sourceMappingURL=recsys-tracker.esm.js.map

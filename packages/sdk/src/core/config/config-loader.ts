@@ -1,5 +1,6 @@
 import { TrackerConfig, TrackingRule, ReturnMethod, PayloadMapping, Condition, TrackingTarget } from '../../types';
 import { OriginVerifier } from '../utils/origin-verifier';
+import { DEFAULT_API_URL, DEFAULT_CONFIG_ENDPOINT_PATH } from '../constants';
 
 // Luồng hoạt động
 // 1. SDK khởi tạo
@@ -11,8 +12,6 @@ import { OriginVerifier } from '../utils/origin-verifier';
 
 // Class để load và quản lý cấu hình tracker
 export class ConfigLoader {
-  private readonly BASE_API_URL = process.env.API_URL || 'http://localhost:3000';
-  
   private config: TrackerConfig | null = null;
   private domainKey: string | null = null;
 
@@ -25,7 +24,7 @@ export class ConfigLoader {
       }
 
       const domainKey = window.__RECSYS_DOMAIN_KEY__;
-      
+
       if (!domainKey || typeof domainKey !== 'string') {
         console.error('[RecSysTracker] Invalid domain key');
         return null;
@@ -38,8 +37,6 @@ export class ConfigLoader {
         domainKey: domainKey,
         domainUrl: '',
         domainType: 0,
-        trackEndpoint: `${this.BASE_API_URL}/event`,
-        configEndpoint: `${this.BASE_API_URL}/domain/${domainKey}`,
         trackingRules: [],
         returnMethods: [],
         options: {
@@ -63,12 +60,15 @@ export class ConfigLoader {
       return this.config;
     }
 
+    const baseUrl = process.env.API_URL || DEFAULT_API_URL;
+
     try {
-      // Bước 1: Gọi 3 API song song để lấy domain, list rules cơ bản, và return methods
-      const [domainResponse, rulesListResponse, returnMethodsResponse] = await Promise.all([
-        fetch(`${this.BASE_API_URL}/domain/${this.domainKey}`),
-        fetch(`${this.BASE_API_URL}/rule/domain/${this.domainKey}`),
-        fetch(`${this.BASE_API_URL}/domain/return-method/${this.domainKey}`)
+      // Bước 1: Gọi 4 API song song để lấy domain, list rules cơ bản, return methods và event types
+      const [domainResponse, rulesListResponse, returnMethodsResponse, eventTypesResponse] = await Promise.all([
+        fetch(`${baseUrl}${DEFAULT_CONFIG_ENDPOINT_PATH}/${this.domainKey}`),
+        fetch(`${baseUrl}/rule/domain/${this.domainKey}`),
+        fetch(`${baseUrl}/domain/return-method/${this.domainKey}`),
+        fetch(`${baseUrl}/rule/event-type`)
       ]);
 
       // Kiểm tra response
@@ -80,18 +80,7 @@ export class ConfigLoader {
       const domainData = domainResponse.ok ? await domainResponse.json() : null;
       const rulesListData = rulesListResponse.ok ? await rulesListResponse.json() : [];
       const returnMethodsData = returnMethodsResponse.ok ? await returnMethodsResponse.json() : [];
-
-      // Bước 2: Lấy chi tiết từng rule
-      let rulesData: any[] = [];
-      if (Array.isArray(rulesListData) && rulesListData.length > 0) {
-        const ruleDetailsPromises = rulesListData.map(rule => 
-          fetch(`${this.BASE_API_URL}/rule/${rule.id}`)
-            .then(res => res.ok ? res.json() : null)
-            .catch(() => null)
-        );
-        const ruleDetails = await Promise.all(ruleDetailsPromises);
-        rulesData = ruleDetails.filter(rule => rule !== null);
-      }
+      const eventTypesData = eventTypesResponse.ok ? await eventTypesResponse.json() : [];
 
       // Cập nhật config với data từ server
       if (this.config) {
@@ -99,8 +88,9 @@ export class ConfigLoader {
           ...this.config,
           domainUrl: domainData?.Url || this.config.domainUrl,
           domainType: domainData?.Type || this.config.domainType,
-          trackingRules: this.transformRules(rulesData),
+          trackingRules: this.transformRules(rulesListData),
           returnMethods: this.transformReturnMethods(returnMethodsData),
+          eventTypes: this.transformEventTypes(eventTypesData),
         };
 
         // Verify origin sau khi có domainUrl từ server
@@ -123,7 +113,7 @@ export class ConfigLoader {
   // Transform rules từ server format sang SDK format
   private transformRules(rulesData: any[]): TrackingRule[] {
     if (!Array.isArray(rulesData)) return [];
-    
+
     return rulesData.map(rule => ({
       id: rule.Id?.toString() || rule.id?.toString(),
       name: rule.Name || rule.name,
@@ -139,7 +129,7 @@ export class ConfigLoader {
   // Transform conditions từ server format sang SDK format
   private transformConditions(conditionsData: any[]): Condition[] {
     if (!Array.isArray(conditionsData)) return [];
-    
+
     return conditionsData.map(condition => ({
       id: condition.Id || condition.id,
       value: condition.Value || condition.value,
@@ -152,7 +142,7 @@ export class ConfigLoader {
   // Transform payload mappings từ server format sang SDK format
   private transformPayloadMappings(payloadData: any[]): PayloadMapping[] {
     if (!Array.isArray(payloadData)) return [];
-    
+
     return payloadData.map(payload => ({
       id: payload.Id || payload.id,
       field: payload.Field || payload.field,
@@ -177,7 +167,7 @@ export class ConfigLoader {
         operatorId: 0,
       };
     }
-    
+
     return {
       id: targetData.Id || targetData.id || 0,
       value: targetData.Value || targetData.value || '',
@@ -189,7 +179,7 @@ export class ConfigLoader {
   // Transform return methods từ server format sang SDK format
   private transformReturnMethods(returnMethodsData: any): ReturnMethod[] {
     if (!returnMethodsData || !Array.isArray(returnMethodsData)) return [];
-    
+
     return returnMethodsData.map(method => ({
       id: method.Id || method.id,
       domainId: method.DomainID || method.domainId,
@@ -197,6 +187,16 @@ export class ConfigLoader {
       returnType: method.ReturnType || method.returnType,
       value: method.Value || method.value || '',
       configurationName: method.ConfigurationName || method.configurationName,
+    }));
+  }
+
+  // Transform event types từ server format sang SDK format
+  private transformEventTypes(eventTypesData: any): any[] {
+    if (!eventTypesData || !Array.isArray(eventTypesData)) return [];
+
+    return eventTypesData.map(type => ({
+      id: type.Id || type.id,
+      name: type.Name || type.name,
     }));
   }
 

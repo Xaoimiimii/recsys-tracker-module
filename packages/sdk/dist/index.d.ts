@@ -1,5 +1,6 @@
 import { DisplayManager, PluginManager } from './core';
 import { TrackerConfig } from './types';
+import { PayloadBuilder } from './core/payload/payload-builder';
 export declare class RecSysTracker {
     private configLoader;
     private errorBoundary;
@@ -12,6 +13,7 @@ export declare class RecSysTracker {
     private userId;
     private isInitialized;
     private sendInterval;
+    payloadBuilder: PayloadBuilder;
     constructor();
     init(): Promise<void>;
     private autoInitializePlugins;
@@ -30,6 +32,7 @@ export declare class RecSysTracker {
     private setupUnloadHandler;
     flush(): Promise<void>;
     getConfig(): TrackerConfig | null;
+    getEventTypeId(name: string): number | undefined;
     setUserId(userId: string | null): void;
     getUserId(): string | null;
     destroy(): void;
@@ -44,7 +47,9 @@ export { ConfigLoader, PluginManager, DisplayManager } from './core';
 export { IPlugin, BasePlugin } from './core/plugins/base-plugin';
 export { ClickPlugin } from './core/plugins/click-plugin';
 export { PageViewPlugin } from './core/plugins/page-view-plugin';
-export { FormPlugin } from './core/plugins/form-plugin';
+export { RatingPlugin } from './core/plugins/rating-plugin';
 export { ScrollPlugin } from './core/plugins/scroll-plugin';
+export { ReviewPlugin } from './core/plugins/review-plugin';
+export { NetworkPlugin } from './core/plugins/network-plugin';
 export type * from './types';
 //# sourceMappingURL=index.d.ts.map

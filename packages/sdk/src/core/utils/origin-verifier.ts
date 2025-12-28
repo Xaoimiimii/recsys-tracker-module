@@ -12,10 +12,21 @@ export class OriginVerifier {
         return false;
       }
 
+      // bỏ qua verification nếu đang ở local
+      if (this.isDevelopment()) {
+        return true;
+      }
+
       // Bỏ qua verification khi test với file:// protocol
       if (typeof window !== 'undefined' && window.location) {
         const protocol = window.location.protocol;
         const origin = window.location.origin;
+        
+        // Cho phép localhost để test
+        if (origin?.startsWith('https://localhost') || origin?.startsWith('http://localhost')) {
+          console.warn('[RecSysTracker] Skipping origin verification for localhost (testing mode)');
+          return true;
+        }
         
         if (protocol === 'file:' || origin === 'null' || origin === 'file://') {
           console.warn('[RecSysTracker] Skipping origin verification for file:// protocol (testing mode)');
@@ -110,14 +121,14 @@ export class OriginVerifier {
   private static normalizeUrl(url: string): string {
     try {
       const urlObj = new URL(url);
-      
+
       // Tạo URL chuẩn: protocol + hostname + port (nếu có) + pathname
       let normalized = `${urlObj.protocol}//${urlObj.hostname}`;
-      
+
       // Thêm port nếu không phải port mặc định
-      if (urlObj.port && 
-          !((urlObj.protocol === 'http:' && urlObj.port === '80') ||
-            (urlObj.protocol === 'https:' && urlObj.port === '443'))) {
+      if (urlObj.port &&
+        !((urlObj.protocol === 'http:' && urlObj.port === '80') ||
+          (urlObj.protocol === 'https:' && urlObj.port === '443'))) {
         normalized += `:${urlObj.port}`;
       }
 
@@ -125,7 +136,7 @@ export class OriginVerifier {
       if (urlObj.pathname && urlObj.pathname !== '/') {
         normalized += urlObj.pathname.replace(/\/$/, '');
       }
-      
+
       return normalized.toLowerCase();
     } catch {
       // Nếu không parse được URL, trả về chuỗi gốc lowercase, loại bỏ trailing slash

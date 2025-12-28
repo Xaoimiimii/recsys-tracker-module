@@ -57,6 +57,20 @@ export class EventBuffer {
         if (this.queue.length >= this.maxQueueSize) {
             this.queue.shift();
         }
+        console.log('[EventBuffer] Payload được thêm vào queue:', {
+            id: event.id,
+            eventTypeId: event.eventTypeId,
+            trackingRuleId: event.trackingRuleId,
+            domainKey: event.domainKey,
+            userField: event.userField,
+            userValue: event.userValue,
+            itemField: event.itemField,
+            itemValue: event.itemValue,
+            ratingValue: event.ratingValue,
+            reviewValue: event.reviewValue,
+            timestamp: event.timestamp,
+            queueSize: this.queue.length + 1
+        });
         this.queue.push(event);
         this.persistToStorage();
     }

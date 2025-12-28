@@ -2,18 +2,22 @@ export interface TrackerConfig {
   domainKey: string;
   domainUrl?: string;
   domainType?: number;
-  trackEndpoint?: string;
-  configEndpoint?: string;
   trackingRules?: TrackingRule[];
   returnMethods?: ReturnMethod[];
+  eventTypes?: EventType[];
   options?: TrackerOptions;
 }
 
+export interface EventType {
+  id: number;
+  name: string;
+}
+
 export interface TrackingRule {
-  id: string;
+  id: number;
   name: string;
   domainId: number;
-  eventTypeId: number; // (click, rate, page view, ...)
+  eventTypeId: number; 
   trackingTargetId: number;
   payloadMappings: PayloadMapping[];
   conditions: Condition[];

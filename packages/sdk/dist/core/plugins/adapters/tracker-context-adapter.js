@@ -1,5 +1,8 @@
-import { getUserIdentityManager } from '../utils/user-identity-manager';
-import { getAIItemDetector } from '../utils/ai-item-detector';
+// import { IRecsysContext, TrackingRule, IRecsysPayload, IAIItemDetectionResult, IPayloadExtraData, IPayloadBuilder } from '../interfaces/recsys-context.interface';
+// import { getUserIdentityManager } from '../utils/user-identity-manager';
+// import { getAIItemDetector } from '../utils/ai-item-detector';
+// import { RecSysTracker } from '../../..';
+// import { PayloadExtractor } from '../../../types';
 export class TrackerContextAdapter {
     constructor(tracker) {
         this.config = {
@@ -11,117 +14,73 @@ export class TrackerContextAdapter {
                     .filter(rule => rule.eventTypeId === eventTypeId);
             },
         };
-        this.payloadBuilder = {
-            build: (element, rule, extraData = {}) => {
-                const userIdentityManager = getUserIdentityManager();
-                const payload = {
-                    event: rule.eventTypeId === 1 ? "item_click" : "page_view",
-                    url: window.location.href,
-                    timestamp: Date.now(),
-                    ruleName: rule.name,
-                    userId: userIdentityManager.getRealUserId(),
-                    itemId: 'N/A'
-                };
-                // Build payload extractor from rule data
-                const targetValue = rule.trackingTarget.value || '';
-                const isRegex = targetValue.startsWith('^');
-                const extractor = {
-                    source: isRegex ? 'regex_group' : 'ai_detect',
-                    eventKey: 'itemId',
-                    pattern: isRegex ? targetValue : undefined,
-                    groupIndex: isRegex ? 1 : undefined,
-                };
-                let detectionResult = null;
-                if (!extractor || typeof extractor.source === 'undefined') {
-                    console.error(`[PayloadBuilder Error] Rule '${rule.name}' is missing a valid payloadExtractor or source.`);
-                    return {
-                        ...payload,
-                        itemId: 'N/A (Invalid Rule Config)',
-                        itemName: 'Invalid Rule',
-                        confidence: 0,
-                        source: 'invalid_rule_config'
-                    };
-                }
-                if (extractor.source === 'regex_group' && extraData.regexMatch) {
-                    const match = extraData.regexMatch;
-                    const groupIndex = extractor.groupIndex;
-                    if (groupIndex !== undefined && match.length > groupIndex) {
-                        const itemId = match[groupIndex];
-                        return {
-                            ...payload,
-                            itemId: itemId,
-                            itemName: itemId,
-                            itemType: 'song',
-                            confidence: 1.0,
-                            source: 'regex_url'
-                        };
-                    }
-                }
-                if (extractor.source === 'ai_detect') {
-                    const detector = getAIItemDetector();
-                    if (rule.eventTypeId === 3 && element && element.id) {
-                        detectionResult = element;
-                    }
-                    else if (detector && element instanceof Element) {
-                        detectionResult = detector.detectItem(element);
-                    }
-                    if (detectionResult && detectionResult.id && detectionResult.id !== 'N/A (AI Failed)') {
-                        return {
-                            ...payload,
-                            itemId: detectionResult.id,
-                            itemName: detectionResult.name || 'Unknown',
-                            itemType: detectionResult.type || 'content',
-                            confidence: detectionResult.confidence || 0,
-                            source: detectionResult.source || 'dom_based',
-                            metadata: detectionResult.metadata || {}
-                        };
-                    }
-                    else {
-                        return {
-                            ...payload,
-                            itemId: 'N/A (Failed)',
-                            itemName: 'Unknown Item',
-                            confidence: 0,
-                            source: 'rule_match_no_ai_id'
-                        };
-                    }
-                }
-                return payload;
-            },
-        };
+        /**
+         * [FIX QUAN TRỌNG]
+         * Thay vì hard-code logic build payload ở đây, ta trỏ nó về
+         * instance payloadBuilder của tracker (Class PayloadBuilder xịn đã viết).
+         * Dùng getter và ép kiểu để TypeScript hiểu nó hỗ trợ Overload.
+         */
         this.eventBuffer = {
             enqueue: (payload) => {
-                let triggerTypeId = 2;
+                // 1. Map Event Type từ Plugin sang ENUM của Database
+                let eventType = 'page_view';
                 switch (payload.event) {
                     case 'item_click':
-                        triggerTypeId = 1;
+                        eventType = 'click';
                         break;
                     case 'rate_submit':
-                        triggerTypeId = 2;
+                        eventType = 'rating';
+                        break; // FormPlugin cũ
+                    case 'review':
+                        eventType = 'review';
+                        break; // ReviewPlugin mới
+                    case 'scroll_depth':
+                        eventType = 'scroll';
                         break;
                     case 'page_view':
-                        triggerTypeId = 3;
+                        eventType = 'page_view';
                         break;
-                    default:
-                        triggerTypeId = 3;
+                    default: eventType = 'page_view';
                 }
+                // 2. Chuẩn bị object phẳng (Flat Data)
                 const trackData = {
-                    triggerTypeId,
-                    userId: parseInt(payload.userId) || 0,
-                    itemId: parseInt(payload.itemId) || 0, // Lưu ý: server nhận int
+                    eventType,
+                    // Map User/Item Value
+                    userValue: String(payload.userId || ''),
+                    userField: 'user_id', // Mặc định hoặc lấy từ metadata nếu cần
+                    itemValue: String(payload.itemId || ''),
+                    itemField: 'item_id', // Mặc định
                 };
-                if (payload.metadata && payload.metadata.rateValue !== undefined) {
-                    trackData.rate = {
-                        Value: Number(payload.metadata.rateValue),
-                        Review: String(payload.metadata.reviewText || '')
-                    };
+                // 3. Map Rating & Review Value từ Metadata
+                if (payload.metadata) {
+                    // Trường hợp 1: Review Plugin mới (Review nằm trong content)
+                    if (eventType === 'review' && payload.metadata.content) {
+                        trackData.reviewValue = String(payload.metadata.content);
+                    }
+                    // Trường hợp 2: Form Plugin cũ (Rate + Review chung)
+                    // Map vào RatingValue
+                    if (payload.metadata.rateValue !== undefined) {
+                        const rateVal = Number(payload.metadata.rateValue);
+                        if (!isNaN(rateVal)) {
+                            trackData.ratingValue = rateVal;
+                        }
+                    }
+                    // Map vào ReviewValue (nếu form đó có cả review text)
+                    if (payload.metadata.reviewText) {
+                        trackData.reviewValue = String(payload.metadata.reviewText);
+                    }
                 }
-                if (payload.itemId && !payload.itemId.toString().startsWith('N/A')) {
+                // 4. Chỉ gửi nếu có ItemID hợp lệ (tùy logic bên bạn)
+                if (trackData.itemValue && !trackData.itemValue.startsWith('N/A')) {
                     this.tracker.track(trackData);
                 }
             },
         };
         this.tracker = tracker;
+    }
+    get payloadBuilder() {
+        // Dùng (this.tracker as any) để tránh lỗi nếu RecSysTracker chưa kịp cập nhật type
+        return this.tracker.payloadBuilder;
     }
     updateIdentity(newUserId) {
         console.log(`[TrackerContext] Identity updated to: ${newUserId}`);

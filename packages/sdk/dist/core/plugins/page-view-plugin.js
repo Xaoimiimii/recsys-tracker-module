@@ -50,11 +50,16 @@ export class PageViewPlugin extends BasePlugin {
     }
     trackCurrentPage(currentUrl) {
         var _a;
-        if (!this.context || !this.detector)
+        if (!this.context || !this.detector || !this.tracker)
             return;
         const urlObject = new URL(currentUrl);
         const pathname = urlObject.pathname;
-        const pageViewRules = this.context.config.getRules(3); // triggerEventId = 3 for page_view
+        const eventId = this.tracker.getEventTypeId('Page View');
+        if (!eventId) {
+            console.log('[PageViewPlugin] Page View event type not found in config.');
+            return;
+        }
+        const pageViewRules = this.context.config.getRules(eventId);
         if (pageViewRules.length === 0) {
             console.log('[PageViewPlugin] No page view rules configured.');
             return;
