@@ -1,6 +1,9 @@
 // packages/sdk/src/core/services/payload-builder.ts
+import { PathMatcher } from "../utils/path-matcher";
 export class PayloadBuilder {
     constructor() {
+        this.isNetworkTrackingActive = false;
+        this.trackerConfig = null;
         this.COMMON_CONTAINERS = [
             'user', 'userInfo', 'userData', 'profile', 'auth', 'session', 'account', 'identity',
             'customer', 'member', 'state'
@@ -265,6 +268,154 @@ export class PayloadBuilder {
         }
         catch {
             return null;
+        }
+    }
+    setConfig(config) {
+        this.trackerConfig = config;
+        this.checkAndEnableNetworkTracking();
+    }
+    checkAndEnableNetworkTracking() {
+        if (!this.trackerConfig || !this.trackerConfig.trackingRules)
+            return;
+        const hasNetworkRules = this.trackerConfig.trackingRules.some((rule) => rule.payloadMappings && rule.payloadMappings.some((m) => (m.source || '').toLowerCase() === 'network_request' ||
+            (m.source || '').toLowerCase() === 'requestbody' // Legacy support
+        ));
+        if (hasNetworkRules) {
+            this.enableNetworkTracking(this.trackerConfig);
+        }
+        else {
+            this.disableNetworkTracking();
+        }
+    }
+    // --- NETWORK TRACKING LOGIC (Moved from NetworkPlugin) ---
+    enableNetworkTracking(config) {
+        if (this.isNetworkTrackingActive)
+            return;
+        this.trackerConfig = config;
+        this.hookXhr();
+        this.hookFetch();
+        this.isNetworkTrackingActive = true;
+        console.log(`[PayloadBuilder] Network Tracking Enabled`);
+    }
+    disableNetworkTracking() {
+        if (!this.isNetworkTrackingActive)
+            return;
+        this.restoreXhr();
+        this.restoreFetch();
+        this.isNetworkTrackingActive = false;
+        console.log(`[PayloadBuilder] Network Tracking Stopped`);
+    }
+    hookXhr() {
+        this.originalXmlOpen = XMLHttpRequest.prototype.open;
+        this.originalXmlSend = XMLHttpRequest.prototype.send;
+        const builder = this;
+        // Ghi đè phương thức open để lấy thông tin method và url
+        XMLHttpRequest.prototype.open = function (method, url) {
+            this._networkTrackInfo = { method, url, startTime: Date.now() };
+            return builder.originalXmlOpen.apply(this, arguments);
+        };
+        // Ghi đè phương thức send để lấy body gửi đi và body trả về
+        XMLHttpRequest.prototype.send = function (body) {
+            const info = this._networkTrackInfo;
+            if (info) {
+                // Lắng nghe sự kiện load để bắt response
+                this.addEventListener('load', () => {
+                    builder.handleNetworkRequest(info.url, info.method, body, this.response);
+                });
+            }
+            return builder.originalXmlSend.apply(this, arguments);
+        };
+    }
+    restoreXhr() {
+        if (this.originalXmlOpen)
+            XMLHttpRequest.prototype.open = this.originalXmlOpen;
+        if (this.originalXmlSend)
+            XMLHttpRequest.prototype.send = this.originalXmlSend;
+    }
+    hookFetch() {
+        // Backup original fetch
+        this.originalFetch = window.fetch;
+        const builder = this;
+        window.fetch = async function (...args) {
+            var _a;
+            // Parse arguments
+            const [resource, config] = args;
+            const url = typeof resource === 'string' ? resource : resource.url;
+            const method = ((_a = config === null || config === void 0 ? void 0 : config.method) === null || _a === void 0 ? void 0 : _a.toUpperCase()) || 'GET';
+            const body = config === null || config === void 0 ? void 0 : config.body;
+            // Call original fetch
+            const response = await builder.originalFetch.apply(this, args);
+            // Clone response to read data without disturbing the stream
+            const clone = response.clone();
+            clone.text().then((text) => {
+                builder.handleNetworkRequest(url, method, body, text);
+            }).catch(() => { });
+            return response;
+        };
+    }
+    restoreFetch() {
+        if (this.originalFetch)
+            window.fetch = this.originalFetch;
+    }
+    handleNetworkRequest(url, method, reqBody, resBody) {
+        if (!this.trackerConfig || !this.trackerConfig.trackingRules)
+            return;
+        // safeParse helper
+        const safeParse = (data) => {
+            try {
+                if (typeof data === 'string')
+                    return JSON.parse(data);
+                return data;
+            }
+            catch (e) {
+                return data;
+            }
+        };
+        const reqData = safeParse(reqBody);
+        const resData = safeParse(resBody);
+        const networkContext = {
+            reqBody: reqData,
+            resBody: resData,
+            method: method
+        };
+        for (const rule of this.trackerConfig.trackingRules) {
+            if (!rule.payloadMappings)
+                continue;
+            // Lọc các mapping phù hợp với URL hiện tại
+            const applicableMappings = rule.payloadMappings.filter((mapping) => {
+                if (!mapping.requestUrlPattern)
+                    return false;
+                if (mapping.requestMethod && mapping.requestMethod.toUpperCase() !== method.toUpperCase()) {
+                    return false;
+                }
+                // Debug log
+                // console.log(`[PayloadBuilder] Checking ${url} against ${mapping.requestUrlPattern}`);
+                if (!PathMatcher.matchStaticSegments(url, mapping.requestUrlPattern)) {
+                    return false;
+                }
+                if (!PathMatcher.match(url, mapping.requestUrlPattern)) {
+                    return false;
+                }
+                return true;
+            });
+            if (applicableMappings.length > 0) {
+                // Ép kiểu source thành 'network_request' để đảm bảo logic trích xuất hoạt động
+                const mappingsForBuilder = applicableMappings.map((m) => ({
+                    ...m,
+                    source: 'network_request',
+                    value: m.value || m.requestBodyPath
+                }));
+                // Call build recursively to extract data
+                const extractedData = this.build(mappingsForBuilder, networkContext);
+                if (Object.keys(extractedData).length > 0) {
+                    // *logic gửi dữ liệu gì gì đó*
+                    // In NetworkPlugin implementation, this matches exactly.
+                    console.groupCollapsed(`%c[TRACKER] Network Match: (${method} ${url})`, "color: orange");
+                    console.log("Rule:", rule.name);
+                    console.log("Extracted:", extractedData);
+                    console.groupEnd();
+                }
+            }
         }
     }
 }

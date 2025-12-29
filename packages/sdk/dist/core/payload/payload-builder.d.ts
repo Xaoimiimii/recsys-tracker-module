@@ -4,6 +4,11 @@ export interface IPayloadMapping {
     value: string;
 }
 export declare class PayloadBuilder {
+    private originalXmlOpen;
+    private originalXmlSend;
+    private originalFetch;
+    private isNetworkTrackingActive;
+    private trackerConfig;
     private readonly COMMON_CONTAINERS;
     /**
      * Hàm build đa năng: Hỗ trợ cả 2 kiểu gọi (Legacy & Mapping)
@@ -34,5 +39,14 @@ export declare class PayloadBuilder {
      * [NEW] Helper to traverse generic object (for Network Plugin)
      */
     private traverseObject;
+    setConfig(config: any): void;
+    private checkAndEnableNetworkTracking;
+    enableNetworkTracking(config: any): void;
+    disableNetworkTracking(): void;
+    private hookXhr;
+    private restoreXhr;
+    private hookFetch;
+    private restoreFetch;
+    private handleNetworkRequest;
 }
 //# sourceMappingURL=payload-builder.d.ts.map

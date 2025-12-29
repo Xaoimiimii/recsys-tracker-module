@@ -50,6 +50,5 @@ export { PageViewPlugin } from './core/plugins/page-view-plugin';
 export { RatingPlugin } from './core/plugins/rating-plugin';
 export { ScrollPlugin } from './core/plugins/scroll-plugin';
 export { ReviewPlugin } from './core/plugins/review-plugin';
-export { NetworkPlugin } from './core/plugins/network-plugin';
 export type * from './types';
 //# sourceMappingURL=index.d.ts.map
