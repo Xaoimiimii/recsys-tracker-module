@@ -203,7 +203,7 @@ var RecSysTracker = (function (exports) {
             if (!this.domainKey) {
                 return this.config;
             }
-            const baseUrl = "http://localhost:3000";
+            const baseUrl = "https://recsys-tracker-module.onrender.com";
             try {
                 // Bước 1: Gọi 4 API song song để lấy domain, list rules cơ bản, return methods và event types
                 const [domainResponse, rulesListResponse, returnMethodsResponse, eventTypesResponse] = await Promise.all([
@@ -4522,16 +4522,26 @@ var RecSysTracker = (function (exports) {
         }
         static extractValueFromContainerState(container) {
             // 1. Tìm Input Radio/Checkbox đang checked (Chuẩn HTML)
-            const checked = container.querySelector('input[type="radio"]:checked, input[type="checkbox"]:checked');
+            const specificSelector = `
+            input[type="radio"][name*="rate"]:checked, 
+            input[type="radio"][name*="rating"]:checked, 
+            input[type="radio"][name*="score"]:checked,
+            input[type="radio"][name*="star"]:checked
+        `;
+            let checked = container.querySelector(specificSelector);
+            // Fallback: Nếu không tìm thấy cái nào có tên cụ thể, thì mới tìm radio bất kỳ (phòng hờ dev đặt tên lạ)
+            if (!checked) {
+                checked = container.querySelector('input[type="radio"]:checked, input[type="checkbox"]:checked');
+            }
             if (checked && checked.value) {
                 const val = parseFloat(checked.value);
-                // Một số web để value="on", ta bỏ qua
+                // Một số web để value="on" (checkbox) hoặc string lạ, ta bỏ qua
                 if (!isNaN(val))
                     return val;
             }
             // 2. Tìm Class Active/Selected (Chuẩn CSS Custom)
             // Tìm các class thường dùng để highlight sao
-            const activeSelectors = ['.active', '.selected', '.checked', '.filled', '.highlighted', '[aria-checked="true"]'];
+            const activeSelectors = ['.active', '.selected', '.checked', '.filled', '.highlighted', '[aria-checked="true"]', '.rating', 'rating-stars', '.star', '.star-rating'];
             const activeItems = container.querySelectorAll(activeSelectors.join(', '));
             if (activeItems.length > 0) {
                 // Logic: Nếu 4 sao sáng -> 4 điểm
@@ -4765,7 +4775,7 @@ var RecSysTracker = (function (exports) {
                     return;
                 }
                 // Khởi tạo EventDispatcher
-                const baseUrl = "http://localhost:3000";
+                const baseUrl = "https://recsys-tracker-module.onrender.com";
                 this.eventDispatcher = new EventDispatcher({
                     endpoint: `${baseUrl}${DEFAULT_TRACK_ENDPOINT_PATH}`,
                 });
@@ -4782,7 +4792,7 @@ var RecSysTracker = (function (exports) {
                     console.log(this.config);
                     // Khởi tạo Display Manager nếu có returnMethods
                     if (this.config.returnMethods && this.config.returnMethods.length > 0) {
-                        const apiBaseUrl = "http://localhost:3000";
+                        const apiBaseUrl = "https://recsys-tracker-module.onrender.com";
                         this.displayManager = new DisplayManager(this.config.domainKey, apiBaseUrl);
                         this.displayManager.initialize(this.config.returnMethods);
                         console.log('[RecSysTracker] Display methods initialized');
