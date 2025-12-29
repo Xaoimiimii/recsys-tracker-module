@@ -41,8 +41,6 @@ export class RecSysTracker {
                 if (this.eventDispatcher && this.config.domainUrl) {
                     this.eventDispatcher.setDomainUrl(this.config.domainUrl);
                 }
-                // Pass config to PayloadBuilder (will auto-enable network tracking if needed)
-                this.payloadBuilder.setConfig(this.config);
                 console.log(this.config);
                 // Khởi tạo Display Manager nếu có returnMethods
                 if (this.config.returnMethods && this.config.returnMethods.length > 0) {
@@ -148,8 +146,7 @@ export class RecSysTracker {
                 userValue: eventData.userValue,
                 itemField: eventData.itemField,
                 itemValue: eventData.itemValue,
-                ...(eventData.ratingValue !== undefined && { ratingValue: eventData.ratingValue }),
-                ...(eventData.reviewValue !== undefined && { reviewValue: eventData.reviewValue }),
+                ...(eventData.value !== undefined && { value: eventData.value }),
             };
             this.eventBuffer.add(trackedEvent);
         }, 'track');

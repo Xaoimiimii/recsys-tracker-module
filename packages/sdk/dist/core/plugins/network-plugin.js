@@ -1,5 +1,4 @@
 import { BasePlugin } from './base-plugin';
-import { PathMatcher } from '../utils/path-matcher';
 // Hàm tiện ích: Parse JSON an toàn (tránh văng lỗi nếu chuỗi không hợp lệ)
 function safeParse(data) {
     try {
@@ -124,48 +123,24 @@ export class NetworkPlugin extends BasePlugin {
                 return;
             const reqData = safeParse(reqBody);
             const resData = safeParse(resBody);
-            // Context để PayloadBuilder sử dụng trích xuất dữ liệu
             const networkContext = {
                 reqBody: reqData,
                 resBody: resData,
-                method: method
+                method: method,
+                url: url
             };
             for (const rule of config.trackingRules) {
-                if (!rule.payloadMappings)
+                if (!rule.payloadMappings || rule.payloadMappings.length === 0)
                     continue;
-                // Lọc các mapping phù hợp với URL hiện tại
-                const applicableMappings = rule.payloadMappings.filter(mapping => {
-                    if (!mapping.requestUrlPattern)
-                        return false;
-                    if (mapping.requestMethod && mapping.requestMethod.toUpperCase() !== method.toUpperCase()) {
-                        return false;
-                    }
-                    // Debug log
-                    console.log(`[NetworkPlugin] Checking ${url} against ${mapping.requestUrlPattern}`);
-                    if (!PathMatcher.matchStaticSegments(url, mapping.requestUrlPattern)) {
-                        console.log(`[NetworkPlugin] Static segments mismatch`);
-                        return false;
-                    }
-                    if (!PathMatcher.match(url, mapping.requestUrlPattern)) {
-                        // Double check match failure
-                        console.log(`[NetworkPlugin] PathMatcher failed for ${url} vs ${mapping.requestUrlPattern}`);
-                        return false;
-                    }
-                    return true;
-                });
-                if (applicableMappings.length > 0) {
-                    // Ép kiểu source thành 'network_request' để đảm bảo PayloadBuilder dùng logic trích xuất mạng
-                    const mappingsForBuilder = applicableMappings.map(m => ({
-                        ...m,
-                        source: 'network_request',
-                        value: m.value || m.requestBodyPath // Ensure value is set (PayloadBuilder relies on 'value')
-                    }));
-                    // Trích xuất dữ liệu thông qua PayloadBuilder
-                    const extractedData = this.tracker.payloadBuilder.build(mappingsForBuilder, networkContext);
-                    console.log(`[NetworkPlugin] Match found for ${rule.name}. Extracted:`, extractedData);
+                const extractedData = this.tracker.payloadBuilder.build(networkContext, rule);
+                if (Object.keys(extractedData).length > 0) {
+                    // Prepare event to send
                     // Nếu có dữ liệu trích xuất được, tiến hành gửi tracking event
                     if (Object.keys(extractedData).length > 0) {
-                        // *logic gửi dữ liệu gì gì đó*
+                        // Use centralized build and track
+                        this.buildAndTrack(networkContext, rule, rule.eventTypeId, {
+                            value: extractedData['Value'] ? String(extractedData['Value']) : undefined
+                        });
                         console.groupCollapsed(`%c[TRACKER] Network Match: (${method} ${url})`, "color: orange");
                         console.log("Rule:", rule.name);
                         console.log("Extracted:", extractedData);

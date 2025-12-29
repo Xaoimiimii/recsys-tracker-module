@@ -1,4 +1,4 @@
-import { IRecsysContext } from '../interfaces/recsys-context.interface';
+import { RecSysTracker } from '../../..';
 declare global {
     var identityManager: UserIdentityManager | null;
     var recsysIdentityManager: UserIdentityManager;
@@ -10,9 +10,9 @@ export declare class UserIdentityManager {
     isLoggedIn: boolean;
     private initialized;
     private authRequests;
-    private trackerContext;
+    private tracker;
     constructor();
-    setTrackerContext(context: IRecsysContext): void;
+    setTracker(tracker: RecSysTracker): void;
     initialize(): void;
     private getPersistedUserId;
     private findOrCreateUserId;
@@ -43,7 +43,6 @@ export declare class UserIdentityManager {
     private startMonitoring;
     getUserInfo(): Record<string, any>;
     logout(): void;
-    private setupIdentitySynchronization;
 }
 export declare function getUserIdentityManager(): UserIdentityManager;
 //# sourceMappingURL=user-identity-manager.d.ts.map

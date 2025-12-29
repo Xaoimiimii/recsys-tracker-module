@@ -65,9 +65,6 @@ export class RecSysTracker {
           this.eventDispatcher.setDomainUrl(this.config.domainUrl);
         }
 
-        // Pass config to PayloadBuilder (will auto-enable network tracking if needed)
-        this.payloadBuilder.setConfig(this.config);
-
         console.log(this.config);
 
         // Khởi tạo Display Manager nếu có returnMethods
@@ -164,7 +161,6 @@ export class RecSysTracker {
       }
 
 
-
       // Chờ tất cả plugin được đăng ký trước khi khởi động
       if (pluginPromises.length > 0) {
         await Promise.all(pluginPromises);
@@ -182,8 +178,7 @@ export class RecSysTracker {
     userValue: string;
     itemField: string;
     itemValue: string;
-    ratingValue?: number;
-    reviewValue?: string;
+    value?: string;
   }): void {
     this.errorBoundary.execute(() => {
       if (!this.isInitialized || !this.config) {
@@ -200,8 +195,7 @@ export class RecSysTracker {
         userValue: eventData.userValue,
         itemField: eventData.itemField,
         itemValue: eventData.itemValue,
-        ...(eventData.ratingValue !== undefined && { ratingValue: eventData.ratingValue }),
-        ...(eventData.reviewValue !== undefined && { reviewValue: eventData.reviewValue }),
+        ...(eventData.value !== undefined && { value: eventData.value }),
       };
 
       this.eventBuffer.add(trackedEvent);

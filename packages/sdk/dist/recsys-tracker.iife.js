@@ -501,8 +501,7 @@ var RecSysTracker = (function (exports) {
                 userValue: event.userValue,
                 itemField: event.itemField,
                 itemValue: event.itemValue,
-                ratingValue: event.ratingValue,
-                reviewValue: event.reviewValue,
+                value: event.value,
                 timestamp: event.timestamp,
                 queueSize: this.queue.length + 1
             });
@@ -622,8 +621,7 @@ var RecSysTracker = (function (exports) {
                 UserValue: event.userValue,
                 ItemField: event.itemField,
                 ItemValue: event.itemValue,
-                RatingValue: event.ratingValue,
-                ReviewValue: event.reviewValue
+                Value: event.value
             });
             // Thử từng phương thức gửi theo thứ tự ưu tiên
             const strategies = ['beacon', 'fetch'];
@@ -641,8 +639,7 @@ var RecSysTracker = (function (exports) {
                             userValue: event.userValue,
                             itemField: event.itemField,
                             itemValue: event.itemValue,
-                            ratingValue: event.ratingValue,
-                            reviewValue: event.reviewValue,
+                            value: event.value,
                             timestamp: event.timestamp,
                             endpoint: this.endpoint
                         });
@@ -1619,7 +1616,8 @@ var RecSysTracker = (function (exports) {
         constructor() {
             this.tracker = null;
             this.active = false;
-            this.errorBoundary = new ErrorBoundary(true); // Enable debug mode
+            this.payloadBuilder = null;
+            this.errorBoundary = new ErrorBoundary(true);
         }
         init(tracker) {
             this.errorBoundary.execute(() => {
@@ -1628,6 +1626,7 @@ var RecSysTracker = (function (exports) {
                     return;
                 }
                 this.tracker = tracker;
+                this.payloadBuilder = tracker.payloadBuilder;
                 console.log(`[${this.name}] Plugin initialized`);
             }, `${this.name}.init`);
         }
@@ -1661,6 +1660,70 @@ var RecSysTracker = (function (exports) {
         // Wrap async event handlers with error boundary
         wrapAsyncHandler(handler, handlerName = 'asyncHandler') {
             return this.errorBoundary.wrapAsync(handler, `${this.name}.${handlerName}`);
+        }
+        // Xử lý thông tin user, item, rating/review_value từ extracted data
+        resolvePayloadIdentity(extractedData) {
+            // Common user field patterns (prioritized)
+            const userFieldPatterns = ['UserId', 'Username'];
+            // Common item field patterns (prioritized)
+            const itemFieldPatterns = ['ItemId', 'ItemTitle'];
+            // Common rating/review_value patterns (prioritized)
+            const valuePatterns = ['Value'];
+            let userField = 'UserId';
+            let userValue = '';
+            let itemField = 'ItemId';
+            let itemValue = '';
+            let value = '';
+            // Find first available user field
+            for (const key of Object.keys(extractedData)) {
+                if (!userValue && userFieldPatterns.some(pattern => key.toLowerCase().includes(pattern.toLowerCase()))) {
+                    userField = key;
+                    userValue = extractedData[key];
+                }
+                if (!itemValue && itemFieldPatterns.some(pattern => key.toLowerCase().includes(pattern.toLowerCase()))) {
+                    itemField = key;
+                    itemValue = extractedData[key];
+                }
+                if (!value && valuePatterns.some(pattern => key.toLowerCase().includes(pattern.toLowerCase()))) {
+                    value = key;
+                    value = extractedData[key];
+                }
+                if (userValue && itemValue && value)
+                    break;
+            }
+            return { userField, userValue, itemField, itemValue, value };
+        }
+        /**
+         * Phương thức xây dựng và theo dõi payload
+         * Extraction → identity resolution → payload construction → tracking
+         *
+         * @param context - Context for extraction (HTMLElement, NetworkContext, etc.)
+         * @param rule - Tracking rule with payload mappings
+         * @param eventId - Event type ID
+         * @param additionalFields - Optional additional fields (ratingValue, reviewValue, metadata, etc.)
+         */
+        buildAndTrack(context, rule, eventId, additionalFields) {
+            if (!this.tracker) {
+                console.warn(`[${this.name}] Cannot track: tracker not initialized`);
+                return;
+            }
+            // 1. Extract data using PayloadBuilder
+            const extractedData = this.tracker.payloadBuilder.build(context, rule);
+            // 2. Resolve identity fields dynamically
+            const { userField, userValue, itemField, itemValue } = this.resolvePayloadIdentity(extractedData);
+            // 3. Construct payload
+            const payload = {
+                eventTypeId: eventId,
+                trackingRuleId: rule.id,
+                userField,
+                userValue,
+                itemField,
+                itemValue,
+                value: additionalFields === null || additionalFields === void 0 ? void 0 : additionalFields.value,
+                ...additionalFields
+            };
+            // 4. Track the event
+            this.tracker.track(payload);
         }
     }
 
@@ -1773,96 +1836,6 @@ var RecSysTracker = (function (exports) {
                 });
                 this.plugins.clear();
             }, 'PluginManager.destroy');
-        }
-    }
-
-    // import { IRecsysContext, TrackingRule, IRecsysPayload, IAIItemDetectionResult, IPayloadExtraData, IPayloadBuilder } from '../interfaces/recsys-context.interface';
-    // import { getUserIdentityManager } from '../utils/user-identity-manager';
-    // import { getAIItemDetector } from '../utils/ai-item-detector';
-    // import { RecSysTracker } from '../../..';
-    // import { PayloadExtractor } from '../../../types';
-    class TrackerContextAdapter {
-        constructor(tracker) {
-            this.config = {
-                getRules: (eventTypeId) => {
-                    const config = this.tracker.getConfig();
-                    if (!(config === null || config === void 0 ? void 0 : config.trackingRules))
-                        return [];
-                    return config.trackingRules
-                        .filter(rule => rule.eventTypeId === eventTypeId);
-                },
-            };
-            /**
-             * [FIX QUAN TRỌNG]
-             * Thay vì hard-code logic build payload ở đây, ta trỏ nó về
-             * instance payloadBuilder của tracker (Class PayloadBuilder xịn đã viết).
-             * Dùng getter và ép kiểu để TypeScript hiểu nó hỗ trợ Overload.
-             */
-            this.eventBuffer = {
-                enqueue: (payload) => {
-                    // 1. Map Event Type từ Plugin sang ENUM của Database
-                    let eventType = 'page_view';
-                    switch (payload.event) {
-                        case 'item_click':
-                            eventType = 'click';
-                            break;
-                        case 'rate_submit':
-                            eventType = 'rating';
-                            break; // FormPlugin cũ
-                        case 'review':
-                            eventType = 'review';
-                            break; // ReviewPlugin mới
-                        case 'scroll_depth':
-                            eventType = 'scroll';
-                            break;
-                        case 'page_view':
-                            eventType = 'page_view';
-                            break;
-                        default: eventType = 'page_view';
-                    }
-                    // 2. Chuẩn bị object phẳng (Flat Data)
-                    const trackData = {
-                        eventType,
-                        // Map User/Item Value
-                        userValue: String(payload.userId || ''),
-                        userField: 'user_id', // Mặc định hoặc lấy từ metadata nếu cần
-                        itemValue: String(payload.itemId || ''),
-                        itemField: 'item_id', // Mặc định
-                    };
-                    // 3. Map Rating & Review Value từ Metadata
-                    if (payload.metadata) {
-                        // Trường hợp 1: Review Plugin mới (Review nằm trong content)
-                        if (eventType === 'review' && payload.metadata.content) {
-                            trackData.reviewValue = String(payload.metadata.content);
-                        }
-                        // Trường hợp 2: Form Plugin cũ (Rate + Review chung)
-                        // Map vào RatingValue
-                        if (payload.metadata.rateValue !== undefined) {
-                            const rateVal = Number(payload.metadata.rateValue);
-                            if (!isNaN(rateVal)) {
-                                trackData.ratingValue = rateVal;
-                            }
-                        }
-                        // Map vào ReviewValue (nếu form đó có cả review text)
-                        if (payload.metadata.reviewText) {
-                            trackData.reviewValue = String(payload.metadata.reviewText);
-                        }
-                    }
-                    // 4. Chỉ gửi nếu có ItemID hợp lệ (tùy logic bên bạn)
-                    if (trackData.itemValue && !trackData.itemValue.startsWith('N/A')) {
-                        this.tracker.track(trackData);
-                    }
-                },
-            };
-            this.tracker = tracker;
-        }
-        get payloadBuilder() {
-            // Dùng (this.tracker as any) để tránh lỗi nếu RecSysTracker chưa kịp cập nhật type
-            return this.tracker.payloadBuilder;
-        }
-        updateIdentity(newUserId) {
-            console.log(`[TrackerContext] Identity updated to: ${newUserId}`);
-            this.tracker.setUserId(newUserId);
         }
     }
 
@@ -2582,7 +2555,6 @@ var RecSysTracker = (function (exports) {
         constructor() {
             super();
             this.name = 'ClickPlugin';
-            this.context = null;
             this.detector = null;
             this.THROTTLE_DELAY = 300;
             // Wrap handler với error boundary ngay trong constructor
@@ -2591,35 +2563,39 @@ var RecSysTracker = (function (exports) {
         init(tracker) {
             this.errorBoundary.execute(() => {
                 super.init(tracker);
-                this.context = new TrackerContextAdapter(tracker);
                 this.detector = getAIItemDetector();
-                console.log(`[ClickPlugin] initialized for Rule + AI-based tracking.`);
+                console.log(`[ClickPlugin] initialized for Rule.`);
             }, 'ClickPlugin.init');
         }
         start() {
             this.errorBoundary.execute(() => {
                 if (!this.ensureInitialized())
                     return;
-                if (this.context && this.detector) {
+                if (this.tracker && this.detector) {
                     document.addEventListener("click", this.throttledHandler, false);
-                    console.log("[ClickPlugin] started Rule + AI-based listening (Throttled).");
+                    console.log("[ClickPlugin] started Rule-based listening (Throttled).");
                     this.active = true;
                 }
             }, 'ClickPlugin.start');
         }
         stop() {
             this.errorBoundary.execute(() => {
-                document.removeEventListener("click", this.throttledHandler, false);
-                super.stop();
-            }, 'ClickPlugin.stop');
+                if (this.tracker) {
+                    document.removeEventListener('click', this.throttledHandler);
+                }
+                super.destroy();
+            }, 'ClickPlugin.destroy');
         }
         handleDocumentClick(event) {
-            if (!this.context || !this.detector || !this.tracker)
+            if (!this.tracker || !this.detector)
                 return;
             const eventId = this.tracker.getEventTypeId('Click');
             if (!eventId)
                 return;
-            const clickRules = this.context.config.getRules(eventId);
+            const config = this.tracker.getConfig();
+            if (!config || !config.trackingRules)
+                return;
+            const clickRules = config.trackingRules.filter(r => r.eventTypeId === eventId);
             if (clickRules.length === 0) {
                 return;
             }
@@ -2631,9 +2607,9 @@ var RecSysTracker = (function (exports) {
                 const matchedElement = event.target.closest(selector);
                 if (matchedElement) {
                     console.log(`[ClickPlugin] Matched rule: ${rule.name}`);
-                    const payload = this.context.payloadBuilder.build(matchedElement, rule);
-                    this.context.eventBuffer.enqueue(payload);
-                    // Stop after first match (hoặc có thể tiếp tục nếu muốn track nhiều rules)
+                    // Use centralized build and track
+                    this.buildAndTrack(matchedElement, rule, eventId);
+                    // Stop after first match
                     break;
                 }
             }
@@ -2649,22 +2625,18 @@ var RecSysTracker = (function (exports) {
         constructor() {
             super(...arguments);
             this.name = 'PageViewPlugin';
-            this.context = null;
             this.detector = null;
         }
         init(tracker) {
             this.errorBoundary.execute(() => {
                 super.init(tracker);
-                this.context = new TrackerContextAdapter(tracker);
                 this.detector = getAIItemDetector();
-                console.log(`[PageViewPlugin] initialized for Rule + AI tracking.`);
+                console.log(`[PageViewPlugin] initialized.`);
             }, 'PageViewPlugin.init');
         }
         start() {
             this.errorBoundary.execute(() => {
                 if (!this.ensureInitialized())
-                    return;
-                if (!this.context || !this.detector)
                     return;
                 const wrappedHandler = this.wrapHandler(this.handlePageChange.bind(this), 'handlePageChange');
                 window.addEventListener("popstate", wrappedHandler);
@@ -2692,8 +2664,8 @@ var RecSysTracker = (function (exports) {
             }, 0);
         }
         trackCurrentPage(currentUrl) {
-            var _a;
-            if (!this.context || !this.detector || !this.tracker)
+            var _a, _b;
+            if (!this.tracker || !this.detector)
                 return;
             const urlObject = new URL(currentUrl);
             const pathname = urlObject.pathname;
@@ -2702,51 +2674,45 @@ var RecSysTracker = (function (exports) {
                 console.log('[PageViewPlugin] Page View event type not found in config.');
                 return;
             }
-            const pageViewRules = this.context.config.getRules(eventId);
-            if (pageViewRules.length === 0) {
+            const config = this.tracker.getConfig();
+            const pageViewRules = (_a = config === null || config === void 0 ? void 0 : config.trackingRules) === null || _a === void 0 ? void 0 : _a.filter(r => r.eventTypeId === eventId);
+            if (!pageViewRules || pageViewRules.length === 0) {
                 console.log('[PageViewPlugin] No page view rules configured.');
                 return;
             }
             // Loop qua tất cả rules và tìm rule phù hợp
             for (const rule of pageViewRules) {
                 let matchFound = false;
-                let matchData = null;
-                const selector = ((_a = rule.trackingTarget) === null || _a === void 0 ? void 0 : _a.value) || '';
-                // Determine payload extractor from rule data
+                const selector = ((_b = rule.trackingTarget) === null || _b === void 0 ? void 0 : _b.value) || '';
+                // Determine payload extractor logic from rule
                 const isRegex = selector.startsWith('^');
-                const extractorSource = isRegex ? 'regex_group' : 'ai_detect';
                 // Regex-based matching (URL pattern)
-                if (extractorSource === 'regex_group' && selector && selector.startsWith('^')) {
+                if (isRegex) {
                     const pattern = new RegExp(selector);
                     const match = pathname.match(pattern);
                     if (match) {
                         matchFound = true;
-                        matchData = { regexMatch: match };
                         console.log(`[PageViewPlugin] ✅ Matched regex rule: ${rule.name}`);
                     }
                 }
-                // DOM selector matching
+                // DOM selector matching (Checking presence of element on page)
                 else if (selector && selector !== 'body') {
                     if (document.querySelector(selector)) {
                         matchFound = true;
                         console.log(`[PageViewPlugin] ✅ Matched DOM selector rule: ${rule.name}`);
                     }
                 }
-                // Default body matching with AI
-                else if (selector === 'body' && extractorSource === 'ai_detect') {
+                // Default body matching
+                else if (selector === 'body') {
                     matchFound = true;
-                    console.log(`[PageViewPlugin] ✅ Matched default AI rule: ${rule.name}`);
+                    console.log(`[PageViewPlugin] ✅ Matched default rule: ${rule.name}`);
                 }
                 if (matchFound) {
-                    let structuredItem = null;
-                    // AI detection if needed
-                    if (extractorSource === 'ai_detect') {
-                        structuredItem = this.detector.detectItemFromStructuredData(document.body) ||
-                            this.detector.extractOpenGraphData();
-                    }
-                    const payload = this.context.payloadBuilder.build(structuredItem, rule, matchData || undefined);
-                    this.context.eventBuffer.enqueue(payload);
-                    // Stop after first match (hoặc tiếp tục nếu muốn track nhiều rules)
+                    // AI/Structured Data detection context
+                    const structuredItem = this.detector.detectItemFromStructuredData(document.body) ||
+                        this.detector.extractOpenGraphData();
+                    // Use centralized build and track
+                    this.buildAndTrack(structuredItem, rule, eventId);
                     return;
                 }
             }
@@ -2768,7 +2734,7 @@ var RecSysTracker = (function (exports) {
             this.isLoggedIn = false;
             this.initialized = false;
             this.authRequests = new Set();
-            this.trackerContext = null;
+            this.tracker = null;
             if (identityManagerInstance) {
                 return identityManagerInstance;
             }
@@ -2778,9 +2744,8 @@ var RecSysTracker = (function (exports) {
             window.identityManager = this;
             window.recsysIdentityManager = this;
         }
-        setTrackerContext(context) {
-            this.trackerContext = context;
-            this.setupIdentitySynchronization();
+        setTracker(tracker) {
+            this.tracker = tracker;
         }
         initialize() {
             if (this.initialized)
@@ -2950,7 +2915,6 @@ var RecSysTracker = (function (exports) {
             catch (e) { /* Ignore */ }
         }
         // --- LOGIN HANDLERS ---
-        // Đã đổi tên 'source' thành '_source'
         handleDetectedUserId(userId, _source) {
             if (this.currentUserId && !this.currentUserId.startsWith('anon_')) {
                 console.log(`[RECSYS] User already authenticated as ${this.currentUserId}. Ignoring ${userId} from ${_source}`);
@@ -2973,9 +2937,12 @@ var RecSysTracker = (function (exports) {
                 this.identifiers.detectionMethod = _source;
                 this.identifiers.detectionTime = new Date().toISOString();
                 this.saveIdentifiers();
+                // Sync to Tracker if available
+                if (this.tracker) {
+                    this.tracker.setUserId(userId);
+                }
             }
         }
-        // Đã đổi tên 'source' thành '_source'
         onUserLoginDetected(anonymousId, userId, _source) {
             this.sendLoginEvent(anonymousId, userId, _source);
             window.dispatchEvent(new CustomEvent('recsys:userLoggedIn', {
@@ -3230,19 +3197,6 @@ var RecSysTracker = (function (exports) {
                 }
             }));
         }
-        setupIdentitySynchronization() {
-            if (!this.trackerContext)
-                return;
-            window.addEventListener('recsys:userLoggedIn', ((event) => {
-                const customEvent = event;
-                const newUserId = customEvent.detail.userId;
-                const source = customEvent.detail.detectionMethod;
-                if (newUserId) {
-                    this.trackerContext.updateIdentity(newUserId);
-                    console.log(`[Context Sync] User ID synced from IdentityManager (${source}).`);
-                }
-            }));
-        }
     }
     function getUserIdentityManager() {
         if (!identityManagerInstance) {
@@ -3251,29 +3205,13 @@ var RecSysTracker = (function (exports) {
         return identityManagerInstance;
     }
 
-    // Target Element chỉ cho phép CSS Selector
     const TARGET_PATTERN_ID = { CSS_SELECTOR: 1 };
-    // Condition Patterns
-    const CONDITION_PATTERN_ID = {
-        URL_PARAM: 1,
-        CSS_SELECTOR: 2,
-        DOM_ATTRIBUTE: 3,
-        DATA_ATTRIBUTE: 4
-    };
-    const OPERATOR_ID = {
-        CONTAINS: 1,
-        NOT_CONTAINS: 2,
-        STARTS_WITH: 3,
-        ENDS_WITH: 4,
-        EQUALS: 5,
-        EXISTS: 7,
-        NOT_EXISTS: 8
-    };
+    const CONDITION_PATTERN_ID = { URL_PARAM: 1, CSS_SELECTOR: 2, DOM_ATTRIBUTE: 3, DATA_ATTRIBUTE: 4 };
+    const OPERATOR_ID = { CONTAINS: 1, NOT_CONTAINS: 2, STARTS_WITH: 3, ENDS_WITH: 4, EQUALS: 5, EXISTS: 7, NOT_EXISTS: 8 };
     class ReviewPlugin extends BasePlugin {
         constructor() {
             super(...arguments);
             this.name = 'ReviewPlugin';
-            this.context = null;
             this.detector = null;
             this.identityManager = null;
             this.handleSubmitBound = this.handleSubmit.bind(this);
@@ -3281,12 +3219,9 @@ var RecSysTracker = (function (exports) {
         init(tracker) {
             this.errorBoundary.execute(() => {
                 super.init(tracker);
-                this.context = new TrackerContextAdapter(tracker);
                 this.detector = getAIItemDetector();
                 this.identityManager = getUserIdentityManager();
                 this.identityManager.initialize();
-                if (this.context)
-                    this.identityManager.setTrackerContext(this.context);
                 console.log(`[ReviewPlugin] initialized.`);
             }, 'ReviewPlugin.init');
         }
@@ -3300,63 +3235,60 @@ var RecSysTracker = (function (exports) {
         }
         stop() {
             this.errorBoundary.execute(() => {
-                document.removeEventListener('submit', this.handleSubmitBound, { capture: true });
+                if (this.tracker) {
+                    document.removeEventListener('submit', this.handleSubmitBound, { capture: true });
+                }
                 super.stop();
-            }, 'ReviewPlugin.stop');
+            }, 'ReviewPlugin.stop'); // Using stop/destroy consistency?
         }
         handleSubmit(event) {
+            var _a;
             console.log("🔥 [ReviewPlugin] Detected SUBMIT event!");
-            if (!this.context || !this.tracker)
+            if (!this.tracker)
                 return;
             const form = event.target;
             console.log(`📝 [ReviewPlugin] Checking form: #${form.id} (Classes: ${form.className})`);
-            // Giả sử Trigger ID cho Review là 5
-            const reviewRules = this.context.config.getRules(5);
-            console.log(`🔎 [ReviewPlugin] Found ${reviewRules.length} rules for TriggerID=5`);
-            if (reviewRules.length === 0) {
-                console.warn("⚠️ [ReviewPlugin] No rules found! Check ConfigLoader or TriggerID.");
+            // Trigger ID for Review is typically 5 (or configured)
+            const eventId = this.tracker.getEventTypeId('Review') || 5;
+            const config = this.tracker.getConfig();
+            const reviewRules = ((_a = config === null || config === void 0 ? void 0 : config.trackingRules) === null || _a === void 0 ? void 0 : _a.filter(r => r.eventTypeId === eventId)) || [];
+            console.log(`🔎 [ReviewPlugin] Found ${reviewRules.length} rules for TriggerID=${eventId}`);
+            if (reviewRules.length === 0)
                 return;
-            }
             for (const rule of reviewRules) {
-                // 1. Check Target (Bắt buộc CSS Selector)
+                // 1. Check Target
                 if (!this.checkTargetMatch(form, rule))
                     continue;
-                // 2. Check Condition (Optional)
+                // 2. Check Condition
                 if (!this.checkConditions(form, rule))
                     continue;
                 console.log(`✅ [ReviewPlugin] Match Rule: "${rule.name}"`);
-                // 3. XÂY DỰNG PAYLOAD (Core Logic)
-                const payload = this.constructPayload(form, rule);
-                // 4. Gửi Event
+                // 3. Construct Payload
+                const payload = this.constructPayload(form, rule, eventId);
+                // 4. Send Event
                 this.tracker.track(payload);
                 console.log(payload);
                 return;
             }
             console.log("❌ [ReviewPlugin] No rules matched the current form.");
         }
-        /**
-         * Logic xây dựng Payload theo thứ tự ưu tiên:
-         * Config (PayloadBuilder) -> Fallback (AI/Radar/Identity)
-         */
-        constructPayload(form, rule) {
-            const mappedData = this.context.payloadBuilder.build(rule.payloadMappings || [], form);
+        constructPayload(form, rule, eventId) {
+            // Extract via PayloadBuilder
+            const mappedData = this.tracker.payloadBuilder.build(form, rule);
             console.log("🧩 [ReviewPlugin] Mapped Data from Config:", mappedData);
-            // Khởi tạo payload cơ bản
+            // Basic Payload
             const payload = {
-                eventTypeId: 5,
+                eventTypeId: eventId,
                 trackingRuleId: Number(rule.id),
                 userField: 'UserId',
                 userValue: '',
                 itemField: 'ItemId',
                 itemValue: '',
-                ratingValue: undefined,
-                reviewValue: ''
+                value: ''
             };
             const potentialUserKeys = ['userId', 'userName', 'userUID'];
             const potentialItemKeys = ['itemId', 'itemName', 'itemUID'];
-            // B. Mapping dữ liệu từ Config vào Payload
-            // if (mappedData.userId) payload.userId = mappedData.userId;
-            // if (mappedData.itemId) payload.itemId = mappedData.itemId;
+            // Map Extracted Data
             for (const key of potentialUserKeys) {
                 if (mappedData[key]) {
                     payload.userField = key;
@@ -3371,12 +3303,10 @@ var RecSysTracker = (function (exports) {
                     break;
                 }
             }
-            // [FIX] Xử lý review_text
             const content = mappedData.review_text || mappedData.content || mappedData.value || mappedData.review;
             if (content) {
-                payload.reviewValue = content;
+                payload.value = content;
             }
-            // C. [PRIORITY 2] Fallback Logic (Chỉ chạy khi thiếu dữ liệu)
             // --- FALLBACK ITEM ID ---
             if (!payload.itemValue) {
                 console.log("⚠️ [ReviewPlugin] Missing ItemId from config. Trying Auto-detect...");
@@ -3404,12 +3334,11 @@ var RecSysTracker = (function (exports) {
                 }
             }
             // --- FALLBACK REVIEW CONTENT ---
-            // Nếu user quên map field review_text, thử tự tìm
-            if (!payload.reviewValue) {
+            if (!payload.value) {
                 const autoContent = this.autoDetectReviewContent(form);
                 if (autoContent) {
                     console.log("⚠️ [ReviewPlugin] Auto-detected review content from form fields.");
-                    payload.reviewValue = autoContent;
+                    payload.value = autoContent;
                 }
             }
             return payload;
@@ -3473,11 +3402,9 @@ var RecSysTracker = (function (exports) {
         autoDetectReviewContent(form) {
             const formData = new FormData(form);
             let content = '';
-            // Cast any để tránh lỗi TS iterator nếu không có type lib mới
             for (const [key, val] of formData) {
                 const k = key.toLowerCase();
                 const vStr = String(val);
-                // Tìm các input có tên chứa 'review', 'comment', 'body' và lấy chuỗi dài nhất
                 if (k.includes('review') || k.includes('comment') || k.includes('body') || k.includes('content')) {
                     if (vStr.length > content.length)
                         content = vStr;
@@ -3486,40 +3413,30 @@ var RecSysTracker = (function (exports) {
             return content;
         }
         scanSurroundingContext(element) {
-            // 1. ANCESTOR SCAN (Ưu tiên cao nhất: Tìm attribute chuẩn)
+            const getAttrs = (el) => {
+                if (!el)
+                    return null;
+                const id = el.getAttribute('data-item-id') || el.getAttribute('data-product-id') || el.getAttribute('data-id');
+                if (id)
+                    return { id, name: el.getAttribute('data-item-name') || undefined, type: el.getAttribute('data-item-type') || undefined };
+                return null;
+            };
             const ancestor = element.closest('[data-item-id], [data-product-id]');
             if (ancestor) {
-                return {
-                    id: ancestor.getAttribute('data-item-id') || ancestor.getAttribute('data-product-id'),
-                    name: ancestor.getAttribute('data-item-name') || ancestor.getAttribute('data-name'),
-                    source: 'ancestor_attribute'
-                };
+                const data = getAttrs(ancestor);
+                if (data)
+                    return { ...data, source: 'ancestor_attribute' };
             }
-            // 2. [MỚI] TEXT HEURISTIC SCAN (Tìm trong Label/Title của Form)
-            // Tìm các thẻ chứa text tiềm năng bên trong form
             const textContainers = Array.from(element.querySelectorAll('label, legend, h3, h4, .product-title'));
             for (const container of textContainers) {
                 const text = container.textContent || '';
-                // Regex 1: Tìm pattern nằm trong ngoặc đơn, ví dụ: (P-JSON-999)
-                // Giải thích Regex: \( trùng ngoặc mở, (P-[A-Z0-9-]+) bắt nhóm ID bắt đầu bằng P-, \) trùng ngoặc đóng
                 const idMatch = text.match(/\((P-[A-Z0-9-]+)\)/i);
-                if (idMatch && idMatch[1]) {
-                    console.log(`🧠 [ReviewPlugin] Found ID inside text "${text}"`);
-                    return {
-                        id: idMatch[1],
-                        source: 'text_heuristic_brackets'
-                    };
-                }
-                // Regex 2: Tìm pattern sau dấu hai chấm, ví dụ: "Mã SP: SP123"
+                if (idMatch && idMatch[1])
+                    return { id: idMatch[1], source: 'text_heuristic_brackets' };
                 const codeMatch = text.match(/(?:code|sku|id|mã)[:\s]+([A-Z0-9-]+)/i);
-                if (codeMatch && codeMatch[1]) {
-                    return {
-                        id: codeMatch[1],
-                        source: 'text_heuristic_label'
-                    };
-                }
+                if (codeMatch && codeMatch[1])
+                    return { id: codeMatch[1], source: 'text_heuristic_label' };
             }
-            // 3. URL SCAN (Cuối cùng mới tìm trên URL)
             const params = new URLSearchParams(window.location.search);
             const urlId = params.get('id') || params.get('productId') || params.get('product_id');
             if (urlId)
@@ -3552,48 +3469,30 @@ var RecSysTracker = (function (exports) {
         ReviewPlugin: ReviewPlugin
     });
 
-    // [1] Copy ENUMS từ FormPlugin sang để dùng chung chuẩn
-    // const TARGET_PATTERN = {
-    //     CSS_SELECTOR: 1,    
-    //     DOM_ATTRIBUTE: 2,
-    //     DATA_ATTRIBUTE: 3
-    // };
+    // CONDITION PATTERNS
     const CONDITION_PATTERN = {
-        URL_PARAM: 1,
-        CSS_SELECTOR: 2,
-        DOM_ATTRIBUTE: 3,
-        DATA_ATTRIBUTE: 4,
+        URL_PARAM: 1, CSS_SELECTOR: 2, DOM_ATTRIBUTE: 3, DATA_ATTRIBUTE: 4,
     };
+    // OPERATORS
     const TARGET_OPERATOR = {
-        CONTAINS: 1,
-        NOT_CONTAINS: 2,
-        STARTS_WITH: 3,
-        ENDS_WITH: 4,
-        EQUALS: 5,
-        NOT_EQUALS: 6,
-        EXISTS: 8,
-        NOT_EXISTS: 9
+        CONTAINS: 1, NOT_CONTAINS: 2, STARTS_WITH: 3, ENDS_WITH: 4, EQUALS: 5, NOT_EQUALS: 6, EXISTS: 8, NOT_EXISTS: 9
     };
     class ScrollPlugin extends BasePlugin {
         constructor() {
             super(...arguments);
             this.name = 'ScrollPlugin';
-            this.context = null;
             this.identityManager = null;
             this.detector = null;
-            // --- STATE QUẢN LÝ SCROLL & TIME ---
+            // --- STATE MANAGEMENT ---
             this.milestones = [25, 50, 75, 100];
             this.sentMilestones = new Set();
             this.maxScrollDepth = 0;
-            // --- STATE QUẢN LÝ THỜI GIAN ---
             this.startTime = Date.now();
             this.totalActiveTime = 0;
             this.isTabVisible = true;
-            // State Context
             this.currentItemContext = null;
             this.activeRule = null;
-            this.targetScrollElement = null; // Element đang được track scroll
-            // --- THROTTLE CONFIG ---
+            this.targetScrollElement = null;
             this.lastScrollProcessTime = 0;
             this.THROTTLE_MS = 200;
             this.handleScrollBound = this.handleScroll.bind(this);
@@ -3603,13 +3502,9 @@ var RecSysTracker = (function (exports) {
         init(tracker) {
             this.errorBoundary.execute(() => {
                 super.init(tracker);
-                this.context = new TrackerContextAdapter(tracker);
                 this.identityManager = getUserIdentityManager();
                 this.identityManager.initialize();
                 this.detector = getAIItemDetector();
-                if (this.context) {
-                    this.identityManager.setTrackerContext(this.context);
-                }
                 console.log(`[ScrollPlugin] initialized.`);
             }, 'ScrollPlugin.init');
         }
@@ -3618,12 +3513,10 @@ var RecSysTracker = (function (exports) {
                 if (!this.ensureInitialized())
                     return;
                 this.resetState();
-                // [NÂNG CẤP] Logic chọn Rule thông minh hơn
                 const isResolved = this.resolveContextFromRules();
                 if (isResolved) {
-                    // Chỉ lắng nghe nếu tìm thấy Rule phù hợp
                     const target = this.targetScrollElement || window;
-                    target.addEventListener('scroll', this.handleScrollBound, { passive: true }); // passive để mượt
+                    target.addEventListener('scroll', this.handleScrollBound, { passive: true });
                     document.addEventListener('visibilitychange', this.handleVisibilityChangeBound);
                     window.addEventListener('beforeunload', this.handleUnloadBound);
                     console.log(`[ScrollPlugin] Started. Target:`, this.targetScrollElement ? 'Specific Element' : 'Window');
@@ -3653,33 +3546,24 @@ var RecSysTracker = (function (exports) {
             this.activeRule = null;
             this.targetScrollElement = null;
         }
-        /**
-         * [NÂNG CẤP] Duyệt qua danh sách Rule để tìm Rule phù hợp nhất
-         * Check Target Match & Check Conditions
-         */
         resolveContextFromRules() {
-            if (!this.context || !this.detector)
+            var _a;
+            if (!this.tracker || !this.detector)
                 return false;
-            // 1. Lấy tất cả Rule SCROLL (ID = 4)
-            const scrollRules = this.context.config.getRules(4);
+            const eventId = this.tracker.getEventTypeId('Scroll') || 4;
+            const config = this.tracker.getConfig();
+            const scrollRules = ((_a = config === null || config === void 0 ? void 0 : config.trackingRules) === null || _a === void 0 ? void 0 : _a.filter(r => r.eventTypeId === eventId)) || [];
             if (scrollRules.length === 0)
                 return false;
             console.log(`📜 [ScrollPlugin] Checking ${scrollRules.length} rules...`);
-            // Tìm Rule đầu tiên thỏa mãn cả Target và Condition
             for (const rule of scrollRules) {
-                // A. Check xem Element đích có tồn tại không
-                // Với Scroll, Target Element chính là container cần track cuộn (hoặc body)
                 const element = this.findTargetElement(rule);
                 if (element) {
-                    // B. Check Conditions (URL, Param, State...)
-                    // Lưu ý: checkConditions cần truyền 1 HTMLElement để check attribute/class
-                    // Nếu track window, ta dùng document.body làm đại diện để check
                     const representativeEl = (element instanceof Window) ? document.body : element;
                     if (this.checkConditions(representativeEl, rule)) {
                         this.activeRule = rule;
                         this.targetScrollElement = (element instanceof Window) ? null : element;
                         console.log(`✅ [ScrollPlugin] Rule Matched: "${rule.name}"`);
-                        // C. Sau khi chốt Rule, bắt đầu Detect Item ID dựa trên Element đó
                         this.detectContextForItem(representativeEl);
                         return true;
                     }
@@ -3687,32 +3571,25 @@ var RecSysTracker = (function (exports) {
             }
             return false;
         }
-        // Helper: Tìm Element dựa trên Rule Config
         findTargetElement(rule) {
             const target = rule.targetElement || rule.TargetElement;
-            // Nếu không config target, hoặc target là "document"/"window" -> Track Window
             if (!target || !target.targetElementValue || target.targetElementValue === 'document' || target.targetElementValue === 'window') {
                 return window;
             }
-            // Nếu có selector cụ thể (VD: .scrollable-sidebar)
             const selector = target.targetElementValue || target.Value;
             try {
                 const el = document.querySelector(selector);
-                return el; // Trả về null nếu không thấy
+                return el;
             }
             catch {
                 return null;
             }
         }
-        // [NÂNG CẤP] Detect Item ID (Dùng lại logic Tam Trụ của FormPlugin)
         detectContextForItem(element) {
             var _a;
-            // 1. Dùng AI
             let detected = (_a = this.detector) === null || _a === void 0 ? void 0 : _a.detectItem(element);
-            // 2. Nếu AI fail, dùng Radar (Full version)
             if (!detected || !detected.id || detected.id === 'N/A (Failed)') {
                 console.log("🔍 [ScrollPlugin] AI failed. Scanning radar...");
-                // Dùng hàm quét full (Ancestors + Siblings + URL)
                 const contextInfo = this.scanSurroundingContext(element);
                 if (contextInfo.id) {
                     this.currentItemContext = {
@@ -3725,7 +3602,6 @@ var RecSysTracker = (function (exports) {
                     };
                 }
                 else {
-                    // Fallback: Tạo Synthetic Item
                     this.currentItemContext = this.createSyntheticItem();
                 }
             }
@@ -3734,7 +3610,6 @@ var RecSysTracker = (function (exports) {
             }
             console.log("🎯 [ScrollPlugin] Resolved Context:", this.currentItemContext);
         }
-        // --- LOGIC CHECK CONDITIONS (Port từ FormPlugin sang) ---
         checkConditions(element, rule) {
             const conditions = rule.Conditions || rule.conditions;
             if (!conditions || conditions.length === 0)
@@ -3746,14 +3621,14 @@ var RecSysTracker = (function (exports) {
                 let actualValue = null;
                 let isMet = false;
                 switch (patternId) {
-                    case CONDITION_PATTERN.URL_PARAM: // 1
+                    case CONDITION_PATTERN.URL_PARAM:
                         const urlParams = new URLSearchParams(window.location.search);
                         if (urlParams.has(expectedValue))
                             actualValue = urlParams.get(expectedValue);
                         else
                             actualValue = window.location.href;
                         break;
-                    case CONDITION_PATTERN.CSS_SELECTOR: // 2
+                    case CONDITION_PATTERN.CSS_SELECTOR:
                         try {
                             isMet = element.matches(expectedValue);
                             if (this.isNegativeOperator(operatorId)) {
@@ -3768,10 +3643,10 @@ var RecSysTracker = (function (exports) {
                         catch {
                             return false;
                         }
-                    case CONDITION_PATTERN.DOM_ATTRIBUTE: // 3
+                    case CONDITION_PATTERN.DOM_ATTRIBUTE:
                         actualValue = element.id;
                         break;
-                    case CONDITION_PATTERN.DATA_ATTRIBUTE: // 4
+                    case CONDITION_PATTERN.DATA_ATTRIBUTE:
                         actualValue = element.getAttribute(expectedValue);
                         break;
                     default: actualValue = '';
@@ -3800,7 +3675,6 @@ var RecSysTracker = (function (exports) {
         isNegativeOperator(opId) {
             return opId === TARGET_OPERATOR.NOT_EQUALS || opId === TARGET_OPERATOR.NOT_CONTAINS || opId === TARGET_OPERATOR.NOT_EXISTS;
         }
-        // --- DOM RADAR (Full Version - Port từ FormPlugin) ---
         scanSurroundingContext(element) {
             const getAttrs = (el) => {
                 if (!el)
@@ -3810,12 +3684,10 @@ var RecSysTracker = (function (exports) {
                     return { id, name: el.getAttribute('data-item-name') || undefined, type: el.getAttribute('data-item-type') || undefined };
                 return null;
             };
-            // 1. Ancestors
             const ancestor = element.closest('[data-item-id], [data-product-id], [data-id]');
             const ancestorData = getAttrs(ancestor);
             if (ancestorData)
                 return { ...ancestorData, source: 'ancestor' };
-            // 2. Siblings (Scope Scan)
             let currentParent = element.parentElement;
             let levels = 0;
             while (currentParent && levels < 5) {
@@ -3833,29 +3705,24 @@ var RecSysTracker = (function (exports) {
                 currentParent = currentParent.parentElement;
                 levels++;
             }
-            // 3. URL
             const urlParams = new URLSearchParams(window.location.search);
             const urlId = urlParams.get('id') || urlParams.get('productId');
             if (urlId)
                 return { id: urlId, source: 'url_param' };
             return { id: undefined, source: 'none' };
         }
-        // --- SCROLL HANDLER (Giữ nguyên logic cũ) ---
         handleScroll() {
             const now = Date.now();
             if (now - this.lastScrollProcessTime < this.THROTTLE_MS)
                 return;
             this.lastScrollProcessTime = now;
-            // Xử lý scroll trên Window hoặc Element cụ thể
             let scrollTop, docHeight, clientHeight;
             if (this.targetScrollElement instanceof HTMLElement) {
-                // Scroll trên div
                 scrollTop = this.targetScrollElement.scrollTop;
                 docHeight = this.targetScrollElement.scrollHeight;
                 clientHeight = this.targetScrollElement.clientHeight;
             }
             else {
-                // Scroll trên window
                 scrollTop = window.scrollY || document.documentElement.scrollTop;
                 docHeight = document.documentElement.scrollHeight;
                 clientHeight = window.innerHeight;
@@ -3870,25 +3737,36 @@ var RecSysTracker = (function (exports) {
                 }
             });
         }
-        // --- CÁC HÀM GỬI EVENT (Update type safety) ---
         sendScrollEvent(depth) {
-            if (!this.context)
+            var _a;
+            if (!this.tracker)
                 return;
             const rule = this.activeRule || this.createDefaultRule('default-scroll', 'Default Scroll');
             const currentActiveSeconds = this.calculateActiveTime();
-            const payload = this.context.payloadBuilder.build(this.currentItemContext, rule);
-            payload.event = 'scroll_depth';
-            payload.metadata = {
-                ...(payload.metadata || {}),
-                depth_percentage: depth,
-                time_on_page: currentActiveSeconds,
-                url: window.location.href
+            // Extract via PayloadBuilder
+            const extracted = this.tracker.payloadBuilder.build(this.currentItemContext, rule);
+            // Build Payload
+            const payload = {
+                eventTypeId: rule.eventTypeId || 4, // Default Scroll ID
+                trackingRuleId: rule.id,
+                userField: 'userId',
+                userValue: extracted['userId'] || extracted['User'] || '',
+                itemField: 'itemId',
+                itemValue: extracted['itemId'] || extracted['Item'] || ((_a = this.currentItemContext) === null || _a === void 0 ? void 0 : _a.id) || 'N/A',
+                // Metadata
+                metadata: {
+                    depth_percentage: depth,
+                    time_on_page: currentActiveSeconds,
+                    url: window.location.href,
+                    ...extracted // Merge extracted
+                }
             };
             this.enrichUserIdentity(payload);
-            this.context.eventBuffer.enqueue(payload);
+            this.tracker.track(payload);
         }
         handleUnload() {
-            if (!this.context)
+            var _a;
+            if (!this.tracker)
                 return;
             if (this.isTabVisible)
                 this.totalActiveTime += Date.now() - this.startTime;
@@ -3898,18 +3776,25 @@ var RecSysTracker = (function (exports) {
             const rule = this.activeRule || this.createDefaultRule('summary', 'Page Summary');
             if (!this.currentItemContext)
                 this.currentItemContext = this.createSyntheticItem();
-            const payload = this.context.payloadBuilder.build(this.currentItemContext, rule);
-            payload.event = 'page_summary';
-            payload.metadata = {
-                max_scroll_depth: this.maxScrollDepth,
-                total_time_on_page: finalTime,
-                is_bounce: this.maxScrollDepth < 25 && finalTime < 5
+            // Extract
+            const extracted = this.tracker.payloadBuilder.build(this.currentItemContext, rule);
+            const payload = {
+                eventTypeId: rule.eventTypeId || 4,
+                trackingRuleId: rule.id,
+                userField: 'userId',
+                userValue: extracted['userId'] || '',
+                itemField: 'itemId',
+                itemValue: extracted['itemId'] || ((_a = this.currentItemContext) === null || _a === void 0 ? void 0 : _a.id) || 'N/A',
+                metadata: {
+                    max_scroll_depth: this.maxScrollDepth,
+                    total_time_on_page: finalTime,
+                    is_bounce: this.maxScrollDepth < 25 && finalTime < 5,
+                    event: 'page_summary'
+                }
             };
             this.enrichUserIdentity(payload);
-            this.debugPersistent('PAGE_SUMMARY', payload);
-            this.context.eventBuffer.enqueue(payload);
+            this.tracker.track(payload);
         }
-        // --- HELPERS (Giữ nguyên) ---
         handleVisibilityChange() {
             if (document.visibilityState === 'hidden') {
                 this.totalActiveTime += Date.now() - this.startTime;
@@ -3930,11 +3815,15 @@ var RecSysTracker = (function (exports) {
         enrichUserIdentity(payload) {
             if (this.identityManager) {
                 const uid = this.identityManager.getRealUserId() || this.identityManager.getStableUserId();
-                if (uid && !uid.startsWith('anon_'))
-                    payload.userId = uid;
+                // Don't override if extracted from builder? 
+                if (uid && !uid.startsWith('anon_') && !payload.userValue)
+                    payload.userValue = uid;
                 const uInfo = this.identityManager.getUserInfo();
-                if (uInfo.sessionId)
-                    payload.sessionId = uInfo.sessionId;
+                if (uInfo.sessionId) {
+                    if (!payload.metadata)
+                        payload.metadata = {};
+                    payload.metadata.sessionId = uInfo.sessionId;
+                }
             }
         }
         createSyntheticItem() {
@@ -3948,16 +3837,10 @@ var RecSysTracker = (function (exports) {
         }
         createDefaultRule(id, name) {
             return {
-                id, name, triggerEventId: 4,
+                id, name, eventTypeId: 4,
                 targetElement: { targetElementValue: 'document', targetEventPatternId: 1, targetOperatorId: 5 },
-                conditions: [], payload: []
+                conditions: [], payloadMappings: [] // Empty mappings
             };
-        }
-        debugPersistent(tag, data) {
-            const logEntry = { time: new Date().toISOString(), tag, data, url: window.location.href };
-            const history = JSON.parse(localStorage.getItem('SDK_DEBUG_LOGS') || '[]');
-            history.unshift(logEntry);
-            localStorage.setItem('SDK_DEBUG_LOGS', JSON.stringify(history.slice(0, 10)));
         }
     }
 
@@ -3965,6 +3848,58 @@ var RecSysTracker = (function (exports) {
         __proto__: null,
         ScrollPlugin: ScrollPlugin
     });
+
+    class ElementExtractor {
+        extract(mapping, context) {
+            const startElement = (context instanceof HTMLElement) ? context : document.body;
+            const selector = mapping.value; // The selector e.g. ".title"
+            if (!selector)
+                return null;
+            try {
+                // 1. Tìm element trong phạm vi context
+                let target = startElement.querySelector(selector);
+                // 2. Nếu không tìm thấy và context không phải là body, tìm trong toàn bộ document
+                if (!target && startElement !== document.body) {
+                    target = document.querySelector(selector);
+                }
+                // 3. Radar / Proximity Scan
+                // Nếu exact selector fails, dùng "Radar" logic. 
+                // Dùng Value để biết css selector... bắt ngay selector đó
+                // Hoặc bắt xung quanh gần nhất nếu fail
+                if (!target) {
+                    target = this.findClosestBySelector(startElement, selector);
+                }
+                if (target) {
+                    return this.getValueFromElement(target);
+                }
+                return null;
+            }
+            catch {
+                return null;
+            }
+        }
+        getValueFromElement(element) {
+            if (element instanceof HTMLInputElement ||
+                element instanceof HTMLTextAreaElement ||
+                element instanceof HTMLSelectElement) {
+                return element.value;
+            }
+            return element.innerText || element.textContent || null;
+        }
+        findClosestBySelector(startElement, selector) {
+            // Try going up parents and searching down
+            let parent = startElement.parentElement;
+            let levels = 0;
+            while (parent && levels < 3) {
+                const found = parent.querySelector(selector);
+                if (found)
+                    return found;
+                parent = parent.parentElement;
+                levels++;
+            }
+            return null;
+        }
+    }
 
     class PathMatcher {
         /**
@@ -4021,255 +3956,43 @@ var RecSysTracker = (function (exports) {
         }
     }
 
-    // packages/sdk/src/core/services/payload-builder.ts
-    class PayloadBuilder {
-        constructor() {
-            this.isNetworkTrackingActive = false;
-            this.trackerConfig = null;
-            this.COMMON_CONTAINERS = [
-                'user', 'userInfo', 'userData', 'profile', 'auth', 'session', 'account', 'identity',
-                'customer', 'member', 'state'
-            ];
-        }
-        /**
-         * Hàm build đa năng: Hỗ trợ cả 2 kiểu gọi (Legacy & Mapping)
-         * Để đơn giản hóa trong context này, ta tập trung vào logic Mapping.
-         * Trong thực tế cần implement cả logic Legacy nếu các plugin cũ vẫn dùng.
-         */
-        build(arg1, arg2, arg3) {
-            // KIỂM TRA: Nếu tham số đầu tiên là Mảng -> Chạy logic Mapping (New)
-            if (Array.isArray(arg1)) {
-                // Check if context is network data (NetworkPlugin) or HTMLElement (Click/Form Plugin)
-                // arg2 could be HTMLElement OR { req, res }
-                return this.buildFromMappings(arg1, arg2);
-            }
-            // NGƯỢC LẠI: Chạy logic Legacy (FormPlugin, ScrollPlugin...)
-            return this.buildLegacy(arg1, arg2, arg3);
-        }
-        buildFromMappings(mappings, contextData) {
-            const result = {};
-            if (!mappings || !Array.isArray(mappings))
-                return result;
-            for (const map of mappings) {
-                let extractedValue = null;
-                // Chuẩn hóa key source về chữ thường để so sánh
-                const source = (map.source || '').toLowerCase();
-                switch (source) {
-                    case 'cookie':
-                        extractedValue = this.extractFromCookie(map.value);
-                        break;
-                    case 'local_storage':
-                        extractedValue = this.extractFromStorage(window.localStorage, map.value);
-                        break;
-                    case 'session_storage':
-                        extractedValue = this.extractFromStorage(window.sessionStorage, map.value);
-                        break;
-                    case 'url_param':
-                        extractedValue = this.extractFromUrl(map.value);
-                        break;
-                    case 'element':
-                        if (contextData && contextData instanceof HTMLElement) {
-                            extractedValue = this.extractFromElement(contextData, map.value);
-                        }
-                        break;
-                    case 'network_request':
-                        // Context data should be { reqBody, resBody }
-                        extractedValue = this.extractFromNetwork(contextData, map.value);
-                        break;
-                }
-                if (this.isValidValue(extractedValue)) {
-                    result[map.field] = extractedValue;
-                }
-            }
-            return result;
-        }
-        // --- [LEGACY LOGIC] Xử lý Rule & AI Detection (Cho Form/Scroll Plugin) ---
-        buildLegacy(element, rule, _extraData) {
-            // Tạo payload cơ bản
-            const payload = {
-                event: 'unknown', // Sẽ được plugin ghi đè (vd: rate_submit)
-                url: window.location.href,
-                timestamp: Date.now(),
-                ruleName: (rule === null || rule === void 0 ? void 0 : rule.name) || 'unknown_rule',
-                userId: '', // Sẽ được enrich bởi IdentityManager sau
-                itemId: 'N/A (Failed)',
-                metadata: {}
-            };
-            // Gán thông tin từ AI Detection (nếu có)
-            if (element && typeof element === 'object' && 'id' in element) {
-                const aiResult = element;
-                if (aiResult.id && aiResult.id !== 'N/A (Failed)') {
-                    payload.itemId = aiResult.id;
-                    payload.itemName = aiResult.name;
-                    payload.itemType = aiResult.type;
-                    payload.confidence = aiResult.confidence;
-                    payload.source = aiResult.source;
-                    if (aiResult.metadata)
-                        payload.metadata = { ...payload.metadata, ...aiResult.metadata };
-                }
-            }
-            return payload;
-        }
-        // --- CÁC HÀM TRÍCH XUẤT ---
-        /**
-         * [NEW] Lấy dữ liệu từ DOM Element (CSS Selector)
-         * Selector được tìm trong phạm vi contextElement (Form) trước, nếu không thấy thì tìm toàn document
-         */
-        extractFromElement(context, selector) {
-            try {
-                if (!selector)
-                    return null;
-                // Tìm element: Ưu tiên trong form, fallback ra toàn trang
-                let targetEl = context.querySelector(selector);
-                if (!targetEl) {
-                    targetEl = document.querySelector(selector);
-                }
-                if (!targetEl)
-                    return null;
-                // 1. Nếu là Input/Textarea/Select -> Lấy value
-                if (targetEl instanceof HTMLInputElement ||
-                    targetEl instanceof HTMLTextAreaElement ||
-                    targetEl instanceof HTMLSelectElement) {
-                    return targetEl.value;
-                }
-                // 2. Nếu là thẻ thường -> Lấy text content
-                return targetEl.innerText || targetEl.textContent || null;
-            }
-            catch {
+    class NetworkExtractor {
+        extract(mapping, context) {
+            if (!context)
                 return null;
-            }
-        }
-        extractFromUrl(paramName) {
-            try {
-                const params = new URLSearchParams(window.location.search);
-                return params.get(paramName);
-            }
-            catch {
-                return null;
-            }
-        }
-        extractFromStorage(storage, keyConfig) {
-            try {
-                if (!keyConfig)
+            // Validate Context Type mapping if needed, or assume caller provides correct context
+            // Check if mapping matches context URL (basic validation)
+            if (mapping.requestUrlPattern && context.url) {
+                if (!this.matchesUrl(context.url, mapping.requestUrlPattern)) {
                     return null;
-                const cleanKey = keyConfig.trim().replace(/^\.+|\.+$/g, ''); // Sanitization
-                if (!cleanKey)
-                    return null;
-                // 1. Direct Lookup
-                const directVal = this.lookupPath(storage, cleanKey);
-                if (this.isValidValue(directVal))
-                    return directVal;
-                // 2. Smart Container Lookup (Fallback)
-                if (!cleanKey.includes('.')) {
-                    for (const container of this.COMMON_CONTAINERS) {
-                        const fallbackPath = `${container}.${cleanKey}`;
-                        const fallbackVal = this.lookupPath(storage, fallbackPath);
-                        if (this.isValidValue(fallbackVal))
-                            return fallbackVal;
-                    }
                 }
+            }
+            const source = (mapping.source || '').toLowerCase();
+            const path = mapping.value || mapping.requestBodyPath; // Backward compat or direct value
+            if (!path)
                 return null;
+            if (source === 'requestbody' || source === 'request_body') {
+                return this.traverseObject(context.reqBody, path);
             }
-            catch {
-                return null;
+            if (source === 'responsebody' || source === 'response_body') {
+                return this.traverseObject(context.resBody, path);
             }
+            if (source === 'network_request') {
+                // Smart inference if source is generic 'network_request'
+                // Try Request first, then Response? Or based on Method?
+                // User logic: "Logic similar to tracker.js 'inferSource'..."
+                let val = this.traverseObject(context.reqBody, path);
+                if (this.isValid(val))
+                    return val;
+                val = this.traverseObject(context.resBody, path);
+                if (this.isValid(val))
+                    return val;
+            }
+            return null;
         }
-        lookupPath(storage, path) {
-            const parts = path.split('.');
-            const rootKey = parts[0];
-            const rawItem = storage.getItem(rootKey);
-            if (!rawItem)
-                return null;
-            if (parts.length === 1)
-                return rawItem;
-            return this.getNestedValue(rawItem, parts.slice(1).join('.'));
+        matchesUrl(url, pattern) {
+            return PathMatcher.match(url, pattern);
         }
-        extractFromCookie(path) {
-            try {
-                if (!document.cookie || !path)
-                    return null;
-                const cleanPath = path.trim().replace(/^\.+|\.+$/g, '');
-                if (!cleanPath)
-                    return null;
-                const parts = cleanPath.split('.');
-                const cookieName = parts[0];
-                const match = document.cookie.match(new RegExp('(^| )' + cookieName + '=([^;]+)'));
-                if (!match)
-                    return null;
-                const cookieValue = decodeURIComponent(match[2]);
-                if (parts.length === 1)
-                    return cookieValue;
-                return this.getNestedValue(cookieValue, parts.slice(1).join('.'));
-            }
-            catch {
-                return null;
-            }
-        }
-        getNestedValue(jsonString, path) {
-            try {
-                let obj = JSON.parse(jsonString);
-                const keys = path.split('.');
-                for (const key of keys) {
-                    if (obj && Object.prototype.hasOwnProperty.call(obj, key)) {
-                        obj = obj[key];
-                    }
-                    else {
-                        return null;
-                    }
-                }
-                return (typeof obj === 'object') ? JSON.stringify(obj) : String(obj);
-            }
-            catch {
-                return null;
-            }
-        }
-        isValidValue(val) {
-            return val !== null && val !== undefined && val !== '' && val !== 'null' && val !== 'undefined';
-        }
-        /**
-         * [NEW] Extract info from Network Request/Response
-         * Context: { reqBody: any, resBody: any, method: string }
-         * Path format: "request.field" or "response.field" or just "field" (infer)
-         */
-        extractFromNetwork(context, pathConfig) {
-            try {
-                if (!context || !pathConfig)
-                    return null;
-                const { reqBody, resBody, method } = context;
-                // Logic similar to tracker.js 'inferSource' but guided by pathConfig if possible
-                // pathConfig example: "response.userId" or "request.payload.id"
-                // If pathConfig doesn't start with request/response, try both.
-                let val = null;
-                if (pathConfig.startsWith('request.')) {
-                    val = this.traverseObject(reqBody, pathConfig.replace('request.', ''));
-                }
-                else if (pathConfig.startsWith('response.')) {
-                    val = this.traverseObject(resBody, pathConfig.replace('response.', ''));
-                }
-                else {
-                    // Unknown source, try inference based on Method like tracker.js
-                    // GET -> Response
-                    // POST/PUT -> Request ?? Response
-                    if (method === 'GET') {
-                        val = this.traverseObject(resBody, pathConfig);
-                    }
-                    else {
-                        // Try request first
-                        val = this.traverseObject(reqBody, pathConfig);
-                        if (!this.isValidValue(val)) {
-                            val = this.traverseObject(resBody, pathConfig);
-                        }
-                    }
-                }
-                return val;
-            }
-            catch {
-                return null;
-            }
-        }
-        /**
-         * [NEW] Helper to traverse generic object (for Network Plugin)
-         */
         traverseObject(obj, path) {
             if (!obj)
                 return null;
@@ -4284,161 +4007,167 @@ var RecSysTracker = (function (exports) {
                         return null;
                     }
                 }
-                if (current === null || current === undefined)
-                    return null;
-                return (typeof current === 'object') ? JSON.stringify(current) : String(current);
+                return (typeof current === 'object') ? JSON.stringify(current) : current;
             }
             catch {
                 return null;
             }
         }
-        setConfig(config) {
-            this.trackerConfig = config;
-            this.checkAndEnableNetworkTracking();
+        isValid(val) {
+            return val !== null && val !== undefined && val !== '';
         }
-        checkAndEnableNetworkTracking() {
-            if (!this.trackerConfig || !this.trackerConfig.trackingRules)
-                return;
-            const hasNetworkRules = this.trackerConfig.trackingRules.some((rule) => rule.payloadMappings && rule.payloadMappings.some((m) => (m.source || '').toLowerCase() === 'network_request' ||
-                (m.source || '').toLowerCase() === 'requestbody' // Legacy support
-            ));
-            if (hasNetworkRules) {
-                this.enableNetworkTracking(this.trackerConfig);
+    }
+
+    class StorageExtractor {
+        extract(mapping, _context) {
+            try {
+                const source = (mapping.source || '').toLowerCase();
+                const keyPath = mapping.value;
+                if (!keyPath)
+                    return null;
+                if (source === 'local_storage') {
+                    return this.extractFromStorage(window.localStorage, keyPath);
+                }
+                if (source === 'session_storage') {
+                    return this.extractFromStorage(window.sessionStorage, keyPath);
+                }
+                if (source === 'cookie') {
+                    return this.extractFromCookie(keyPath);
+                }
+                return null;
             }
-            else {
-                this.disableNetworkTracking();
+            catch {
+                return null;
             }
         }
-        // --- NETWORK TRACKING LOGIC (Moved from NetworkPlugin) ---
-        enableNetworkTracking(config) {
-            if (this.isNetworkTrackingActive)
-                return;
-            this.trackerConfig = config;
-            this.hookXhr();
-            this.hookFetch();
-            this.isNetworkTrackingActive = true;
-            console.log(`[PayloadBuilder] Network Tracking Enabled`);
+        extractFromStorage(storage, keyPath) {
+            if (!storage || !keyPath)
+                return null;
+            const cleanKey = keyPath.trim();
+            // Split key.path
+            const parts = cleanKey.split('.');
+            const rootKey = parts[0];
+            const rawVal = storage.getItem(rootKey);
+            if (!rawVal)
+                return null;
+            if (parts.length === 1)
+                return rawVal;
+            return this.getNestedValue(rawVal, parts.slice(1).join('.'));
         }
-        disableNetworkTracking() {
-            if (!this.isNetworkTrackingActive)
-                return;
-            this.restoreXhr();
-            this.restoreFetch();
-            this.isNetworkTrackingActive = false;
-            console.log(`[PayloadBuilder] Network Tracking Stopped`);
+        extractFromCookie(keyPath) {
+            if (typeof document === 'undefined' || !document.cookie)
+                return null;
+            const parts = keyPath.trim().split('.');
+            const cookieName = parts[0];
+            const match = document.cookie.match(new RegExp('(^| )' + cookieName + '=([^;]+)'));
+            if (!match)
+                return null;
+            const cookieVal = decodeURIComponent(match[2]);
+            if (parts.length === 1)
+                return cookieVal;
+            return this.getNestedValue(cookieVal, parts.slice(1).join('.'));
         }
-        hookXhr() {
-            this.originalXmlOpen = XMLHttpRequest.prototype.open;
-            this.originalXmlSend = XMLHttpRequest.prototype.send;
-            const builder = this;
-            // Ghi đè phương thức open để lấy thông tin method và url
-            XMLHttpRequest.prototype.open = function (method, url) {
-                this._networkTrackInfo = { method, url, startTime: Date.now() };
-                return builder.originalXmlOpen.apply(this, arguments);
-            };
-            // Ghi đè phương thức send để lấy body gửi đi và body trả về
-            XMLHttpRequest.prototype.send = function (body) {
-                const info = this._networkTrackInfo;
-                if (info) {
-                    // Lắng nghe sự kiện load để bắt response
-                    this.addEventListener('load', () => {
-                        builder.handleNetworkRequest(info.url, info.method, body, this.response);
-                    });
+        getNestedValue(jsonString, path) {
+            try {
+                let obj = JSON.parse(jsonString);
+                const keys = path.split('.');
+                for (const key of keys) {
+                    if (obj && typeof obj === 'object' && key in obj) {
+                        obj = obj[key];
+                    }
+                    else {
+                        return null;
+                    }
                 }
-                return builder.originalXmlSend.apply(this, arguments);
-            };
+                return (typeof obj === 'object') ? JSON.stringify(obj) : String(obj);
+            }
+            catch {
+                return null;
+            }
         }
-        restoreXhr() {
-            if (this.originalXmlOpen)
-                XMLHttpRequest.prototype.open = this.originalXmlOpen;
-            if (this.originalXmlSend)
-                XMLHttpRequest.prototype.send = this.originalXmlSend;
-        }
-        hookFetch() {
-            // Backup original fetch
-            this.originalFetch = window.fetch;
-            const builder = this;
-            window.fetch = async function (...args) {
-                var _a;
-                // Parse arguments
-                const [resource, config] = args;
-                const url = typeof resource === 'string' ? resource : resource.url;
-                const method = ((_a = config === null || config === void 0 ? void 0 : config.method) === null || _a === void 0 ? void 0 : _a.toUpperCase()) || 'GET';
-                const body = config === null || config === void 0 ? void 0 : config.body;
-                // Call original fetch
-                const response = await builder.originalFetch.apply(this, args);
-                // Clone response to read data without disturbing the stream
-                const clone = response.clone();
-                clone.text().then((text) => {
-                    builder.handleNetworkRequest(url, method, body, text);
-                }).catch(() => { });
-                return response;
-            };
-        }
-        restoreFetch() {
-            if (this.originalFetch)
-                window.fetch = this.originalFetch;
-        }
-        handleNetworkRequest(url, method, reqBody, resBody) {
-            if (!this.trackerConfig || !this.trackerConfig.trackingRules)
-                return;
-            // safeParse helper
-            const safeParse = (data) => {
-                try {
-                    if (typeof data === 'string')
-                        return JSON.parse(data);
-                    return data;
+    }
+
+    class UrlExtractor {
+        extract(mapping, _context) {
+            try {
+                const urlPart = mapping.urlPart || '';
+                const urlPartValue = mapping.urlPartValue;
+                if (!urlPart)
+                    return null;
+                const currentUrl = new URL(typeof window !== 'undefined' ? window.location.href : 'http://localhost');
+                // 1. Query Param
+                if (urlPart === 'query_param') {
+                    if (!urlPartValue)
+                        return null;
+                    return currentUrl.searchParams.get(urlPartValue);
                 }
-                catch (e) {
-                    return data;
+                // 2. Pathname Segment
+                if (urlPart === 'pathname') {
+                    if (!urlPartValue)
+                        return null;
+                    const index = parseInt(urlPartValue, 10);
+                    if (isNaN(index))
+                        return null;
+                    const segments = currentUrl.pathname.split('/').filter(s => s.length > 0);
+                    // Adjust for 0-index or 1-index based on convention. 
+                    // Assuming 0-index for internal array, but user might pass 1-based index? 
+                    // Let's assume 0-indexed based on typical dev usage, or handle bounds.
+                    if (index >= 0 && index < segments.length) {
+                        return segments[index];
+                    }
                 }
-            };
-            const reqData = safeParse(reqBody);
-            const resData = safeParse(resBody);
-            const networkContext = {
-                reqBody: reqData,
-                resBody: resData,
-                method: method
-            };
-            for (const rule of this.trackerConfig.trackingRules) {
-                if (!rule.payloadMappings)
-                    continue;
-                // Lọc các mapping phù hợp với URL hiện tại
-                const applicableMappings = rule.payloadMappings.filter((mapping) => {
-                    if (!mapping.requestUrlPattern)
-                        return false;
-                    if (mapping.requestMethod && mapping.requestMethod.toUpperCase() !== method.toUpperCase()) {
-                        return false;
-                    }
-                    // Debug log
-                    // console.log(`[PayloadBuilder] Checking ${url} against ${mapping.requestUrlPattern}`);
-                    if (!PathMatcher.matchStaticSegments(url, mapping.requestUrlPattern)) {
-                        return false;
-                    }
-                    if (!PathMatcher.match(url, mapping.requestUrlPattern)) {
-                        return false;
-                    }
-                    return true;
-                });
-                if (applicableMappings.length > 0) {
-                    // Ép kiểu source thành 'network_request' để đảm bảo logic trích xuất hoạt động
-                    const mappingsForBuilder = applicableMappings.map((m) => ({
-                        ...m,
-                        source: 'network_request',
-                        value: m.value || m.requestBodyPath
-                    }));
-                    // Call build recursively to extract data
-                    const extractedData = this.build(mappingsForBuilder, networkContext);
-                    if (Object.keys(extractedData).length > 0) {
-                        // *logic gửi dữ liệu gì gì đó*
-                        // In NetworkPlugin implementation, this matches exactly.
-                        console.groupCollapsed(`%c[TRACKER] Network Match: (${method} ${url})`, "color: orange");
-                        console.log("Rule:", rule.name);
-                        console.log("Extracted:", extractedData);
-                        console.groupEnd();
-                    }
+                return null;
+            }
+            catch (error) {
+                return null;
+            }
+        }
+    }
+
+    class PayloadBuilder {
+        // Singleton / Shared instances
+        constructor() {
+            this.extractors = new Map();
+            this.elementExtractor = new ElementExtractor();
+            this.networkExtractor = new NetworkExtractor();
+            this.storageExtractor = new StorageExtractor();
+            this.urlExtractor = new UrlExtractor();
+            this.registerExtractors();
+        }
+        registerExtractors() {
+            // Element
+            this.extractors.set('element', this.elementExtractor);
+            // Network
+            this.extractors.set('request_body', this.networkExtractor);
+            // Url
+            this.extractors.set('url', this.urlExtractor);
+            // Storage
+            this.extractors.set('cookie', this.storageExtractor);
+            this.extractors.set('local_storage', this.storageExtractor);
+            this.extractors.set('session_storage', this.storageExtractor);
+        }
+        // Tạo payload dựa trên rule và context
+        build(context, rule) {
+            const payload = {};
+            if (!rule || !rule.payloadMappings || rule.payloadMappings.length === 0) {
+                return payload;
+            }
+            for (const mapping of rule.payloadMappings) {
+                const source = (mapping.source || '').toLowerCase();
+                let val = null;
+                // Chọn Extractor dựa trên source
+                const extractor = this.extractors.get(source);
+                if (extractor) {
+                    val = extractor.extract(mapping, context);
+                }
+                if (this.isValid(val)) {
+                    payload[mapping.field] = val;
                 }
             }
+            return payload;
+        }
+        isValid(val) {
+            return val !== null && val !== undefined && val !== '';
         }
     }
 
@@ -4638,16 +4367,13 @@ var RecSysTracker = (function (exports) {
         constructor() {
             super();
             this.name = 'RatingPlugin';
-            this.context = null;
             this.detector = null;
-            // Delay 500ms cho click: User click sao liên tục thì chỉ lấy cái cuối sau khi dừng tay
             this.throttledClickHandler = throttle(this.wrapHandler(this.handleInteraction.bind(this, 'click'), 'handleClick'), 500);
             this.submitHandler = this.wrapHandler(this.handleInteraction.bind(this, 'submit'), 'handleSubmit');
         }
         init(tracker) {
             this.errorBoundary.execute(() => {
                 super.init(tracker);
-                this.context = new TrackerContextAdapter(tracker);
                 this.detector = getAIItemDetector();
                 console.log(`[RatingPlugin] initialized.`);
             }, 'RatingPlugin.init');
@@ -4656,10 +4382,9 @@ var RecSysTracker = (function (exports) {
             this.errorBoundary.execute(() => {
                 if (!this.ensureInitialized())
                     return;
-                // 1. Lắng nghe Click (Interactive Rating: Stars, Likes)
-                // Sử dụng capture = true để bắt sự kiện sớm, trước khi các framework (React/Vue) chặn propagation
+                // 1. Listen for Click (Interactive Rating: Stars, Likes)
                 document.addEventListener("click", this.throttledClickHandler, true);
-                // 2. Lắng nghe Submit (Traditional Forms)
+                // 2. Listen for Submit (Traditional Forms)
                 document.addEventListener("submit", this.submitHandler, true);
                 console.log("[RatingPlugin] started listening (Universal Mode).");
                 this.active = true;
@@ -4672,71 +4397,61 @@ var RecSysTracker = (function (exports) {
                 super.stop();
             }, 'RatingPlugin.stop');
         }
-        /**
-         * Hàm xử lý trung tâm
-         */
         handleInteraction(eventType, event) {
-            var _a;
+            var _a, _b;
+            if (!this.tracker || !this.detector)
+                return;
+            // Trigger ID = 2 for Rating (Standard)
+            const eventId = this.tracker.getEventTypeId('Rating') || 2;
+            const config = this.tracker.getConfig();
+            const rules = (_a = config === null || config === void 0 ? void 0 : config.trackingRules) === null || _a === void 0 ? void 0 : _a.filter(r => r.eventTypeId === eventId);
+            if (!rules || rules.length === 0)
+                return;
+            const target = event.target;
+            if (!target)
+                return;
             try {
-                if (!this.context || !this.detector)
-                    return;
-                // Trigger ID = 2 cho Rating (Lấy từ server config)
-                const rules = this.context.config.getRules(2);
-                if (rules.length === 0)
-                    return;
-                const target = event.target;
-                if (!target)
-                    return;
                 for (const rule of rules) {
                     const selector = rule.trackingTarget.value;
                     if (!selector)
                         continue;
-                    // Kiểm tra xem user có tương tác đúng khu vực quy định không
-                    // closest() giúp tìm ngược lên trên nếu click vào phần tử con (vd click vào path trong svg)
                     const matchedElement = target.closest(selector);
                     if (matchedElement) {
-                        // Xác định "Container" bao quanh toàn bộ widget đánh giá để quét ngữ cảnh
-                        // Logic: Tìm Form cha, hoặc Div bao quanh, hoặc chính là parent của nút bấm
+                        // Determine Container
                         const container = matchedElement.closest('form') ||
                             matchedElement.closest('.rating-container') ||
                             matchedElement.closest('.review-box') ||
                             matchedElement.parentElement ||
                             document.body;
-                        // Gọi Utils để "thám thính"
+                        // Process Rating
                         const result = RatingUtils.processRating(container, matchedElement, eventType);
-                        // Lọc rác: Nếu không bắt được điểm và cũng không có text -> Bỏ qua
+                        // Filter garbage
                         if (result.originalValue === 0 && !result.reviewText) {
                             continue;
                         }
                         console.log(`[RatingPlugin] 🎯 Captured [${eventType}]: Raw=${result.originalValue}/${result.maxValue} -> Norm=${result.normalizedValue}`);
-                        // Detect Item ID (Sản phẩm nào đang được đánh giá?)
-                        // Dùng AI quét Container trước vì nó gần nhất, chính xác hơn quét cả body
+                        // Detect Item ID
                         let structuredItem = null;
-                        if (!((_a = rule.trackingTarget.value) === null || _a === void 0 ? void 0 : _a.startsWith('^'))) {
+                        if (!((_b = rule.trackingTarget.value) === null || _b === void 0 ? void 0 : _b.startsWith('^'))) {
                             structuredItem = this.detector.detectItem(container);
                         }
-                        // Build Payload
-                        const payload = this.context.payloadBuilder.build(structuredItem || matchedElement, rule);
-                        payload.event = 'rate_submit';
-                        payload.metadata = {
-                            ...payload.metadata,
-                            // Dữ liệu quan trọng nhất
-                            rateValue: result.normalizedValue,
-                            reviewText: result.reviewText,
-                            // Dữ liệu phụ để debug/analytics
-                            rawRateValue: result.originalValue,
-                            rateMax: result.maxValue,
-                            rateType: result.type,
-                            captureMethod: result.captureMethod
-                        };
-                        this.context.eventBuffer.enqueue(payload);
-                        // Break ngay sau khi khớp rule đầu tiên để tránh duplicate event
+                        // Build Payload using centralized method
+                        this.buildAndTrack(structuredItem || matchedElement, rule, eventId, {
+                            value: result.reviewText || String(result.normalizedValue),
+                            metadata: {
+                                rawRateValue: result.originalValue,
+                                rateMax: result.maxValue,
+                                rateType: result.type,
+                                captureMethod: result.captureMethod,
+                                normalizedValue: result.normalizedValue,
+                                reviewText: result.reviewText
+                            }
+                        });
                         break;
                     }
                 }
             }
             catch (error) {
-                // Safety guard: Không bao giờ để lỗi plugin làm ảnh hưởng trải nghiệm user
                 console.warn('[RatingPlugin] Error processing interaction:', error);
             }
         }
@@ -4787,8 +4502,6 @@ var RecSysTracker = (function (exports) {
                     if (this.eventDispatcher && this.config.domainUrl) {
                         this.eventDispatcher.setDomainUrl(this.config.domainUrl);
                     }
-                    // Pass config to PayloadBuilder (will auto-enable network tracking if needed)
-                    this.payloadBuilder.setConfig(this.config);
                     console.log(this.config);
                     // Khởi tạo Display Manager nếu có returnMethods
                     if (this.config.returnMethods && this.config.returnMethods.length > 0) {
@@ -4894,8 +4607,7 @@ var RecSysTracker = (function (exports) {
                     userValue: eventData.userValue,
                     itemField: eventData.itemField,
                     itemValue: eventData.itemValue,
-                    ...(eventData.ratingValue !== undefined && { ratingValue: eventData.ratingValue }),
-                    ...(eventData.reviewValue !== undefined && { reviewValue: eventData.reviewValue }),
+                    ...(eventData.value !== undefined && { value: eventData.value }),
                 };
                 this.eventBuffer.add(trackedEvent);
             }, 'track');

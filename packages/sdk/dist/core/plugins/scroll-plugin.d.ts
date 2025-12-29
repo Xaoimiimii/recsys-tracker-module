@@ -2,7 +2,6 @@ import { BasePlugin } from './base-plugin';
 import { RecSysTracker } from '../..';
 export declare class ScrollPlugin extends BasePlugin {
     readonly name = "ScrollPlugin";
-    private context;
     private identityManager;
     private detector;
     private milestones;
@@ -23,10 +22,6 @@ export declare class ScrollPlugin extends BasePlugin {
     start(): void;
     stop(): void;
     private resetState;
-    /**
-     * [NÂNG CẤP] Duyệt qua danh sách Rule để tìm Rule phù hợp nhất
-     * Check Target Match & Check Conditions
-     */
     private resolveContextFromRules;
     private findTargetElement;
     private detectContextForItem;
@@ -42,6 +37,5 @@ export declare class ScrollPlugin extends BasePlugin {
     private enrichUserIdentity;
     private createSyntheticItem;
     private createDefaultRule;
-    private debugPersistent;
 }
 //# sourceMappingURL=scroll-plugin.d.ts.map

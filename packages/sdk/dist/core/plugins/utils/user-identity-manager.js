@@ -8,7 +8,7 @@ export class UserIdentityManager {
         this.isLoggedIn = false;
         this.initialized = false;
         this.authRequests = new Set();
-        this.trackerContext = null;
+        this.tracker = null;
         if (identityManagerInstance) {
             return identityManagerInstance;
         }
@@ -18,9 +18,8 @@ export class UserIdentityManager {
         window.identityManager = this;
         window.recsysIdentityManager = this;
     }
-    setTrackerContext(context) {
-        this.trackerContext = context;
-        this.setupIdentitySynchronization();
+    setTracker(tracker) {
+        this.tracker = tracker;
     }
     initialize() {
         if (this.initialized)
@@ -190,7 +189,6 @@ export class UserIdentityManager {
         catch (e) { /* Ignore */ }
     }
     // --- LOGIN HANDLERS ---
-    // Đã đổi tên 'source' thành '_source'
     handleDetectedUserId(userId, _source) {
         if (this.currentUserId && !this.currentUserId.startsWith('anon_')) {
             console.log(`[RECSYS] User already authenticated as ${this.currentUserId}. Ignoring ${userId} from ${_source}`);
@@ -213,9 +211,12 @@ export class UserIdentityManager {
             this.identifiers.detectionMethod = _source;
             this.identifiers.detectionTime = new Date().toISOString();
             this.saveIdentifiers();
+            // Sync to Tracker if available
+            if (this.tracker) {
+                this.tracker.setUserId(userId);
+            }
         }
     }
-    // Đã đổi tên 'source' thành '_source'
     onUserLoginDetected(anonymousId, userId, _source) {
         this.sendLoginEvent(anonymousId, userId, _source);
         window.dispatchEvent(new CustomEvent('recsys:userLoggedIn', {
@@ -467,19 +468,6 @@ export class UserIdentityManager {
                 oldUserId,
                 newUserId: newAnonId,
                 sessionId: this.sessionId
-            }
-        }));
-    }
-    setupIdentitySynchronization() {
-        if (!this.trackerContext)
-            return;
-        window.addEventListener('recsys:userLoggedIn', ((event) => {
-            const customEvent = event;
-            const newUserId = customEvent.detail.userId;
-            const source = customEvent.detail.detectionMethod;
-            if (newUserId) {
-                this.trackerContext.updateIdentity(newUserId);
-                console.log(`[Context Sync] User ID synced from IdentityManager (${source}).`);
             }
         }));
     }

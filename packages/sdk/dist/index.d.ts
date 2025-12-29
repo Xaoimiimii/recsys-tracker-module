@@ -24,8 +24,7 @@ export declare class RecSysTracker {
         userValue: string;
         itemField: string;
         itemValue: string;
-        ratingValue?: number;
-        reviewValue?: string;
+        value?: string;
     }): void;
     private setupBatchSending;
     private sendBatch;

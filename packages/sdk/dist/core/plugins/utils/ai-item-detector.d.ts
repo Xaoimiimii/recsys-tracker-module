@@ -1,4 +1,12 @@
-import { IAIItemDetectionResult } from '../interfaces/recsys-context.interface';
+export interface IAIItemDetectionResult {
+    id: string;
+    name?: string;
+    type?: string;
+    confidence: number;
+    source: string;
+    context?: string;
+    metadata?: any;
+}
 export declare class AIItemDetector {
     private itemCache;
     private domObserver;

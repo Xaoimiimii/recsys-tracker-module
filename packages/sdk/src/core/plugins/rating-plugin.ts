@@ -1,7 +1,5 @@
 import { BasePlugin } from './base-plugin';
 import { RecSysTracker } from '../..';
-import { IRecsysContext } from './interfaces/recsys-context.interface';
-import { TrackerContextAdapter } from './adapters/tracker-context-adapter';
 import { getAIItemDetector, AIItemDetector } from './utils/ai-item-detector';
 import { throttle } from './utils/plugin-utils';
 import { RatingUtils } from './utils/rating-utils';
@@ -9,17 +7,15 @@ import { RatingUtils } from './utils/rating-utils';
 export class RatingPlugin extends BasePlugin {
     public readonly name = 'RatingPlugin';
 
-    private context: IRecsysContext | null = null;
     private detector: AIItemDetector | null = null;
 
-    // Throttle cho click (chống spam)
+    // Throttle for click (prevent spam)
     private throttledClickHandler: (event: Event) => void;
-    // Không throttle submit để đảm bảo bắt dính sự kiện cuối cùng
+    // No throttle for submit
     private submitHandler: (event: Event) => void;
 
     constructor() {
         super();
-        // Delay 500ms cho click: User click sao liên tục thì chỉ lấy cái cuối sau khi dừng tay
         this.throttledClickHandler = throttle(
             this.wrapHandler(this.handleInteraction.bind(this, 'click'), 'handleClick'),
             500
@@ -30,7 +26,6 @@ export class RatingPlugin extends BasePlugin {
     public init(tracker: RecSysTracker): void {
         this.errorBoundary.execute(() => {
             super.init(tracker);
-            this.context = new TrackerContextAdapter(tracker);
             this.detector = getAIItemDetector();
             console.log(`[RatingPlugin] initialized.`);
         }, 'RatingPlugin.init');
@@ -40,11 +35,10 @@ export class RatingPlugin extends BasePlugin {
         this.errorBoundary.execute(() => {
             if (!this.ensureInitialized()) return;
 
-            // 1. Lắng nghe Click (Interactive Rating: Stars, Likes)
-            // Sử dụng capture = true để bắt sự kiện sớm, trước khi các framework (React/Vue) chặn propagation
+            // 1. Listen for Click (Interactive Rating: Stars, Likes)
             document.addEventListener("click", this.throttledClickHandler, true);
 
-            // 2. Lắng nghe Submit (Traditional Forms)
+            // 2. Listen for Submit (Traditional Forms)
             document.addEventListener("submit", this.submitHandler, true);
 
             console.log("[RatingPlugin] started listening (Universal Mode).");
@@ -60,79 +54,67 @@ export class RatingPlugin extends BasePlugin {
         }, 'RatingPlugin.stop');
     }
 
-    /**
-     * Hàm xử lý trung tâm
-     */
     private handleInteraction(eventType: 'click' | 'submit', event: Event): void {
+        if (!this.tracker || !this.detector) return;
+
+        // Trigger ID = 2 for Rating (Standard)
+        const eventId = this.tracker.getEventTypeId('Rating') || 2;
+        const config = this.tracker.getConfig();
+        const rules = config?.trackingRules?.filter(r => r.eventTypeId === eventId);
+
+        if (!rules || rules.length === 0) return;
+
+        const target = event.target as Element;
+        if (!target) return;
+
         try {
-            if (!this.context || !this.detector) return;
-
-            // Trigger ID = 2 cho Rating (Lấy từ server config)
-            const rules = this.context.config.getRules(2);
-            if (rules.length === 0) return;
-
-            const target = event.target as Element;
-            if (!target) return;
-
             for (const rule of rules) {
                 const selector = rule.trackingTarget.value;
                 if (!selector) continue;
 
-                // Kiểm tra xem user có tương tác đúng khu vực quy định không
-                // closest() giúp tìm ngược lên trên nếu click vào phần tử con (vd click vào path trong svg)
                 const matchedElement = target.closest(selector);
 
                 if (matchedElement) {
-                    // Xác định "Container" bao quanh toàn bộ widget đánh giá để quét ngữ cảnh
-                    // Logic: Tìm Form cha, hoặc Div bao quanh, hoặc chính là parent của nút bấm
+                    // Determine Container
                     const container = matchedElement.closest('form') ||
                         matchedElement.closest('.rating-container') ||
                         matchedElement.closest('.review-box') ||
                         matchedElement.parentElement ||
                         document.body;
 
-                    // Gọi Utils để "thám thính"
+                    // Process Rating
                     const result = RatingUtils.processRating(container, matchedElement, eventType);
 
-                    // Lọc rác: Nếu không bắt được điểm và cũng không có text -> Bỏ qua
+                    // Filter garbage
                     if (result.originalValue === 0 && !result.reviewText) {
                         continue;
                     }
 
                     console.log(`[RatingPlugin] 🎯 Captured [${eventType}]: Raw=${result.originalValue}/${result.maxValue} -> Norm=${result.normalizedValue}`);
 
-                    // Detect Item ID (Sản phẩm nào đang được đánh giá?)
-                    // Dùng AI quét Container trước vì nó gần nhất, chính xác hơn quét cả body
+                    // Detect Item ID
                     let structuredItem = null;
                     if (!rule.trackingTarget.value?.startsWith('^')) {
                         structuredItem = this.detector.detectItem(container);
                     }
 
-                    // Build Payload
-                    const payload = this.context.payloadBuilder.build(structuredItem || matchedElement, rule);
+                    // Build Payload using centralized method
+                    this.buildAndTrack(structuredItem || matchedElement, rule, eventId, {
+                        value: result.reviewText || String(result.normalizedValue),
+                        metadata: {
+                            rawRateValue: result.originalValue,
+                            rateMax: result.maxValue,
+                            rateType: result.type,
+                            captureMethod: result.captureMethod,
+                            normalizedValue: result.normalizedValue,
+                            reviewText: result.reviewText
+                        }
+                    });
 
-                    payload.event = 'rate_submit';
-                    payload.metadata = {
-                        ...payload.metadata,
-                        // Dữ liệu quan trọng nhất
-                        rateValue: result.normalizedValue,
-                        reviewText: result.reviewText,
-
-                        // Dữ liệu phụ để debug/analytics
-                        rawRateValue: result.originalValue,
-                        rateMax: result.maxValue,
-                        rateType: result.type,
-                        captureMethod: result.captureMethod
-                    };
-
-                    this.context.eventBuffer.enqueue(payload);
-
-                    // Break ngay sau khi khớp rule đầu tiên để tránh duplicate event
                     break;
                 }
             }
         } catch (error) {
-            // Safety guard: Không bao giờ để lỗi plugin làm ảnh hưởng trải nghiệm user
             console.warn('[RatingPlugin] Error processing interaction:', error);
         }
     }
