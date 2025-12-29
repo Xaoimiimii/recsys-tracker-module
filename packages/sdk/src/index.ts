@@ -65,6 +65,9 @@ export class RecSysTracker {
           this.eventDispatcher.setDomainUrl(this.config.domainUrl);
         }
 
+        // Pass config to PayloadBuilder (will auto-enable network tracking if needed)
+        this.payloadBuilder.setConfig(this.config);
+
         console.log(this.config);
 
         // Khởi tạo Display Manager nếu có returnMethods
@@ -127,7 +130,7 @@ export class RecSysTracker {
         });
         pluginPromises.push(clickPromise);
       }
-    
+
       if (hasRateRules) {
         const ratingPromise = import('./core/plugins/rating-plugin').then(({ RatingPlugin }) => {
           this.use(new RatingPlugin());
@@ -137,11 +140,11 @@ export class RecSysTracker {
       }
 
       if (hasReviewRules) {
-          const scrollPromise = import('./core/plugins/review-plugin').then(({ ReviewPlugin }) => {
-            this.use(new ReviewPlugin());
-            console.log('[RecSysTracker] Auto-registered ScrollPlugin');
-          });
-          pluginPromises.push(scrollPromise);
+        const scrollPromise = import('./core/plugins/review-plugin').then(({ ReviewPlugin }) => {
+          this.use(new ReviewPlugin());
+          console.log('[RecSysTracker] Auto-registered ScrollPlugin');
+        });
+        pluginPromises.push(scrollPromise);
       }
 
       if (hasPageViewRules) {
@@ -152,26 +155,15 @@ export class RecSysTracker {
         pluginPromises.push(pageViewPromise);
       }
 
-      if (hasScrollRules) { 
-          const scrollPromise = import('./core/plugins/scroll-plugin').then(({ ScrollPlugin }) => {
-            this.use(new ScrollPlugin());
-            console.log('[RecSysTracker] Auto-registered ScrollPlugin');
-          });
-          pluginPromises.push(scrollPromise);
-      }
-
-      // Check for Network Rules
-      const hasNetworkRules = this.config.trackingRules.some(rule =>
-        rule.payloadMappings && rule.payloadMappings.some(m => m.source == "RequestBody")
-      );
-
-      if (hasNetworkRules) {
-        const networkPromise = import('./core/plugins/network-plugin').then(({ NetworkPlugin }) => {
-          this.use(new NetworkPlugin());
-          console.log('[RecSysTracker] Auto-registered NetworkPlugin');
+      if (hasScrollRules) {
+        const scrollPromise = import('./core/plugins/scroll-plugin').then(({ ScrollPlugin }) => {
+          this.use(new ScrollPlugin());
+          console.log('[RecSysTracker] Auto-registered ScrollPlugin');
         });
-        pluginPromises.push(networkPromise);
+        pluginPromises.push(scrollPromise);
       }
+
+
 
       // Chờ tất cả plugin được đăng ký trước khi khởi động
       if (pluginPromises.length > 0) {
@@ -410,7 +402,7 @@ export { PageViewPlugin } from './core/plugins/page-view-plugin';
 export { RatingPlugin } from './core/plugins/rating-plugin';
 export { ScrollPlugin } from './core/plugins/scroll-plugin';
 export { ReviewPlugin } from './core/plugins/review-plugin';
-export { NetworkPlugin } from './core/plugins/network-plugin';
+
 
 // Export types for TypeScript users
 export type * from './types';

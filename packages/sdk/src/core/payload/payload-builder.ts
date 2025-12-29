@@ -1,6 +1,7 @@
 // packages/sdk/src/core/services/payload-builder.ts
 
 import { IAIItemDetectionResult, IPayloadExtraData, IRecsysPayload, TrackingRule } from "../plugins/interfaces/recsys-context.interface";
+import { PathMatcher } from "../utils/path-matcher";
 
 export interface IPayloadMapping {
     field: string;
@@ -9,6 +10,12 @@ export interface IPayloadMapping {
 }
 
 export class PayloadBuilder {
+    private originalXmlOpen: any;
+    private originalXmlSend: any;
+    private originalFetch: any;
+    private isNetworkTrackingActive: boolean = false;
+    private trackerConfig: any = null;
+
     private readonly COMMON_CONTAINERS = [
         'user', 'userInfo', 'userData', 'profile', 'auth', 'session', 'account', 'identity',
         'customer', 'member', 'state'
@@ -269,6 +276,182 @@ export class PayloadBuilder {
             if (current === null || current === undefined) return null;
             return (typeof current === 'object') ? JSON.stringify(current) : String(current);
         } catch { return null; }
+    }
+
+    public setConfig(config: any) {
+        this.trackerConfig = config;
+        this.checkAndEnableNetworkTracking();
+    }
+
+    private checkAndEnableNetworkTracking() {
+        if (!this.trackerConfig || !this.trackerConfig.trackingRules) return;
+
+        const hasNetworkRules = this.trackerConfig.trackingRules.some((rule: any) =>
+            rule.payloadMappings && rule.payloadMappings.some((m: any) =>
+                (m.source || '').toLowerCase() === 'network_request' ||
+                (m.source || '').toLowerCase() === 'requestbody' // Legacy support
+            )
+        );
+
+        if (hasNetworkRules) {
+            this.enableNetworkTracking(this.trackerConfig);
+        } else {
+            this.disableNetworkTracking();
+        }
+    }
+
+    // --- NETWORK TRACKING LOGIC (Moved from NetworkPlugin) ---
+
+    public enableNetworkTracking(config: any): void {
+        if (this.isNetworkTrackingActive) return;
+
+        this.trackerConfig = config;
+        this.hookXhr();
+        this.hookFetch();
+        this.isNetworkTrackingActive = true;
+        console.log(`[PayloadBuilder] Network Tracking Enabled`);
+    }
+
+    public disableNetworkTracking(): void {
+        if (!this.isNetworkTrackingActive) return;
+
+        this.restoreXhr();
+        this.restoreFetch();
+        this.isNetworkTrackingActive = false;
+        console.log(`[PayloadBuilder] Network Tracking Stopped`);
+    }
+
+    private hookXhr() {
+        this.originalXmlOpen = XMLHttpRequest.prototype.open;
+        this.originalXmlSend = XMLHttpRequest.prototype.send;
+
+        const builder = this;
+
+        // Ghi đè phương thức open để lấy thông tin method và url
+        XMLHttpRequest.prototype.open = function (method: string, url: string) {
+            (this as any)._networkTrackInfo = { method, url, startTime: Date.now() };
+            return builder.originalXmlOpen.apply(this, arguments as any);
+        };
+
+        // Ghi đè phương thức send để lấy body gửi đi và body trả về
+        XMLHttpRequest.prototype.send = function (body: any) {
+            const info = (this as any)._networkTrackInfo;
+            if (info) {
+                // Lắng nghe sự kiện load để bắt response
+                this.addEventListener('load', () => {
+                    builder.handleNetworkRequest(
+                        info.url,
+                        info.method,
+                        body,
+                        this.response
+                    );
+                });
+            }
+            return builder.originalXmlSend.apply(this, arguments as any);
+        };
+    }
+
+    private restoreXhr() {
+        if (this.originalXmlOpen) XMLHttpRequest.prototype.open = this.originalXmlOpen;
+        if (this.originalXmlSend) XMLHttpRequest.prototype.send = this.originalXmlSend;
+    }
+
+    private hookFetch() {
+        // Backup original fetch
+        this.originalFetch = window.fetch;
+        const builder = this;
+
+        window.fetch = async function (...args: any[]) {
+            // Parse arguments
+            const [resource, config] = args;
+            const url = typeof resource === 'string' ? resource : (resource as Request).url;
+            const method = config?.method?.toUpperCase() || 'GET';
+            const body = config?.body;
+
+            // Call original fetch
+            const response = await builder.originalFetch.apply(this, args);
+
+            // Clone response to read data without disturbing the stream
+            const clone = response.clone();
+            clone.text().then((text: string) => {
+                builder.handleNetworkRequest(url, method, body, text);
+            }).catch(() => { });
+
+            return response;
+        };
+    }
+
+    private restoreFetch() {
+        if (this.originalFetch) window.fetch = this.originalFetch;
+    }
+
+    private handleNetworkRequest(url: string, method: string, reqBody: any, resBody: any) {
+        if (!this.trackerConfig || !this.trackerConfig.trackingRules) return;
+
+        // safeParse helper
+        const safeParse = (data: any) => {
+            try {
+                if (typeof data === 'string') return JSON.parse(data);
+                return data;
+            } catch (e) {
+                return data;
+            }
+        };
+
+        const reqData = safeParse(reqBody);
+        const resData = safeParse(resBody);
+
+        const networkContext = {
+            reqBody: reqData,
+            resBody: resData,
+            method: method
+        };
+
+        for (const rule of this.trackerConfig.trackingRules) {
+            if (!rule.payloadMappings) continue;
+
+            // Lọc các mapping phù hợp với URL hiện tại
+            const applicableMappings = rule.payloadMappings.filter((mapping: any) => {
+                if (!mapping.requestUrlPattern) return false;
+
+                if (mapping.requestMethod && mapping.requestMethod.toUpperCase() !== method.toUpperCase()) {
+                    return false;
+                }
+
+                // Debug log
+                // console.log(`[PayloadBuilder] Checking ${url} against ${mapping.requestUrlPattern}`);
+
+                if (!PathMatcher.matchStaticSegments(url, mapping.requestUrlPattern)) {
+                    return false;
+                }
+                if (!PathMatcher.match(url, mapping.requestUrlPattern)) {
+                    return false;
+                }
+                return true;
+            });
+
+            if (applicableMappings.length > 0) {
+                // Ép kiểu source thành 'network_request' để đảm bảo logic trích xuất hoạt động
+                const mappingsForBuilder = applicableMappings.map((m: any) => ({
+                    ...m,
+                    source: 'network_request',
+                    value: m.value || m.requestBodyPath
+                }));
+
+                // Call build recursively to extract data
+                const extractedData = this.build(mappingsForBuilder, networkContext);
+
+                if (Object.keys(extractedData).length > 0) {
+                    // *logic gửi dữ liệu gì gì đó*
+                    // In NetworkPlugin implementation, this matches exactly.
+
+                    console.groupCollapsed(`%c[TRACKER] Network Match: (${method} ${url})`, "color: orange");
+                    console.log("Rule:", rule.name);
+                    console.log("Extracted:", extractedData);
+                    console.groupEnd();
+                }
+            }
+        }
     }
 }
 
