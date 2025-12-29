@@ -69,7 +69,7 @@ export class RecSysTracker {
 
         // Khởi tạo Display Manager nếu có returnMethods
         if (this.config.returnMethods && this.config.returnMethods.length > 0) {
-          const apiBaseUrl = process.env.API_URL || 'http://localhost:3000';
+          const apiBaseUrl = process.env.API_URL || 'https://recsys-tracker-module.onrender.com';
           this.displayManager = new DisplayManager(this.config.domainKey, apiBaseUrl);
           this.displayManager.initialize(this.config.returnMethods);
           console.log('[RecSysTracker] Display methods initialized');
