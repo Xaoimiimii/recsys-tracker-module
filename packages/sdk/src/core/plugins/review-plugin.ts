@@ -21,6 +21,7 @@ export class ReviewPlugin extends BasePlugin {
         this.errorBoundary.execute(() => {
             if (!this.ensureInitialized()) return;
             document.addEventListener('submit', this.handleSubmitBound, { capture: true });
+            console.log("[ReviewPlugin] started listening for Review submissions.");
             this.active = true;
         }, 'ReviewPlugin.start');
     }

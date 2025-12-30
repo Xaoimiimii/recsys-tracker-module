@@ -37,7 +37,7 @@ export class RatingPlugin extends BasePlugin {
             // 2. Listen for Submit (Traditional Forms)
             document.addEventListener("submit", this.submitHandler, true);
 
-            console.log("[RatingPlugin] started listening (Universal Mode).");
+            console.log("[RatingPlugin] started listening for Rating interactions.");
             this.active = true;
         }, 'RatingPlugin.start');
     }

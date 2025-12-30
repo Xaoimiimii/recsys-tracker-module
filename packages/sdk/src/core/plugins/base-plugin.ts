@@ -35,13 +35,12 @@ export abstract class BasePlugin implements IPlugin {
   public init(tracker: RecSysTracker): void {
     this.errorBoundary.execute(() => {
       if (this.tracker) {
-        console.warn(`[${this.name}] Plugin already initialized`);
         return;
       }
 
       this.tracker = tracker;
       this.payloadBuilder = tracker.payloadBuilder;
-      console.log(`[${this.name}] Plugin initialized`);
+
     }, `${this.name}.init`);
   }
 

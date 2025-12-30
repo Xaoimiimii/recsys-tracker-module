@@ -16,13 +16,12 @@ export class PluginManager {
   register(plugin: IPlugin): void {
     this.errorBoundary.execute(() => {
       if (this.plugins.has(plugin.name)) {
-        console.warn(`[PluginManager] Plugin "${plugin.name}" already registered`);
         return;
       }
       
       plugin.init(this.tracker);
       this.plugins.set(plugin.name, plugin);
-      console.log(`[PluginManager] Registered plugin: ${plugin.name}`);
+
     }, 'PluginManager.register');
   }
   
