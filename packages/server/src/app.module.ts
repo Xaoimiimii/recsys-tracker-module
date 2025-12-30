@@ -6,6 +6,7 @@ import { RuleModule } from './modules/rule/rule.module';
 import { PrismaModule } from './modules/prisma/prisma.module';
 import { ConfigModule } from '@nestjs/config';
 import { EventModule } from './modules/event/event.module';
+import { RecommendationModule } from './modules/recommendation/recommendation.module';
 
 @Module({
   imports: [
@@ -20,7 +21,8 @@ import { EventModule } from './modules/event/event.module';
     DomainModule,
     RuleModule,
     PrismaModule,
-    EventModule
+    EventModule,
+    RecommendationModule
   ],
   controllers: [],
 })
