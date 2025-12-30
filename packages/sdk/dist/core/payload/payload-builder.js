@@ -17,6 +17,10 @@ export class PayloadBuilder {
         this.extractors.set('element', this.elementExtractor);
         // Network
         this.extractors.set('request_body', this.networkExtractor);
+        this.extractors.set('requestbody', this.networkExtractor);
+        this.extractors.set('response_body', this.networkExtractor);
+        this.extractors.set('responsebody', this.networkExtractor);
+        this.extractors.set('network_request', this.networkExtractor);
         // Url
         this.extractors.set('url', this.urlExtractor);
         // Storage

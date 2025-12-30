@@ -2807,6 +2807,10 @@
             this.extractors.set('element', this.elementExtractor);
             // Network
             this.extractors.set('request_body', this.networkExtractor);
+            this.extractors.set('requestbody', this.networkExtractor);
+            this.extractors.set('response_body', this.networkExtractor);
+            this.extractors.set('responsebody', this.networkExtractor);
+            this.extractors.set('network_request', this.networkExtractor);
             // Url
             this.extractors.set('url', this.urlExtractor);
             // Storage
@@ -3422,6 +3426,8 @@
                 // Chờ tất cả plugin được đăng ký trước khi khởi động
                 if (pluginPromises.length > 0) {
                     await Promise.all(pluginPromises);
+                }
+                if (this.pluginManager.getPluginNames().length > 0) {
                     this.startPlugins();
                     console.log('[RecSysTracker] Auto-started plugins');
                 }

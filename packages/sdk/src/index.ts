@@ -182,6 +182,9 @@ export class RecSysTracker {
       // Chờ tất cả plugin được đăng ký trước khi khởi động
       if (pluginPromises.length > 0) {
         await Promise.all(pluginPromises);
+      }
+
+      if (this.pluginManager.getPluginNames().length > 0) {
         this.startPlugins();
         console.log('[RecSysTracker] Auto-started plugins');
       }
