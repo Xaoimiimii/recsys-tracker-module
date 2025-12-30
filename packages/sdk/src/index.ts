@@ -160,7 +160,6 @@ export class RecSysTracker {
         pluginPromises.push(scrollPromise);
       }
 
-
       // Chờ tất cả plugin được đăng ký trước khi khởi động
       if (pluginPromises.length > 0) {
         await Promise.all(pluginPromises);

@@ -11,8 +11,8 @@ export class PayloadBuilder {
     private networkExtractor: NetworkExtractor;
     private storageExtractor: StorageExtractor;
     private urlExtractor: UrlExtractor;
+    private trackerConfig: any = null;
 
-    // Singleton / Shared instances
     constructor() {
         this.elementExtractor = new ElementExtractor();
         this.networkExtractor = new NetworkExtractor();
@@ -22,7 +22,7 @@ export class PayloadBuilder {
         this.registerExtractors();
     }
 
-    private registerExtractors() {
+    private registerExtractors(): void {
         // Element
         this.extractors.set('element', this.elementExtractor);
 
@@ -62,6 +62,79 @@ export class PayloadBuilder {
         }
 
         return payload;
+    }
+
+    /**
+     * Set tracker configuration and check if network tracking should be enabled
+     */
+    public setConfig(config: any): void {
+        this.trackerConfig = config;
+        this.checkAndEnableNetworkTracking();
+    }
+
+    /**
+     * Check if config has network rules and enable tracking if needed
+     */
+    private checkAndEnableNetworkTracking(): void {
+        if (!this.trackerConfig || !this.trackerConfig.trackingRules) return;
+
+        const hasNetworkRules = this.trackerConfig.trackingRules.some((rule: any) =>
+            rule.payloadMappings && rule.payloadMappings.some((m: any) => {
+                const source = (m.source || '').toLowerCase();
+                return source === 'request_body';
+            })
+        );
+
+        if (hasNetworkRules && !this.networkExtractor.isTracking()) {
+            this.enableNetworkTracking();
+        } else if (!hasNetworkRules && this.networkExtractor.isTracking()) {
+            this.disableNetworkTracking();
+        }
+    }
+
+    /**
+     * Enable network tracking
+     */
+    public enableNetworkTracking(): void {
+        if (!this.trackerConfig) {
+            console.warn('[PayloadBuilder] Cannot enable network tracking: config not set');
+            return;
+        }
+
+        this.networkExtractor.enableTracking(
+            this.trackerConfig,
+            (rule, extractedData, context) => {
+                // Callback when network request matches a rule
+                // This can be extended to dispatch events or perform other actions
+                console.log('[PayloadBuilder] Network match:', {
+                    rule: rule.name,
+                    data: extractedData,
+                    url: context.url,
+                    method: context.method
+                });
+            }
+        );
+    }
+
+    /**
+     * Disable network tracking
+     */
+    public disableNetworkTracking(): void {
+        this.networkExtractor.disableTracking();
+    }
+
+    /**
+     * Check if network tracking is currently active
+     */
+    public isNetworkTrackingActive(): boolean {
+        return this.networkExtractor.isTracking();
+    }
+
+    /**
+     * Get the network extractor instance for advanced usage
+     */
+    public getNetworkExtractor(): NetworkExtractor {
+        return this.networkExtractor;
     }
 
     private isValid(val: any): boolean {
