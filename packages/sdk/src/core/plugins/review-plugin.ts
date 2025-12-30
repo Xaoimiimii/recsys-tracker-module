@@ -64,8 +64,8 @@ export class ReviewPlugin extends BasePlugin {
 
             // 4. Build and track using centralized method
             this.buildAndTrack(form, rule, eventId, {
-                value: reviewContent,
                 metadata: {
+                    additionalValues: reviewContent,
                     captureMethod: 'form-submit',
                     source: 'review-plugin'
                 }

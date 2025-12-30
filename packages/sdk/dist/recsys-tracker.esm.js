@@ -1707,7 +1707,7 @@ class BasePlugin {
         // 1. Extract data using PayloadBuilder
         const extractedData = this.tracker.payloadBuilder.build(context, rule);
         // 2. Resolve identity fields dynamically
-        const { userField, userValue, itemField, itemValue } = this.resolvePayloadIdentity(extractedData);
+        const { userField, userValue, itemField, itemValue, value } = this.resolvePayloadIdentity(extractedData);
         // 3. Construct payload
         const payload = {
             eventTypeId: eventId,
@@ -1716,7 +1716,7 @@ class BasePlugin {
             userValue,
             itemField,
             itemValue,
-            value: additionalFields === null || additionalFields === void 0 ? void 0 : additionalFields.value,
+            value,
             ...additionalFields
         };
         // 4. Track the event
@@ -2089,8 +2089,8 @@ class ReviewPlugin extends BasePlugin {
             console.log(`[ReviewPlugin] Detected review content: "${reviewContent}"`);
             // 4. Build and track using centralized method
             this.buildAndTrack(form, rule, eventId, {
-                value: reviewContent,
                 metadata: {
+                    additionalValues: reviewContent,
                     captureMethod: 'form-submit',
                     source: 'review-plugin'
                 }
@@ -3095,8 +3095,8 @@ class RatingPlugin extends BasePlugin {
                     console.log(`[RatingPlugin] 🎯 Captured [${eventType}]: Raw=${result.originalValue}/${result.maxValue} -> Norm=${result.normalizedValue}`);
                     // Build Payload using centralized method
                     this.buildAndTrack(matchedElement, rule, eventId, {
-                        value: result.reviewText || String(result.normalizedValue),
                         metadata: {
+                            additionalValues: result.reviewText || String(result.normalizedValue),
                             rawRateValue: result.originalValue,
                             rateMax: result.maxValue,
                             rateType: result.type,

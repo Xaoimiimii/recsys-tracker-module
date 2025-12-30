@@ -68,8 +68,8 @@ export class RatingPlugin extends BasePlugin {
                     console.log(`[RatingPlugin] 🎯 Captured [${eventType}]: Raw=${result.originalValue}/${result.maxValue} -> Norm=${result.normalizedValue}`);
                     // Build Payload using centralized method
                     this.buildAndTrack(matchedElement, rule, eventId, {
-                        value: result.reviewText || String(result.normalizedValue),
                         metadata: {
+                            additionalValues: result.reviewText || String(result.normalizedValue),
                             rawRateValue: result.originalValue,
                             rateMax: result.maxValue,
                             rateType: result.type,

@@ -146,7 +146,7 @@ export abstract class BasePlugin implements IPlugin {
     rule: any,
     eventId: number,
     additionalFields?: {
-      value?: string;
+      additionalValues?: string
       metadata?: Record<string, any>;
     }
   ): void {
@@ -159,7 +159,7 @@ export abstract class BasePlugin implements IPlugin {
     const extractedData = this.tracker.payloadBuilder.build(context, rule);
 
     // 2. Resolve identity fields dynamically
-    const { userField, userValue, itemField, itemValue } = this.resolvePayloadIdentity(extractedData);
+    const { userField, userValue, itemField, itemValue, value } = this.resolvePayloadIdentity(extractedData);
 
     // 3. Construct payload
     const payload: any = {
@@ -169,7 +169,7 @@ export abstract class BasePlugin implements IPlugin {
       userValue,
       itemField,
       itemValue,
-      value: additionalFields?.value,
+      value,
       ...additionalFields
     };
 

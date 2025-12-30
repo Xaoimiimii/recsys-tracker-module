@@ -139,7 +139,12 @@ export class NetworkPlugin extends BasePlugin {
                     if (Object.keys(extractedData).length > 0) {
                         // Use centralized build and track
                         this.buildAndTrack(networkContext, rule, rule.eventTypeId, {
-                            value: extractedData['Value'] ? String(extractedData['Value']) : undefined
+                            metadata: {
+                                additionalValues: JSON.stringify(extractedData),
+                                method: method,
+                                url: url,
+                                captureMethod: 'network-intercept'
+                            }
                         });
                         console.groupCollapsed(`%c[TRACKER] Network Match: (${method} ${url})`, "color: orange");
                         console.log("Rule:", rule.name);

@@ -97,7 +97,7 @@ export class BasePlugin {
         // 1. Extract data using PayloadBuilder
         const extractedData = this.tracker.payloadBuilder.build(context, rule);
         // 2. Resolve identity fields dynamically
-        const { userField, userValue, itemField, itemValue } = this.resolvePayloadIdentity(extractedData);
+        const { userField, userValue, itemField, itemValue, value } = this.resolvePayloadIdentity(extractedData);
         // 3. Construct payload
         const payload = {
             eventTypeId: eventId,
@@ -106,7 +106,7 @@ export class BasePlugin {
             userValue,
             itemField,
             itemValue,
-            value: additionalFields === null || additionalFields === void 0 ? void 0 : additionalFields.value,
+            value,
             ...additionalFields
         };
         // 4. Track the event

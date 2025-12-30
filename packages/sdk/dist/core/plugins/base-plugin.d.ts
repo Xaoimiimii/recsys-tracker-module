@@ -40,7 +40,7 @@ export declare abstract class BasePlugin implements IPlugin {
      * @param additionalFields - Optional additional fields (ratingValue, reviewValue, metadata, etc.)
      */
     protected buildAndTrack(context: any, rule: any, eventId: number, additionalFields?: {
-        value?: string;
+        additionalValues?: string;
         metadata?: Record<string, any>;
     }): void;
 }

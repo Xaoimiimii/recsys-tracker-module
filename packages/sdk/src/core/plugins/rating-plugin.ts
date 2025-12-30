@@ -90,8 +90,8 @@ export class RatingPlugin extends BasePlugin {
 
                     // Build Payload using centralized method
                     this.buildAndTrack(matchedElement, rule, eventId, {
-                        value: result.reviewText || String(result.normalizedValue),
                         metadata: {
+                            additionalValues: result.reviewText || String(result.normalizedValue),
                             rawRateValue: result.originalValue,
                             rateMax: result.maxValue,
                             rateType: result.type,
