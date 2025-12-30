@@ -1,17 +1,13 @@
 import { BasePlugin } from './base-plugin';
 import { RecSysTracker } from '../..';
-import { getAIItemDetector, AIItemDetector } from './utils/ai-item-detector';
 import { CUSTOM_ROUTE_EVENT } from './utils/plugin-utils';
 
 export class PageViewPlugin extends BasePlugin {
     public readonly name = 'PageViewPlugin';
 
-    private detector: AIItemDetector | null = null;
-
     public init(tracker: RecSysTracker): void {
         this.errorBoundary.execute(() => {
             super.init(tracker);
-            this.detector = getAIItemDetector();
             console.log(`[PageViewPlugin] initialized.`);
         }, 'PageViewPlugin.init');
     }
@@ -50,7 +46,7 @@ export class PageViewPlugin extends BasePlugin {
     }
 
     private trackCurrentPage(currentUrl: string): void {
-        if (!this.tracker || !this.detector) return;
+        if (!this.tracker) return;
 
         const urlObject = new URL(currentUrl);
         const pathname = urlObject.pathname;
@@ -102,12 +98,8 @@ export class PageViewPlugin extends BasePlugin {
             }
 
             if (matchFound) {
-                // AI/Structured Data detection context
-                const structuredItem = this.detector!.detectItemFromStructuredData(document.body) ||
-                    this.detector!.extractOpenGraphData();
-
                 // Use centralized build and track
-                this.buildAndTrack(structuredItem, rule, eventId);
+                this.buildAndTrack(document.body, rule, eventId);
 
                 return;
             }

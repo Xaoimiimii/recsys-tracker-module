@@ -1,13 +1,10 @@
 import { BasePlugin } from './base-plugin';
 import { RecSysTracker } from '../..';
-import { getAIItemDetector, AIItemDetector } from './utils/ai-item-detector';
 import { throttle } from './utils/plugin-utils';
 import { RatingUtils } from './utils/rating-utils';
 
 export class RatingPlugin extends BasePlugin {
     public readonly name = 'RatingPlugin';
-
-    private detector: AIItemDetector | null = null;
 
     // Throttle for click (prevent spam)
     private throttledClickHandler: (event: Event) => void;
@@ -26,7 +23,6 @@ export class RatingPlugin extends BasePlugin {
     public init(tracker: RecSysTracker): void {
         this.errorBoundary.execute(() => {
             super.init(tracker);
-            this.detector = getAIItemDetector();
             console.log(`[RatingPlugin] initialized.`);
         }, 'RatingPlugin.init');
     }
@@ -55,7 +51,7 @@ export class RatingPlugin extends BasePlugin {
     }
 
     private handleInteraction(eventType: 'click' | 'submit', event: Event): void {
-        if (!this.tracker || !this.detector) return;
+        if (!this.tracker) return;
 
         // Trigger ID = 2 for Rating (Standard)
         const eventId = this.tracker.getEventTypeId('Rating') || 2;
@@ -92,14 +88,8 @@ export class RatingPlugin extends BasePlugin {
 
                     console.log(`[RatingPlugin] 🎯 Captured [${eventType}]: Raw=${result.originalValue}/${result.maxValue} -> Norm=${result.normalizedValue}`);
 
-                    // Detect Item ID
-                    let structuredItem = null;
-                    if (!rule.trackingTarget.value?.startsWith('^')) {
-                        structuredItem = this.detector.detectItem(container);
-                    }
-
                     // Build Payload using centralized method
-                    this.buildAndTrack(structuredItem || matchedElement, rule, eventId, {
+                    this.buildAndTrack(matchedElement, rule, eventId, {
                         value: result.reviewText || String(result.normalizedValue),
                         metadata: {
                             rawRateValue: result.originalValue,

@@ -2,7 +2,6 @@ import { BasePlugin } from './base-plugin';
 import { RecSysTracker } from '../..';
 export declare class RatingPlugin extends BasePlugin {
     readonly name = "RatingPlugin";
-    private detector;
     private throttledClickHandler;
     private submitHandler;
     constructor();

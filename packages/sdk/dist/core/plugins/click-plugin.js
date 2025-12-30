@@ -1,11 +1,9 @@
 import { BasePlugin } from './base-plugin';
-import { getAIItemDetector } from './utils/ai-item-detector';
 import { throttle } from './utils/plugin-utils';
 export class ClickPlugin extends BasePlugin {
     constructor() {
         super();
         this.name = 'ClickPlugin';
-        this.detector = null;
         this.THROTTLE_DELAY = 300;
         // Wrap handler với error boundary ngay trong constructor
         this.throttledHandler = throttle(this.wrapHandler(this.handleDocumentClick.bind(this), 'handleDocumentClick'), this.THROTTLE_DELAY);
@@ -13,7 +11,6 @@ export class ClickPlugin extends BasePlugin {
     init(tracker) {
         this.errorBoundary.execute(() => {
             super.init(tracker);
-            this.detector = getAIItemDetector();
             console.log(`[ClickPlugin] initialized for Rule.`);
         }, 'ClickPlugin.init');
     }
@@ -21,7 +18,7 @@ export class ClickPlugin extends BasePlugin {
         this.errorBoundary.execute(() => {
             if (!this.ensureInitialized())
                 return;
-            if (this.tracker && this.detector) {
+            if (this.tracker) {
                 document.addEventListener("click", this.throttledHandler, false);
                 console.log("[ClickPlugin] started Rule-based listening (Throttled).");
                 this.active = true;
@@ -37,7 +34,7 @@ export class ClickPlugin extends BasePlugin {
         }, 'ClickPlugin.destroy');
     }
     handleDocumentClick(event) {
-        if (!this.tracker || !this.detector)
+        if (!this.tracker)
             return;
         const eventId = this.tracker.getEventTypeId('Click');
         if (!eventId)

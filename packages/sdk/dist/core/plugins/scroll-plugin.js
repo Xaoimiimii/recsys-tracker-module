@@ -1,20 +1,12 @@
 import { BasePlugin } from './base-plugin';
-import { getUserIdentityManager } from './utils/user-identity-manager';
-import { getAIItemDetector } from './utils/ai-item-detector';
 // CONDITION PATTERNS
-const CONDITION_PATTERN = {
-    URL_PARAM: 1, CSS_SELECTOR: 2, DOM_ATTRIBUTE: 3, DATA_ATTRIBUTE: 4,
-};
+const CONDITION_PATTERN = { CSS_SELECTOR: 1, URL: 2, DATA_ATTRIBUTE: 3 };
 // OPERATORS
-const TARGET_OPERATOR = {
-    CONTAINS: 1, NOT_CONTAINS: 2, STARTS_WITH: 3, ENDS_WITH: 4, EQUALS: 5, NOT_EQUALS: 6, EXISTS: 8, NOT_EXISTS: 9
-};
+const TARGET_OPERATOR = { CONTAINS: 1, EQUALS: 2, STARTS_WITH: 3, ENDS_WITH: 4 };
 export class ScrollPlugin extends BasePlugin {
     constructor() {
         super(...arguments);
         this.name = 'ScrollPlugin';
-        this.identityManager = null;
-        this.detector = null;
         // --- STATE MANAGEMENT ---
         this.milestones = [25, 50, 75, 100];
         this.sentMilestones = new Set();
@@ -34,9 +26,6 @@ export class ScrollPlugin extends BasePlugin {
     init(tracker) {
         this.errorBoundary.execute(() => {
             super.init(tracker);
-            this.identityManager = getUserIdentityManager();
-            this.identityManager.initialize();
-            this.detector = getAIItemDetector();
             console.log(`[ScrollPlugin] initialized.`);
         }, 'ScrollPlugin.init');
     }
@@ -80,7 +69,7 @@ export class ScrollPlugin extends BasePlugin {
     }
     resolveContextFromRules() {
         var _a;
-        if (!this.tracker || !this.detector)
+        if (!this.tracker)
             return false;
         const eventId = this.tracker.getEventTypeId('Scroll') || 4;
         const config = this.tracker.getConfig();
@@ -118,27 +107,20 @@ export class ScrollPlugin extends BasePlugin {
         }
     }
     detectContextForItem(element) {
-        var _a;
-        let detected = (_a = this.detector) === null || _a === void 0 ? void 0 : _a.detectItem(element);
-        if (!detected || !detected.id || detected.id === 'N/A (Failed)') {
-            console.log("🔍 [ScrollPlugin] AI failed. Scanning radar...");
-            const contextInfo = this.scanSurroundingContext(element);
-            if (contextInfo.id) {
-                this.currentItemContext = {
-                    id: contextInfo.id,
-                    name: contextInfo.name || 'Unknown Item',
-                    type: contextInfo.type || 'item',
-                    confidence: 1,
-                    source: contextInfo.source,
-                    context: 'dom_context'
-                };
-            }
-            else {
-                this.currentItemContext = this.createSyntheticItem();
-            }
+        console.log("🔍 [ScrollPlugin] Scanning for context...");
+        const contextInfo = this.scanSurroundingContext(element);
+        if (contextInfo.id) {
+            this.currentItemContext = {
+                id: contextInfo.id,
+                name: contextInfo.name || 'Unknown Item',
+                type: contextInfo.type || 'item',
+                confidence: 1,
+                source: contextInfo.source,
+                context: 'dom_context'
+            };
         }
         else {
-            this.currentItemContext = detected;
+            this.currentItemContext = this.createSyntheticItem();
         }
         console.log("🎯 [ScrollPlugin] Resolved Context:", this.currentItemContext);
     }
@@ -153,7 +135,7 @@ export class ScrollPlugin extends BasePlugin {
             let actualValue = null;
             let isMet = false;
             switch (patternId) {
-                case CONDITION_PATTERN.URL_PARAM:
+                case CONDITION_PATTERN.URL:
                     const urlParams = new URLSearchParams(window.location.search);
                     if (urlParams.has(expectedValue))
                         actualValue = urlParams.get(expectedValue);
@@ -163,11 +145,6 @@ export class ScrollPlugin extends BasePlugin {
                 case CONDITION_PATTERN.CSS_SELECTOR:
                     try {
                         isMet = element.matches(expectedValue);
-                        if (this.isNegativeOperator(operatorId)) {
-                            if (!isMet)
-                                continue;
-                            return false;
-                        }
                         if (!isMet)
                             return false;
                         continue;
@@ -175,9 +152,6 @@ export class ScrollPlugin extends BasePlugin {
                     catch {
                         return false;
                     }
-                case CONDITION_PATTERN.DOM_ATTRIBUTE:
-                    actualValue = element.id;
-                    break;
                 case CONDITION_PATTERN.DATA_ATTRIBUTE:
                     actualValue = element.getAttribute(expectedValue);
                     break;
@@ -194,18 +168,11 @@ export class ScrollPlugin extends BasePlugin {
             actual = '';
         switch (operatorId) {
             case TARGET_OPERATOR.EQUALS: return actual === expected;
-            case TARGET_OPERATOR.NOT_EQUALS: return actual !== expected;
             case TARGET_OPERATOR.CONTAINS: return actual.includes(expected);
-            case TARGET_OPERATOR.NOT_CONTAINS: return !actual.includes(expected);
             case TARGET_OPERATOR.STARTS_WITH: return actual.startsWith(expected);
             case TARGET_OPERATOR.ENDS_WITH: return actual.endsWith(expected);
-            case TARGET_OPERATOR.EXISTS: return actual !== '' && actual !== null;
-            case TARGET_OPERATOR.NOT_EXISTS: return actual === '' || actual === null;
             default: return actual === expected;
         }
-    }
-    isNegativeOperator(opId) {
-        return opId === TARGET_OPERATOR.NOT_EQUALS || opId === TARGET_OPERATOR.NOT_CONTAINS || opId === TARGET_OPERATOR.NOT_EXISTS;
     }
     scanSurroundingContext(element) {
         const getAttrs = (el) => {
@@ -293,7 +260,6 @@ export class ScrollPlugin extends BasePlugin {
                 ...extracted // Merge extracted
             }
         };
-        this.enrichUserIdentity(payload);
         this.tracker.track(payload);
     }
     handleUnload() {
@@ -324,7 +290,6 @@ export class ScrollPlugin extends BasePlugin {
                 event: 'page_summary'
             }
         };
-        this.enrichUserIdentity(payload);
         this.tracker.track(payload);
     }
     handleVisibilityChange() {
@@ -343,20 +308,6 @@ export class ScrollPlugin extends BasePlugin {
             currentSessionTime = Date.now() - this.startTime;
         const totalMs = this.totalActiveTime + currentSessionTime;
         return parseFloat((totalMs / 1000).toFixed(1));
-    }
-    enrichUserIdentity(payload) {
-        if (this.identityManager) {
-            const uid = this.identityManager.getRealUserId() || this.identityManager.getStableUserId();
-            // Don't override if extracted from builder? 
-            if (uid && !uid.startsWith('anon_') && !payload.userValue)
-                payload.userValue = uid;
-            const uInfo = this.identityManager.getUserInfo();
-            if (uInfo.sessionId) {
-                if (!payload.metadata)
-                    payload.metadata = {};
-                payload.metadata.sessionId = uInfo.sessionId;
-            }
-        }
     }
     createSyntheticItem() {
         return {

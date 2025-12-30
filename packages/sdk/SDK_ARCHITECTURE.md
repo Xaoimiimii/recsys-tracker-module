@@ -595,44 +595,7 @@ async sendBatch(events: TrackedEvent[]): Promise<boolean>
 
 ---
 
-## 8. Configuration Example
-
-```javascript
-window.RecSysTrackerConfig = {
-    domainKey: 'my-shop.com',
-    domainUrl: 'https://my-shop.com',
-    trackEndpoint: 'https://api.tracker.com/api/events/track',
-    
-    eventTypes: [
-        { id: 1, name: 'Page View' },
-        { id: 2, name: 'Click' },
-        { id: 3, name: 'Rating' }
-    ],
-    
-    trackingRules: [
-        {
-            id: 1,
-            name: 'Product Click',
-            eventTypeId: 2,
-            trackingTarget: { value: '.product-card' },
-            payloadMappings: [
-                { field: 'UserId', source: 'cookie', value: 'user_id' },
-                { field: 'ItemId', source: 'element', value: '.product-id' },
-                { field: 'ItemTitle', source: 'element', value: '.product-title' }
-            ]
-        }
-    ],
-    
-    options: {
-        batchSize: 10,
-        batchDelay: 2000
-    }
-};
-```
-
----
-
-## 9. Summary
+## 8. Summary
 
 **SDK Initialization:**
 1. Load config → Verify origin → Initialize components → Auto-load plugins → Start tracking

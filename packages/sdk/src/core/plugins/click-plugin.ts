@@ -1,12 +1,10 @@
 import { BasePlugin } from './base-plugin';
 import { RecSysTracker } from '../..';
-import { getAIItemDetector, AIItemDetector } from './utils/ai-item-detector';
 import { throttle } from './utils/plugin-utils';
 
 export class ClickPlugin extends BasePlugin {
     public readonly name = 'ClickPlugin';
 
-    private detector: AIItemDetector | null = null;
     private throttledHandler: (event: MouseEvent) => void;
     private readonly THROTTLE_DELAY = 300;
 
@@ -22,8 +20,6 @@ export class ClickPlugin extends BasePlugin {
     public init(tracker: RecSysTracker): void {
         this.errorBoundary.execute(() => {
             super.init(tracker);
-
-            this.detector = getAIItemDetector();
             console.log(`[ClickPlugin] initialized for Rule.`);
         }, 'ClickPlugin.init');
     }
@@ -32,7 +28,7 @@ export class ClickPlugin extends BasePlugin {
         this.errorBoundary.execute(() => {
             if (!this.ensureInitialized()) return;
 
-            if (this.tracker && this.detector) {
+            if (this.tracker) {
                 document.addEventListener("click", this.throttledHandler as any, false);
                 console.log("[ClickPlugin] started Rule-based listening (Throttled).");
                 this.active = true;
@@ -50,7 +46,7 @@ export class ClickPlugin extends BasePlugin {
     }
 
     private handleDocumentClick(event: MouseEvent): void {
-        if (!this.tracker || !this.detector) return;
+        if (!this.tracker) return;
 
         const eventId = this.tracker.getEventTypeId('Click');
         if (!eventId) return;

@@ -1,19 +1,16 @@
 import { BasePlugin } from './base-plugin';
-import { getAIItemDetector } from './utils/ai-item-detector';
 import { throttle } from './utils/plugin-utils';
 import { RatingUtils } from './utils/rating-utils';
 export class RatingPlugin extends BasePlugin {
     constructor() {
         super();
         this.name = 'RatingPlugin';
-        this.detector = null;
         this.throttledClickHandler = throttle(this.wrapHandler(this.handleInteraction.bind(this, 'click'), 'handleClick'), 500);
         this.submitHandler = this.wrapHandler(this.handleInteraction.bind(this, 'submit'), 'handleSubmit');
     }
     init(tracker) {
         this.errorBoundary.execute(() => {
             super.init(tracker);
-            this.detector = getAIItemDetector();
             console.log(`[RatingPlugin] initialized.`);
         }, 'RatingPlugin.init');
     }
@@ -37,8 +34,8 @@ export class RatingPlugin extends BasePlugin {
         }, 'RatingPlugin.stop');
     }
     handleInteraction(eventType, event) {
-        var _a, _b;
-        if (!this.tracker || !this.detector)
+        var _a;
+        if (!this.tracker)
             return;
         // Trigger ID = 2 for Rating (Standard)
         const eventId = this.tracker.getEventTypeId('Rating') || 2;
@@ -69,13 +66,8 @@ export class RatingPlugin extends BasePlugin {
                         continue;
                     }
                     console.log(`[RatingPlugin] 🎯 Captured [${eventType}]: Raw=${result.originalValue}/${result.maxValue} -> Norm=${result.normalizedValue}`);
-                    // Detect Item ID
-                    let structuredItem = null;
-                    if (!((_b = rule.trackingTarget.value) === null || _b === void 0 ? void 0 : _b.startsWith('^'))) {
-                        structuredItem = this.detector.detectItem(container);
-                    }
                     // Build Payload using centralized method
-                    this.buildAndTrack(structuredItem || matchedElement, rule, eventId, {
+                    this.buildAndTrack(matchedElement, rule, eventId, {
                         value: result.reviewText || String(result.normalizedValue),
                         metadata: {
                             rawRateValue: result.originalValue,

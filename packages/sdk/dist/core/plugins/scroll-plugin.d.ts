@@ -2,8 +2,6 @@ import { BasePlugin } from './base-plugin';
 import { RecSysTracker } from '../..';
 export declare class ScrollPlugin extends BasePlugin {
     readonly name = "ScrollPlugin";
-    private identityManager;
-    private detector;
     private milestones;
     private sentMilestones;
     private maxScrollDepth;
@@ -27,14 +25,12 @@ export declare class ScrollPlugin extends BasePlugin {
     private detectContextForItem;
     private checkConditions;
     private compareValues;
-    private isNegativeOperator;
     private scanSurroundingContext;
     private handleScroll;
     private sendScrollEvent;
     private handleUnload;
     private handleVisibilityChange;
     private calculateActiveTime;
-    private enrichUserIdentity;
     private createSyntheticItem;
     private createDefaultRule;
 }

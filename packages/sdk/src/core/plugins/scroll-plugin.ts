@@ -1,23 +1,14 @@
 import { BasePlugin } from './base-plugin';
 import { RecSysTracker } from '../..';
-import { UserIdentityManager, getUserIdentityManager } from './utils/user-identity-manager';
-import { getAIItemDetector, AIItemDetector } from './utils/ai-item-detector';
 
 // CONDITION PATTERNS
-const CONDITION_PATTERN = {
-    URL_PARAM: 1, CSS_SELECTOR: 2, DOM_ATTRIBUTE: 3, DATA_ATTRIBUTE: 4,
-};
+const CONDITION_PATTERN = { CSS_SELECTOR: 1, URL: 2, DATA_ATTRIBUTE: 3 };
 
 // OPERATORS
-const TARGET_OPERATOR = {
-    CONTAINS: 1, NOT_CONTAINS: 2, STARTS_WITH: 3, ENDS_WITH: 4, EQUALS: 5, NOT_EQUALS: 6, EXISTS: 8, NOT_EXISTS: 9
-};
+const TARGET_OPERATOR = { CONTAINS: 1, EQUALS: 2, STARTS_WITH: 3, ENDS_WITH: 4 };
 
 export class ScrollPlugin extends BasePlugin {
     public readonly name = 'ScrollPlugin';
-
-    private identityManager: UserIdentityManager | null = null;
-    private detector: AIItemDetector | null = null;
 
     // --- STATE MANAGEMENT ---
     private milestones = [25, 50, 75, 100];
@@ -42,9 +33,6 @@ export class ScrollPlugin extends BasePlugin {
     public init(tracker: RecSysTracker): void {
         this.errorBoundary.execute(() => {
             super.init(tracker);
-            this.identityManager = getUserIdentityManager();
-            this.identityManager.initialize();
-            this.detector = getAIItemDetector();
             console.log(`[ScrollPlugin] initialized.`);
         }, 'ScrollPlugin.init');
     }
@@ -92,7 +80,7 @@ export class ScrollPlugin extends BasePlugin {
     }
 
     private resolveContextFromRules(): boolean {
-        if (!this.tracker || !this.detector) return false;
+        if (!this.tracker) return false;
 
         const eventId = this.tracker.getEventTypeId('Scroll') || 4;
         const config = this.tracker.getConfig();
@@ -138,26 +126,20 @@ export class ScrollPlugin extends BasePlugin {
     }
 
     private detectContextForItem(element: HTMLElement) {
-        let detected = this.detector?.detectItem(element);
+        console.log("🔍 [ScrollPlugin] Scanning for context...");
+        const contextInfo = this.scanSurroundingContext(element);
 
-        if (!detected || !detected.id || detected.id === 'N/A (Failed)') {
-            console.log("🔍 [ScrollPlugin] AI failed. Scanning radar...");
-            const contextInfo = this.scanSurroundingContext(element);
-
-            if (contextInfo.id) {
-                this.currentItemContext = {
-                    id: contextInfo.id,
-                    name: contextInfo.name || 'Unknown Item',
-                    type: contextInfo.type || 'item',
-                    confidence: 1,
-                    source: contextInfo.source,
-                    context: 'dom_context'
-                };
-            } else {
-                this.currentItemContext = this.createSyntheticItem();
-            }
+        if (contextInfo.id) {
+            this.currentItemContext = {
+                id: contextInfo.id,
+                name: contextInfo.name || 'Unknown Item',
+                type: contextInfo.type || 'item',
+                confidence: 1,
+                source: contextInfo.source,
+                context: 'dom_context'
+            };
         } else {
-            this.currentItemContext = detected;
+            this.currentItemContext = this.createSyntheticItem();
         }
         console.log("🎯 [ScrollPlugin] Resolved Context:", this.currentItemContext);
     }
@@ -175,7 +157,7 @@ export class ScrollPlugin extends BasePlugin {
             let isMet = false;
 
             switch (patternId) {
-                case CONDITION_PATTERN.URL_PARAM:
+                case CONDITION_PATTERN.URL:
                     const urlParams = new URLSearchParams(window.location.search);
                     if (urlParams.has(expectedValue)) actualValue = urlParams.get(expectedValue);
                     else actualValue = window.location.href;
@@ -183,12 +165,9 @@ export class ScrollPlugin extends BasePlugin {
                 case CONDITION_PATTERN.CSS_SELECTOR:
                     try {
                         isMet = element.matches(expectedValue);
-                        if (this.isNegativeOperator(operatorId)) { if (!isMet) continue; return false; }
                         if (!isMet) return false;
                         continue;
                     } catch { return false; }
-                case CONDITION_PATTERN.DOM_ATTRIBUTE:
-                    actualValue = element.id; break;
                 case CONDITION_PATTERN.DATA_ATTRIBUTE:
                     actualValue = element.getAttribute(expectedValue); break;
                 default: actualValue = '';
@@ -204,19 +183,11 @@ export class ScrollPlugin extends BasePlugin {
         if (actual === null) actual = '';
         switch (operatorId) {
             case TARGET_OPERATOR.EQUALS: return actual === expected;
-            case TARGET_OPERATOR.NOT_EQUALS: return actual !== expected;
             case TARGET_OPERATOR.CONTAINS: return actual.includes(expected);
-            case TARGET_OPERATOR.NOT_CONTAINS: return !actual.includes(expected);
             case TARGET_OPERATOR.STARTS_WITH: return actual.startsWith(expected);
             case TARGET_OPERATOR.ENDS_WITH: return actual.endsWith(expected);
-            case TARGET_OPERATOR.EXISTS: return actual !== '' && actual !== null;
-            case TARGET_OPERATOR.NOT_EXISTS: return actual === '' || actual === null;
             default: return actual === expected;
         }
-    }
-
-    private isNegativeOperator(opId: number): boolean {
-        return opId === TARGET_OPERATOR.NOT_EQUALS || opId === TARGET_OPERATOR.NOT_CONTAINS || opId === TARGET_OPERATOR.NOT_EXISTS;
     }
 
     private scanSurroundingContext(element: HTMLElement): { id?: string, name?: string, type?: string, source: string } {
@@ -309,8 +280,6 @@ export class ScrollPlugin extends BasePlugin {
                 ...extracted // Merge extracted
             }
         };
-
-        this.enrichUserIdentity(payload);
         this.tracker.track(payload);
     }
 
@@ -342,7 +311,6 @@ export class ScrollPlugin extends BasePlugin {
             }
         };
 
-        this.enrichUserIdentity(payload);
         this.tracker.track(payload);
     }
 
@@ -361,20 +329,6 @@ export class ScrollPlugin extends BasePlugin {
         if (this.isTabVisible) currentSessionTime = Date.now() - this.startTime;
         const totalMs = this.totalActiveTime + currentSessionTime;
         return parseFloat((totalMs / 1000).toFixed(1));
-    }
-
-    private enrichUserIdentity(payload: any) {
-        if (this.identityManager) {
-            const uid = this.identityManager.getRealUserId() || this.identityManager.getStableUserId();
-            // Don't override if extracted from builder? 
-            if (uid && !uid.startsWith('anon_') && !payload.userValue) payload.userValue = uid;
-
-            const uInfo = this.identityManager.getUserInfo();
-            if (uInfo.sessionId) {
-                if (!payload.metadata) payload.metadata = {};
-                payload.metadata.sessionId = uInfo.sessionId;
-            }
-        }
     }
 
     private createSyntheticItem(): any {

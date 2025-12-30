@@ -2,7 +2,6 @@ import { BasePlugin } from './base-plugin';
 import { RecSysTracker } from '../..';
 export declare class PageViewPlugin extends BasePlugin {
     readonly name = "PageViewPlugin";
-    private detector;
     init(tracker: RecSysTracker): void;
     start(): void;
     stop(): void;

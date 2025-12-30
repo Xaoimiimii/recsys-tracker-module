@@ -1836,690 +1836,6 @@ class PluginManager {
     }
 }
 
-let aiItemDetectorInstance = null;
-class AIItemDetector {
-    constructor() {
-        this.itemCache = new Map();
-        this.domObserver = null;
-        if (aiItemDetectorInstance) {
-            return aiItemDetectorInstance;
-        }
-        this.init();
-        aiItemDetectorInstance = this;
-    }
-    init() {
-        console.log('[Recsys AI] 🤖 AI Item Detector initialized');
-        this.setupDOMMutationObserver();
-    }
-    detectItemFromClick(event) {
-        const element = event.target;
-        console.log('[Recsys AI] 🔍 Analyzing clicked element...');
-        const domItem = this.detectItemFromDOM(element);
-        if (domItem)
-            return domItem;
-        const textItem = this.detectItemFromText(element);
-        if (textItem)
-            return textItem;
-        const mediaItem = this.detectItemFromMedia(element);
-        if (mediaItem)
-            return mediaItem;
-        const structuredItem = this.detectItemFromStructuredData(element);
-        if (structuredItem)
-            return structuredItem;
-        return this.detectItemFromPosition(element);
-    }
-    detectItemFromDOM(element) {
-        console.log('[Recsys AI] 🔍 Analyzing DOM context (Self/Parent Check)...');
-        let current = element;
-        for (let i = 0; i < 5; i++) {
-            if (!current)
-                break;
-            const itemData = this.extractItemDataFromElement(current);
-            if (itemData) {
-                return itemData;
-            }
-            current = current.parentElement;
-        }
-        return null;
-    }
-    detectItemFromChildren(parentElement) {
-        var _a;
-        console.log('[Recsys AI] 🔍 Analyzing Item Card Children...');
-        const itemSelectors = ['[data-item-id]', '[data-id]',
-            '[data-song-id]', '[data-track-id]', '[data-video-id]',
-            '[data-product-id]', '[data-sku]', '[data-listing-id]',
-            '[data-article-id]', '[data-post-id]', '[data-thread-id]',
-            '[data-user-id]', '[data-author-id]',
-            '[data-content-id]'
-        ];
-        for (const selector of itemSelectors) {
-            const childElement = parentElement.querySelector(selector);
-            if (childElement) {
-                const itemData = this.extractItemDataFromElement(childElement);
-                if (itemData) {
-                    console.log('[Recsys AI] ✅ Found item in Child Element via Data Attribute:', itemData);
-                    return itemData;
-                }
-            }
-        }
-        const prominentChildren = parentElement.querySelectorAll('a, button, [role="link"], [role="button"]');
-        for (const child of Array.from(prominentChildren)) {
-            const itemData = this.extractItemDataFromElement(child);
-            if (itemData) {
-                console.log('[Recsys AI] ✅ Found item in Prominent Child Element:', itemData);
-                return itemData;
-            }
-        }
-        const titleElement = parentElement.querySelector('h1, h2, h3, h4, [data-title]');
-        const title = (_a = titleElement === null || titleElement === void 0 ? void 0 : titleElement.textContent) === null || _a === void 0 ? void 0 : _a.trim();
-        if (title) {
-            console.log('[Recsys AI] 💡 Detected item via Title Fallback:', title);
-            return {
-                id: this.generateHashId(title),
-                name: title,
-                type: 'content',
-                confidence: 0.6,
-                source: 'title_fallback'
-            };
-        }
-        return null;
-    }
-    detectItemFromText(element) {
-        console.log('[Recsys AI] 🔍 Analyzing text content...');
-        const textContext = this.getTextContext(element, 2);
-        if (!textContext)
-            return null;
-        const patterns = {
-            song: [
-                /(["'])(.+?)\1\s*(?:-|-|by)\s*(.+)/i,
-                /(.+?)\s*(?:-|-)\s*(.+)/i,
-                /Track\s*\d+[:\s]*(.+)/i,
-                /(.+?)\s*\(feat\.\s*(.+)\)/i,
-            ],
-            album: [
-                /Album[:\s]*(.+)/i,
-                /(.+?)\s*(?:album|LP|EP)/i,
-            ],
-            artist: [
-                /Artist[:\s]*(.+)/i,
-                /by\s*(.+)/i,
-            ],
-            product: [
-                /(Mã|SKU|Code|Item)\s*[:#]\s*([A-Z0-9-]+)/i,
-                /(Product|Sản phẩm)\s*[:\s]*(.+)/i,
-            ],
-            article: [
-                /(Bài viết|Post|News)\s*[:\s]*(.+)/i,
-                /Published\s*(?:by|on)\s*(.+)/i,
-            ],
-        };
-        for (const [type, typePatterns] of Object.entries(patterns)) {
-            for (const pattern of typePatterns) {
-                const match = textContext.match(pattern);
-                if (match) {
-                    const itemName = (match[2] || match[1] || '').trim();
-                    if (!itemName)
-                        continue;
-                    const idValue = (type === 'product' && itemName.length < 50) ? itemName : this.generateHashId(itemName);
-                    console.log(`[Recsys AI] ✅ Detected ${type}: ${itemName}`);
-                    return {
-                        id: idValue,
-                        name: itemName,
-                        type: type,
-                        confidence: 0.7,
-                        source: 'text_pattern',
-                        context: textContext.substring(0, 100)
-                    };
-                }
-            }
-        }
-        const keywords = {
-            song: ['play', 'listen', 'track', 'song', 'music', 'audio'],
-            video: ['watch', 'view', 'video', 'movie', 'film', 'trailer'],
-            product: ['buy', 'purchase', 'shop', 'product', 'item', 'add to cart', 'giá', 'mua hàng', 'price'],
-            article: ['read more', 'continue reading', 'bài viết', 'tin tức', 'blog post', 'tác giả'],
-            user: ['follow', 'profile', 'người dùng', 'tài khoản', 'friend'],
-            comment: ['like', 'share', 'comment', 'bình luận'],
-        };
-        const lowerText = textContext.toLowerCase();
-        for (const [type, words] of Object.entries(keywords)) {
-            if (words.some(word => lowerText.includes(word))) {
-                const words = textContext.split(/\s+/).slice(0, 5).join(' ');
-                if (words.length > 3) {
-                    return {
-                        id: this.generateHashId(words),
-                        name: words,
-                        type: type,
-                        confidence: 0.5,
-                        source: 'keyword_match',
-                        context: textContext.substring(0, 100)
-                    };
-                }
-            }
-        }
-        return null;
-    }
-    detectItemFromLimitedText(element) {
-        const textContext = this.getTextContext(element, 1);
-        if (!textContext)
-            return null;
-        const MAX_CONTEXT_LENGTH = 120;
-        if (textContext.length > MAX_CONTEXT_LENGTH) {
-            console.log('[Recsys AI] Text fallback ignored: Context too long (>' + MAX_CONTEXT_LENGTH + ').');
-            return null;
-        }
-        const patterns = {
-            song: [
-                /(["'])(.+?)\1\s*(?:-|-|by)\s*(.+)/i,
-                /(.+?)\s*(?:-|-)\s*(.+)/i,
-                /Track\s*\d+[:\s]*(.+)/i,
-                /(.+?)\s*\(feat\.\s*(.+)\)/i,
-            ],
-            product: [
-                /(Mã|SKU|Code|Item)\s*[:#]\s*([A-Z0-9-]+)/i,
-                /(Product|Sản phẩm)\s*[:\s]*(.+)/i,
-            ],
-            article: [
-                /(Bài viết|Post|News)\s*[:\s]*(.+)/i,
-                /Published\s*(?:by|on)\s*(.+)/i,
-            ],
-            album: [
-                /Album[:\s]*(.+)/i,
-                /(.+?)\s*(?:album|LP|EP)/i,
-            ],
-            artist: [
-                /Artist[:\s]*(.+)/i,
-                /by\s*(.+)/i,
-            ]
-        };
-        for (const [type, typePatterns] of Object.entries(patterns)) {
-            for (const pattern of typePatterns) {
-                const match = textContext.match(pattern);
-                if (match) {
-                    const itemName = (match[2] || match[1] || '').trim();
-                    if (!itemName)
-                        continue;
-                    const idValue = (type === 'product' && itemName.length < 50) ? itemName : this.generateHashId(itemName);
-                    return {
-                        id: idValue,
-                        name: itemName,
-                        type: type,
-                        confidence: 0.5,
-                        source: 'text_pattern_limited',
-                        context: textContext
-                    };
-                }
-            }
-        }
-        const keywords = {
-            song: ['play', 'listen', 'track', 'song', 'music', 'audio'],
-            video: ['watch', 'view', 'video', 'movie', 'film', 'trailer'],
-            product: ['buy', 'purchase', 'shop', 'product', 'item', 'add to cart', 'giá', 'mua hàng', 'price'],
-            article: ['read more', 'continue reading', 'bài viết', 'tin tức', 'blog post', 'tác giả'],
-            user: ['follow', 'profile', 'người dùng', 'tài khoản', 'friend'],
-            comment: ['like', 'share', 'comment', 'bình luận'],
-        };
-        const lowerText = textContext.toLowerCase();
-        for (const [type, words] of Object.entries(keywords)) {
-            if (words.some(word => lowerText.includes(word))) {
-                const words = textContext.split(/\s+/).slice(0, 5).join(' ');
-                if (words.length > 3) {
-                    return {
-                        id: this.generateHashId(words),
-                        name: words,
-                        type: type,
-                        confidence: 0.3,
-                        source: 'keyword_match_limited',
-                        context: textContext
-                    };
-                }
-            }
-        }
-        return null;
-    }
-    detectItemFromMedia(element) {
-        const mediaElement = this.findNearbyMedia(element);
-        if (!mediaElement)
-            return null;
-        const castedMedia = mediaElement;
-        let mediaData = {
-            type: mediaElement.tagName.toLowerCase(),
-            src: castedMedia.src || castedMedia.currentSrc || '',
-            alt: castedMedia.alt || castedMedia.getAttribute('alt') || '',
-            title: castedMedia.title || castedMedia.getAttribute('title') || ''
-        };
-        if (mediaElement.tagName === 'IMG') {
-            const imageInfo = this.analyzeImage(mediaElement);
-            if (imageInfo) {
-                return {
-                    id: this.generateHashId(mediaData.src + mediaData.alt),
-                    name: imageInfo.name || mediaData.alt || this.extractNameFromSrc(mediaData.src),
-                    type: 'media',
-                    confidence: 0.6,
-                    source: 'image_analysis',
-                    metadata: { ...mediaData, ...imageInfo }
-                };
-            }
-        }
-        if (mediaElement.tagName === 'VIDEO') {
-            const videoInfo = this.analyzeVideo(mediaElement);
-            if (videoInfo) {
-                return {
-                    id: this.generateHashId(mediaData.src + Date.now()),
-                    name: videoInfo.title || 'Video Content',
-                    type: 'video',
-                    confidence: 0.6,
-                    source: 'video_analysis',
-                    metadata: { ...mediaData, ...videoInfo }
-                };
-            }
-        }
-        return null;
-    }
-    detectItemFromStructuredData(element) {
-        const microdata = this.extractMicrodata(element);
-        if (microdata)
-            return microdata;
-        const jsonLdData = this.extractJsonLdData();
-        if (jsonLdData) {
-            const matchingItem = this.findMatchingItemInJsonLd(jsonLdData, element);
-            if (matchingItem)
-                return matchingItem;
-        }
-        const ogData = this.extractOpenGraphData();
-        if (ogData) {
-            return {
-                id: this.generateHashId(ogData.title),
-                name: ogData.title,
-                type: ogData.type || 'content',
-                confidence: 0.8,
-                source: 'open_graph',
-                metadata: ogData
-            };
-        }
-        return null;
-    }
-    detectItemFromPosition(element) {
-        var _a;
-        const rect = element.getBoundingClientRect();
-        const position = {
-            x: Math.round(rect.left + window.scrollX),
-            y: Math.round(rect.top + window.scrollY),
-            width: Math.round(rect.width),
-            height: Math.round(rect.height)
-        };
-        const positionId = `${position.x}_${position.y}_${position.width}_${position.height}`;
-        const contentHash = this.hashString(element.textContent || '');
-        return {
-            id: `pos_${positionId}_${contentHash}`,
-            name: this.extractNameFromPosition(element),
-            type: 'ui_element',
-            confidence: 0.3,
-            source: 'position_based',
-            metadata: {
-                position: position,
-                elementType: element.tagName.toLowerCase(),
-                textPreview: ((_a = element.textContent) === null || _a === void 0 ? void 0 : _a.substring(0, 50)) || ''
-            }
-        };
-    }
-    extractItemDataFromElement(element) {
-        var _a;
-        const dataAttrs = ['data-item-id', 'data-id',
-            'data-song-id', 'data-track-id', 'data-video-id',
-            'data-product-id', 'data-sku', 'data-listing-id',
-            'data-article-id', 'data-post-id', 'data-thread-id',
-            'data-user-id', 'data-author-id',
-            'data-content-id'
-        ];
-        const htmlElement = element;
-        for (const attr of dataAttrs) {
-            const value = element.getAttribute(attr);
-            if (value) {
-                const itemTitle = htmlElement.title || htmlElement.getAttribute('title');
-                const itemAlt = htmlElement.getAttribute('alt');
-                return {
-                    id: value,
-                    name: element.getAttribute('data-item-name') ||
-                        element.getAttribute('data-name') ||
-                        itemTitle ||
-                        itemAlt ||
-                        'Unnamed Item',
-                    type: this.inferTypeFromAttribute(attr),
-                    confidence: 0.9,
-                    source: 'data_attribute',
-                    metadata: { attribute: attr }
-                };
-            }
-        }
-        if (element.tagName === 'ARTICLE' || element.getAttribute('role') === 'article') {
-            const title = element.querySelector('h1, h2, h3, [role="heading"]');
-            if (title) {
-                return {
-                    id: this.generateHashId(title.textContent + element.innerHTML.length),
-                    name: (_a = title.textContent) === null || _a === void 0 ? void 0 : _a.trim(),
-                    type: 'article',
-                    confidence: 0.7,
-                    source: 'semantic_html'
-                };
-            }
-        }
-        return null;
-    }
-    getTextContext(element, depth = 2) {
-        var _a, _b, _c;
-        let context = '';
-        let current = element;
-        for (let i = 0; i <= depth; i++) {
-            if (!current)
-                break;
-            const text = (_a = current.textContent) === null || _a === void 0 ? void 0 : _a.trim();
-            if (text && text.length > 0 && text.length < 500) {
-                context += text + ' ';
-            }
-            if (current.previousElementSibling) {
-                const prevText = (_b = current.previousElementSibling.textContent) === null || _b === void 0 ? void 0 : _b.trim();
-                if (prevText && prevText.length < 200) {
-                    context = prevText + ' ' + context;
-                }
-            }
-            if (current.nextElementSibling) {
-                const nextText = (_c = current.nextElementSibling.textContent) === null || _c === void 0 ? void 0 : _c.trim();
-                if (nextText && nextText.length < 200) {
-                    context += ' ' + nextText;
-                }
-            }
-            current = current.parentElement;
-        }
-        return context.trim() || null;
-    }
-    findNearbyMedia(element, maxDistance = 3) {
-        if (element.tagName === 'IMG' || element.tagName === 'VIDEO' ||
-            element.tagName === 'AUDIO' || element.tagName === 'FIGURE') {
-            return element;
-        }
-        const mediaChild = element.querySelector('img, video, audio, figure, [data-media]');
-        if (mediaChild)
-            return mediaChild;
-        let current = element;
-        for (let i = 0; i < maxDistance; i++) {
-            if (!current)
-                break;
-            if (current.parentElement) {
-                const parentMedia = current.parentElement.querySelector('img, video, audio');
-                if (parentMedia)
-                    return parentMedia;
-            }
-            const siblings = [];
-            if (current.previousElementSibling)
-                siblings.push(current.previousElementSibling);
-            if (current.nextElementSibling)
-                siblings.push(current.nextElementSibling);
-            for (const sibling of siblings) {
-                const siblingMedia = sibling.querySelector('img, video, audio');
-                if (siblingMedia)
-                    return siblingMedia;
-            }
-            current = current.parentElement;
-        }
-        return null;
-    }
-    analyzeImage(imgElement) {
-        const src = imgElement.src || '';
-        const alt = imgElement.alt || '';
-        let name = alt;
-        if (!name && src) {
-            name = this.extractNameFromSrc(src);
-        }
-        let type = 'image';
-        const patterns = [
-            /(album|cover|artwork).*\.(jpg|jpeg|png|gif)/i,
-            /(song|track|music).*\.(jpg|jpeg|png|gif)/i,
-            /(artist|band).*\.(jpg|jpeg|png|gif)/i,
-            /(thumbnail|thumb).*\.(jpg|jpeg|png|gif)/i,
-        ];
-        for (const pattern of patterns) {
-            if (pattern.test(src) || pattern.test(alt)) {
-                if (pattern.toString().includes('album'))
-                    type = 'album_art';
-                if (pattern.toString().includes('song'))
-                    type = 'song_image';
-                if (pattern.toString().includes('artist'))
-                    type = 'artist_image';
-                break;
-            }
-        }
-        return {
-            name: name,
-            type: type,
-            dimensions: {
-                naturalWidth: imgElement.naturalWidth,
-                naturalHeight: imgElement.naturalHeight,
-                clientWidth: imgElement.clientWidth,
-                clientHeight: imgElement.clientHeight
-            }
-        };
-    }
-    analyzeVideo(videoElement) {
-        const src = videoElement.src || videoElement.currentSrc || '';
-        const duration = videoElement.duration || 0;
-        return {
-            title: videoElement.getAttribute('data-title') ||
-                videoElement.title ||
-                this.extractNameFromSrc(src),
-            duration: duration,
-            isPlaying: !videoElement.paused,
-            currentTime: videoElement.currentTime || 0
-        };
-    }
-    extractNameFromSrc(src) {
-        var _a;
-        if (!src)
-            return '';
-        const filename = ((_a = src.split('/').pop()) === null || _a === void 0 ? void 0 : _a.split('?')[0]) || '';
-        const name = filename.replace(/\.[^/.]+$/, '');
-        let cleanName = name.replace(/[-_]/g, ' ');
-        try {
-            cleanName = decodeURIComponent(cleanName);
-        }
-        catch (e) {
-            // Ignore
-        }
-        return cleanName;
-    }
-    extractMicrodata(element) {
-        const itemprops = element.querySelectorAll('[itemprop]');
-        if (itemprops.length === 0)
-            return null;
-        const data = {};
-        Array.from(itemprops).forEach(el => {
-            var _a;
-            const prop = el.getAttribute('itemprop');
-            const value = el.getAttribute('content') ||
-                el.getAttribute('src') ||
-                ((_a = el.textContent) === null || _a === void 0 ? void 0 : _a.trim());
-            if (prop && value) {
-                data[prop] = value;
-            }
-        });
-        if (Object.keys(data).length > 0) {
-            return {
-                id: data.url || data.identifier || this.generateHashId(JSON.stringify(data)),
-                name: data.name || data.title || 'Microdata Item',
-                type: data['@type'] || 'Thing',
-                confidence: 0.85,
-                source: 'microdata',
-                metadata: data
-            };
-        }
-        return null;
-    }
-    extractJsonLdData() {
-        const scripts = document.querySelectorAll('script[type="application/ld+json"]');
-        const allData = [];
-        Array.from(scripts).forEach(script => {
-            try {
-                const data = JSON.parse(script.textContent || '{}');
-                if (Array.isArray(data)) {
-                    allData.push(...data);
-                }
-                else {
-                    allData.push(data);
-                }
-            }
-            catch (e) {
-                console.error('[Recsys AI] Failed to parse JSON-LD:', e);
-            }
-        });
-        return allData.length > 0 ? allData : null;
-    }
-    findMatchingItemInJsonLd(jsonLdData, element) {
-        var _a;
-        const elementText = (_a = element.textContent) === null || _a === void 0 ? void 0 : _a.trim().toLowerCase();
-        if (!elementText)
-            return null;
-        for (const item of jsonLdData) {
-            if (item.name && item.name.toLowerCase().includes(elementText.substring(0, 20))) {
-                return {
-                    id: item['@id'] || item.identifier || this.generateHashId(item.name),
-                    name: item.name,
-                    type: item['@type'] || 'CreativeWork',
-                    confidence: 0.9,
-                    source: 'json_ld',
-                    metadata: item
-                };
-            }
-        }
-        return null;
-    }
-    extractOpenGraphData() {
-        const metaTags = document.querySelectorAll('meta[property^="og:"]');
-        const data = {};
-        Array.from(metaTags).forEach(tag => {
-            var _a;
-            const property = (_a = tag.getAttribute('property')) === null || _a === void 0 ? void 0 : _a.replace('og:', '');
-            const content = tag.getAttribute('content');
-            if (property && content) {
-                data[property] = content;
-            }
-        });
-        return Object.keys(data).length > 0 ? data : null;
-    }
-    extractNameFromPosition(element) {
-        var _a, _b;
-        const text = (_a = element.textContent) === null || _a === void 0 ? void 0 : _a.trim();
-        if (text && text.length > 0 && text.length < 100) {
-            return text;
-        }
-        const htmlElement = element;
-        const heading = htmlElement.closest('h1, h2, h3, h4, h5, h6, [role="heading"]');
-        if (heading)
-            return ((_b = heading.textContent) === null || _b === void 0 ? void 0 : _b.trim()) || 'UI Element';
-        const label = element.getAttribute('aria-label') ||
-            element.getAttribute('title') ||
-            element.getAttribute('alt');
-        if (label)
-            return label;
-        return `Element at (${htmlElement.offsetLeft}, ${htmlElement.offsetTop})`;
-    }
-    inferTypeFromAttribute(attr) {
-        if (attr.includes('song') || attr.includes('track'))
-            return 'song';
-        if (attr.includes('video'))
-            return 'video';
-        if (attr.includes('product') || attr.includes('sku') || attr.includes('listing'))
-            return 'product';
-        if (attr.includes('article') || attr.includes('post') || attr.includes('thread'))
-            return 'article';
-        if (attr.includes('user') || attr.includes('author'))
-            return 'user';
-        if (attr.includes('content'))
-            return 'content';
-        return 'item';
-    }
-    generateHashId(str) {
-        let hash = 0;
-        for (let i = 0; i < str.length; i++) {
-            const char = str.charCodeAt(i);
-            hash = ((hash << 5) - hash) + char;
-            hash = hash & hash;
-        }
-        return Math.abs(hash).toString(36);
-    }
-    hashString(str) {
-        let hash = 0;
-        for (let i = 0; i < str.length; i++) {
-            const char = str.charCodeAt(i);
-            hash = ((hash << 5) - hash) + char;
-            hash = hash & hash;
-        }
-        return hash.toString(36);
-    }
-    setupDOMMutationObserver() {
-        this.domObserver = new MutationObserver((mutations) => {
-            mutations.forEach((mutation) => {
-                if (mutation.type === 'childList' && mutation.addedNodes.length > 0) {
-                    this.scanNewContent(Array.from(mutation.addedNodes));
-                }
-            });
-        });
-        this.domObserver.observe(document.body, {
-            childList: true,
-            subtree: true
-        });
-    }
-    scanNewContent(nodes) {
-        nodes.forEach(node => {
-            if (node.nodeType === Node.ELEMENT_NODE) {
-                const element = node;
-                const items = element.querySelectorAll('[data-item-id], [data-song-id], [data-track-id]');
-                items.forEach(item => {
-                    const itemData = this.extractItemDataFromElement(item);
-                    if (itemData) {
-                        this.itemCache.set(itemData.id, itemData);
-                    }
-                });
-            }
-        });
-    }
-    detectItem(eventOrElement) {
-        if (!eventOrElement)
-            return null;
-        if (eventOrElement instanceof Event) {
-            return this.detectItemFromClick(eventOrElement);
-        }
-        else if (eventOrElement instanceof Element) {
-            let itemData = this.extractItemDataFromElement(eventOrElement);
-            if (itemData)
-                return itemData;
-            itemData = this.detectItemFromChildren(eventOrElement);
-            if (itemData)
-                return itemData;
-            console.log('[Recsys AI] ⚠️ Failed to find Item ID in DOM/Children. Falling back.');
-            let fallbackItemData = this.detectItemFromLimitedText(eventOrElement) ||
-                this.detectItemFromPosition(eventOrElement);
-            if (fallbackItemData) {
-                fallbackItemData.source = 'fallback_' + fallbackItemData.source;
-            }
-            return fallbackItemData;
-        }
-        return null;
-    }
-}
-function getAIItemDetector() {
-    if (!aiItemDetectorInstance) {
-        aiItemDetectorInstance = new AIItemDetector();
-    }
-    return aiItemDetectorInstance;
-}
-
-const STORAGE_KEYS = {
-    ANON_USER_ID: 'recsys_anon_id',
-    USER_ID: 'recsys_user_id',
-    SESSION_ID: 'recsys_session',
-    IDENTIFIERS: 'recsys_identifiers',
-    LAST_USER_ID: 'recsys_last_user_id'
-};
 function throttle(fn, delay) {
     let lastCall = 0;
     let timeoutId = null;
@@ -2552,7 +1868,6 @@ class ClickPlugin extends BasePlugin {
     constructor() {
         super();
         this.name = 'ClickPlugin';
-        this.detector = null;
         this.THROTTLE_DELAY = 300;
         // Wrap handler với error boundary ngay trong constructor
         this.throttledHandler = throttle(this.wrapHandler(this.handleDocumentClick.bind(this), 'handleDocumentClick'), this.THROTTLE_DELAY);
@@ -2560,7 +1875,6 @@ class ClickPlugin extends BasePlugin {
     init(tracker) {
         this.errorBoundary.execute(() => {
             super.init(tracker);
-            this.detector = getAIItemDetector();
             console.log(`[ClickPlugin] initialized for Rule.`);
         }, 'ClickPlugin.init');
     }
@@ -2568,7 +1882,7 @@ class ClickPlugin extends BasePlugin {
         this.errorBoundary.execute(() => {
             if (!this.ensureInitialized())
                 return;
-            if (this.tracker && this.detector) {
+            if (this.tracker) {
                 document.addEventListener("click", this.throttledHandler, false);
                 console.log("[ClickPlugin] started Rule-based listening (Throttled).");
                 this.active = true;
@@ -2584,7 +1898,7 @@ class ClickPlugin extends BasePlugin {
         }, 'ClickPlugin.destroy');
     }
     handleDocumentClick(event) {
-        if (!this.tracker || !this.detector)
+        if (!this.tracker)
             return;
         const eventId = this.tracker.getEventTypeId('Click');
         if (!eventId)
@@ -2622,12 +1936,10 @@ class PageViewPlugin extends BasePlugin {
     constructor() {
         super(...arguments);
         this.name = 'PageViewPlugin';
-        this.detector = null;
     }
     init(tracker) {
         this.errorBoundary.execute(() => {
             super.init(tracker);
-            this.detector = getAIItemDetector();
             console.log(`[PageViewPlugin] initialized.`);
         }, 'PageViewPlugin.init');
     }
@@ -2662,7 +1974,7 @@ class PageViewPlugin extends BasePlugin {
     }
     trackCurrentPage(currentUrl) {
         var _a, _b;
-        if (!this.tracker || !this.detector)
+        if (!this.tracker)
             return;
         const urlObject = new URL(currentUrl);
         const pathname = urlObject.pathname;
@@ -2705,11 +2017,8 @@ class PageViewPlugin extends BasePlugin {
                 console.log(`[PageViewPlugin] ✅ Matched default rule: ${rule.name}`);
             }
             if (matchFound) {
-                // AI/Structured Data detection context
-                const structuredItem = this.detector.detectItemFromStructuredData(document.body) ||
-                    this.detector.extractOpenGraphData();
                 // Use centralized build and track
-                this.buildAndTrack(structuredItem, rule, eventId);
+                this.buildAndTrack(document.body, rule, eventId);
                 return;
             }
         }
@@ -2722,503 +2031,18 @@ var pageViewPlugin = /*#__PURE__*/Object.freeze({
     PageViewPlugin: PageViewPlugin
 });
 
-let identityManagerInstance = null;
-class UserIdentityManager {
-    constructor() {
-        this.identifiers = {};
-        this.sessionId = '';
-        this.currentUserId = null;
-        this.isLoggedIn = false;
-        this.initialized = false;
-        this.authRequests = new Set();
-        this.tracker = null;
-        if (identityManagerInstance) {
-            return identityManagerInstance;
-        }
-        this.identifiers = this.loadIdentifiers();
-        this.sessionId = this.generateSessionId();
-        identityManagerInstance = this;
-        window.identityManager = this;
-        window.recsysIdentityManager = this;
-    }
-    setTracker(tracker) {
-        this.tracker = tracker;
-    }
-    initialize() {
-        if (this.initialized)
-            return;
-        const persistedUserId = this.getPersistedUserId();
-        if (persistedUserId && !persistedUserId.startsWith('anon_')) {
-            this.currentUserId = persistedUserId;
-            this.isLoggedIn = true;
-            console.log(`[RECSYS] Restored logged-in user: ${persistedUserId}`);
-            this.identifiers.detectedUserId = persistedUserId;
-            this.saveIdentifiers();
-        }
-        else {
-            this.currentUserId = this.findOrCreateUserId();
-        }
-        this.setupEnhancedNetworkMonitoring();
-        this.startMonitoring();
-        this.initialized = true;
-        console.log(`[RECSYS] Identity Manager initialized. Current user: ${this.currentUserId}, Logged in: ${this.isLoggedIn}`);
-    }
-    getPersistedUserId() {
-        if (this.identifiers.detectedUserId && typeof this.identifiers.detectedUserId === 'string' && !this.identifiers.detectedUserId.startsWith('anon_')) {
-            return this.identifiers.detectedUserId;
-        }
-        const storedUserId = localStorage.getItem(STORAGE_KEYS.USER_ID);
-        if (storedUserId && storedUserId !== 'undefined' && storedUserId !== 'null' && !storedUserId.startsWith('anon_')) {
-            return storedUserId;
-        }
-        const anonId = localStorage.getItem(STORAGE_KEYS.ANON_USER_ID);
-        if (anonId) {
-            return anonId;
-        }
-        return null;
-    }
-    findOrCreateUserId() {
-        const userId = this.extractUserIdFromCookies() ||
-            this.extractUserIdFromLocalStorage() ||
-            this.extractUserIdFromJWT(localStorage.getItem('token'));
-        if (userId && !userId.startsWith('anon_')) {
-            this.handleDetectedUserId(userId, 'initial_lookup');
-            this.isLoggedIn = true;
-            return userId;
-        }
-        let anonId = localStorage.getItem(STORAGE_KEYS.ANON_USER_ID);
-        if (!anonId) {
-            anonId = 'anon_' + Date.now() + '_' + Math.random().toString(36).substring(2, 9);
-            localStorage.setItem(STORAGE_KEYS.ANON_USER_ID, anonId);
-        }
-        this.isLoggedIn = false;
-        return anonId;
-    }
-    getUserId() {
-        if (this.currentUserId) {
-            return this.currentUserId;
-        }
-        return this.findOrCreateUserId();
-    }
-    getStableUserId() {
-        return this.currentUserId || this.getUserId();
-    }
-    getRealUserId() {
-        if (this.currentUserId && !this.currentUserId.startsWith('anon_')) {
-            return this.currentUserId;
-        }
-        return this.getUserId();
-    }
-    refreshUserId() {
-        const oldUserId = this.currentUserId;
-        const newUserId = this.findOrCreateUserId();
-        if (oldUserId !== newUserId) {
-            const wasLoggedIn = this.isLoggedIn;
-            this.isLoggedIn = !newUserId.startsWith('anon_');
-            console.log(`[RECSYS] User ID changed: ${oldUserId} -> ${newUserId}, Login status: ${wasLoggedIn} -> ${this.isLoggedIn}`);
-            this.currentUserId = newUserId;
-            window.dispatchEvent(new CustomEvent('recsys:userIdChanged', {
-                detail: {
-                    oldUserId,
-                    newUserId,
-                    wasLoggedIn,
-                    isNowLoggedIn: this.isLoggedIn,
-                    sessionId: this.sessionId
-                }
-            }));
-        }
-        return newUserId;
-    }
-    setupEnhancedNetworkMonitoring() {
-        const self = this;
-        const originalFetch = window.fetch;
-        window.fetch = async (...args) => {
-            const [resource] = args;
-            const url = typeof resource === 'string' ? resource : resource.url;
-            if (url && (url.includes('/auth') || url.includes('/login') || url.includes('/signin'))) {
-                self.authRequests.add(url);
-            }
-            try {
-                const response = await originalFetch(...args);
-                const clonedResponse = response.clone();
-                if (url && self.authRequests.has(url)) {
-                    setTimeout(() => { self.processAuthResponse(url, clonedResponse); }, 100);
-                }
-                return response;
-            }
-            catch (error) {
-                console.log('❌ Fetch error:', error);
-                throw error;
-            }
-        };
-        if (window.XMLHttpRequest) {
-            const originalOpen = XMLHttpRequest.prototype.open;
-            const originalSend = XMLHttpRequest.prototype.send;
-            XMLHttpRequest.prototype.open = function (method, url) {
-                this._url = url;
-                this._method = method;
-                if (url && (url.includes('/auth') || url.includes('/login') || url.includes('/signin'))) {
-                    this._isAuthRequest = true;
-                }
-                return originalOpen.apply(this, arguments);
-            };
-            XMLHttpRequest.prototype.send = function (_body) {
-                const xhr = this;
-                xhr.addEventListener('load', () => {
-                    if (xhr.status >= 200 && xhr.status < 300) {
-                        if (xhr._isAuthRequest) {
-                            setTimeout(() => { self.processXHRAuthResponse(xhr); }, 100);
-                        }
-                        setTimeout(() => { self.checkResponseForUserData(xhr); }, 150);
-                    }
-                });
-                return originalSend.apply(this, arguments);
-            };
-        }
-        this.setupLocalStorageMonitor();
-        this.setupCookieMonitor();
-    }
-    async processAuthResponse(_url, response) {
-        try {
-            const data = await response.json();
-            const userId = this.extractUserIdFromObject(data);
-            if (userId) {
-                this.handleDetectedUserId(userId, 'auth_response');
-            }
-            else {
-                setTimeout(() => { this.checkAllSourcesForUserId(); }, 1000);
-            }
-        }
-        catch (e) { }
-    }
-    processXHRAuthResponse(xhr) {
-        try {
-            const data = JSON.parse(xhr.responseText);
-            const userId = this.extractUserIdFromObject(data);
-            if (userId) {
-                this.handleDetectedUserId(userId, 'xhr_auth_response');
-            }
-        }
-        catch (e) { }
-    }
-    checkResponseForUserData(xhr) {
-        try {
-            const data = JSON.parse(xhr.responseText);
-            const userId = this.extractUserIdFromObject(data);
-            if (userId && !this.authRequests.has(xhr._url)) {
-                this.handleDetectedUserId(userId, 'api_response');
-            }
-        }
-        catch (e) { /* Ignore */ }
-    }
-    // --- LOGIN HANDLERS ---
-    handleDetectedUserId(userId, _source) {
-        if (this.currentUserId && !this.currentUserId.startsWith('anon_')) {
-            console.log(`[RECSYS] User already authenticated as ${this.currentUserId}. Ignoring ${userId} from ${_source}`);
-            return;
-        }
-        if (userId && !userId.startsWith('anon_')) {
-            const oldUserId = this.currentUserId;
-            const wasAnonymous = oldUserId && oldUserId.startsWith('anon_');
-            if (wasAnonymous) {
-                console.log(`[RECSYS CAPTURE] User logged in: ${oldUserId} -> ${userId} (Source: ${_source})`);
-                this.onUserLoginDetected(oldUserId, userId, _source);
-            }
-            else if (oldUserId !== userId) {
-                console.log(`[RECSYS CAPTURE] User ID updated: ${oldUserId} -> ${userId} (Source: ${_source})`);
-            }
-            this.currentUserId = userId;
-            this.isLoggedIn = true;
-            localStorage.setItem(STORAGE_KEYS.USER_ID, userId);
-            this.identifiers.detectedUserId = userId;
-            this.identifiers.detectionMethod = _source;
-            this.identifiers.detectionTime = new Date().toISOString();
-            this.saveIdentifiers();
-            // Sync to Tracker if available
-            if (this.tracker) {
-                this.tracker.setUserId(userId);
-            }
-        }
-    }
-    onUserLoginDetected(anonymousId, userId, _source) {
-        this.sendLoginEvent(anonymousId, userId, _source);
-        window.dispatchEvent(new CustomEvent('recsys:userLoggedIn', {
-            detail: {
-                userId: userId,
-                anonymousId: anonymousId,
-                detectionMethod: _source,
-                sessionId: this.sessionId,
-                timestamp: new Date().toISOString()
-            }
-        }));
-    }
-    sendLoginEvent(anonymousId, userId, _source) {
-        console.log(`[RECSYS CAPTURE] Login event prepared for User ID: ${userId} (from ${anonymousId}).`);
-    }
-    checkAllSourcesForUserId() {
-        const cookieUserId = this.extractUserIdFromCookies();
-        if (cookieUserId) {
-            this.handleDetectedUserId(cookieUserId, 'cookies_after_login');
-            return;
-        }
-        const lsUserId = this.extractUserIdFromLocalStorage();
-        if (lsUserId) {
-            this.handleDetectedUserId(lsUserId, 'localStorage_after_login');
-            return;
-        }
-        setTimeout(() => { this.checkCommonUserEndpoints(); }, 2000);
-        this.startPostLoginPolling();
-    }
-    startPostLoginPolling() {
-        let attempts = 0;
-        const maxAttempts = 10;
-        const poll = () => {
-            attempts++;
-            const cookieId = this.extractUserIdFromCookies();
-            const lsId = this.extractUserIdFromLocalStorage();
-            if (cookieId) {
-                this.handleDetectedUserId(cookieId, 'polling_cookies');
-                return;
-            }
-            if (lsId) {
-                this.handleDetectedUserId(lsId, 'polling_localStorage');
-                return;
-            }
-            if (attempts < maxAttempts) {
-                setTimeout(poll, 1000);
-            }
-        };
-        setTimeout(poll, 1000);
-    }
-    checkCommonUserEndpoints() {
-        const endpoints = ['/user/profile', '/api/me', '/user/me', '/account/info'];
-        endpoints.forEach(endpoint => {
-            fetch(endpoint, { method: 'GET', credentials: 'include' })
-                .then(res => res.json())
-                .then(data => {
-                const userId = this.extractUserIdFromObject(data);
-                if (userId) {
-                    this.handleDetectedUserId(userId, `endpoint_${endpoint}`);
-                }
-            }).catch(() => { });
-        });
-    }
-    setupLocalStorageMonitor() {
-        const self = this;
-        const originalSetItem = localStorage.setItem;
-        localStorage.setItem = function (key, value) {
-            originalSetItem.call(this, key, value);
-            if (self.isUserRelatedKey(key)) {
-                window.dispatchEvent(new CustomEvent('storage', {
-                    detail: { key, newValue: value, storageArea: this }
-                }));
-            }
-        };
-        window.addEventListener('storage', ((e) => {
-            if (this.isUserRelatedKey(e.key)) {
-                setTimeout(() => {
-                    const userId = this.extractUserIdFromLocalStorage();
-                    if (userId && !userId.startsWith('anon_')) {
-                        this.handleDetectedUserId(userId, 'localStorage_event');
-                    }
-                }, 100);
-            }
-        }));
-    }
-    setupCookieMonitor() {
-        let lastCookieString = document.cookie;
-        setInterval(() => {
-            const currentCookieString = document.cookie;
-            if (currentCookieString !== lastCookieString) {
-                lastCookieString = currentCookieString;
-                const userId = this.extractUserIdFromCookies();
-                if (userId && !userId.startsWith('anon_')) {
-                    this.handleDetectedUserId(userId, 'cookies_polling');
-                }
-            }
-        }, 2000);
-    }
-    isUserRelatedKey(key) {
-        if (!key)
-            return false;
-        const keywords = ['user', 'auth', 'token', 'session', 'login', 'profile', 'id', 'account'];
-        return keywords.some(kw => key.toLowerCase().includes(kw.toLowerCase()));
-    }
-    extractUserIdFromCookies() {
-        const cookies = document.cookie.split(';');
-        const cookieMap = {};
-        cookies.forEach(cookie => {
-            const parts = cookie.trim().split('=');
-            const key = parts[0];
-            const value = parts.slice(1).join('=');
-            if (key && value)
-                cookieMap[key] = decodeURIComponent(value);
-        });
-        const possibleKeys = ['userId', 'user_id', 'uid', 'user-id', 'auth_user_id', STORAGE_KEYS.USER_ID];
-        for (const key of possibleKeys) {
-            if (cookieMap[key] && cookieMap[key] !== 'undefined') {
-                return cookieMap[key];
-            }
-        }
-        const jwtKeys = ['token', 'access_token', 'jwt', 'auth_token'];
-        for (const key of jwtKeys) {
-            if (cookieMap[key]) {
-                const userId = this.extractUserIdFromJWT(cookieMap[key]);
-                if (userId)
-                    return userId;
-            }
-        }
-        return null;
-    }
-    extractUserIdFromLocalStorage() {
-        try {
-            const possibleKeys = [
-                'user_id', 'userId', 'uid', 'customer_id',
-                'user', 'userData', 'auth', 'currentUser', 'userInfo', 'profile', 'account',
-                STORAGE_KEYS.USER_ID
-            ];
-            for (const key of possibleKeys) {
-                const value = localStorage.getItem(key);
-                if (value) {
-                    try {
-                        const parsed = JSON.parse(value);
-                        const id = this.extractUserIdFromObject(parsed);
-                        if (id)
-                            return id;
-                    }
-                    catch (e) {
-                        if (value.length < 100 && !value.includes('.')) {
-                            return value;
-                        }
-                    }
-                }
-            }
-            const tokenKeys = ['token', 'access_token', 'jwt', 'auth_token'];
-            for (const key of tokenKeys) {
-                const token = localStorage.getItem(key);
-                if (token) {
-                    const userId = this.extractUserIdFromJWT(token);
-                    if (userId)
-                        return userId;
-                }
-            }
-        }
-        catch (e) {
-            return null;
-        }
-        return null;
-    }
-    extractUserIdFromJWT(token) {
-        if (!token || !token.includes('.'))
-            return null;
-        try {
-            const payload = token.split('.')[1];
-            const decoded = JSON.parse(atob(payload.replace(/-/g, '+').replace(/_/g, '/')));
-            return decoded.sub || decoded.userId || decoded.id || decoded.user_id || decoded.UserId;
-        }
-        catch (e) {
-            return null;
-        }
-    }
-    extractUserIdFromObject(obj) {
-        if (!obj || typeof obj !== 'object')
-            return null;
-        const idKeys = ['id', 'userId', 'user_id', 'uid', '_id', 'userID', 'UserId', 'UserID'];
-        for (const key of idKeys) {
-            if (obj[key] && obj[key] !== 'undefined' && obj[key] !== 'null') {
-                return String(obj[key]);
-            }
-        }
-        for (const key in obj) {
-            if (typeof obj[key] === 'object' && obj[key] !== null) {
-                const found = this.extractUserIdFromObject(obj[key]);
-                if (found)
-                    return found;
-            }
-        }
-        return null;
-    }
-    generateSessionId() {
-        return 'sess_' + Date.now() + '_' + Math.random().toString(36).substring(2, 11);
-    }
-    loadIdentifiers() {
-        try {
-            const stored = localStorage.getItem(STORAGE_KEYS.IDENTIFIERS);
-            return stored ? JSON.parse(stored) : {};
-        }
-        catch (e) {
-            return {};
-        }
-    }
-    saveIdentifiers() {
-        try {
-            localStorage.setItem(STORAGE_KEYS.IDENTIFIERS, JSON.stringify(this.identifiers));
-        }
-        catch (e) { /* Ignore */ }
-    }
-    startMonitoring() {
-        setInterval(() => {
-            if (!this.isLoggedIn || (this.currentUserId && this.currentUserId.startsWith('anon_'))) {
-                const newUserId = this.findOrCreateUserId();
-                if (newUserId !== this.currentUserId && !newUserId.startsWith('anon_')) {
-                    console.log(`[RECSYS] Monitoring detected login: ${this.currentUserId} -> ${newUserId}`);
-                    this.handleDetectedUserId(newUserId, 'monitoring');
-                }
-            }
-        }, 5000);
-    }
-    getUserInfo() {
-        return {
-            userId: this.currentUserId,
-            isLoggedIn: this.isLoggedIn,
-            sessionId: this.sessionId,
-            detectionMethod: this.identifiers.detectionMethod,
-            detectionTime: this.identifiers.detectionTime,
-            isAnonymous: this.currentUserId ? this.currentUserId.startsWith('anon_') : true
-        };
-    }
-    logout() {
-        const oldUserId = this.currentUserId;
-        this.currentUserId = null;
-        this.isLoggedIn = false;
-        localStorage.removeItem(STORAGE_KEYS.USER_ID);
-        const newAnonId = 'anon_' + Date.now() + '_' + Math.random().toString(36).substring(2, 9);
-        localStorage.setItem(STORAGE_KEYS.ANON_USER_ID, newAnonId);
-        this.currentUserId = newAnonId;
-        console.log(`[RECSYS] User logged out: ${oldUserId} -> ${newAnonId}`);
-        window.dispatchEvent(new CustomEvent('recsys:userLoggedOut', {
-            detail: {
-                oldUserId,
-                newUserId: newAnonId,
-                sessionId: this.sessionId
-            }
-        }));
-    }
-}
-function getUserIdentityManager() {
-    if (!identityManagerInstance) {
-        identityManagerInstance = new UserIdentityManager();
-    }
-    return identityManagerInstance;
-}
-
 const TARGET_PATTERN_ID = { CSS_SELECTOR: 1 };
-const CONDITION_PATTERN_ID = { URL_PARAM: 1, CSS_SELECTOR: 2, DOM_ATTRIBUTE: 3, DATA_ATTRIBUTE: 4 };
-const OPERATOR_ID = { CONTAINS: 1, NOT_CONTAINS: 2, STARTS_WITH: 3, ENDS_WITH: 4, EQUALS: 5, EXISTS: 7, NOT_EXISTS: 8 };
+const CONDITION_PATTERN_ID = { CSS_SELECTOR: 1, URL: 2, DATA_ATTRIBUTE: 3 };
+const OPERATOR_ID = { CONTAINS: 1, EQUALS: 2, STARTS_WITH: 3, ENDS_WITH: 4 };
 class ReviewPlugin extends BasePlugin {
     constructor() {
         super(...arguments);
         this.name = 'ReviewPlugin';
-        this.detector = null;
-        this.identityManager = null;
         this.handleSubmitBound = this.handleSubmit.bind(this);
     }
     init(tracker) {
         this.errorBoundary.execute(() => {
             super.init(tracker);
-            this.detector = getAIItemDetector();
-            this.identityManager = getUserIdentityManager();
-            this.identityManager.initialize();
             console.log(`[ReviewPlugin] initialized.`);
         }, 'ReviewPlugin.init');
     }
@@ -3245,8 +2069,8 @@ class ReviewPlugin extends BasePlugin {
             return;
         const form = event.target;
         console.log(`📝 [ReviewPlugin] Checking form: #${form.id} (Classes: ${form.className})`);
-        // Trigger ID for Review is typically 5 (or configured)
-        const eventId = this.tracker.getEventTypeId('Review') || 5;
+        // Trigger ID for Review is typically 3 (or configured)
+        const eventId = this.tracker.getEventTypeId('Review') || 3;
         const config = this.tracker.getConfig();
         const reviewRules = ((_a = config === null || config === void 0 ? void 0 : config.trackingRules) === null || _a === void 0 ? void 0 : _a.filter(r => r.eventTypeId === eventId)) || [];
         console.log(`🔎 [ReviewPlugin] Found ${reviewRules.length} rules for TriggerID=${eventId}`);
@@ -3260,85 +2084,21 @@ class ReviewPlugin extends BasePlugin {
             if (!this.checkConditions(form, rule))
                 continue;
             console.log(`✅ [ReviewPlugin] Match Rule: "${rule.name}"`);
-            // 3. Construct Payload
-            const payload = this.constructPayload(form, rule, eventId);
-            // 4. Send Event
-            this.tracker.track(payload);
-            console.log(payload);
+            // 3. Auto-detect review content if needed
+            const reviewContent = this.autoDetectReviewContent(form);
+            console.log(`[ReviewPlugin] Detected review content: "${reviewContent}"`);
+            // 4. Build and track using centralized method
+            this.buildAndTrack(form, rule, eventId, {
+                value: reviewContent,
+                metadata: {
+                    captureMethod: 'form-submit',
+                    source: 'review-plugin'
+                }
+            });
+            console.log(`[ReviewPlugin] 📤 Event tracked successfully`);
             return;
         }
         console.log("❌ [ReviewPlugin] No rules matched the current form.");
-    }
-    constructPayload(form, rule, eventId) {
-        // Extract via PayloadBuilder
-        const mappedData = this.tracker.payloadBuilder.build(form, rule);
-        console.log("🧩 [ReviewPlugin] Mapped Data from Config:", mappedData);
-        // Basic Payload
-        const payload = {
-            eventTypeId: eventId,
-            trackingRuleId: Number(rule.id),
-            userField: 'UserId',
-            userValue: '',
-            itemField: 'ItemId',
-            itemValue: '',
-            value: ''
-        };
-        const potentialUserKeys = ['userId', 'userName', 'userUID'];
-        const potentialItemKeys = ['itemId', 'itemName', 'itemUID'];
-        // Map Extracted Data
-        for (const key of potentialUserKeys) {
-            if (mappedData[key]) {
-                payload.userField = key;
-                payload.userValue = mappedData[key];
-                break;
-            }
-        }
-        for (const key of potentialItemKeys) {
-            if (mappedData[key]) {
-                payload.itemField = key;
-                payload.itemValue = mappedData[key];
-                break;
-            }
-        }
-        const content = mappedData.review_text || mappedData.content || mappedData.value || mappedData.review;
-        if (content) {
-            payload.value = content;
-        }
-        // --- FALLBACK ITEM ID ---
-        if (!payload.itemValue) {
-            console.log("⚠️ [ReviewPlugin] Missing ItemId from config. Trying Auto-detect...");
-            const radarScan = this.scanSurroundingContext(form);
-            if (radarScan.id) {
-                payload.itemValue = radarScan.id;
-            }
-            else if (this.detector) {
-                const aiItem = this.detector.detectItem(form);
-                if (aiItem && aiItem.id && aiItem.id !== 'N/A (Failed)') {
-                    payload.itemValue = aiItem.id;
-                }
-            }
-        }
-        // --- FALLBACK USER ID ---
-        if (!payload.userValue && this.identityManager) {
-            console.log("⚠️ [ReviewPlugin] Missing UserId from config. Trying IdentityManager...");
-            const realId = this.identityManager.getRealUserId();
-            const stableId = this.identityManager.getStableUserId();
-            if (realId && !realId.startsWith('anon_')) {
-                payload.userValue = realId;
-            }
-            else if (stableId) {
-                payload.userValue = stableId;
-            }
-        }
-        // --- FALLBACK REVIEW CONTENT ---
-        if (!payload.value) {
-            const autoContent = this.autoDetectReviewContent(form);
-            if (autoContent) {
-                console.log("⚠️ [ReviewPlugin] Auto-detected review content from form fields.");
-                payload.value = autoContent;
-            }
-        }
-        return payload;
     }
     checkTargetMatch(form, rule) {
         const target = rule.targetElement;
@@ -3365,31 +2125,23 @@ class ReviewPlugin extends BasePlugin {
             let actual = null;
             let isMet = false;
             switch (pattern) {
-                case CONDITION_PATTERN_ID.URL_PARAM:
-                    const p = new URLSearchParams(location.search);
-                    actual = p.get(val);
+                case CONDITION_PATTERN_ID.URL:
+                    actual = location.href;
                     break;
                 case CONDITION_PATTERN_ID.CSS_SELECTOR:
                     try {
                         isMet = form.matches(val);
-                        if (operator === OPERATOR_ID.EXISTS && !isMet)
-                            return false;
-                        if (operator === OPERATOR_ID.NOT_EXISTS && isMet)
-                            return false;
                         actual = isMet ? 'true' : 'false';
                     }
                     catch {
                         return false;
                     }
                     break;
-                case CONDITION_PATTERN_ID.DOM_ATTRIBUTE:
-                    actual = form.id;
-                    break;
                 case CONDITION_PATTERN_ID.DATA_ATTRIBUTE:
                     actual = form.getAttribute(val);
                     break;
             }
-            if (pattern === CONDITION_PATTERN_ID.CSS_SELECTOR && (operator === OPERATOR_ID.EXISTS || operator === OPERATOR_ID.NOT_EXISTS))
+            if (pattern === CONDITION_PATTERN_ID.CSS_SELECTOR)
                 continue;
             if (!this.compareValues(actual, val, operator))
                 return false;
@@ -3409,37 +2161,6 @@ class ReviewPlugin extends BasePlugin {
         }
         return content;
     }
-    scanSurroundingContext(element) {
-        const getAttrs = (el) => {
-            if (!el)
-                return null;
-            const id = el.getAttribute('data-item-id') || el.getAttribute('data-product-id') || el.getAttribute('data-id');
-            if (id)
-                return { id, name: el.getAttribute('data-item-name') || undefined, type: el.getAttribute('data-item-type') || undefined };
-            return null;
-        };
-        const ancestor = element.closest('[data-item-id], [data-product-id]');
-        if (ancestor) {
-            const data = getAttrs(ancestor);
-            if (data)
-                return { ...data, source: 'ancestor_attribute' };
-        }
-        const textContainers = Array.from(element.querySelectorAll('label, legend, h3, h4, .product-title'));
-        for (const container of textContainers) {
-            const text = container.textContent || '';
-            const idMatch = text.match(/\((P-[A-Z0-9-]+)\)/i);
-            if (idMatch && idMatch[1])
-                return { id: idMatch[1], source: 'text_heuristic_brackets' };
-            const codeMatch = text.match(/(?:code|sku|id|mã)[:\s]+([A-Z0-9-]+)/i);
-            if (codeMatch && codeMatch[1])
-                return { id: codeMatch[1], source: 'text_heuristic_label' };
-        }
-        const params = new URLSearchParams(window.location.search);
-        const urlId = params.get('id') || params.get('productId') || params.get('product_id');
-        if (urlId)
-            return { id: urlId, source: 'url_param' };
-        return {};
-    }
     compareValues(actual, expected, op) {
         if (!actual)
             actual = '';
@@ -3447,16 +2168,10 @@ class ReviewPlugin extends BasePlugin {
             return actual == expected;
         if (op === OPERATOR_ID.CONTAINS)
             return actual.includes(expected);
-        if (op === OPERATOR_ID.NOT_CONTAINS)
-            return !actual.includes(expected);
         if (op === OPERATOR_ID.STARTS_WITH)
             return actual.startsWith(expected);
         if (op === OPERATOR_ID.ENDS_WITH)
             return actual.endsWith(expected);
-        if (op === OPERATOR_ID.EXISTS)
-            return actual !== '' && actual !== null;
-        if (op === OPERATOR_ID.NOT_EXISTS)
-            return actual === '' || actual === null;
         return false;
     }
 }
@@ -3467,19 +2182,13 @@ var reviewPlugin = /*#__PURE__*/Object.freeze({
 });
 
 // CONDITION PATTERNS
-const CONDITION_PATTERN = {
-    URL_PARAM: 1, CSS_SELECTOR: 2, DOM_ATTRIBUTE: 3, DATA_ATTRIBUTE: 4,
-};
+const CONDITION_PATTERN = { CSS_SELECTOR: 1, URL: 2, DATA_ATTRIBUTE: 3 };
 // OPERATORS
-const TARGET_OPERATOR = {
-    CONTAINS: 1, NOT_CONTAINS: 2, STARTS_WITH: 3, ENDS_WITH: 4, EQUALS: 5, NOT_EQUALS: 6, EXISTS: 8, NOT_EXISTS: 9
-};
+const TARGET_OPERATOR = { CONTAINS: 1, EQUALS: 2, STARTS_WITH: 3, ENDS_WITH: 4 };
 class ScrollPlugin extends BasePlugin {
     constructor() {
         super(...arguments);
         this.name = 'ScrollPlugin';
-        this.identityManager = null;
-        this.detector = null;
         // --- STATE MANAGEMENT ---
         this.milestones = [25, 50, 75, 100];
         this.sentMilestones = new Set();
@@ -3499,9 +2208,6 @@ class ScrollPlugin extends BasePlugin {
     init(tracker) {
         this.errorBoundary.execute(() => {
             super.init(tracker);
-            this.identityManager = getUserIdentityManager();
-            this.identityManager.initialize();
-            this.detector = getAIItemDetector();
             console.log(`[ScrollPlugin] initialized.`);
         }, 'ScrollPlugin.init');
     }
@@ -3545,7 +2251,7 @@ class ScrollPlugin extends BasePlugin {
     }
     resolveContextFromRules() {
         var _a;
-        if (!this.tracker || !this.detector)
+        if (!this.tracker)
             return false;
         const eventId = this.tracker.getEventTypeId('Scroll') || 4;
         const config = this.tracker.getConfig();
@@ -3583,27 +2289,20 @@ class ScrollPlugin extends BasePlugin {
         }
     }
     detectContextForItem(element) {
-        var _a;
-        let detected = (_a = this.detector) === null || _a === void 0 ? void 0 : _a.detectItem(element);
-        if (!detected || !detected.id || detected.id === 'N/A (Failed)') {
-            console.log("🔍 [ScrollPlugin] AI failed. Scanning radar...");
-            const contextInfo = this.scanSurroundingContext(element);
-            if (contextInfo.id) {
-                this.currentItemContext = {
-                    id: contextInfo.id,
-                    name: contextInfo.name || 'Unknown Item',
-                    type: contextInfo.type || 'item',
-                    confidence: 1,
-                    source: contextInfo.source,
-                    context: 'dom_context'
-                };
-            }
-            else {
-                this.currentItemContext = this.createSyntheticItem();
-            }
+        console.log("🔍 [ScrollPlugin] Scanning for context...");
+        const contextInfo = this.scanSurroundingContext(element);
+        if (contextInfo.id) {
+            this.currentItemContext = {
+                id: contextInfo.id,
+                name: contextInfo.name || 'Unknown Item',
+                type: contextInfo.type || 'item',
+                confidence: 1,
+                source: contextInfo.source,
+                context: 'dom_context'
+            };
         }
         else {
-            this.currentItemContext = detected;
+            this.currentItemContext = this.createSyntheticItem();
         }
         console.log("🎯 [ScrollPlugin] Resolved Context:", this.currentItemContext);
     }
@@ -3618,7 +2317,7 @@ class ScrollPlugin extends BasePlugin {
             let actualValue = null;
             let isMet = false;
             switch (patternId) {
-                case CONDITION_PATTERN.URL_PARAM:
+                case CONDITION_PATTERN.URL:
                     const urlParams = new URLSearchParams(window.location.search);
                     if (urlParams.has(expectedValue))
                         actualValue = urlParams.get(expectedValue);
@@ -3628,11 +2327,6 @@ class ScrollPlugin extends BasePlugin {
                 case CONDITION_PATTERN.CSS_SELECTOR:
                     try {
                         isMet = element.matches(expectedValue);
-                        if (this.isNegativeOperator(operatorId)) {
-                            if (!isMet)
-                                continue;
-                            return false;
-                        }
                         if (!isMet)
                             return false;
                         continue;
@@ -3640,9 +2334,6 @@ class ScrollPlugin extends BasePlugin {
                     catch {
                         return false;
                     }
-                case CONDITION_PATTERN.DOM_ATTRIBUTE:
-                    actualValue = element.id;
-                    break;
                 case CONDITION_PATTERN.DATA_ATTRIBUTE:
                     actualValue = element.getAttribute(expectedValue);
                     break;
@@ -3659,18 +2350,11 @@ class ScrollPlugin extends BasePlugin {
             actual = '';
         switch (operatorId) {
             case TARGET_OPERATOR.EQUALS: return actual === expected;
-            case TARGET_OPERATOR.NOT_EQUALS: return actual !== expected;
             case TARGET_OPERATOR.CONTAINS: return actual.includes(expected);
-            case TARGET_OPERATOR.NOT_CONTAINS: return !actual.includes(expected);
             case TARGET_OPERATOR.STARTS_WITH: return actual.startsWith(expected);
             case TARGET_OPERATOR.ENDS_WITH: return actual.endsWith(expected);
-            case TARGET_OPERATOR.EXISTS: return actual !== '' && actual !== null;
-            case TARGET_OPERATOR.NOT_EXISTS: return actual === '' || actual === null;
             default: return actual === expected;
         }
-    }
-    isNegativeOperator(opId) {
-        return opId === TARGET_OPERATOR.NOT_EQUALS || opId === TARGET_OPERATOR.NOT_CONTAINS || opId === TARGET_OPERATOR.NOT_EXISTS;
     }
     scanSurroundingContext(element) {
         const getAttrs = (el) => {
@@ -3758,7 +2442,6 @@ class ScrollPlugin extends BasePlugin {
                 ...extracted // Merge extracted
             }
         };
-        this.enrichUserIdentity(payload);
         this.tracker.track(payload);
     }
     handleUnload() {
@@ -3789,7 +2472,6 @@ class ScrollPlugin extends BasePlugin {
                 event: 'page_summary'
             }
         };
-        this.enrichUserIdentity(payload);
         this.tracker.track(payload);
     }
     handleVisibilityChange() {
@@ -3808,20 +2490,6 @@ class ScrollPlugin extends BasePlugin {
             currentSessionTime = Date.now() - this.startTime;
         const totalMs = this.totalActiveTime + currentSessionTime;
         return parseFloat((totalMs / 1000).toFixed(1));
-    }
-    enrichUserIdentity(payload) {
-        if (this.identityManager) {
-            const uid = this.identityManager.getRealUserId() || this.identityManager.getStableUserId();
-            // Don't override if extracted from builder? 
-            if (uid && !uid.startsWith('anon_') && !payload.userValue)
-                payload.userValue = uid;
-            const uInfo = this.identityManager.getUserInfo();
-            if (uInfo.sessionId) {
-                if (!payload.metadata)
-                    payload.metadata = {};
-                payload.metadata.sessionId = uInfo.sessionId;
-            }
-        }
     }
     createSyntheticItem() {
         return {
@@ -4364,14 +3032,12 @@ class RatingPlugin extends BasePlugin {
     constructor() {
         super();
         this.name = 'RatingPlugin';
-        this.detector = null;
         this.throttledClickHandler = throttle(this.wrapHandler(this.handleInteraction.bind(this, 'click'), 'handleClick'), 500);
         this.submitHandler = this.wrapHandler(this.handleInteraction.bind(this, 'submit'), 'handleSubmit');
     }
     init(tracker) {
         this.errorBoundary.execute(() => {
             super.init(tracker);
-            this.detector = getAIItemDetector();
             console.log(`[RatingPlugin] initialized.`);
         }, 'RatingPlugin.init');
     }
@@ -4395,8 +3061,8 @@ class RatingPlugin extends BasePlugin {
         }, 'RatingPlugin.stop');
     }
     handleInteraction(eventType, event) {
-        var _a, _b;
-        if (!this.tracker || !this.detector)
+        var _a;
+        if (!this.tracker)
             return;
         // Trigger ID = 2 for Rating (Standard)
         const eventId = this.tracker.getEventTypeId('Rating') || 2;
@@ -4427,13 +3093,8 @@ class RatingPlugin extends BasePlugin {
                         continue;
                     }
                     console.log(`[RatingPlugin] 🎯 Captured [${eventType}]: Raw=${result.originalValue}/${result.maxValue} -> Norm=${result.normalizedValue}`);
-                    // Detect Item ID
-                    let structuredItem = null;
-                    if (!((_b = rule.trackingTarget.value) === null || _b === void 0 ? void 0 : _b.startsWith('^'))) {
-                        structuredItem = this.detector.detectItem(container);
-                    }
                     // Build Payload using centralized method
-                    this.buildAndTrack(structuredItem || matchedElement, rule, eventId, {
+                    this.buildAndTrack(matchedElement, rule, eventId, {
                         value: result.reviewText || String(result.normalizedValue),
                         metadata: {
                             rawRateValue: result.originalValue,
