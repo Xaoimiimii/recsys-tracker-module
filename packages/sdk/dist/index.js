@@ -1,6 +1,7 @@
 import { ConfigLoader, ErrorBoundary, EventBuffer, EventDispatcher, MetadataNormalizer, DisplayManager, PluginManager } from './core';
 import { DEFAULT_API_URL, DEFAULT_TRACK_ENDPOINT_PATH } from './core/constants';
 import { PayloadBuilder } from './core/payload/payload-builder';
+import { NetworkPlugin } from './core/plugins/network-plugin';
 // RecSysTracker - Main SDK class
 export class RecSysTracker {
     constructor() {
@@ -122,9 +123,28 @@ export class RecSysTracker {
                 });
                 pluginPromises.push(scrollPromise);
             }
+            // Check for Network Rules
+            const hasNetworkRules = this.config.trackingRules.some(rule => {
+                var _a;
+                return (_a = rule.payloadMappings) === null || _a === void 0 ? void 0 : _a.some(mapping => {
+                    var _a;
+                    const source = (_a = mapping.source) === null || _a === void 0 ? void 0 : _a.toLowerCase();
+                    return source === 'requestbody' ||
+                        source === 'responsebody' ||
+                        source === 'request_body' ||
+                        source === 'response_body' ||
+                        source === 'network_request';
+                });
+            });
+            if (hasNetworkRules) {
+                this.use(new NetworkPlugin());
+                console.log('[RecSysTracker] Auto-registered NetworkPlugin based on tracking rules');
+            }
             // Chờ tất cả plugin được đăng ký trước khi khởi động
             if (pluginPromises.length > 0) {
                 await Promise.all(pluginPromises);
+            }
+            if (this.pluginManager.getPluginNames().length > 0) {
                 this.startPlugins();
                 console.log('[RecSysTracker] Auto-started plugins');
             }
