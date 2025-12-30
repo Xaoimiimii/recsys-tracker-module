@@ -10,7 +10,7 @@ Add this to your website's `<head>`:
 
 ```html
 <script>window.__RECSYS_DOMAIN_KEY__ = "your-domain-key";</script>
-<script src="https://cdn.jsdelivr.net/gh/Xaoimiimii/recsys-tracker-module/packages/sdk/dist/loader.js"></script>
+<script src="https://tracking-sdk.s3-ap-southeast-2.amazonaws.com/dist/loader.js"></script>
 ```
 
 That's it! The SDK will automatically load and initialize.
@@ -161,7 +161,7 @@ This creates:
 
 ```html
 <script>window.__RECSYS_DOMAIN_KEY__ = "test-key";</script>
-<script src="http://localhost:8080/packages/sdk/dist/loader.js"></script>
+<script src="https://tracking-sdk.s3-ap-southeast-2.amazonaws.com/dist/loader.js"></script>
 ```
 
 ### Environment Variables
@@ -169,7 +169,7 @@ This creates:
 Create `.env` file:
 
 ```bash
-API_URL=http://localhost:3000
+API_URL=https://recsys-tracker-module.onrender.com
 ```
 
 ## Package Structure

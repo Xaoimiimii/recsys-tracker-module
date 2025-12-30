@@ -50,7 +50,7 @@ cd packages/server
 npm run dev
 ```
 
-Server will run on `http://localhost:3000`
+Server will run on `http://localhost:3000` (Local) or `https://recsys-tracker-module.onrender.com` (Production)
 
 
 ## 4. Loader Script
@@ -60,5 +60,5 @@ Add to your website's `<head>`:
 ```html
 <!-- Simple CDN Loader (Recommended) -->
 <script>window.__RECSYS_DOMAIN_KEY__ = "your-domain-key";</script>
-<script src="https://cdn.jsdelivr.net/gh/Xaoimiimii/recsys-tracker-module/packages/sdk/dist/loader.js"></script>
+<script src="https://tracking-sdk.s3-ap-southeast-2.amazonaws.com/dist/loader.js"></script>
 ```

@@ -33,8 +33,7 @@ export class EventDispatcher {
             UserValue: event.userValue,
             ItemField: event.itemField,
             ItemValue: event.itemValue,
-            RatingValue: event.ratingValue,
-            ReviewValue: event.reviewValue
+            Value: event.value
         });
         // Thử từng phương thức gửi theo thứ tự ưu tiên
         const strategies = ['beacon', 'fetch'];
@@ -52,8 +51,7 @@ export class EventDispatcher {
                         userValue: event.userValue,
                         itemField: event.itemField,
                         itemValue: event.itemValue,
-                        ratingValue: event.ratingValue,
-                        reviewValue: event.reviewValue,
+                        value: event.value,
                         timestamp: event.timestamp,
                         endpoint: this.endpoint
                     });

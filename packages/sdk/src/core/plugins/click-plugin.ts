@@ -1,15 +1,10 @@
 import { BasePlugin } from './base-plugin';
 import { RecSysTracker } from '../..';
-import { IRecsysContext } from './interfaces/recsys-context.interface';
-import { TrackerContextAdapter } from './adapters/tracker-context-adapter';
-import { getAIItemDetector, AIItemDetector } from './utils/ai-item-detector';
 import { throttle } from './utils/plugin-utils';
 
 export class ClickPlugin extends BasePlugin {
     public readonly name = 'ClickPlugin';
 
-    private context: IRecsysContext | null = null;
-    private detector: AIItemDetector | null = null;
     private throttledHandler: (event: MouseEvent) => void;
     private readonly THROTTLE_DELAY = 300;
 
@@ -25,10 +20,7 @@ export class ClickPlugin extends BasePlugin {
     public init(tracker: RecSysTracker): void {
         this.errorBoundary.execute(() => {
             super.init(tracker);
-
-            this.context = new TrackerContextAdapter(tracker);
-            this.detector = getAIItemDetector();
-            console.log(`[ClickPlugin] initialized for Rule + AI-based tracking.`);
+            console.log(`[ClickPlugin] initialized for Rule.`);
         }, 'ClickPlugin.init');
     }
 
@@ -36,9 +28,9 @@ export class ClickPlugin extends BasePlugin {
         this.errorBoundary.execute(() => {
             if (!this.ensureInitialized()) return;
 
-            if (this.context && this.detector) {
+            if (this.tracker) {
                 document.addEventListener("click", this.throttledHandler as any, false);
-                console.log("[ClickPlugin] started Rule + AI-based listening (Throttled).");
+                console.log("[ClickPlugin] started Rule-based listening (Throttled).");
                 this.active = true;
             }
         }, 'ClickPlugin.start');
@@ -46,18 +38,23 @@ export class ClickPlugin extends BasePlugin {
 
     public stop(): void {
         this.errorBoundary.execute(() => {
-            document.removeEventListener("click", this.throttledHandler as any, false);
-            super.stop();
-        }, 'ClickPlugin.stop');
+            if (this.tracker) {
+                document.removeEventListener('click', this.throttledHandler);
+            }
+            super.destroy();
+        }, 'ClickPlugin.destroy');
     }
 
     private handleDocumentClick(event: MouseEvent): void {
-        if (!this.context || !this.detector || !this.tracker) return;
+        if (!this.tracker) return;
 
         const eventId = this.tracker.getEventTypeId('Click');
         if (!eventId) return;
 
-        const clickRules = this.context.config.getRules(eventId);
+        const config = this.tracker.getConfig();
+        if (!config || !config.trackingRules) return;
+
+        const clickRules = config.trackingRules.filter(r => r.eventTypeId === eventId);
         if (clickRules.length === 0) {
             return;
         }
@@ -72,10 +69,10 @@ export class ClickPlugin extends BasePlugin {
             if (matchedElement) {
                 console.log(`[ClickPlugin] Matched rule: ${rule.name}`);
 
-                const payload = this.context.payloadBuilder.build(matchedElement, rule);
-                this.context.eventBuffer.enqueue(payload);
+                // Use centralized build and track
+                this.buildAndTrack(matchedElement, rule, eventId);
 
-                // Stop after first match (hoặc có thể tiếp tục nếu muốn track nhiều rules)
+                // Stop after first match
                 break;
             }
         }

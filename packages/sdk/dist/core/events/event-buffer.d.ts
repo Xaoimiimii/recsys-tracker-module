@@ -8,8 +8,7 @@ export interface TrackedEvent {
     userValue: string;
     itemField: string;
     itemValue: string;
-    ratingValue?: number;
-    reviewValue?: string;
+    value?: string;
     retryCount?: number;
     lastRetryAt?: number;
     nextRetryAt?: number;

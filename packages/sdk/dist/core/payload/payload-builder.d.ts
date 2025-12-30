@@ -1,38 +1,13 @@
-export interface IPayloadMapping {
-    field: string;
-    source: string;
-    value: string;
-}
+import { TrackingRule } from "../../types";
 export declare class PayloadBuilder {
-    private readonly COMMON_CONTAINERS;
-    /**
-     * Hàm build đa năng: Hỗ trợ cả 2 kiểu gọi (Legacy & Mapping)
-     * Để đơn giản hóa trong context này, ta tập trung vào logic Mapping.
-     * Trong thực tế cần implement cả logic Legacy nếu các plugin cũ vẫn dùng.
-     */
-    build(arg1: any, arg2?: any, arg3?: any): any;
-    private buildFromMappings;
-    private buildLegacy;
-    /**
-     * [NEW] Lấy dữ liệu từ DOM Element (CSS Selector)
-     * Selector được tìm trong phạm vi contextElement (Form) trước, nếu không thấy thì tìm toàn document
-     */
-    private extractFromElement;
-    private extractFromUrl;
-    private extractFromStorage;
-    private lookupPath;
-    private extractFromCookie;
-    private getNestedValue;
-    private isValidValue;
-    /**
-     * [NEW] Extract info from Network Request/Response
-     * Context: { reqBody: any, resBody: any, method: string }
-     * Path format: "request.field" or "response.field" or just "field" (infer)
-     */
-    private extractFromNetwork;
-    /**
-     * [NEW] Helper to traverse generic object (for Network Plugin)
-     */
-    private traverseObject;
+    private extractors;
+    private elementExtractor;
+    private networkExtractor;
+    private storageExtractor;
+    private urlExtractor;
+    constructor();
+    private registerExtractors;
+    build(context: any, rule: TrackingRule): Record<string, any>;
+    private isValid;
 }
 //# sourceMappingURL=payload-builder.d.ts.map

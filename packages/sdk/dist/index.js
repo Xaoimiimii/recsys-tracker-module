@@ -44,7 +44,7 @@ export class RecSysTracker {
                 console.log(this.config);
                 // Khởi tạo Display Manager nếu có returnMethods
                 if (this.config.returnMethods && this.config.returnMethods.length > 0) {
-                    const apiBaseUrl = process.env.API_URL || 'http://localhost:3000';
+                    const apiBaseUrl = process.env.API_URL || 'https://recsys-tracker-module.onrender.com';
                     this.displayManager = new DisplayManager(this.config.domainKey, apiBaseUrl);
                     this.displayManager.initialize(this.config.returnMethods);
                     console.log('[RecSysTracker] Display methods initialized');
@@ -122,15 +122,6 @@ export class RecSysTracker {
                 });
                 pluginPromises.push(scrollPromise);
             }
-            // Check for Network Rules
-            const hasNetworkRules = this.config.trackingRules.some(rule => rule.payloadMappings && rule.payloadMappings.some(m => m.source == "RequestBody"));
-            if (hasNetworkRules) {
-                const networkPromise = import('./core/plugins/network-plugin').then(({ NetworkPlugin }) => {
-                    this.use(new NetworkPlugin());
-                    console.log('[RecSysTracker] Auto-registered NetworkPlugin');
-                });
-                pluginPromises.push(networkPromise);
-            }
             // Chờ tất cả plugin được đăng ký trước khi khởi động
             if (pluginPromises.length > 0) {
                 await Promise.all(pluginPromises);
@@ -155,8 +146,7 @@ export class RecSysTracker {
                 userValue: eventData.userValue,
                 itemField: eventData.itemField,
                 itemValue: eventData.itemValue,
-                ...(eventData.ratingValue !== undefined && { ratingValue: eventData.ratingValue }),
-                ...(eventData.reviewValue !== undefined && { reviewValue: eventData.reviewValue }),
+                ...(eventData.value !== undefined && { value: eventData.value }),
             };
             this.eventBuffer.add(trackedEvent);
         }, 'track');
@@ -327,5 +317,4 @@ export { PageViewPlugin } from './core/plugins/page-view-plugin';
 export { RatingPlugin } from './core/plugins/rating-plugin';
 export { ScrollPlugin } from './core/plugins/scroll-plugin';
 export { ReviewPlugin } from './core/plugins/review-plugin';
-export { NetworkPlugin } from './core/plugins/network-plugin';
 //# sourceMappingURL=index.js.map

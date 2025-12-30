@@ -14,6 +14,4 @@ export { ClickPlugin } from './plugins/click-plugin';
 export { PageViewPlugin } from './plugins/page-view-plugin';
 export { ReviewPlugin } from './plugins/review-plugin';
 export { ScrollPlugin } from './plugins/scroll-plugin';
-export { TrackerContextAdapter } from './plugins/adapters/tracker-context-adapter';
-export { IRecsysContext } from './plugins/interfaces/recsys-context.interface';
 //# sourceMappingURL=index.d.ts.map

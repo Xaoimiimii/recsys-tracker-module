@@ -69,7 +69,7 @@ export class RecSysTracker {
 
         // Khởi tạo Display Manager nếu có returnMethods
         if (this.config.returnMethods && this.config.returnMethods.length > 0) {
-          const apiBaseUrl = process.env.API_URL || 'http://localhost:3000';
+          const apiBaseUrl = process.env.API_URL || 'https://recsys-tracker-module.onrender.com';
           this.displayManager = new DisplayManager(this.config.domainKey, apiBaseUrl);
           this.displayManager.initialize(this.config.returnMethods);
           console.log('[RecSysTracker] Display methods initialized');
@@ -127,7 +127,7 @@ export class RecSysTracker {
         });
         pluginPromises.push(clickPromise);
       }
-    
+
       if (hasRateRules) {
         const ratingPromise = import('./core/plugins/rating-plugin').then(({ RatingPlugin }) => {
           this.use(new RatingPlugin());
@@ -137,11 +137,11 @@ export class RecSysTracker {
       }
 
       if (hasReviewRules) {
-          const scrollPromise = import('./core/plugins/review-plugin').then(({ ReviewPlugin }) => {
-            this.use(new ReviewPlugin());
-            console.log('[RecSysTracker] Auto-registered ScrollPlugin');
-          });
-          pluginPromises.push(scrollPromise);
+        const scrollPromise = import('./core/plugins/review-plugin').then(({ ReviewPlugin }) => {
+          this.use(new ReviewPlugin());
+          console.log('[RecSysTracker] Auto-registered ScrollPlugin');
+        });
+        pluginPromises.push(scrollPromise);
       }
 
       if (hasPageViewRules) {
@@ -152,26 +152,14 @@ export class RecSysTracker {
         pluginPromises.push(pageViewPromise);
       }
 
-      if (hasScrollRules) { 
-          const scrollPromise = import('./core/plugins/scroll-plugin').then(({ ScrollPlugin }) => {
-            this.use(new ScrollPlugin());
-            console.log('[RecSysTracker] Auto-registered ScrollPlugin');
-          });
-          pluginPromises.push(scrollPromise);
-      }
-
-      // Check for Network Rules
-      const hasNetworkRules = this.config.trackingRules.some(rule =>
-        rule.payloadMappings && rule.payloadMappings.some(m => m.source == "RequestBody")
-      );
-
-      if (hasNetworkRules) {
-        const networkPromise = import('./core/plugins/network-plugin').then(({ NetworkPlugin }) => {
-          this.use(new NetworkPlugin());
-          console.log('[RecSysTracker] Auto-registered NetworkPlugin');
+      if (hasScrollRules) {
+        const scrollPromise = import('./core/plugins/scroll-plugin').then(({ ScrollPlugin }) => {
+          this.use(new ScrollPlugin());
+          console.log('[RecSysTracker] Auto-registered ScrollPlugin');
         });
-        pluginPromises.push(networkPromise);
+        pluginPromises.push(scrollPromise);
       }
+
 
       // Chờ tất cả plugin được đăng ký trước khi khởi động
       if (pluginPromises.length > 0) {
@@ -190,8 +178,7 @@ export class RecSysTracker {
     userValue: string;
     itemField: string;
     itemValue: string;
-    ratingValue?: number;
-    reviewValue?: string;
+    value?: string;
   }): void {
     this.errorBoundary.execute(() => {
       if (!this.isInitialized || !this.config) {
@@ -208,8 +195,7 @@ export class RecSysTracker {
         userValue: eventData.userValue,
         itemField: eventData.itemField,
         itemValue: eventData.itemValue,
-        ...(eventData.ratingValue !== undefined && { ratingValue: eventData.ratingValue }),
-        ...(eventData.reviewValue !== undefined && { reviewValue: eventData.reviewValue }),
+        ...(eventData.value !== undefined && { value: eventData.value }),
       };
 
       this.eventBuffer.add(trackedEvent);
@@ -410,7 +396,7 @@ export { PageViewPlugin } from './core/plugins/page-view-plugin';
 export { RatingPlugin } from './core/plugins/rating-plugin';
 export { ScrollPlugin } from './core/plugins/scroll-plugin';
 export { ReviewPlugin } from './core/plugins/review-plugin';
-export { NetworkPlugin } from './core/plugins/network-plugin';
+
 
 // Export types for TypeScript users
 export type * from './types';

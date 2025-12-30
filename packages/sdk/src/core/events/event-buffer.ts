@@ -16,8 +16,7 @@ export interface TrackedEvent {
   userValue: string;
   itemField: string;
   itemValue: string;
-  ratingValue?: number;
-  reviewValue?: string;
+  value?: string;
   retryCount?: number; // Cho logic SDK retry
   lastRetryAt?: number; // Timestamp của lần retry cuối cùng
   nextRetryAt?: number; // Timestamp của lần retry tiếp theo (exponential backoff)
@@ -101,8 +100,7 @@ export class EventBuffer {
       userValue: event.userValue,
       itemField: event.itemField,
       itemValue: event.itemValue,
-      ratingValue: event.ratingValue,
-      reviewValue: event.reviewValue,
+      value: event.value,
       timestamp: event.timestamp,
       queueSize: this.queue.length + 1
     });
@@ -134,14 +132,14 @@ export class EventBuffer {
       if (eventIds.includes(event.id)) {
         event.retryCount = (event.retryCount || 0) + 1;
         event.lastRetryAt = now;
-        
+
         // Exponential backoff: 1s → 2s → 4s → 8s → 16s
         const backoffDelay = Math.min(
           Math.pow(2, event.retryCount) * 1000, // 2^n seconds
           32000 // Max 32 seconds
         );
         event.nextRetryAt = now + backoffDelay;
-        
+
         console.log(
           `[EventBuffer] Event ${event.id} will retry in ${backoffDelay / 1000}s (attempt ${event.retryCount}/${this.maxRetries})`
         );
