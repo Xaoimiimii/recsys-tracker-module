@@ -23,7 +23,7 @@ export declare abstract class BasePlugin implements IPlugin {
     protected ensureInitialized(): boolean;
     protected wrapHandler<T extends any[]>(handler: (...args: T) => void, handlerName?: string): (...args: T) => void;
     protected wrapAsyncHandler<T extends any[]>(handler: (...args: T) => Promise<void>, handlerName?: string): (...args: T) => Promise<void>;
-    protected resolvePayloadIdentity(extractedData: any): {
+    protected resolvePayloadIdentity(extractedData: any, rule?: any): {
         userField: string;
         userValue: string;
         itemField: string;
