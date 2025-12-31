@@ -1,0 +1,269 @@
+export class InlineDisplay {
+    constructor(domainKey, slotName, selector, apiBaseUrl, config = {}) {
+        this.observer = null;
+        this.debounceTimer = null;
+        this.domainKey = domainKey;
+        this.slotName = slotName;
+        this.selector = selector;
+        this.apiBaseUrl = apiBaseUrl;
+        this.config = {
+            pages: config.pages || ['*'], // Default show on all pages
+        };
+    }
+    // Bắt đầu inline display
+    start() {
+        console.log(`[InlineDisplay] Starting watcher for: "${this.selector}"`);
+        // Kiểm tra page có được phép không
+        if (!this.isPageAllowed(window.location.pathname)) {
+            console.log('[InlineDisplay] Page not allowed');
+            return;
+        }
+        // Quét lần đầu
+        this.scanAndRender();
+        // Setup MutationObserver để theo dõi DOM changes
+        this.setupObserver();
+    }
+    // Dừng inline display
+    stop() {
+        if (this.observer) {
+            this.observer.disconnect();
+            this.observer = null;
+        }
+        if (this.debounceTimer) {
+            clearTimeout(this.debounceTimer);
+            this.debounceTimer = null;
+        }
+    }
+    // Quét và render tất cả containers
+    scanAndRender() {
+        const containers = document.querySelectorAll(this.selector);
+        containers.forEach(container => {
+            this.processContainer(container);
+        });
+    }
+    // Setup MutationObserver để theo dõi DOM changes
+    setupObserver() {
+        this.observer = new MutationObserver(() => {
+            // Debounce để tránh xử lý quá nhiều
+            if (this.debounceTimer) {
+                clearTimeout(this.debounceTimer);
+            }
+            this.debounceTimer = setTimeout(() => {
+                this.scanAndRender();
+            }, 100);
+        });
+        this.observer.observe(document.body, {
+            childList: true,
+            subtree: true,
+        });
+    }
+    // Xử lý từng container
+    async processContainer(container) {
+        // Kiểm tra đã render chưa
+        if (!container || container.getAttribute('data-recsys-loaded') === 'true') {
+            return;
+        }
+        // Đánh dấu đã xử lý
+        container.setAttribute('data-recsys-loaded', 'true');
+        try {
+            // Fetch recommendations
+            const items = await this.fetchRecommendations();
+            if (items && items.length > 0) {
+                this.renderWidget(container, items);
+            }
+            else {
+                console.log(`[InlineDisplay] No items for ${this.selector}`);
+            }
+        }
+        catch (error) {
+            console.error('[InlineDisplay] Error processing container:', error);
+        }
+    }
+    // Kiểm tra page có được phép hiển thị không
+    isPageAllowed(currentPath) {
+        const allowedPatterns = this.config.pages || [];
+        if (allowedPatterns.length === 0 || allowedPatterns.includes('*')) {
+            return true;
+        }
+        return allowedPatterns.some(pattern => {
+            if (pattern === '/')
+                return currentPath === '/';
+            // Hỗ trợ wildcard
+            if (pattern.endsWith('/*')) {
+                const base = pattern.slice(0, -2);
+                return currentPath.startsWith(base);
+            }
+            return currentPath === pattern;
+        });
+    }
+    // Fetch recommendations từ API
+    async fetchRecommendations() {
+        try {
+            const response = await fetch(`${this.apiBaseUrl}/recommendations?domainKey=${this.domainKey}&slot=${this.slotName}`);
+            if (!response.ok) {
+                throw new Error('API Error');
+            }
+            const data = await response.json();
+            return data;
+        }
+        catch (error) {
+            console.error('[InlineDisplay] Error fetching recommendations:', error);
+            // Fallback mock data for development
+            return [
+                {
+                    id: 1,
+                    name: 'Sản phẩm 1',
+                    img: 'https://via.placeholder.com/150',
+                    price: '199.000đ'
+                },
+                {
+                    id: 2,
+                    name: 'Sản phẩm 2',
+                    img: 'https://via.placeholder.com/150',
+                    price: '299.000đ'
+                },
+                {
+                    id: 3,
+                    name: 'Sản phẩm 3',
+                    img: 'https://via.placeholder.com/150',
+                    price: '399.000đ'
+                },
+                {
+                    id: 4,
+                    name: 'Sản phẩm 4',
+                    img: 'https://via.placeholder.com/150',
+                    price: '499.000đ'
+                }
+            ];
+        }
+    }
+    // Render widget với Shadow DOM
+    renderWidget(container, items) {
+        try {
+            // Setup Shadow DOM
+            let shadow = container.shadowRoot;
+            if (!shadow) {
+                shadow = container.attachShadow({ mode: 'open' });
+            }
+            // Clear existing content
+            shadow.innerHTML = '';
+            // Add styles
+            const style = document.createElement('style');
+            style.textContent = this.getWidgetStyles();
+            shadow.appendChild(style);
+            // Create wrapper
+            const wrapper = document.createElement('div');
+            wrapper.className = 'recsys-wrapper';
+            // Create items
+            items.forEach(item => {
+                const name = item.name || item.title || 'Sản phẩm';
+                const img = item.img || item.image || '';
+                const itemEl = document.createElement('div');
+                itemEl.className = 'recsys-item';
+                itemEl.setAttribute('data-id', String(item.id));
+                itemEl.innerHTML = `
+          <div class="recsys-img-box">
+            <img src="${img}" alt="${name}">
+          </div>
+          <div class="recsys-info">
+            <div class="recsys-title">${name}</div>
+            <div class="recsys-price">${item.price}</div>
+          </div>
+        `;
+                wrapper.appendChild(itemEl);
+            });
+            shadow.appendChild(wrapper);
+            // Setup click handler
+            wrapper.addEventListener('click', (e) => {
+                const itemEl = e.target.closest('.recsys-item');
+                if (itemEl) {
+                    const itemId = itemEl.getAttribute('data-id');
+                    console.log('[InlineDisplay] Item clicked:', itemId);
+                    // TODO: Track click event
+                }
+            });
+        }
+        catch (error) {
+            console.error('[InlineDisplay] Error rendering widget:', error);
+        }
+    }
+    // Get widget styles
+    getWidgetStyles() {
+        return `
+      :host {
+        display: block;
+        all: initial;
+        font-family: Arial, sans-serif;
+        width: 100%;
+      }
+      * {
+        box-sizing: border-box;
+      }
+
+      .recsys-wrapper {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+        gap: 16px;
+        padding: 10px 0;
+      }
+
+      .recsys-item {
+        border: 1px solid #eee;
+        border-radius: 8px;
+        overflow: hidden;
+        background: #fff;
+        cursor: pointer;
+        transition: transform 0.2s, box-shadow 0.2s;
+        display: flex;
+        flex-direction: column;
+      }
+
+      .recsys-item:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+      }
+
+      .recsys-img-box {
+        width: 100%;
+        padding-top: 100%;
+        position: relative;
+        background: #f9f9f9;
+      }
+
+      .recsys-img-box img {
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+      }
+
+      .recsys-info {
+        padding: 10px;
+        flex-grow: 1;
+        display: flex;
+        flex-direction: column;
+      }
+
+      .recsys-title {
+        font-size: 14px;
+        font-weight: 600;
+        color: #333;
+        margin-bottom: 4px;
+        display: -webkit-box;
+        -webkit-line-clamp: 2;
+        -webkit-box-orient: vertical;
+        overflow: hidden;
+      }
+
+      .recsys-price {
+        font-size: 14px;
+        color: #d0021b;
+        font-weight: bold;
+        margin-top: auto;
+      }
+    `;
+    }
+}
+//# sourceMappingURL=inline-display.js.map

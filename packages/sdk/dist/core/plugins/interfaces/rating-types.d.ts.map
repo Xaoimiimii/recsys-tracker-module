@@ -1,0 +1,1 @@
+{"version":3,"file":"rating-types.d.ts","sourceRoot":"","sources":["../../../../src/core/plugins/interfaces/rating-types.ts"],"names":[],"mappings":"AAAA,MAAM,WAAW,aAAa;IAC1B,aAAa,EAAE,MAAM,CAAC;IACtB,QAAQ,EAAE,MAAM,CAAC;IACjB,eAAe,EAAE,MAAM,CAAC;IACxB,UAAU,EAAE,MAAM,CAAC;IACnB,IAAI,EAAE,MAAM,GAAG,SAAS,GAAG,QAAQ,GAAG,SAAS,CAAC;IAChD,aAAa,EAAE,YAAY,GAAG,aAAa,GAAG,cAAc,CAAC;CAChE"}
