@@ -82,6 +82,12 @@ model ReturnMethod {
 //   DomainReturns DomainReturn[]
 // }
 
+enum IntentLevel {
+  High
+  Medium
+  Normal
+}
+
 model TrackingRule {
   Id   Int    @id @default(autoincrement())
   Name String
@@ -97,6 +103,8 @@ model TrackingRule {
 
   TrackingTargetId Int
   TrackingTarget   TrackingTarget @relation(fields: [TrackingTargetId], references: [Id])
+
+  IntentLevel IntentLevel?
 
   Conditions      Condition[]
   PayloadMappings PayloadMapping[]
@@ -243,6 +251,7 @@ model Operator {
 enum EventUserField {
   UserId
   Username
+  AnonymousId
 }
 
 enum EventItemField {
