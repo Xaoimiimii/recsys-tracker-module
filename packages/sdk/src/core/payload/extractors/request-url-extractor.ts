@@ -22,16 +22,26 @@ export class RequestUrlExtractor implements IPayloadExtractor {
     extract(mapping: PayloadMapping, _context?: any): any {
         if (!mapping.requestUrlPattern) return null;
 
-        // If context provides URL (e.g. NetworkPlugin), check it first?
-        // But user said "capture data from request url matching closest after tracking plugins triggered"
-        // This likely implies looking at the global history.
-        // But if 'context.url' is present, it's the *current* request.
-        // We should prioritize the *current* request if it matches?
-        // Or strictly look at history?
-        // Let's look at history, effectively "most recent".
-
         const targetMethod = mapping.requestMethod?.toUpperCase();
 
+        // 1. Check strict context first (e.g. from NetworkPlugin)
+        if (_context && _context.url) {
+            const ctxUrl = _context.url;
+            const ctxMethod = _context.method?.toUpperCase();
+
+            let methodMatch = true;
+            if (targetMethod && ctxMethod && ctxMethod !== targetMethod) {
+                methodMatch = false;
+            }
+
+            if (methodMatch) {
+                if (PathMatcher.match(ctxUrl, mapping.requestUrlPattern)) {
+                    return this.extractValueFromUrl(ctxUrl, mapping.value);
+                }
+            }
+        }
+
+        // 2. Fallback to history (e.g. from other plugins: 'closest request after trigger')
         // Iterate backwards (newest first)
         for (let i = this.history.length - 1; i >= 0; i--) {
             const req = this.history[i];

@@ -1,4 +1,5 @@
 import { BasePlugin } from './base-plugin';
+import { PathMatcher } from '../utils/path-matcher';
 // Hàm tiện ích: Parse JSON an toàn (tránh văng lỗi nếu chuỗi không hợp lệ)
 function safeParse(data) {
     try {
@@ -115,6 +116,7 @@ export class NetworkPlugin extends BasePlugin {
      */
     handleRequest(url, method, reqBody, resBody) {
         this.errorBoundary.execute(() => {
+            var _a;
             if (!this.tracker)
                 return;
             const config = this.tracker.getConfig();
@@ -131,12 +133,25 @@ export class NetworkPlugin extends BasePlugin {
             for (const rule of config.trackingRules) {
                 if (!rule.payloadMappings || rule.payloadMappings.length === 0)
                     continue;
-                const extractedData = this.tracker.payloadBuilder.build(networkContext, rule);
-                if (Object.keys(extractedData).length > 0) {
-                    // Prepare event to send
-                    // Nếu có dữ liệu trích xuất được, tiến hành gửi tracking event
+                // Check if this rule applies to the current network request
+                let isNetworkMatch = false;
+                for (const m of rule.payloadMappings) {
+                    if (m.requestUrlPattern) {
+                        // Check method
+                        const targetMethod = (_a = m.requestMethod) === null || _a === void 0 ? void 0 : _a.toUpperCase();
+                        if (targetMethod && targetMethod !== method)
+                            continue;
+                        // Check URL
+                        if (PathMatcher.match(url, m.requestUrlPattern)) {
+                            isNetworkMatch = true;
+                            break;
+                        }
+                    }
+                }
+                if (isNetworkMatch) {
+                    // Extract data using PayloadBuilder (which now handles Network/RequestUrl using the passed context)
+                    const extractedData = this.tracker.payloadBuilder.build(networkContext, rule);
                     if (Object.keys(extractedData).length > 0) {
-                        // Use centralized build and track
                         this.buildAndTrack(networkContext, rule, rule.eventTypeId);
                         console.groupCollapsed(`%c[TRACKER] Network Match: (${method} ${url})`, "color: orange");
                         console.log("Rule:", rule.name);

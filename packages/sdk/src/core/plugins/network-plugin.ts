@@ -1,4 +1,5 @@
 import { BasePlugin } from './base-plugin';
+import { PathMatcher } from '../utils/path-matcher';
 
 // Hàm tiện ích: Parse JSON an toàn (tránh văng lỗi nếu chuỗi không hợp lệ)
 function safeParse(data: any) {
@@ -155,13 +156,28 @@ export class NetworkPlugin extends BasePlugin {
             for (const rule of config.trackingRules) {
                 if (!rule.payloadMappings || rule.payloadMappings.length === 0) continue;
 
-                const extractedData = this.tracker.payloadBuilder.build(networkContext, rule);
+                // Check if this rule applies to the current network request
+                let isNetworkMatch = false;
 
-                if (Object.keys(extractedData).length > 0) {
-                    // Prepare event to send
-                    // Nếu có dữ liệu trích xuất được, tiến hành gửi tracking event
+                for (const m of rule.payloadMappings) {
+                    if (m.requestUrlPattern) {
+                        // Check method
+                        const targetMethod = m.requestMethod?.toUpperCase();
+                        if (targetMethod && targetMethod !== method) continue;
+
+                        // Check URL
+                        if (PathMatcher.match(url, m.requestUrlPattern)) {
+                            isNetworkMatch = true;
+                            break;
+                        }
+                    }
+                }
+
+                if (isNetworkMatch) {
+                    // Extract data using PayloadBuilder (which now handles Network/RequestUrl using the passed context)
+                    const extractedData = this.tracker.payloadBuilder.build(networkContext, rule);
+
                     if (Object.keys(extractedData).length > 0) {
-                        // Use centralized build and track
                         this.buildAndTrack(networkContext, rule, rule.eventTypeId);
 
                         console.groupCollapsed(`%c[TRACKER] Network Match: (${method} ${url})`, "color: orange");
