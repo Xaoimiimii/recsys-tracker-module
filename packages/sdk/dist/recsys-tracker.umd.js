@@ -1036,7 +1036,7 @@
             popup.className = 'recsys-popup';
             popup.innerHTML = `
       <div class="recsys-header">
-        Gợi ý dành cho bạn
+        Gợi ý dành cho 
         <button class="recsys-close">✕</button>
       </div>
       <div class="recsys-body">
@@ -1862,6 +1862,180 @@
         }
     }
 
+    class TrackerCore {
+        static findScope(targetElement, rootSelector) {
+            if (!targetElement)
+                return document;
+            if (rootSelector) {
+                const scope = targetElement.closest(rootSelector);
+                if (scope)
+                    return scope;
+            }
+            return targetElement.parentElement || document;
+        }
+        static resolveElementValue(selector, scope = document) {
+            var _a;
+            if (!scope || !(scope instanceof HTMLElement))
+                return null;
+            if (scope.hasAttribute(selector)) {
+                return scope.getAttribute(selector);
+            }
+            const el = scope.querySelector(selector);
+            if (el) {
+                return ((_a = el.textContent) === null || _a === void 0 ? void 0 : _a.trim()) || null;
+            }
+            if (selector.startsWith("[") && selector.endsWith("]")) {
+                const attrName = selector.slice(1, -1);
+                const elWithAttr = scope.querySelector(selector);
+                return elWithAttr ? elWithAttr.getAttribute(attrName) : null;
+            }
+            return null;
+        }
+    }
+
+    class TrackerInit {
+        static getUsername() {
+            var _a;
+            if (this.usernameCache !== null) {
+                return this.usernameCache;
+            }
+            // @ts-ignore
+            const user = (_a = window.LoginDetector) === null || _a === void 0 ? void 0 : _a.getCurrentUser();
+            return this.usernameCache = user !== null && user !== void 0 ? user : "guest";
+        }
+        static init() {
+            console.log("✅ [TrackerInit] Static system initialized");
+        }
+        static handleMapping(rule, target = null) {
+            var _a;
+            const payload = {
+                ruleId: rule.id,
+                eventTypeId: rule.eventTypeId
+            };
+            const scope = TrackerCore.findScope(target, ((_a = rule.trackingTarget) === null || _a === void 0 ? void 0 : _a.value) || null);
+            const mappings = rule.payloadMappings || [];
+            mappings.forEach((map) => {
+                const field = map.field;
+                const source = map.source;
+                const value = map.value;
+                if (source === 'element') {
+                    payload[field] = TrackerCore.resolveElementValue(value, scope);
+                }
+                else if (source === 'static') {
+                    payload[field] = value;
+                }
+                else if (source === 'login_detector' || field.toLowerCase() === 'userid') {
+                    payload[field] = this.getUsername();
+                }
+            });
+            return payload;
+        }
+        static checkConditions(conditions) {
+            if (!conditions || conditions.length === 0)
+                return true;
+            return true;
+        }
+    }
+    TrackerInit.usernameCache = null;
+
+    class ClickPlugin extends BasePlugin {
+        constructor(config) {
+            super();
+            this.name = "click-plugin";
+            this.config = config;
+        }
+        start() {
+            const configToUse = this.config || (this.tracker ? this.tracker.getConfig() : null);
+            if (!configToUse || !configToUse.trackingRules) {
+                console.warn("[ClickPlugin] No tracking rules found. Plugin stopped.");
+                return;
+            }
+            console.log("[ClickPlugin] Started with config:", configToUse.domainUrl);
+            document.addEventListener("click", (event) => {
+                this.handleDocumentClick(event, configToUse);
+            }, true);
+        }
+        handleDocumentClick(event, config) {
+            var _a, _b, _c;
+            if (!this.tracker)
+                return;
+            const rules = config.trackingRules;
+            if (!rules || rules.length === 0)
+                return;
+            const clickRules = rules.filter((r) => r.eventTypeId === 1);
+            if (clickRules.length === 0)
+                return;
+            for (const rule of clickRules) {
+                const selector = (_a = rule.trackingTarget) === null || _a === void 0 ? void 0 : _a.value;
+                if (!selector)
+                    continue;
+                const target = event.target.closest(selector);
+                if (!target)
+                    continue;
+                if ((_b = rule.conditions) === null || _b === void 0 ? void 0 : _b.length) {
+                    const conditionsMet = rule.conditions.every((cond) => {
+                        if (cond.patternId === 2 && cond.operatorId === 1) {
+                            return window.location.href.includes(cond.value);
+                        }
+                        return true;
+                    });
+                    if (!conditionsMet)
+                        continue;
+                }
+                console.log("🎯 [ClickPlugin] Rule matched:", rule.name, "| ID:", rule.id);
+                let payload = {};
+                if ((_c = rule.payloadMappings) === null || _c === void 0 ? void 0 : _c.length) {
+                    rule.payloadMappings.forEach((m) => {
+                        var _a;
+                        if (m.source === "Element" || m.source === "element") {
+                            const el = target.querySelector(m.value);
+                            if (el) {
+                                payload[m.field] = (_a = el.textContent) === null || _a === void 0 ? void 0 : _a.trim();
+                            }
+                            else if (target.hasAttribute(m.value)) {
+                                payload[m.field] = target.getAttribute(m.value);
+                            }
+                        }
+                        if (m.source === "LocalStorage") {
+                            payload[m.field] = localStorage.getItem(m.value);
+                        }
+                        if (m.source === "global_variable") {
+                            const globalVal = window[m.value];
+                            payload[m.field] =
+                                typeof globalVal === "function" ? globalVal() : globalVal;
+                        }
+                    });
+                }
+                console.log("🚀 Payload collected:", payload);
+                const userKey = Object.keys(payload).find((k) => k.toLowerCase().includes("user")) ||
+                    "userId";
+                const itemKey = Object.keys(payload).find((k) => k.toLowerCase().includes("item")) ||
+                    "ItemId";
+                const rawData = TrackerInit.handleMapping(rule, target);
+                this.tracker.track({
+                    eventTypeId: rule.eventTypeId,
+                    trackingRuleId: Number(rule.id),
+                    userField: userKey,
+                    userValue: payload[userKey] ||
+                        rawData.userId ||
+                        TrackerInit.getUsername() ||
+                        "guest",
+                    itemField: itemKey,
+                    itemValue: payload[itemKey] ||
+                        rawData.ItemId ||
+                        rawData.ItemTitle ||
+                        "Unknown Song",
+                });
+                break;
+            }
+        }
+    }
+
+    var clickPlugin = /*#__PURE__*/Object.freeze({
+        __proto__: null,
+        ClickPlugin: ClickPlugin
+    });
+
     function throttle(fn, delay) {
         let lastCall = 0;
         let timeoutId = null;
@@ -1889,73 +2063,6 @@
         };
     }
     const CUSTOM_ROUTE_EVENT = "recsys_route_change";
-
-    class ClickPlugin extends BasePlugin {
-        constructor() {
-            super();
-            this.name = 'ClickPlugin';
-            this.THROTTLE_DELAY = 300;
-            // Wrap handler với error boundary ngay trong constructor
-            this.throttledHandler = throttle(this.wrapHandler(this.handleDocumentClick.bind(this), 'handleDocumentClick'), this.THROTTLE_DELAY);
-        }
-        init(tracker) {
-            this.errorBoundary.execute(() => {
-                super.init(tracker);
-                console.log(`[ClickPlugin] initialized for Rule.`);
-            }, 'ClickPlugin.init');
-        }
-        start() {
-            this.errorBoundary.execute(() => {
-                if (!this.ensureInitialized())
-                    return;
-                if (this.tracker) {
-                    document.addEventListener("click", this.throttledHandler, false);
-                    this.active = true;
-                }
-            }, 'ClickPlugin.start');
-        }
-        stop() {
-            this.errorBoundary.execute(() => {
-                if (this.tracker) {
-                    document.removeEventListener('click', this.throttledHandler);
-                }
-                super.destroy();
-            }, 'ClickPlugin.destroy');
-        }
-        handleDocumentClick(event) {
-            if (!this.tracker)
-                return;
-            const eventId = this.tracker.getEventTypeId('Click');
-            if (!eventId)
-                return;
-            const config = this.tracker.getConfig();
-            if (!config || !config.trackingRules)
-                return;
-            const clickRules = config.trackingRules.filter(r => r.eventTypeId === eventId);
-            if (clickRules.length === 0) {
-                return;
-            }
-            // Loop qua tất cả click rules và check match
-            for (const rule of clickRules) {
-                const selector = rule.trackingTarget.value;
-                if (!selector)
-                    continue;
-                const matchedElement = event.target.closest(selector);
-                if (matchedElement) {
-                    console.log(`[ClickPlugin] Matched rule: ${rule.name}`);
-                    // Use centralized build and track
-                    this.buildAndTrack(matchedElement, rule, eventId);
-                    // Stop after first match
-                    break;
-                }
-            }
-        }
-    }
-
-    var clickPlugin = /*#__PURE__*/Object.freeze({
-        __proto__: null,
-        ClickPlugin: ClickPlugin
-    });
 
     class PageViewPlugin extends BasePlugin {
         constructor() {
@@ -3806,9 +3913,11 @@
             // Chỉ tự động đăng ký nếu chưa có plugin nào được đăng ký
             if (this.pluginManager.getPluginNames().length === 0) {
                 const pluginPromises = [];
-                if (hasClickRules) {
+                if (hasClickRules && this.config) {
+                    const currentConfig = this.config; // TypeScript sẽ hiểu currentConfig chắc chắn là TrackerConfig
                     const clickPromise = Promise.resolve().then(function () { return clickPlugin; }).then(({ ClickPlugin }) => {
-                        this.use(new ClickPlugin());
+                        this.use(new ClickPlugin(currentConfig));
+                        console.log('[RecSysTracker] Auto-registered ClickPlugin');
                     });
                     pluginPromises.push(clickPromise);
                 }

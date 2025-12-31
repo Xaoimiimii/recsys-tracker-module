@@ -1,79 +1,127 @@
-import { BasePlugin } from './base-plugin';
-import { RecSysTracker } from '../..';
-import { throttle } from './utils/plugin-utils';
+import { BasePlugin } from "./base-plugin";
+import { TrackerConfig } from "../../types";
+import { TrackerInit } from "../tracker-init";
 
 export class ClickPlugin extends BasePlugin {
-    public readonly name = 'ClickPlugin';
+  public readonly name = "click-plugin";
+  private config: TrackerConfig | any;
 
-    private throttledHandler: (event: MouseEvent) => void;
-    private readonly THROTTLE_DELAY = 300;
+  constructor(config?: TrackerConfig) {
+    super();
+    this.config = config;
+  }
 
-    constructor() {
-        super();
-        // Wrap handler với error boundary ngay trong constructor
-        this.throttledHandler = throttle(
-            this.wrapHandler(this.handleDocumentClick.bind(this), 'handleDocumentClick'),
-            this.THROTTLE_DELAY
-        );
+  public start(): void {
+    const configToUse =
+      this.config || (this.tracker ? this.tracker.getConfig() : null);
+
+    if (!configToUse || !configToUse.trackingRules) {
+      console.warn("[ClickPlugin] No tracking rules found. Plugin stopped.");
+      return;
     }
 
-    public init(tracker: RecSysTracker): void {
-        this.errorBoundary.execute(() => {
-            super.init(tracker);
-            console.log(`[ClickPlugin] initialized for Rule.`);
-        }, 'ClickPlugin.init');
-    }
+    console.log("[ClickPlugin] Started with config:", configToUse.domainUrl);
 
-    public start(): void {
-        this.errorBoundary.execute(() => {
-            if (!this.ensureInitialized()) return;
+    document.addEventListener(
+      "click",
+      (event: MouseEvent) => {
+        this.handleDocumentClick(event, configToUse);
+      },
+      true
+    );
+  }
 
-            if (this.tracker) {
-                document.addEventListener("click", this.throttledHandler as any, false);
-                this.active = true;
+  private handleDocumentClick(event: MouseEvent, config: any): void {
+    if (!this.tracker) return;
+
+    const rules = config.trackingRules;
+    if (!rules || rules.length === 0) return;
+
+    const clickRules = rules.filter((r: any) => r.eventTypeId === 1);
+
+    if (clickRules.length === 0) return;
+
+    for (const rule of clickRules) {
+      const selector = rule.trackingTarget?.value;
+      if (!selector) continue;
+
+      const target = (event.target as HTMLElement).closest(selector);
+      if (!target) continue;
+
+      if (rule.conditions?.length) {
+        const conditionsMet = rule.conditions.every((cond: any) => {
+          if (cond.patternId === 2 && cond.operatorId === 1) {
+            return window.location.href.includes(cond.value);
+          }
+          return true;
+        });
+
+        if (!conditionsMet) continue;
+      }
+
+      console.log(
+        "🎯 [ClickPlugin] Rule matched:",
+        rule.name,
+        "| ID:",
+        rule.id
+      );
+
+      let payload: Record<string, any> = {};
+
+      if (rule.payloadMappings?.length) {
+        rule.payloadMappings.forEach((m: any) => {
+          if (m.source === "Element" || m.source === "element") {
+            const el = (target as HTMLElement).querySelector(m.value);
+            if (el) {
+              payload[m.field] = el.textContent?.trim();
+            } else if ((target as HTMLElement).hasAttribute(m.value)) {
+              payload[m.field] = (target as HTMLElement).getAttribute(m.value);
             }
-        }, 'ClickPlugin.start');
+          }
+
+          if (m.source === "LocalStorage") {
+            payload[m.field] = localStorage.getItem(m.value);
+          }
+
+          if (m.source === "global_variable") {
+            const globalVal = (window as any)[m.value];
+            payload[m.field] =
+              typeof globalVal === "function" ? globalVal() : globalVal;
+          }
+        });
+      }
+
+      console.log("🚀 Payload collected:", payload);
+
+      const userKey =
+        Object.keys(payload).find((k) => k.toLowerCase().includes("user")) ||
+        "userId";
+      const itemKey =
+        Object.keys(payload).find((k) => k.toLowerCase().includes("item")) ||
+        "ItemId";
+
+      const rawData = TrackerInit.handleMapping(rule, target as HTMLElement);
+
+      this.tracker.track({
+        eventTypeId: rule.eventTypeId,
+        trackingRuleId: Number(rule.id),
+
+        userField: userKey,
+        userValue:
+          payload[userKey] ||
+          rawData.userId ||
+          TrackerInit.getUsername() ||
+          "guest",
+
+        itemField: itemKey,
+        itemValue:
+          payload[itemKey] ||
+          rawData.ItemId ||
+          rawData.ItemTitle ||
+          "Unknown Song",
+      });
+
+      break;
     }
-
-    public stop(): void {
-        this.errorBoundary.execute(() => {
-            if (this.tracker) {
-                document.removeEventListener('click', this.throttledHandler);
-            }
-            super.destroy();
-        }, 'ClickPlugin.destroy');
-    }
-
-    private handleDocumentClick(event: MouseEvent): void {
-        if (!this.tracker) return;
-
-        const eventId = this.tracker.getEventTypeId('Click');
-        if (!eventId) return;
-
-        const config = this.tracker.getConfig();
-        if (!config || !config.trackingRules) return;
-
-        const clickRules = config.trackingRules.filter(r => r.eventTypeId === eventId);
-        if (clickRules.length === 0) {
-            return;
-        }
-
-        // Loop qua tất cả click rules và check match
-        for (const rule of clickRules) {
-            const selector = rule.trackingTarget.value;
-            if (!selector) continue;
-
-            const matchedElement = (event.target as Element).closest(selector);
-
-            if (matchedElement) {
-                console.log(`[ClickPlugin] Matched rule: ${rule.name}`);
-
-                // Use centralized build and track
-                this.buildAndTrack(matchedElement, rule, eventId);
-
-                // Stop after first match
-                break;
-            }
-        }
-    }
+  }
 }

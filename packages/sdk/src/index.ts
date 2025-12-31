@@ -121,13 +121,15 @@ export class RecSysTracker {
     if (this.pluginManager.getPluginNames().length === 0) {
       const pluginPromises: Promise<void>[] = [];
 
-      if (hasClickRules) {
+      if (hasClickRules && this.config) {
+        const currentConfig = this.config; // TypeScript sẽ hiểu currentConfig chắc chắn là TrackerConfig
         const clickPromise = import('./core/plugins/click-plugin').then(({ ClickPlugin }) => {
-          this.use(new ClickPlugin());
+          this.use(new ClickPlugin(currentConfig)); 
+          console.log('[RecSysTracker] Auto-registered ClickPlugin');
         });
         pluginPromises.push(clickPromise);
       }
-
+        
       if (hasRateRules) {
         const ratingPromise = import('./core/plugins/rating-plugin').then(({ RatingPlugin }) => {
           this.use(new RatingPlugin());

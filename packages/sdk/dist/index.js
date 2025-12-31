@@ -88,9 +88,11 @@ export class RecSysTracker {
         // Chỉ tự động đăng ký nếu chưa có plugin nào được đăng ký
         if (this.pluginManager.getPluginNames().length === 0) {
             const pluginPromises = [];
-            if (hasClickRules) {
+            if (hasClickRules && this.config) {
+                const currentConfig = this.config; // TypeScript sẽ hiểu currentConfig chắc chắn là TrackerConfig
                 const clickPromise = import('./core/plugins/click-plugin').then(({ ClickPlugin }) => {
-                    this.use(new ClickPlugin());
+                    this.use(new ClickPlugin(currentConfig));
+                    console.log('[RecSysTracker] Auto-registered ClickPlugin');
                 });
                 pluginPromises.push(clickPromise);
             }

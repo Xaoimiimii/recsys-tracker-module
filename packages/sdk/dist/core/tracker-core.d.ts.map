@@ -1,0 +1,1 @@
+{"version":3,"file":"tracker-core.d.ts","sourceRoot":"","sources":["../../src/core/tracker-core.ts"],"names":[],"mappings":"AAAA,qBAAa,WAAW;IACtB,MAAM,CAAC,SAAS,CACd,aAAa,EAAE,WAAW,GAAG,IAAI,EACjC,YAAY,EAAE,MAAM,GAAG,IAAI,GAC1B,WAAW,GAAG,QAAQ;IAWzB,MAAM,CAAC,mBAAmB,CACxB,QAAQ,EAAE,MAAM,EAChB,KAAK,GAAE,WAAW,GAAG,QAAmB,GACvC,MAAM,GAAG,IAAI;CAoBjB"}
