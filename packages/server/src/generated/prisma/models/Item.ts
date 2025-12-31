@@ -262,6 +262,7 @@ export type ItemOrderByWithRelationInput = {
 
 export type ItemWhereUniqueInput = Prisma.AtLeast<{
   Id?: number
+  DomainId_DomainItemId?: Prisma.ItemDomainIdDomainItemIdCompoundUniqueInput
   AND?: Prisma.ItemWhereInput | Prisma.ItemWhereInput[]
   OR?: Prisma.ItemWhereInput[]
   NOT?: Prisma.ItemWhereInput | Prisma.ItemWhereInput[]
@@ -277,7 +278,7 @@ export type ItemWhereUniqueInput = Prisma.AtLeast<{
   Predicts?: Prisma.PredictListRelationFilter
   Ratings?: Prisma.RatingListRelationFilter
   interactions?: Prisma.InteractionListRelationFilter
-}, "Id">
+}, "Id" | "DomainId_DomainItemId">
 
 export type ItemOrderByWithAggregationInput = {
   Id?: Prisma.SortOrder
@@ -414,6 +415,11 @@ export type FloatNullableListFilter<$PrismaModel = never> = {
   hasEvery?: number[] | Prisma.ListFloatFieldRefInput<$PrismaModel>
   hasSome?: number[] | Prisma.ListFloatFieldRefInput<$PrismaModel>
   isEmpty?: boolean
+}
+
+export type ItemDomainIdDomainItemIdCompoundUniqueInput = {
+  DomainId: number
+  DomainItemId: string
 }
 
 export type ItemCountOrderByAggregateInput = {
