@@ -11,22 +11,21 @@ export class TrackerCore {
     }
     static resolveElementValue(selector, scope = document) {
         var _a;
-        if (!scope)
+        if (!scope || !(scope instanceof HTMLElement))
             return null;
-        if (selector.startsWith("[") && selector.endsWith("]")) {
-            const attr = selector.slice(1, -1);
-            if (scope instanceof HTMLElement && scope.hasAttribute(attr)) {
-                return scope.getAttribute(attr);
-            }
+        if (scope.hasAttribute(selector)) {
+            return scope.getAttribute(selector);
         }
         const el = scope.querySelector(selector);
-        if (!el)
-            return null;
-        if (selector.startsWith("[")) {
-            const attr = selector.slice(1, -1);
-            return el.getAttribute(attr);
+        if (el) {
+            return ((_a = el.textContent) === null || _a === void 0 ? void 0 : _a.trim()) || null;
         }
-        return ((_a = el.textContent) === null || _a === void 0 ? void 0 : _a.trim()) || null;
+        if (selector.startsWith("[") && selector.endsWith("]")) {
+            const attrName = selector.slice(1, -1);
+            const elWithAttr = scope.querySelector(selector);
+            return elWithAttr ? elWithAttr.getAttribute(attrName) : null;
+        }
+        return null;
     }
 }
 //# sourceMappingURL=tracker-core.js.map

@@ -1,5 +1,8 @@
 export class TrackerCore {
-  static findScope(targetElement: HTMLElement | null, rootSelector: string | null): HTMLElement | Document {
+  static findScope(
+    targetElement: HTMLElement | null,
+    rootSelector: string | null
+  ): HTMLElement | Document {
     if (!targetElement) return document;
 
     if (rootSelector) {
@@ -10,24 +13,27 @@ export class TrackerCore {
     return targetElement.parentElement || document;
   }
 
-  static resolveElementValue(selector: string, scope: HTMLElement | Document = document): string | null {
-    if (!scope) return null;
+  static resolveElementValue(
+    selector: string,
+    scope: HTMLElement | Document = document
+  ): string | null {
+    if (!scope || !(scope instanceof HTMLElement)) return null;
 
-    if (selector.startsWith("[") && selector.endsWith("]")) {
-      const attr = selector.slice(1, -1);
-      if (scope instanceof HTMLElement && scope.hasAttribute(attr)) {
-        return scope.getAttribute(attr);
-      }
+    if (scope.hasAttribute(selector)) {
+      return scope.getAttribute(selector);
     }
 
     const el = scope.querySelector(selector);
-    if (!el) return null;
-
-    if (selector.startsWith("[")) {
-      const attr = selector.slice(1, -1);
-      return el.getAttribute(attr);
+    if (el) {
+      return el.textContent?.trim() || null;
     }
 
-    return el.textContent?.trim() || null;
+    if (selector.startsWith("[") && selector.endsWith("]")) {
+      const attrName = selector.slice(1, -1);
+      const elWithAttr = scope.querySelector(selector);
+      return elWithAttr ? elWithAttr.getAttribute(attrName) : null;
+    }
+
+    return null;
   }
 }
