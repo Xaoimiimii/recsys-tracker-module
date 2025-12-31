@@ -5,10 +5,10 @@ export class StorageExtractor {
             const keyPath = mapping.value;
             if (!keyPath)
                 return null;
-            if (source === 'local_storage') {
+            if (source === 'localstorage') {
                 return this.extractFromStorage(window.localStorage, keyPath);
             }
-            if (source === 'session_storage') {
+            if (source === 'sessionstorage') {
                 return this.extractFromStorage(window.sessionStorage, keyPath);
             }
             if (source === 'cookie') {
