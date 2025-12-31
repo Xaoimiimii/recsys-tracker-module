@@ -199,7 +199,8 @@ export class RecSysTracker {
     userValue: string;
     itemField: string;
     itemValue: string;
-    value?: string;
+    ratingValue?: number;
+    ratingReview?: string;
   }): void {
     this.errorBoundary.execute(() => {
       if (!this.isInitialized || !this.config) {
@@ -216,7 +217,8 @@ export class RecSysTracker {
         userValue: eventData.userValue,
         itemField: eventData.itemField,
         itemValue: eventData.itemValue,
-        ...(eventData.value !== undefined && { value: eventData.value }),
+        ...(eventData.ratingValue !== undefined && { ratingValue: eventData.ratingValue }),
+        ...(eventData.ratingReview !== undefined && { ratingReview: eventData.ratingReview }),
       };
 
       this.eventBuffer.add(trackedEvent);

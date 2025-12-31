@@ -39,9 +39,6 @@ export declare abstract class BasePlugin implements IPlugin {
      * @param eventId - Event type ID
      * @param additionalFields - Optional additional fields (ratingValue, reviewValue, metadata, etc.)
      */
-    protected buildAndTrack(context: any, rule: any, eventId: number, additionalFields?: {
-        additionalValues?: string;
-        metadata?: Record<string, any>;
-    }): void;
+    protected buildAndTrack(context: any, rule: any, eventId: number): void;
 }
 //# sourceMappingURL=base-plugin.d.ts.map

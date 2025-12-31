@@ -1,16 +1,20 @@
 export class PathMatcher {
     /**
-     * Parse pattern like '/api/user/:id' into regex and segment config
+     * Parse pattern like '/api/user/:id' or '/api/cart/{itemId}' into regex and segment config
      */
     static compile(pattern: string): { regex: RegExp; keys: string[] } {
         const keys: string[] = [];
         const cleanPattern = pattern.split('?')[0];
 
-        // Escape generic regex chars except ':'
-        const escaped = cleanPattern.replace(/[.+^${}()|[\]\\]/g, '\\$&');
+        // Escape generic regex chars except ':' and '{' and '}'
+        const escaped = cleanPattern.replace(/[.+^$|()\\[\]]/g, '\\$&');
 
-        // Replace :param with capture group
-        const regexString = escaped.replace(/:([a-zA-Z0-9_]+)/g, (_, key) => {
+        // Replace :param or {param} with capture group
+        // Regex explanation:
+        // :([a-zA-Z0-9_]+)   -> matches :id
+        // \{([a-zA-Z0-9_]+)\} -> matches {id}
+        const regexString = escaped.replace(/:([a-zA-Z0-9_]+)|\{([a-zA-Z0-9_]+)\}/g, (_match, p1, p2) => {
+            const key = p1 || p2;
             keys.push(key);
             return '([^/]+)';
         });
@@ -54,7 +58,10 @@ export class PathMatcher {
         // return rule._staticSegments.every(seg => segments.includes(seg));
 
         const patternSegments = pattern.split('/').filter(Boolean);
-        const staticSegments = patternSegments.filter(s => !s.startsWith(':'));
+        // Filter out dynamic segments (:param or {param})
+        const staticSegments = patternSegments.filter(s =>
+            !s.startsWith(':') && !(s.startsWith('{') && s.endsWith('}'))
+        );
 
         const urlSegments = url.split('?')[0].split('/').filter(Boolean);
 

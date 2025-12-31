@@ -16,7 +16,8 @@ export interface TrackedEvent {
   userValue: string;
   itemField: string;
   itemValue: string;
-  value?: string;
+  ratingValue?: number;
+  ratingReview?: string;
   retryCount?: number; // Cho logic SDK retry
   lastRetryAt?: number; // Timestamp của lần retry cuối cùng
   nextRetryAt?: number; // Timestamp của lần retry tiếp theo (exponential backoff)
@@ -100,7 +101,8 @@ export class EventBuffer {
       userValue: event.userValue,
       itemField: event.itemField,
       itemValue: event.itemValue,
-      value: event.value,
+      ratingValue: event.ratingValue,
+      ratingReview: event.ratingReview,
       timestamp: event.timestamp,
       queueSize: this.queue.length + 1
     });

@@ -66,7 +66,8 @@ export class EventBuffer {
             userValue: event.userValue,
             itemField: event.itemField,
             itemValue: event.itemValue,
-            value: event.value,
+            ratingValue: event.ratingValue,
+            ratingReview: event.ratingReview,
             timestamp: event.timestamp,
             queueSize: this.queue.length + 1
         });

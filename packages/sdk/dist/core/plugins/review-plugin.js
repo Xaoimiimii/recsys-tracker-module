@@ -57,13 +57,7 @@ export class ReviewPlugin extends BasePlugin {
             const reviewContent = this.autoDetectReviewContent(form);
             console.log(`[ReviewPlugin] Detected review content: "${reviewContent}"`);
             // 4. Build and track using centralized method
-            this.buildAndTrack(form, rule, eventId, {
-                metadata: {
-                    additionalValues: reviewContent,
-                    captureMethod: 'form-submit',
-                    source: 'review-plugin'
-                }
-            });
+            this.buildAndTrack(form, rule, eventId);
             console.log(`[ReviewPlugin] 📤 Event tracked successfully`);
             return;
         }

@@ -111,7 +111,7 @@ export class BasePlugin {
      * @param eventId - Event type ID
      * @param additionalFields - Optional additional fields (ratingValue, reviewValue, metadata, etc.)
      */
-    buildAndTrack(context, rule, eventId, additionalFields) {
+    buildAndTrack(context, rule, eventId) {
         if (!this.tracker) {
             console.warn(`[${this.name}] Cannot track: tracker not initialized`);
             return;
@@ -122,14 +122,14 @@ export class BasePlugin {
         const { userField, userValue, itemField, itemValue, value } = this.resolvePayloadIdentity(extractedData, rule);
         // 3. Construct payload
         const payload = {
-            eventTypeId: eventId,
-            trackingRuleId: rule.id,
+            eventTypeId: Number(eventId),
+            trackingRuleId: Number(rule.id),
             userField,
             userValue,
             itemField,
             itemValue,
-            value,
-            ...additionalFields
+            ratingValue: eventId === 2 ? Number(value) : undefined,
+            ratingReview: eventId === 3 ? value : undefined,
         };
         // 4. Track the event
         this.tracker.track(payload);

@@ -6,6 +6,7 @@ export declare class PayloadBuilder {
     private networkExtractor;
     private storageExtractor;
     private urlExtractor;
+    private requestUrlExtractor;
     private trackerConfig;
     constructor();
     private registerExtractors;
@@ -18,6 +19,10 @@ export declare class PayloadBuilder {
      * Check if config has network rules and enable tracking if needed
      */
     private checkAndEnableNetworkTracking;
+    /**
+     * Check if config has request url rules and enable tracking if needed
+     */
+    private checkAndEnableRequestUrlTracking;
     /**
      * Enable network tracking
      */

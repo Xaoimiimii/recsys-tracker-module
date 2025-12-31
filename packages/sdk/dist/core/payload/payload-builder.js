@@ -2,6 +2,7 @@ import { ElementExtractor } from "./extractors/element-extractor";
 import { NetworkExtractor } from "./extractors/network-extractor";
 import { StorageExtractor } from "./extractors/storage-extractor";
 import { UrlExtractor } from "./extractors/url-extractor";
+import { RequestUrlExtractor } from "./extractors/request-url-extractor";
 export class PayloadBuilder {
     constructor() {
         this.extractors = new Map();
@@ -10,6 +11,7 @@ export class PayloadBuilder {
         this.networkExtractor = new NetworkExtractor();
         this.storageExtractor = new StorageExtractor();
         this.urlExtractor = new UrlExtractor();
+        this.requestUrlExtractor = new RequestUrlExtractor();
         this.registerExtractors();
     }
     registerExtractors() {
@@ -17,10 +19,8 @@ export class PayloadBuilder {
         this.extractors.set('element', this.elementExtractor);
         // Network
         this.extractors.set('request_body', this.networkExtractor);
-        this.extractors.set('requestbody', this.networkExtractor);
-        this.extractors.set('response_body', this.networkExtractor);
-        this.extractors.set('responsebody', this.networkExtractor);
-        this.extractors.set('network_request', this.networkExtractor);
+        // Request Url
+        this.extractors.set('request_url', this.requestUrlExtractor);
         // Url
         this.extractors.set('url', this.urlExtractor);
         // Storage
@@ -54,6 +54,7 @@ export class PayloadBuilder {
     setConfig(config) {
         this.trackerConfig = config;
         this.checkAndEnableNetworkTracking();
+        this.checkAndEnableRequestUrlTracking();
     }
     /**
      * Check if config has network rules and enable tracking if needed
@@ -70,6 +71,23 @@ export class PayloadBuilder {
         }
         else if (!hasNetworkRules && this.networkExtractor.isTracking()) {
             this.disableNetworkTracking();
+        }
+    }
+    /**
+     * Check if config has request url rules and enable tracking if needed
+     */
+    checkAndEnableRequestUrlTracking() {
+        if (!this.trackerConfig || !this.trackerConfig.trackingRules)
+            return;
+        const hasRequestUrlRules = this.trackerConfig.trackingRules.some((rule) => rule.payloadMappings && rule.payloadMappings.some((m) => {
+            const source = (m.source || '').toLowerCase();
+            return source === 'request_url';
+        }));
+        if (hasRequestUrlRules) {
+            this.requestUrlExtractor.enableTracking();
+        }
+        else {
+            this.requestUrlExtractor.disableTracking();
         }
     }
     /**

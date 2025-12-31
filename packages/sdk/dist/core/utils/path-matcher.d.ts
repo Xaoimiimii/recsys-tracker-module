@@ -1,6 +1,6 @@
 export declare class PathMatcher {
     /**
-     * Parse pattern like '/api/user/:id' into regex and segment config
+     * Parse pattern like '/api/user/:id' or '/api/cart/{itemId}' into regex and segment config
      */
     static compile(pattern: string): {
         regex: RegExp;
