@@ -148,6 +148,23 @@ export type EnumReturnTypeWithAggregatesFilter<$PrismaModel = never> = {
   _max?: Prisma.NestedEnumReturnTypeFilter<$PrismaModel>
 }
 
+export type EnumIntentLevelNullableFilter<$PrismaModel = never> = {
+  equals?: $Enums.IntentLevel | Prisma.EnumIntentLevelFieldRefInput<$PrismaModel> | null
+  in?: $Enums.IntentLevel[] | Prisma.ListEnumIntentLevelFieldRefInput<$PrismaModel> | null
+  notIn?: $Enums.IntentLevel[] | Prisma.ListEnumIntentLevelFieldRefInput<$PrismaModel> | null
+  not?: Prisma.NestedEnumIntentLevelNullableFilter<$PrismaModel> | $Enums.IntentLevel | null
+}
+
+export type EnumIntentLevelNullableWithAggregatesFilter<$PrismaModel = never> = {
+  equals?: $Enums.IntentLevel | Prisma.EnumIntentLevelFieldRefInput<$PrismaModel> | null
+  in?: $Enums.IntentLevel[] | Prisma.ListEnumIntentLevelFieldRefInput<$PrismaModel> | null
+  notIn?: $Enums.IntentLevel[] | Prisma.ListEnumIntentLevelFieldRefInput<$PrismaModel> | null
+  not?: Prisma.NestedEnumIntentLevelNullableWithAggregatesFilter<$PrismaModel> | $Enums.IntentLevel | null
+  _count?: Prisma.NestedIntNullableFilter<$PrismaModel>
+  _min?: Prisma.NestedEnumIntentLevelNullableFilter<$PrismaModel>
+  _max?: Prisma.NestedEnumIntentLevelNullableFilter<$PrismaModel>
+}
+
 export type EnumPayloadFieldFilter<$PrismaModel = never> = {
   equals?: $Enums.PayloadField | Prisma.EnumPayloadFieldFieldRefInput<$PrismaModel>
   in?: $Enums.PayloadField[] | Prisma.ListEnumPayloadFieldFieldRefInput<$PrismaModel>
@@ -484,6 +501,23 @@ export type NestedEnumReturnTypeWithAggregatesFilter<$PrismaModel = never> = {
   _count?: Prisma.NestedIntFilter<$PrismaModel>
   _min?: Prisma.NestedEnumReturnTypeFilter<$PrismaModel>
   _max?: Prisma.NestedEnumReturnTypeFilter<$PrismaModel>
+}
+
+export type NestedEnumIntentLevelNullableFilter<$PrismaModel = never> = {
+  equals?: $Enums.IntentLevel | Prisma.EnumIntentLevelFieldRefInput<$PrismaModel> | null
+  in?: $Enums.IntentLevel[] | Prisma.ListEnumIntentLevelFieldRefInput<$PrismaModel> | null
+  notIn?: $Enums.IntentLevel[] | Prisma.ListEnumIntentLevelFieldRefInput<$PrismaModel> | null
+  not?: Prisma.NestedEnumIntentLevelNullableFilter<$PrismaModel> | $Enums.IntentLevel | null
+}
+
+export type NestedEnumIntentLevelNullableWithAggregatesFilter<$PrismaModel = never> = {
+  equals?: $Enums.IntentLevel | Prisma.EnumIntentLevelFieldRefInput<$PrismaModel> | null
+  in?: $Enums.IntentLevel[] | Prisma.ListEnumIntentLevelFieldRefInput<$PrismaModel> | null
+  notIn?: $Enums.IntentLevel[] | Prisma.ListEnumIntentLevelFieldRefInput<$PrismaModel> | null
+  not?: Prisma.NestedEnumIntentLevelNullableWithAggregatesFilter<$PrismaModel> | $Enums.IntentLevel | null
+  _count?: Prisma.NestedIntNullableFilter<$PrismaModel>
+  _min?: Prisma.NestedEnumIntentLevelNullableFilter<$PrismaModel>
+  _max?: Prisma.NestedEnumIntentLevelNullableFilter<$PrismaModel>
 }
 
 export type NestedEnumPayloadFieldFilter<$PrismaModel = never> = {
