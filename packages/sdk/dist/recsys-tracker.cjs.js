@@ -1674,14 +1674,14 @@ class BasePlugin {
                 const fieldName = mapping.Field || mapping.field; // Handle potential case differences
                 const fieldValue = extractedData[fieldName];
                 // Check for User fields
-                if (fieldName && ['UserId', 'Username'].some(f => f.toLowerCase() === fieldName.toLowerCase())) {
+                if (fieldName && ['UserId', 'Username', 'AnonymousId'].some(f => f.toLowerCase() === fieldName.toLowerCase())) {
                     userField = fieldName;
-                    userValue = fieldValue || ''; // Ensure empty string if undefined
+                    userValue = fieldValue || 'thisisusser'; // Ensure empty string if undefined
                 }
                 // Check for Item fields
                 if (fieldName && ['ItemId', 'ItemTitle'].some(f => f.toLowerCase() === fieldName.toLowerCase())) {
                     itemField = fieldName;
-                    itemValue = fieldValue || ''; // Ensure empty string if undefined
+                    itemValue = fieldValue || 'thisisitem'; // Ensure empty string if undefined
                 }
                 // Check for Value field
                 if (fieldName && ['Value'].some(f => f.toLowerCase() === fieldName.toLowerCase())) {

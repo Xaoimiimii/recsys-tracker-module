@@ -111,15 +111,15 @@ export abstract class BasePlugin implements IPlugin {
         const fieldValue = extractedData[fieldName];
 
         // Check for User fields
-        if (fieldName && ['UserId', 'Username'].some(f => f.toLowerCase() === fieldName.toLowerCase())) {
+        if (fieldName && ['UserId', 'Username', 'AnonymousId'].some(f => f.toLowerCase() === fieldName.toLowerCase())) {
           userField = fieldName;
-          userValue = fieldValue || ''; // Ensure empty string if undefined
+          userValue = fieldValue || 'thisisusser'; // Ensure empty string if undefined
         }
 
         // Check for Item fields
         if (fieldName && ['ItemId', 'ItemTitle'].some(f => f.toLowerCase() === fieldName.toLowerCase())) {
           itemField = fieldName;
-          itemValue = fieldValue || ''; // Ensure empty string if undefined
+          itemValue = fieldValue || 'thisisitem'; // Ensure empty string if undefined
         }
 
         // Check for Value field
@@ -188,7 +188,7 @@ export abstract class BasePlugin implements IPlugin {
     // 3. Construct payload
     const payload: any = {
       eventTypeId: eventId,
-      trackingRuleId: rule.id,
+      trackingRuleId: Number(rule.id),
       userField,
       userValue,
       itemField,
