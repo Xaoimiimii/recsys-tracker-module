@@ -36,11 +36,10 @@ export class ReviewPlugin extends BasePlugin {
     }
 
     private handleSubmit(event: Event): void {
-        console.log("🔥 [ReviewPlugin] Detected SUBMIT event!");
         if (!this.tracker) return;
         const form = event.target as HTMLFormElement;
 
-        console.log(`📝 [ReviewPlugin] Checking form: #${form.id} (Classes: ${form.className})`);
+        //console.log(`📝 [ReviewPlugin] Checking form: #${form.id} (Classes: ${form.className})`);
 
         // Trigger ID for Review is typically 3 (or configured)
         const eventId = this.tracker.getEventTypeId('Review') || 3;
@@ -53,7 +52,7 @@ export class ReviewPlugin extends BasePlugin {
         for (const rule of reviewRules) {
             // 1. Check Target
             if (!this.checkTargetMatch(form, rule)) continue;
-
+            console.log("🔥 [ReviewPlugin] Detected SUBMIT event!");
             // 2. Check Condition
             if (!this.checkConditions(form, rule)) continue;
 
