@@ -163,14 +163,7 @@ export class NetworkPlugin extends BasePlugin {
                     // Nếu có dữ liệu trích xuất được, tiến hành gửi tracking event
                     if (Object.keys(extractedData).length > 0) {
                         // Use centralized build and track
-                        this.buildAndTrack(networkContext, rule, rule.eventTypeId, {
-                            metadata: {
-                                additionalValues: JSON.stringify(extractedData),
-                                method: method,
-                                url: url,
-                                captureMethod: 'network-intercept'
-                            }
-                        });
+                        this.buildAndTrack(networkContext, rule, rule.eventTypeId);
 
                         console.groupCollapsed(`%c[TRACKER] Network Match: (${method} ${url})`, "color: orange");
                         console.log("Rule:", rule.name);

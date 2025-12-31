@@ -168,11 +168,7 @@ export abstract class BasePlugin implements IPlugin {
   protected buildAndTrack(
     context: any,
     rule: any,
-    eventId: number,
-    additionalFields?: {
-      additionalValues?: string
-      metadata?: Record<string, any>;
-    }
+    eventId: number
   ): void {
     if (!this.tracker) {
       console.warn(`[${this.name}] Cannot track: tracker not initialized`);
@@ -187,14 +183,14 @@ export abstract class BasePlugin implements IPlugin {
 
     // 3. Construct payload
     const payload: any = {
-      eventTypeId: eventId,
+      eventTypeId: Number(eventId),
       trackingRuleId: Number(rule.id),
       userField,
       userValue,
       itemField,
       itemValue,
-      value,
-      ...additionalFields
+      ratingValue: eventId === 2 ? Number(value) : undefined,
+      ratingReview: eventId === 3 ? value : undefined,
     };
 
     // 4. Track the event
