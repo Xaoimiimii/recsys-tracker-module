@@ -192,6 +192,7 @@ enum PayloadField {
   ItemId
   ItemTitle
   Value
+  AnonymousId
 }
 
 enum PayloadSource {
