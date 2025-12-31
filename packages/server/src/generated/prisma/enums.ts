@@ -43,7 +43,8 @@ export const PayloadSource = {
   Cookie: 'Cookie',
   LocalStorage: 'LocalStorage',
   SessionStorage: 'SessionStorage',
-  Url: 'Url'
+  Url: 'Url',
+  RequestUrl: 'RequestUrl'
 } as const
 
 export type PayloadSource = (typeof PayloadSource)[keyof typeof PayloadSource]
