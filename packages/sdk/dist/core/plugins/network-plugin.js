@@ -30,7 +30,7 @@ export class NetworkPlugin extends BasePlugin {
         this.hookXhr();
         this.hookFetch();
         this.active = true;
-        console.log(`[${this.name}] Started - Intercepting Network Requests`);
+        console.log(`[NetworkPlugin] initialized.`);
     }
     /**
      * Dừng plugin.
@@ -42,7 +42,6 @@ export class NetworkPlugin extends BasePlugin {
         this.restoreXhr();
         this.restoreFetch();
         this.active = false;
-        console.log(`[${this.name}] Stopped`);
     }
     /**
      * Ghi đè XMLHttpRequest để theo dõi request cũ.

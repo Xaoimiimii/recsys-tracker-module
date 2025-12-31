@@ -30,18 +30,18 @@ export class PayloadBuilder {
         this.extractors.set('element', this.elementExtractor);
 
         // Network
-        this.extractors.set('request_body', this.networkExtractor);
+        this.extractors.set('requestbody', this.networkExtractor);
 
         // Request Url
-        this.extractors.set('request_url', this.requestUrlExtractor);
+        this.extractors.set('requesturl', this.requestUrlExtractor);
 
         // Url
         this.extractors.set('url', this.urlExtractor);
 
         // Storage
         this.extractors.set('cookie', this.storageExtractor);
-        this.extractors.set('local_storage', this.storageExtractor);
-        this.extractors.set('session_storage', this.storageExtractor);
+        this.extractors.set('localstorage', this.storageExtractor);
+        this.extractors.set('sessionstorage', this.storageExtractor);
     }
 
     // Tạo payload dựa trên rule và context

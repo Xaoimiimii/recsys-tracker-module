@@ -119,7 +119,7 @@ export abstract class BasePlugin implements IPlugin {
         // Check for Item fields
         if (fieldName && ['ItemId', 'ItemTitle'].some(f => f.toLowerCase() === fieldName.toLowerCase())) {
           itemField = fieldName;
-          itemValue = fieldValue || 'thisisitem'; // Ensure empty string if undefined
+          itemValue = fieldValue || 'AO-THUN'; // Ensure empty string if undefined
         }
 
         // Check for Value field

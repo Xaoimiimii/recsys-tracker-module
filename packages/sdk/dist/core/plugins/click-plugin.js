@@ -20,7 +20,6 @@ export class ClickPlugin extends BasePlugin {
                 return;
             if (this.tracker) {
                 document.addEventListener("click", this.throttledHandler, false);
-                console.log("[ClickPlugin] started listening for Click events.");
                 this.active = true;
             }
         }, 'ClickPlugin.start');

@@ -1680,7 +1680,7 @@ class BasePlugin {
                 // Check for Item fields
                 if (fieldName && ['ItemId', 'ItemTitle'].some(f => f.toLowerCase() === fieldName.toLowerCase())) {
                     itemField = fieldName;
-                    itemValue = fieldValue || 'thisisitem'; // Ensure empty string if undefined
+                    itemValue = fieldValue || 'AO-THUN'; // Ensure empty string if undefined
                 }
                 // Check for Value field
                 if (fieldName && ['Value'].some(f => f.toLowerCase() === fieldName.toLowerCase())) {
@@ -1809,7 +1809,6 @@ class PluginManager {
     // Start all registered plugins
     startAll() {
         this.errorBoundary.execute(() => {
-            console.log(`[PluginManager] Starting ${this.plugins.size} plugin(s)...`);
             this.plugins.forEach((plugin) => {
                 if (!plugin.isActive()) {
                     plugin.start();
@@ -1820,7 +1819,6 @@ class PluginManager {
     // Stop all registered plugins
     stopAll() {
         this.errorBoundary.execute(() => {
-            console.log(`[PluginManager] Stopping ${this.plugins.size} plugin(s)...`);
             this.plugins.forEach((plugin) => {
                 if (plugin.isActive()) {
                     plugin.stop();
@@ -1850,7 +1848,6 @@ class PluginManager {
     // Destroy all plugins and cleanup
     destroy() {
         this.errorBoundary.execute(() => {
-            console.log(`[PluginManager] Destroying ${this.plugins.size} plugin(s)...`);
             this.plugins.forEach((plugin) => {
                 plugin.destroy();
             });
@@ -1907,7 +1904,6 @@ class ClickPlugin extends BasePlugin {
                 return;
             if (this.tracker) {
                 document.addEventListener("click", this.throttledHandler, false);
-                console.log("[ClickPlugin] started listening for Click events.");
                 this.active = true;
             }
         }, 'ClickPlugin.start');
@@ -2074,7 +2070,6 @@ class ReviewPlugin extends BasePlugin {
             if (!this.ensureInitialized())
                 return;
             document.addEventListener('submit', this.handleSubmitBound, { capture: true });
-            console.log("[ReviewPlugin] started listening for Review submissions.");
             this.active = true;
         }, 'ReviewPlugin.start');
     }
@@ -2088,16 +2083,13 @@ class ReviewPlugin extends BasePlugin {
     }
     handleSubmit(event) {
         var _a;
-        console.log("🔥 [ReviewPlugin] Detected SUBMIT event!");
         if (!this.tracker)
             return;
         const form = event.target;
-        console.log(`📝 [ReviewPlugin] Checking form: #${form.id} (Classes: ${form.className})`);
         // Trigger ID for Review is typically 3 (or configured)
         const eventId = this.tracker.getEventTypeId('Review') || 3;
         const config = this.tracker.getConfig();
         const reviewRules = ((_a = config === null || config === void 0 ? void 0 : config.trackingRules) === null || _a === void 0 ? void 0 : _a.filter(r => r.eventTypeId === eventId)) || [];
-        console.log(`🔎 [ReviewPlugin] Found ${reviewRules.length} rules for TriggerID=${eventId}`);
         if (reviewRules.length === 0)
             return;
         for (const rule of reviewRules) {
@@ -2116,7 +2108,6 @@ class ReviewPlugin extends BasePlugin {
             console.log(`[ReviewPlugin] 📤 Event tracked successfully`);
             return;
         }
-        console.log("❌ [ReviewPlugin] No rules matched the current form.");
     }
     checkTargetMatch(form, rule) {
         const target = rule.targetElement;
@@ -3164,15 +3155,15 @@ class PayloadBuilder {
         // Element
         this.extractors.set('element', this.elementExtractor);
         // Network
-        this.extractors.set('request_body', this.networkExtractor);
+        this.extractors.set('requestbody', this.networkExtractor);
         // Request Url
-        this.extractors.set('request_url', this.requestUrlExtractor);
+        this.extractors.set('requesturl', this.requestUrlExtractor);
         // Url
         this.extractors.set('url', this.urlExtractor);
         // Storage
         this.extractors.set('cookie', this.storageExtractor);
-        this.extractors.set('local_storage', this.storageExtractor);
-        this.extractors.set('session_storage', this.storageExtractor);
+        this.extractors.set('localstorage', this.storageExtractor);
+        this.extractors.set('sessionstorage', this.storageExtractor);
     }
     // Tạo payload dựa trên rule và context
     build(context, rule) {
@@ -3309,7 +3300,7 @@ class NetworkPlugin extends BasePlugin {
         this.hookXhr();
         this.hookFetch();
         this.active = true;
-        console.log(`[${this.name}] Started - Intercepting Network Requests`);
+        console.log(`[NetworkPlugin] initialized.`);
     }
     /**
      * Dừng plugin.
@@ -3321,7 +3312,6 @@ class NetworkPlugin extends BasePlugin {
         this.restoreXhr();
         this.restoreFetch();
         this.active = false;
-        console.log(`[${this.name}] Stopped`);
     }
     /**
      * Ghi đè XMLHttpRequest để theo dõi request cũ.
@@ -3642,7 +3632,6 @@ class RatingPlugin extends BasePlugin {
             document.addEventListener("click", this.throttledClickHandler, true);
             // 2. Listen for Submit (Traditional Forms)
             document.addEventListener("submit", this.submitHandler, true);
-            console.log("[RatingPlugin] started listening for Rating interactions.");
             this.active = true;
         }, 'RatingPlugin.start');
     }
@@ -3792,35 +3781,30 @@ class RecSysTracker {
             if (hasClickRules) {
                 const clickPromise = Promise.resolve().then(function () { return clickPlugin; }).then(({ ClickPlugin }) => {
                     this.use(new ClickPlugin());
-                    console.log('[RecSysTracker] Auto-registered ClickPlugin based on tracking rules');
                 });
                 pluginPromises.push(clickPromise);
             }
             if (hasRateRules) {
                 const ratingPromise = Promise.resolve().then(function () { return ratingPlugin; }).then(({ RatingPlugin }) => {
                     this.use(new RatingPlugin());
-                    console.log('[RecSysTracker] Auto-registered RatingPlugin based on tracking rules');
                 });
                 pluginPromises.push(ratingPromise);
             }
             if (hasReviewRules) {
                 const scrollPromise = Promise.resolve().then(function () { return reviewPlugin; }).then(({ ReviewPlugin }) => {
                     this.use(new ReviewPlugin());
-                    console.log('[RecSysTracker] Auto-registered ScrollPlugin');
                 });
                 pluginPromises.push(scrollPromise);
             }
             if (hasPageViewRules) {
                 const pageViewPromise = Promise.resolve().then(function () { return pageViewPlugin; }).then(({ PageViewPlugin }) => {
                     this.use(new PageViewPlugin());
-                    console.log('[RecSysTracker] Auto-registered PageViewPlugin based on tracking rules');
                 });
                 pluginPromises.push(pageViewPromise);
             }
             if (hasScrollRules) {
                 const scrollPromise = Promise.resolve().then(function () { return scrollPlugin; }).then(({ ScrollPlugin }) => {
                     this.use(new ScrollPlugin());
-                    console.log('[RecSysTracker] Auto-registered ScrollPlugin');
                 });
                 pluginPromises.push(scrollPromise);
             }
@@ -3839,7 +3823,6 @@ class RecSysTracker {
             });
             if (hasNetworkRules) {
                 this.use(new NetworkPlugin());
-                console.log('[RecSysTracker] Auto-registered NetworkPlugin based on tracking rules');
             }
             // Chờ tất cả plugin được đăng ký trước khi khởi động
             if (pluginPromises.length > 0) {
@@ -3847,7 +3830,6 @@ class RecSysTracker {
             }
             if (this.pluginManager.getPluginNames().length > 0) {
                 this.startPlugins();
-                console.log('[RecSysTracker] Auto-started plugins');
             }
         }
     }

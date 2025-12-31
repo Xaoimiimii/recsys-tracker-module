@@ -124,7 +124,6 @@ export class RecSysTracker {
       if (hasClickRules) {
         const clickPromise = import('./core/plugins/click-plugin').then(({ ClickPlugin }) => {
           this.use(new ClickPlugin());
-          console.log('[RecSysTracker] Auto-registered ClickPlugin based on tracking rules');
         });
         pluginPromises.push(clickPromise);
       }
@@ -132,7 +131,6 @@ export class RecSysTracker {
       if (hasRateRules) {
         const ratingPromise = import('./core/plugins/rating-plugin').then(({ RatingPlugin }) => {
           this.use(new RatingPlugin());
-          console.log('[RecSysTracker] Auto-registered RatingPlugin based on tracking rules');
         });
         pluginPromises.push(ratingPromise);
       }
@@ -140,7 +138,6 @@ export class RecSysTracker {
       if (hasReviewRules) {
         const scrollPromise = import('./core/plugins/review-plugin').then(({ ReviewPlugin }) => {
           this.use(new ReviewPlugin());
-          console.log('[RecSysTracker] Auto-registered ScrollPlugin');
         });
         pluginPromises.push(scrollPromise);
       }
@@ -148,7 +145,6 @@ export class RecSysTracker {
       if (hasPageViewRules) {
         const pageViewPromise = import('./core/plugins/page-view-plugin').then(({ PageViewPlugin }) => {
           this.use(new PageViewPlugin());
-          console.log('[RecSysTracker] Auto-registered PageViewPlugin based on tracking rules');
         });
         pluginPromises.push(pageViewPromise);
       }
@@ -156,7 +152,6 @@ export class RecSysTracker {
       if (hasScrollRules) {
         const scrollPromise = import('./core/plugins/scroll-plugin').then(({ ScrollPlugin }) => {
           this.use(new ScrollPlugin());
-          console.log('[RecSysTracker] Auto-registered ScrollPlugin');
         });
         pluginPromises.push(scrollPromise);
       }
@@ -175,7 +170,6 @@ export class RecSysTracker {
 
       if (hasNetworkRules) {
         this.use(new NetworkPlugin());
-        console.log('[RecSysTracker] Auto-registered NetworkPlugin based on tracking rules');
       }
 
 
@@ -186,7 +180,6 @@ export class RecSysTracker {
 
       if (this.pluginManager.getPluginNames().length > 0) {
         this.startPlugins();
-        console.log('[RecSysTracker] Auto-started plugins');
       }
     }
   }

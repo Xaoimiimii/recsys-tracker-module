@@ -72,7 +72,6 @@ export class PluginManager {
   // Start all registered plugins
   startAll(): void {
     this.errorBoundary.execute(() => {
-      console.log(`[PluginManager] Starting ${this.plugins.size} plugin(s)...`);
       this.plugins.forEach((plugin) => {
         if (!plugin.isActive()) {
           plugin.start();
@@ -84,7 +83,6 @@ export class PluginManager {
   // Stop all registered plugins
   stopAll(): void {
     this.errorBoundary.execute(() => {
-      console.log(`[PluginManager] Stopping ${this.plugins.size} plugin(s)...`);
       this.plugins.forEach((plugin) => {
         if (plugin.isActive()) {
           plugin.stop();
@@ -119,7 +117,6 @@ export class PluginManager {
   // Destroy all plugins and cleanup
   destroy(): void {
     this.errorBoundary.execute(() => {
-      console.log(`[PluginManager] Destroying ${this.plugins.size} plugin(s)...`);
       this.plugins.forEach((plugin) => {
         plugin.destroy();
       });

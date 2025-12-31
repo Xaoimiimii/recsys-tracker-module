@@ -37,7 +37,7 @@ export class NetworkPlugin extends BasePlugin {
         this.hookFetch();
 
         this.active = true;
-        console.log(`[${this.name}] Started - Intercepting Network Requests`);
+        console.log(`[NetworkPlugin] initialized.`);
     }
 
     /**
@@ -51,7 +51,6 @@ export class NetworkPlugin extends BasePlugin {
         this.restoreFetch();
 
         this.active = false;
-        console.log(`[${this.name}] Stopped`);
     }
 
     /**

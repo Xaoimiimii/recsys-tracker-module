@@ -19,7 +19,6 @@ export class ReviewPlugin extends BasePlugin {
             if (!this.ensureInitialized())
                 return;
             document.addEventListener('submit', this.handleSubmitBound, { capture: true });
-            console.log("[ReviewPlugin] started listening for Review submissions.");
             this.active = true;
         }, 'ReviewPlugin.start');
     }
@@ -33,16 +32,13 @@ export class ReviewPlugin extends BasePlugin {
     }
     handleSubmit(event) {
         var _a;
-        console.log("🔥 [ReviewPlugin] Detected SUBMIT event!");
         if (!this.tracker)
             return;
         const form = event.target;
-        console.log(`📝 [ReviewPlugin] Checking form: #${form.id} (Classes: ${form.className})`);
         // Trigger ID for Review is typically 3 (or configured)
         const eventId = this.tracker.getEventTypeId('Review') || 3;
         const config = this.tracker.getConfig();
         const reviewRules = ((_a = config === null || config === void 0 ? void 0 : config.trackingRules) === null || _a === void 0 ? void 0 : _a.filter(r => r.eventTypeId === eventId)) || [];
-        console.log(`🔎 [ReviewPlugin] Found ${reviewRules.length} rules for TriggerID=${eventId}`);
         if (reviewRules.length === 0)
             return;
         for (const rule of reviewRules) {
@@ -61,7 +57,6 @@ export class ReviewPlugin extends BasePlugin {
             console.log(`[ReviewPlugin] 📤 Event tracked successfully`);
             return;
         }
-        console.log("❌ [ReviewPlugin] No rules matched the current form.");
     }
     checkTargetMatch(form, rule) {
         const target = rule.targetElement;
