@@ -129,7 +129,8 @@ export const TrackingRuleScalarFieldEnum = {
   Name: 'Name',
   DomainID: 'DomainID',
   EventTypeID: 'EventTypeID',
-  TrackingTargetId: 'TrackingTargetId'
+  TrackingTargetId: 'TrackingTargetId',
+  IntentLevel: 'IntentLevel'
 } as const
 
 export type TrackingRuleScalarFieldEnum = (typeof TrackingRuleScalarFieldEnum)[keyof typeof TrackingRuleScalarFieldEnum]
