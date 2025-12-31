@@ -1,15 +1,11 @@
 import { BasePlugin } from './base-plugin';
-import { RecSysTracker } from '../..';
+import { TrackerConfig } from '../../types';
 export declare class ClickPlugin extends BasePlugin {
-    readonly name = "ClickPlugin";
-    private context;
-    private detector;
-    private throttledHandler;
-    private readonly THROTTLE_DELAY;
-    constructor();
-    init(tracker: RecSysTracker): void;
+    readonly name = "click-plugin";
+    private config;
+    constructor(config?: TrackerConfig);
     start(): void;
-    stop(): void;
-    private handleDocumentClick;
+    private runPascalMode;
+    private runLegacyMode;
 }
 //# sourceMappingURL=click-plugin.d.ts.map

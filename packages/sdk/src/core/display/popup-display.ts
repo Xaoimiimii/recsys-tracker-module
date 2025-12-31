@@ -174,7 +174,7 @@ export class PopupDisplay {
     popup.className = 'recsys-popup';
     popup.innerHTML = `
       <div class="recsys-header">
-        Gợi ý dành cho bạn
+        Gợi ý dành cho 
         <button class="recsys-close">✕</button>
       </div>
       <div class="recsys-body">
