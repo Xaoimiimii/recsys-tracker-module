@@ -4,6 +4,7 @@ export enum PayloadField {
     ITEM_ID = 'ItemId',
     ITEM_TITLE = 'ItemTitle',
     VALUE = 'Value',
+    ANONYMOUS_ID = 'AnonymousId',
 }
 
 export enum PayloadSource {
@@ -13,6 +14,7 @@ export enum PayloadSource {
     LOCAL_STORAGE = 'LocalStorage',
     SESSION_STORAGE = 'SessionStorage',
     URL = 'Url',
+    REQUEST_URL = 'RequestUrl',
 }
 
 export enum PayloadRequestMethod {
