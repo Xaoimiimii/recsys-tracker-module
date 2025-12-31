@@ -13,7 +13,7 @@ export class PathMatcher {
         // Regex explanation:
         // :([a-zA-Z0-9_]+)   -> matches :id
         // \{([a-zA-Z0-9_]+)\} -> matches {id}
-        const regexString = escaped.replace(/:([a-zA-Z0-9_]+)|\{([a-zA-Z0-9_]+)\}/g, (match, p1, p2) => {
+        const regexString = escaped.replace(/:([a-zA-Z0-9_]+)|\{([a-zA-Z0-9_]+)\}/g, (_match, p1, p2) => {
             const key = p1 || p2;
             keys.push(key);
             return '([^/]+)';

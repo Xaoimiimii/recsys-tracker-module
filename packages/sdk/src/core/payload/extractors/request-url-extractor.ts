@@ -19,7 +19,7 @@ export class RequestUrlExtractor implements IPayloadExtractor {
     /**
      * Extract data from the most recent matching network request
      */
-    extract(mapping: PayloadMapping, context?: any): any {
+    extract(mapping: PayloadMapping, _context?: any): any {
         if (!mapping.requestUrlPattern) return null;
 
         // If context provides URL (e.g. NetworkPlugin), check it first?
@@ -109,7 +109,7 @@ export class RequestUrlExtractor implements IPayloadExtractor {
             return self.originalXmlOpen.apply(this, arguments as any);
         };
 
-        XMLHttpRequest.prototype.send = function (body: any) {
+        XMLHttpRequest.prototype.send = function (_body: any) {
             const info = (this as any)._reqUrlArgs;
             if (info) {
                 // We log the request when it is SENT (closest to trigger time usually)

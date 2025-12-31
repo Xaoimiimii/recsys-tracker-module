@@ -31,13 +31,8 @@ export class PayloadBuilder {
 
         // Network
         this.extractors.set('request_body', this.networkExtractor);
-        this.extractors.set('requestbody', this.networkExtractor);
-        this.extractors.set('response_body', this.networkExtractor);
-        this.extractors.set('responsebody', this.networkExtractor);
-        this.extractors.set('network_request', this.networkExtractor);
 
         // Request Url
-        this.extractors.set('requesturl', this.requestUrlExtractor);
         this.extractors.set('request_url', this.requestUrlExtractor);
 
         // Url
@@ -113,7 +108,7 @@ export class PayloadBuilder {
         const hasRequestUrlRules = this.trackerConfig.trackingRules.some((rule: any) =>
             rule.payloadMappings && rule.payloadMappings.some((m: any) => {
                 const source = (m.source || '').toLowerCase();
-                return source === 'requesturl' || source === 'request_url';
+                return source === 'request_url';
             })
         );
 
