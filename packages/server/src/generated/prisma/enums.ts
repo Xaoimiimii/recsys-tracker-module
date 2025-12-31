@@ -31,7 +31,8 @@ export const PayloadField = {
   Username: 'Username',
   ItemId: 'ItemId',
   ItemTitle: 'ItemTitle',
-  Value: 'Value'
+  Value: 'Value',
+  AnonymousId: 'AnonymousId'
 } as const
 
 export type PayloadField = (typeof PayloadField)[keyof typeof PayloadField]
