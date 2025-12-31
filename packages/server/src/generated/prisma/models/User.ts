@@ -261,6 +261,8 @@ export type UserOrderByWithRelationInput = {
 export type UserWhereUniqueInput = Prisma.AtLeast<{
   Id?: number
   Username_DomainId?: Prisma.UserUsernameDomainIdCompoundUniqueInput
+  DomainId_DomainUserId?: Prisma.UserDomainIdDomainUserIdCompoundUniqueInput
+  Username_DomainUserId?: Prisma.UserUsernameDomainUserIdCompoundUniqueInput
   AND?: Prisma.UserWhereInput | Prisma.UserWhereInput[]
   OR?: Prisma.UserWhereInput[]
   NOT?: Prisma.UserWhereInput | Prisma.UserWhereInput[]
@@ -275,7 +277,7 @@ export type UserWhereUniqueInput = Prisma.AtLeast<{
   Predicts?: Prisma.PredictListRelationFilter
   Ratings?: Prisma.RatingListRelationFilter
   Interactions?: Prisma.InteractionListRelationFilter
-}, "Id" | "Username_DomainId">
+}, "Id" | "Username_DomainId" | "DomainId_DomainUserId" | "Username_DomainUserId">
 
 export type UserOrderByWithAggregationInput = {
   Id?: Prisma.SortOrder
@@ -400,6 +402,16 @@ export type UserOrderByRelationAggregateInput = {
 export type UserUsernameDomainIdCompoundUniqueInput = {
   Username: string
   DomainId: number
+}
+
+export type UserDomainIdDomainUserIdCompoundUniqueInput = {
+  DomainId: number
+  DomainUserId: string
+}
+
+export type UserUsernameDomainUserIdCompoundUniqueInput = {
+  Username: string
+  DomainUserId: string
 }
 
 export type UserCountOrderByAggregateInput = {
