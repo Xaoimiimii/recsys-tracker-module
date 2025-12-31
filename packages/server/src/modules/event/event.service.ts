@@ -34,7 +34,12 @@ export class EventService {
             where:
                 event.UserField === UserField.USERNAME
                     ? { Username_DomainId: { Username: event.UserValue, DomainId: domain.Id } }
-                    : { Id: parseInt(event.UserValue) }
+                    : {
+                        DomainId_DomainUserId: {
+                            DomainUserId: event.UserValue,
+                            DomainId: domain.Id
+                        }
+                    }
         });
 
         if (!user) {
@@ -42,7 +47,10 @@ export class EventService {
                 data:
                     event.UserField === UserField.USERNAME
                         ? { Username: event.UserValue, DomainId: domain.Id, CreatedAt: new Date() }
-                        : { Id: parseInt(event.UserValue), DomainId: domain.Id, CreatedAt: new Date() }
+                        : {
+                            DomainUserId: event.UserValue,
+                            DomainId: domain.Id
+                    }
             });
         }
 
