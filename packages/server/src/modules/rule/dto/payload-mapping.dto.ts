@@ -18,6 +18,10 @@ export class PayloadMappingDto {
     @IsString()
     Value?: string;
 
+    @IsOptional()
+    @IsString()
+    RequestUrl?: string;
+
     @ApiPropertyOptional({ description: 'Pattern của URL để kích hoạt mapping' })
     @IsOptional()
     @IsString()

@@ -50,7 +50,10 @@ export class EventService {
         if (event.ItemField === ItemField.ITEM_ID) {
             const item = await this.prisma.item.findUnique({
                 where: {
-                    Id: parseInt(event.ItemValue),
+                    DomainId_DomainItemId: {
+                        DomainId: domain.Id,
+                        DomainItemId: event.ItemValue,
+                    }
                 }
             })
             if (!item) throw new NotFoundException(`Item id '${event.ItemValue}' does not exist.`);

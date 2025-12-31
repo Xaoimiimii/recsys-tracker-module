@@ -318,6 +318,8 @@ model Item {
   Predicts       Predict[]
   Ratings        Rating[]
   interactions   Interaction[]
+
+  @@unique([DomainId, DomainItemId])
 }
 
 model Model {
@@ -370,6 +372,8 @@ model User {
   Interactions Interaction[]
 
   @@unique([Username, DomainId])
+  @@unique([DomainId, DomainUserId])
+  @@unique([Username, DomainUserId])
 }
 
 model UserFactor {
