@@ -2105,6 +2105,7 @@ export const PayloadMappingScalarFieldEnum = {
   Field: 'Field',
   Source: 'Source',
   Value: 'Value',
+  RequestUrl: 'RequestUrl',
   RequestUrlPattern: 'RequestUrlPattern',
   RequestMethod: 'RequestMethod',
   RequestBodyPath: 'RequestBodyPath',

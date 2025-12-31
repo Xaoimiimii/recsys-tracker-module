@@ -201,6 +201,7 @@ enum PayloadSource {
   LocalStorage
   SessionStorage
   Url
+  RequestUrl
 }
 
 enum PayloadRequestMethod {
@@ -221,6 +222,9 @@ model PayloadMapping {
   Field             PayloadField
   Source            PayloadSource
   Value             String?
+
+  RequestUrl        String?
+
   RequestUrlPattern String?
   RequestMethod     PayloadRequestMethod?
   RequestBodyPath   String?
