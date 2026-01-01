@@ -1,8 +1,8 @@
 import { BasePlugin } from './base-plugin';
 /**
- * NetworkPlugin: Plugin chịu trách nhiệm theo dõi các yêu cầu mạng (XHR & Fetch).
- * Nó tự động chặn (intercept) các request, so sánh với Rules cấu hình,
- * và trích xuất dữ liệu nếu trùng khớp.
+ * NetworkPlugin: Plugin chịu trách nhiệm intercept network requests (XHR & Fetch).
+ * It caches network data so PayloadBuilder extractors (NetworkExtractor, RequestUrlExtractor) can use it.
+ * Does NOT automatically track events - only tracking plugins (click, rating, etc.) trigger tracking.
  */
 export declare class NetworkPlugin extends BasePlugin {
     readonly name = "NetworkPlugin";
@@ -38,7 +38,8 @@ export declare class NetworkPlugin extends BasePlugin {
     private restoreFetch;
     /**
      * Xử lý thông tin request đã chặn được.
-     * So khớp URL với các Rule trong Config và trích xuất dữ liệu.
+     * Only caches network data for PayloadBuilder extractors to use.
+     * Does NOT automatically track events.
      * @param url URL của request
      * @param method Phương thức (GET, POST, ...)
      * @param reqBody Body gửi đi (nếu có)

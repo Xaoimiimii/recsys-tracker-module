@@ -46,28 +46,59 @@ export class PayloadBuilder {
 
     // Tạo payload dựa trên rule và context
     public build(context: any, rule: TrackingRule): Record<string, any> {
+        console.log('[PayloadBuilder.build] Rule:', rule.name, 'Mappings:', rule.payloadMappings);
         const payload: Record<string, any> = {};
 
         if (!rule || !rule.payloadMappings || rule.payloadMappings.length === 0) {
+            console.warn('[PayloadBuilder.build] No payload mappings');
             return payload;
         }
 
         for (const mapping of rule.payloadMappings as PayloadMapping[]) {
             const source = (mapping.source || '').toLowerCase();
+            console.log('[PayloadBuilder.build] Processing mapping:', {
+                field: mapping.field,
+                source: source,
+                value: mapping.value
+            });
+            
             let val = null;
 
             // Chọn Extractor dựa trên source
             const extractor = this.extractors.get(source);
             if (extractor) {
                 val = extractor.extract(mapping, context);
+                console.log('[PayloadBuilder.build] Extracted value:', val, 'for field:', mapping.field);
+            } else {
+                console.warn('[PayloadBuilder.build] No extractor found for source:', source);
             }
 
             if (this.isValid(val)) {
                 payload[mapping.field] = val;
+            } else {
+                console.warn('[PayloadBuilder.build] Invalid value, not adding to payload');
             }
         }
 
+        console.log('[PayloadBuilder.build] Final payload:', payload);
         return payload;
+    }
+
+    /**
+     * Build payload and call back with the result
+     * Used by tracking plugins (click, rating, review, scroll, pageview)
+     * NOT used by network plugin
+     */
+    public buildWithCallback(
+        context: any,
+        rule: TrackingRule,
+        callback: (payload: Record<string, any>, rule: TrackingRule, context: any) => void
+    ): void {
+        console.log('[PayloadBuilder] buildWithCallback called for rule:', rule.name);
+        const payload = this.build(context, rule);
+        console.log('[PayloadBuilder] Payload built:', payload);
+        callback(payload, rule, context);
+        console.log('[PayloadBuilder] Callback executed');
     }
 
     /**
@@ -88,7 +119,7 @@ export class PayloadBuilder {
         const hasNetworkRules = this.trackerConfig.trackingRules.some((rule: any) =>
             rule.payloadMappings && rule.payloadMappings.some((m: any) => {
                 const source = (m.source || '').toLowerCase();
-                return source === 'request_body';
+                return source === 'request_body' || source === 'requestbody';
             })
         );
 
@@ -108,9 +139,11 @@ export class PayloadBuilder {
         const hasRequestUrlRules = this.trackerConfig.trackingRules.some((rule: any) =>
             rule.payloadMappings && rule.payloadMappings.some((m: any) => {
                 const source = (m.source || '').toLowerCase();
-                return source === 'request_url';
+                return source === 'request_url' || source === 'requesturl';
             })
         );
+        
+        console.log('[PayloadBuilder] hasRequestUrlRules:', hasRequestUrlRules);
 
         if (hasRequestUrlRules) {
             this.requestUrlExtractor.enableTracking();

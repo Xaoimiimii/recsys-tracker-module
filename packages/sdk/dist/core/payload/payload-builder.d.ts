@@ -12,6 +12,12 @@ export declare class PayloadBuilder {
     private registerExtractors;
     build(context: any, rule: TrackingRule): Record<string, any>;
     /**
+     * Build payload and call back with the result
+     * Used by tracking plugins (click, rating, review, scroll, pageview)
+     * NOT used by network plugin
+     */
+    buildWithCallback(context: any, rule: TrackingRule, callback: (payload: Record<string, any>, rule: TrackingRule, context: any) => void): void;
+    /**
      * Set tracker configuration and check if network tracking should be enabled
      */
     setConfig(config: any): void;

@@ -1780,6 +1780,82 @@ class DisplayManager {
     }
 }
 
+class TrackerCore {
+    static findScope(targetElement, rootSelector) {
+        if (!targetElement)
+            return document;
+        if (rootSelector) {
+            const scope = targetElement.closest(rootSelector);
+            if (scope)
+                return scope;
+        }
+        return targetElement.parentElement || document;
+    }
+    static resolveElementValue(selector, scope = document) {
+        var _a;
+        if (!scope || !(scope instanceof HTMLElement))
+            return null;
+        if (scope.hasAttribute(selector)) {
+            return scope.getAttribute(selector);
+        }
+        const el = scope.querySelector(selector);
+        if (el) {
+            return ((_a = el.textContent) === null || _a === void 0 ? void 0 : _a.trim()) || null;
+        }
+        if (selector.startsWith("[") && selector.endsWith("]")) {
+            const attrName = selector.slice(1, -1);
+            const elWithAttr = scope.querySelector(selector);
+            return elWithAttr ? elWithAttr.getAttribute(attrName) : null;
+        }
+        return null;
+    }
+}
+
+class TrackerInit {
+    static getUsername() {
+        var _a;
+        if (this.usernameCache !== null) {
+            return this.usernameCache;
+        }
+        // @ts-ignore
+        const user = (_a = window.LoginDetector) === null || _a === void 0 ? void 0 : _a.getCurrentUser();
+        return this.usernameCache = user !== null && user !== void 0 ? user : "guest";
+    }
+    static init() {
+        console.log("✅ [TrackerInit] Static system initialized");
+    }
+    static handleMapping(rule, target = null) {
+        var _a;
+        const payload = {
+            ruleId: rule.id,
+            eventTypeId: rule.eventTypeId
+        };
+        const scope = TrackerCore.findScope(target, ((_a = rule.trackingTarget) === null || _a === void 0 ? void 0 : _a.value) || null);
+        const mappings = rule.payloadMappings || [];
+        mappings.forEach((map) => {
+            const field = map.field;
+            const source = map.source;
+            const value = map.value;
+            if (source === 'element') {
+                payload[field] = TrackerCore.resolveElementValue(value, scope);
+            }
+            else if (source === 'static') {
+                payload[field] = value;
+            }
+            else if (source === 'login_detector' || field.toLowerCase() === 'userid') {
+                payload[field] = this.getUsername();
+            }
+        });
+        return payload;
+    }
+    static checkConditions(conditions) {
+        if (!conditions || conditions.length === 0)
+            return true;
+        return true;
+    }
+}
+TrackerInit.usernameCache = null;
+
 class BasePlugin {
     constructor() {
         this.tracker = null;
@@ -1885,7 +1961,9 @@ class BasePlugin {
     }
     /**
      * Phương thức xây dựng và theo dõi payload
-     * Extraction → identity resolution → payload construction → tracking
+     * New Flow: Plugin detects trigger → calls payloadBuilder with callback →
+     * payloadBuilder processes and calls back → buildAndTrack constructs and tracks →
+     * add to buffer → event dispatch
      *
      * @param context - Context for extraction (HTMLElement, NetworkContext, etc.)
      * @param rule - Tracking rule with payload mappings
@@ -1897,23 +1975,39 @@ class BasePlugin {
             console.warn(`[${this.name}] Cannot track: tracker not initialized`);
             return;
         }
-        // 1. Extract data using PayloadBuilder
-        const extractedData = this.tracker.payloadBuilder.build(context, rule);
-        // 2. Resolve identity fields dynamically
-        const { userField, userValue, itemField, itemValue, value } = this.resolvePayloadIdentity(extractedData, rule);
-        // 3. Construct payload
-        const payload = {
-            eventTypeId: Number(eventId),
-            trackingRuleId: Number(rule.id),
-            userField,
-            userValue,
-            itemField,
-            itemValue,
-            ratingValue: eventId === 2 ? Number(value) : undefined,
-            ratingReview: eventId === 3 ? value : undefined,
-        };
-        // 4. Track the event
-        this.tracker.track(payload);
+        console.log(`[${this.name}] buildAndTrack called for eventId:`, eventId, 'rule:', rule.name);
+        // New Flow: Call PayloadBuilder with callback
+        this.tracker.payloadBuilder.buildWithCallback(context, rule, (extractedData, processedRule, _processedContext) => {
+            console.log(`[${this.name}] Callback received - extractedData from PayloadBuilder:`, extractedData);
+            // Use TrackerInit.handleMapping like old code for proper payload extraction from DOM
+            const element = context instanceof HTMLElement ? context : null;
+            const mappedData = TrackerInit.handleMapping(processedRule, element);
+            console.log(`[${this.name}] Mapped data from TrackerInit:`, mappedData);
+            // Merge: PayloadBuilder data (network, localStorage) + TrackerInit data (DOM, static)
+            const finalData = { ...mappedData, ...extractedData };
+            console.log(`[${this.name}] Final merged data:`, finalData);
+            // Get values from finalData
+            const userField = finalData.UserId ? 'UserId' : (finalData.Username ? 'Username' : (finalData.AnonymousId ? 'AnonymousId' : 'UserId'));
+            const userValue = finalData.UserId || finalData.Username || finalData.AnonymousId || TrackerInit.getUsername() || 'guest';
+            const itemField = finalData.ItemId ? 'ItemId' : (finalData.ItemTitle ? 'ItemTitle' : 'ItemId');
+            const itemValue = finalData.ItemId || finalData.ItemTitle || '';
+            const value = finalData.Value || '';
+            // Construct payload
+            const payload = {
+                eventTypeId: Number(eventId),
+                trackingRuleId: Number(processedRule.id),
+                userField,
+                userValue,
+                itemField,
+                itemValue,
+                ratingValue: eventId === 2 ? Number(value) : undefined,
+                ratingReview: eventId === 3 ? value : undefined,
+            };
+            console.log(`[${this.name}] Final payload to track:`, payload);
+            // Track the event (this adds to buffer and dispatches)
+            this.tracker.track(payload);
+            console.log(`[${this.name}] tracker.track() called`);
+        });
     }
 }
 
@@ -2024,82 +2118,6 @@ class PluginManager {
     }
 }
 
-class TrackerCore {
-    static findScope(targetElement, rootSelector) {
-        if (!targetElement)
-            return document;
-        if (rootSelector) {
-            const scope = targetElement.closest(rootSelector);
-            if (scope)
-                return scope;
-        }
-        return targetElement.parentElement || document;
-    }
-    static resolveElementValue(selector, scope = document) {
-        var _a;
-        if (!scope || !(scope instanceof HTMLElement))
-            return null;
-        if (scope.hasAttribute(selector)) {
-            return scope.getAttribute(selector);
-        }
-        const el = scope.querySelector(selector);
-        if (el) {
-            return ((_a = el.textContent) === null || _a === void 0 ? void 0 : _a.trim()) || null;
-        }
-        if (selector.startsWith("[") && selector.endsWith("]")) {
-            const attrName = selector.slice(1, -1);
-            const elWithAttr = scope.querySelector(selector);
-            return elWithAttr ? elWithAttr.getAttribute(attrName) : null;
-        }
-        return null;
-    }
-}
-
-class TrackerInit {
-    static getUsername() {
-        var _a;
-        if (this.usernameCache !== null) {
-            return this.usernameCache;
-        }
-        // @ts-ignore
-        const user = (_a = window.LoginDetector) === null || _a === void 0 ? void 0 : _a.getCurrentUser();
-        return this.usernameCache = user !== null && user !== void 0 ? user : "guest";
-    }
-    static init() {
-        console.log("✅ [TrackerInit] Static system initialized");
-    }
-    static handleMapping(rule, target = null) {
-        var _a;
-        const payload = {
-            ruleId: rule.id,
-            eventTypeId: rule.eventTypeId
-        };
-        const scope = TrackerCore.findScope(target, ((_a = rule.trackingTarget) === null || _a === void 0 ? void 0 : _a.value) || null);
-        const mappings = rule.payloadMappings || [];
-        mappings.forEach((map) => {
-            const field = map.field;
-            const source = map.source;
-            const value = map.value;
-            if (source === 'element') {
-                payload[field] = TrackerCore.resolveElementValue(value, scope);
-            }
-            else if (source === 'static') {
-                payload[field] = value;
-            }
-            else if (source === 'login_detector' || field.toLowerCase() === 'userid') {
-                payload[field] = this.getUsername();
-            }
-        });
-        return payload;
-    }
-    static checkConditions(conditions) {
-        if (!conditions || conditions.length === 0)
-            return true;
-        return true;
-    }
-}
-TrackerInit.usernameCache = null;
-
 /**
  * Selector Matcher Utility
  * Provides strict and loose matching modes for tracking targets
@@ -2192,34 +2210,78 @@ class ClickPlugin extends BasePlugin {
     }
     handleDocumentClick(event, config) {
         var _a, _b, _c;
-        if (!this.tracker)
+        console.log('[ClickPlugin] Click detected on:', event.target);
+        if (!this.tracker) {
+            console.warn('[ClickPlugin] Tracker not initialized');
             return;
+        }
         const rules = config.trackingRules;
-        if (!rules || rules.length === 0)
+        if (!rules || rules.length === 0) {
+            console.warn('[ClickPlugin] No tracking rules found');
             return;
+        }
         const clickRules = rules.filter((r) => r.eventTypeId === 1);
+        console.log('[ClickPlugin] Found', clickRules.length, 'click rules');
         if (clickRules.length === 0)
             return;
         for (const rule of clickRules) {
             const selector = (_a = rule.trackingTarget) === null || _a === void 0 ? void 0 : _a.value;
+            console.log('[ClickPlugin] Checking rule:', rule.name, 'with selector:', selector);
             if (!selector)
                 continue;
             const clickedElement = event.target;
+            console.log('[ClickPlugin] Clicked element:', clickedElement.tagName, clickedElement.className);
+            // Debug: Log parent chain
+            let parent = clickedElement.parentElement;
+            let depth = 0;
+            while (parent && depth < 5) {
+                console.log(`[ClickPlugin] Parent ${depth}:`, parent.tagName, parent.className, (_b = parent.classList) === null || _b === void 0 ? void 0 : _b.toString());
+                parent = parent.parentElement;
+                depth++;
+            }
             // Strategy: 
             // 1. Try STRICT match first (element itself must match selector)
             // 2. If no match, try CLOSEST (parent traversal) but ONLY if clicked element is not a button/link
             //    This prevents other interactive elements from accidentally triggering
             let target = SelectorMatcher.match(clickedElement, selector, MatchMode.STRICT);
+            console.log('[ClickPlugin] STRICT match result:', target);
+            // TEMPORARY: If selector is .play-button, also try to match elements with "play-button" in their class
+            if (!target && selector === '.play-button') {
+                const className = clickedElement.className;
+                if (typeof className === 'string' && className.includes('play-button')) {
+                    target = clickedElement;
+                    console.log('[ClickPlugin] Matched via flexible class check on clicked element');
+                }
+            }
             if (!target) {
                 // Only use CLOSEST matching if clicked element is NOT an interactive element
                 const isInteractiveElement = ['BUTTON', 'A', 'INPUT', 'SELECT', 'TEXTAREA'].includes(clickedElement.tagName) || clickedElement.hasAttribute('role') && ['button', 'link'].includes(clickedElement.getAttribute('role') || '');
+                console.log('[ClickPlugin] Is interactive element:', isInteractiveElement);
                 if (!isInteractiveElement) {
                     // Safe to traverse up - probably clicked on icon/text inside button
                     target = SelectorMatcher.match(clickedElement, selector, MatchMode.CLOSEST);
+                    console.log('[ClickPlugin] CLOSEST match result:', target);
+                    // TEMPORARY: If selector is .play-button and CLOSEST didn't find it, try manual parent search
+                    if (!target && selector === '.play-button') {
+                        let parent = clickedElement.parentElement;
+                        let depth = 0;
+                        while (parent && depth < 10) {
+                            const parentClassName = parent.className;
+                            if (typeof parentClassName === 'string' && parentClassName.includes('play-button')) {
+                                target = parent;
+                                console.log('[ClickPlugin] Matched via flexible class check on parent at depth', depth);
+                                break;
+                            }
+                            parent = parent.parentElement;
+                            depth++;
+                        }
+                    }
                 }
             }
-            if (!target)
+            if (!target) {
+                console.log('[ClickPlugin] No target matched for selector:', selector);
                 continue;
+            }
             // Log for debugging
             console.log('[ClickPlugin] ✓ Click matched tracking target:', {
                 element: target.className || target.tagName,
@@ -2227,7 +2289,7 @@ class ClickPlugin extends BasePlugin {
                 rule: rule.name,
                 matchedDirectly: clickedElement === target
             });
-            if ((_b = rule.conditions) === null || _b === void 0 ? void 0 : _b.length) {
+            if ((_c = rule.conditions) === null || _c === void 0 ? void 0 : _c.length) {
                 const conditionsMet = rule.conditions.every((cond) => {
                     if (cond.patternId === 2 && cond.operatorId === 1) {
                         return window.location.href.includes(cond.value);
@@ -2238,49 +2300,8 @@ class ClickPlugin extends BasePlugin {
                     continue;
             }
             console.log("🎯 [ClickPlugin] Rule matched:", rule.name, "| ID:", rule.id);
-            let payload = {};
-            if ((_c = rule.payloadMappings) === null || _c === void 0 ? void 0 : _c.length) {
-                rule.payloadMappings.forEach((m) => {
-                    var _a;
-                    if (m.source === "Element" || m.source === "element") {
-                        const el = target.querySelector(m.value);
-                        if (el) {
-                            payload[m.field] = (_a = el.textContent) === null || _a === void 0 ? void 0 : _a.trim();
-                        }
-                        else if (target.hasAttribute(m.value)) {
-                            payload[m.field] = target.getAttribute(m.value);
-                        }
-                    }
-                    if (m.source === "LocalStorage") {
-                        payload[m.field] = localStorage.getItem(m.value);
-                    }
-                    if (m.source === "global_variable") {
-                        const globalVal = window[m.value];
-                        payload[m.field] =
-                            typeof globalVal === "function" ? globalVal() : globalVal;
-                    }
-                });
-            }
-            console.log("🚀 Payload collected:", payload);
-            const userKey = Object.keys(payload).find((k) => k.toLowerCase().includes("user")) ||
-                "userId";
-            const itemKey = Object.keys(payload).find((k) => k.toLowerCase().includes("item")) ||
-                "ItemId";
-            const rawData = TrackerInit.handleMapping(rule, target);
-            this.tracker.track({
-                eventTypeId: rule.eventTypeId,
-                trackingRuleId: Number(rule.id),
-                userField: userKey,
-                userValue: payload[userKey] ||
-                    rawData.userId ||
-                    TrackerInit.getUsername() ||
-                    "guest",
-                itemField: itemKey,
-                itemValue: payload[itemKey] ||
-                    rawData.ItemId ||
-                    rawData.ItemTitle ||
-                    "Unknown Song",
-            });
+            // Use new flow: call buildAndTrack which handles payload extraction and tracking
+            this.buildAndTrack(target, rule, rule.eventTypeId);
             break;
         }
     }
@@ -2439,6 +2460,7 @@ class ReviewPlugin extends BasePlugin {
                 return;
             document.addEventListener('submit', this.handleSubmitBound, { capture: true });
             this.active = true;
+            console.log('[ReviewPlugin] Started successfully');
         }, 'ReviewPlugin.start');
     }
     stop() {
@@ -2451,6 +2473,7 @@ class ReviewPlugin extends BasePlugin {
     }
     handleSubmit(event) {
         var _a;
+        console.log('[ReviewPlugin] handleSubmit called');
         if (!this.tracker)
             return;
         const form = event.target;
@@ -3376,42 +3399,67 @@ class RequestUrlExtractor {
      */
     extract(mapping, _context) {
         var _a, _b;
-        if (!mapping.requestUrlPattern)
+        console.log('[RequestUrlExtractor] Extracting with mapping:', {
+            field: mapping.field,
+            pattern: mapping.requestUrlPattern,
+            method: mapping.requestMethod,
+            value: mapping.value
+        });
+        console.log('[RequestUrlExtractor] History size:', this.history.length);
+        console.log('[RequestUrlExtractor] Context:', _context);
+        if (!mapping.requestUrlPattern) {
+            console.warn('[RequestUrlExtractor] No requestUrlPattern');
             return null;
+        }
         const targetMethod = (_a = mapping.requestMethod) === null || _a === void 0 ? void 0 : _a.toUpperCase();
         // 1. Check strict context first (e.g. from NetworkPlugin)
         if (_context && _context.url) {
+            console.log('[RequestUrlExtractor] Checking context URL:', _context.url);
             const ctxUrl = _context.url;
             const ctxMethod = (_b = _context.method) === null || _b === void 0 ? void 0 : _b.toUpperCase();
             let methodMatch = true;
             if (targetMethod && ctxMethod && ctxMethod !== targetMethod) {
+                console.log('[RequestUrlExtractor] Method mismatch:', ctxMethod, 'vs', targetMethod);
                 methodMatch = false;
             }
             if (methodMatch) {
-                if (PathMatcher.match(ctxUrl, mapping.requestUrlPattern)) {
-                    return this.extractValueFromUrl(ctxUrl, mapping.value);
+                const patternMatch = PathMatcher.match(ctxUrl, mapping.requestUrlPattern);
+                console.log('[RequestUrlExtractor] Pattern match result:', patternMatch);
+                if (patternMatch) {
+                    const extracted = this.extractValueFromUrl(ctxUrl, mapping.value);
+                    console.log('[RequestUrlExtractor] Extracted from context:', extracted);
+                    return extracted;
                 }
             }
         }
         // 2. Fallback to history (e.g. from other plugins: 'closest request after trigger')
+        console.log('[RequestUrlExtractor] Checking history...');
         // Iterate backwards (newest first)
         for (let i = this.history.length - 1; i >= 0; i--) {
             const req = this.history[i];
+            console.log('[RequestUrlExtractor] Checking history entry:', req);
             // Check Method
-            if (targetMethod && req.method !== targetMethod)
+            if (targetMethod && req.method !== targetMethod) {
+                console.log('[RequestUrlExtractor] Method mismatch in history');
                 continue;
+            }
             // Check Pattern
             // 1. Static segments must match (optimization & requirement)
             if (!PathMatcher.matchStaticSegments(req.url, mapping.requestUrlPattern)) {
+                console.log('[RequestUrlExtractor] Static segments mismatch');
                 continue;
             }
             // 2. Full match
             if (!PathMatcher.match(req.url, mapping.requestUrlPattern)) {
+                console.log('[RequestUrlExtractor] Full pattern mismatch');
                 continue;
             }
             // Match found! Extract value.
-            return this.extractValueFromUrl(req.url, mapping.value);
+            const extracted = this.extractValueFromUrl(req.url, mapping.value);
+            console.log('[RequestUrlExtractor] Extracted from history:', extracted);
+            return extracted;
         }
+        console.warn('[RequestUrlExtractor] No match found');
         return null;
     }
     extractValueFromUrl(url, valueConfig) {
@@ -3419,14 +3467,22 @@ class RequestUrlExtractor {
         // Example: /api/rating/{itemId}/add-review
         // Split: ['api', 'rating', '123', 'add-review']
         // value=2 -> '123'
+        console.log('[RequestUrlExtractor.extractValueFromUrl] URL:', url, 'valueConfig:', valueConfig);
         const index = typeof valueConfig === 'string' ? parseInt(valueConfig, 10) : valueConfig;
-        if (typeof index !== 'number' || isNaN(index))
+        if (typeof index !== 'number' || isNaN(index)) {
+            console.warn('[RequestUrlExtractor] Invalid index:', index);
             return null;
+        }
         const path = url.split('?')[0];
         const segments = path.split('/').filter(Boolean); // Remote empty strings
-        if (index < 0 || index >= segments.length)
+        console.log('[RequestUrlExtractor.extractValueFromUrl] Segments:', segments, 'index:', index);
+        if (index < 0 || index >= segments.length) {
+            console.warn('[RequestUrlExtractor] Index out of range:', index, 'segments length:', segments.length);
             return null;
-        return segments[index];
+        }
+        const result = segments[index];
+        console.log('[RequestUrlExtractor.extractValueFromUrl] Result:', result);
+        return result;
     }
     /**
      * Enable network tracking
@@ -3543,23 +3599,50 @@ class PayloadBuilder {
     }
     // Tạo payload dựa trên rule và context
     build(context, rule) {
+        console.log('[PayloadBuilder.build] Rule:', rule.name, 'Mappings:', rule.payloadMappings);
         const payload = {};
         if (!rule || !rule.payloadMappings || rule.payloadMappings.length === 0) {
+            console.warn('[PayloadBuilder.build] No payload mappings');
             return payload;
         }
         for (const mapping of rule.payloadMappings) {
             const source = (mapping.source || '').toLowerCase();
+            console.log('[PayloadBuilder.build] Processing mapping:', {
+                field: mapping.field,
+                source: source,
+                value: mapping.value
+            });
             let val = null;
             // Chọn Extractor dựa trên source
             const extractor = this.extractors.get(source);
             if (extractor) {
                 val = extractor.extract(mapping, context);
+                console.log('[PayloadBuilder.build] Extracted value:', val, 'for field:', mapping.field);
+            }
+            else {
+                console.warn('[PayloadBuilder.build] No extractor found for source:', source);
             }
             if (this.isValid(val)) {
                 payload[mapping.field] = val;
             }
+            else {
+                console.warn('[PayloadBuilder.build] Invalid value, not adding to payload');
+            }
         }
+        console.log('[PayloadBuilder.build] Final payload:', payload);
         return payload;
+    }
+    /**
+     * Build payload and call back with the result
+     * Used by tracking plugins (click, rating, review, scroll, pageview)
+     * NOT used by network plugin
+     */
+    buildWithCallback(context, rule, callback) {
+        console.log('[PayloadBuilder] buildWithCallback called for rule:', rule.name);
+        const payload = this.build(context, rule);
+        console.log('[PayloadBuilder] Payload built:', payload);
+        callback(payload, rule, context);
+        console.log('[PayloadBuilder] Callback executed');
     }
     /**
      * Set tracker configuration and check if network tracking should be enabled
@@ -3577,7 +3660,7 @@ class PayloadBuilder {
             return;
         const hasNetworkRules = this.trackerConfig.trackingRules.some((rule) => rule.payloadMappings && rule.payloadMappings.some((m) => {
             const source = (m.source || '').toLowerCase();
-            return source === 'request_body';
+            return source === 'request_body' || source === 'requestbody';
         }));
         if (hasNetworkRules && !this.networkExtractor.isTracking()) {
             this.enableNetworkTracking();
@@ -3594,8 +3677,9 @@ class PayloadBuilder {
             return;
         const hasRequestUrlRules = this.trackerConfig.trackingRules.some((rule) => rule.payloadMappings && rule.payloadMappings.some((m) => {
             const source = (m.source || '').toLowerCase();
-            return source === 'request_url';
+            return source === 'request_url' || source === 'requesturl';
         }));
+        console.log('[PayloadBuilder] hasRequestUrlRules:', hasRequestUrlRules);
         if (hasRequestUrlRules) {
             this.requestUrlExtractor.enableTracking();
         }
@@ -3645,21 +3729,10 @@ class PayloadBuilder {
     }
 }
 
-// Hàm tiện ích: Parse JSON an toàn (tránh văng lỗi nếu chuỗi không hợp lệ)
-function safeParse(data) {
-    try {
-        if (typeof data === 'string')
-            return JSON.parse(data);
-        return data;
-    }
-    catch (e) {
-        return data;
-    }
-}
 /**
- * NetworkPlugin: Plugin chịu trách nhiệm theo dõi các yêu cầu mạng (XHR & Fetch).
- * Nó tự động chặn (intercept) các request, so sánh với Rules cấu hình,
- * và trích xuất dữ liệu nếu trùng khớp.
+ * NetworkPlugin: Plugin chịu trách nhiệm intercept network requests (XHR & Fetch).
+ * It caches network data so PayloadBuilder extractors (NetworkExtractor, RequestUrlExtractor) can use it.
+ * Does NOT automatically track events - only tracking plugins (click, rating, etc.) trigger tracking.
  */
 class NetworkPlugin extends BasePlugin {
     constructor() {
@@ -3753,70 +3826,19 @@ class NetworkPlugin extends BasePlugin {
     }
     /**
      * Xử lý thông tin request đã chặn được.
-     * So khớp URL với các Rule trong Config và trích xuất dữ liệu.
+     * Only caches network data for PayloadBuilder extractors to use.
+     * Does NOT automatically track events.
      * @param url URL của request
      * @param method Phương thức (GET, POST, ...)
      * @param reqBody Body gửi đi (nếu có)
      * @param resBody Body trả về (nếu có)
      */
-    handleRequest(url, method, reqBody, resBody) {
+    handleRequest(url, method, _reqBody, _resBody) {
         this.errorBoundary.execute(() => {
-            var _a;
-            if (!this.tracker)
-                return;
-            const config = this.tracker.getConfig();
-            if (!config || !config.trackingRules)
-                return;
-            const reqData = safeParse(reqBody);
-            const resData = safeParse(resBody);
-            const networkContext = {
-                reqBody: reqData,
-                resBody: resData,
-                method: method,
-                url: url
-            };
-            for (const rule of config.trackingRules) {
-                if (!rule.payloadMappings || rule.payloadMappings.length === 0)
-                    continue;
-                // Check if this rule applies to the current network request
-                let isNetworkMatch = false;
-                let hasRequestSourceMapping = false;
-                for (const m of rule.payloadMappings) {
-                    // Check if this mapping uses RequestBody or RequestUrl source
-                    if (m.source === 'RequestBody' || m.source === 'RequestUrl') {
-                        hasRequestSourceMapping = true;
-                    }
-                    if (m.requestUrlPattern) {
-                        // Check method
-                        const targetMethod = (_a = m.requestMethod) === null || _a === void 0 ? void 0 : _a.toUpperCase();
-                        if (targetMethod && targetMethod !== method)
-                            continue;
-                        // Check URL
-                        if (PathMatcher.match(url, m.requestUrlPattern)) {
-                            isNetworkMatch = true;
-                            break;
-                        }
-                    }
-                }
-                if (isNetworkMatch) {
-                    // Loop guard: only check if rule has RequestBody or RequestUrl source mappings
-                    if (hasRequestSourceMapping) {
-                        const shouldBlock = this.tracker.loopGuard.checkAndRecord(url, method, rule.id);
-                        if (shouldBlock) {
-                            continue; // Skip this rule temporarily
-                        }
-                    }
-                    // Extract data using PayloadBuilder (which now handles Network/RequestUrl using the passed context)
-                    const extractedData = this.tracker.payloadBuilder.build(networkContext, rule);
-                    if (Object.keys(extractedData).length > 0) {
-                        this.buildAndTrack(networkContext, rule, rule.eventTypeId);
-                        console.groupCollapsed(`%c[TRACKER] Network Match: (${method} ${url})`, "color: orange");
-                        console.log("Rule:", rule.name);
-                        console.log("Extracted:", extractedData);
-                        console.groupEnd();
-                    }
-                }
-            }
+            // NetworkPlugin no longer auto-tracks events
+            // It only intercepts requests so NetworkExtractor and RequestUrlExtractor can cache data
+            // The cached data will be extracted by PayloadBuilder when tracking plugins call buildAndTrack
+            console.log('[NetworkPlugin] Request intercepted:', method, url);
         }, 'NetworkPlugin.handleRequest');
     }
 }
@@ -4035,6 +4057,7 @@ class RatingPlugin extends BasePlugin {
             // 2. Listen for Submit (Traditional Forms)
             document.addEventListener("submit", this.submitHandler, true);
             this.active = true;
+            console.log('[RatingPlugin] Started successfully');
         }, 'RatingPlugin.start');
     }
     stop() {
@@ -4046,39 +4069,74 @@ class RatingPlugin extends BasePlugin {
     }
     handleInteraction(eventType, event) {
         var _a;
-        if (!this.tracker)
+        console.log('[RatingPlugin] handleInteraction called, eventType:', eventType);
+        if (!this.tracker) {
+            console.warn('[RatingPlugin] No tracker');
             return;
+        }
         // Trigger ID = 2 for Rating (Standard)
         const eventId = this.tracker.getEventTypeId('Rating') || 2;
         const config = this.tracker.getConfig();
         const rules = (_a = config === null || config === void 0 ? void 0 : config.trackingRules) === null || _a === void 0 ? void 0 : _a.filter(r => r.eventTypeId === eventId);
-        if (!rules || rules.length === 0)
+        console.log('[RatingPlugin] Found', (rules === null || rules === void 0 ? void 0 : rules.length) || 0, 'rating rules');
+        if (!rules || rules.length === 0) {
+            console.warn('[RatingPlugin] No rating rules found');
             return;
+        }
         const target = event.target;
-        if (!target)
+        if (!target) {
+            console.warn('[RatingPlugin] No target');
             return;
+        }
+        console.log('[RatingPlugin] Target:', target);
         try {
             for (const rule of rules) {
                 const selector = rule.trackingTarget.value;
-                if (!selector)
+                console.log('[RatingPlugin] Checking rule:', rule.name, 'selector:', selector);
+                if (!selector) {
+                    console.warn('[RatingPlugin] No selector for rule:', rule.name);
                     continue;
+                }
                 const matchedElement = target.closest(selector);
-                if (matchedElement) {
+                console.log('[RatingPlugin] Matched element:', matchedElement);
+                // TEMPORARY: Flexible matching for CSS modules
+                let finalMatch = matchedElement;
+                if (!finalMatch && selector.startsWith('.')) {
+                    // Extract base class name (remove leading dot and everything after underscore)
+                    const baseClassName = selector.substring(1).split('_')[0];
+                    console.log('[RatingPlugin] Trying flexible match with base class:', baseClassName);
+                    // Try to find parent with matching base class
+                    let parent = target;
+                    let depth = 0;
+                    while (parent && depth < 10) {
+                        const parentClassName = parent.className;
+                        if (typeof parentClassName === 'string' && parentClassName.includes(baseClassName)) {
+                            finalMatch = parent;
+                            console.log('[RatingPlugin] Flexible match found at depth', depth);
+                            break;
+                        }
+                        parent = parent.parentElement;
+                        depth++;
+                    }
+                }
+                if (finalMatch) {
                     // Determine Container
-                    const container = matchedElement.closest('form') ||
-                        matchedElement.closest('.rating-container') ||
-                        matchedElement.closest('.review-box') ||
-                        matchedElement.parentElement ||
+                    const container = finalMatch.closest('form') ||
+                        finalMatch.closest('.rating-container') ||
+                        finalMatch.closest('.review-box') ||
+                        finalMatch.parentElement ||
                         document.body;
                     // Process Rating
-                    const result = RatingUtils.processRating(container, matchedElement, eventType);
+                    const result = RatingUtils.processRating(container, finalMatch, eventType);
+                    console.log('[RatingPlugin] Rating result:', result);
                     // Filter garbage
                     if (result.originalValue === 0 && !result.reviewText) {
+                        console.warn('[RatingPlugin] Filtered as garbage (value=0, no review)');
                         continue;
                     }
                     console.log(`[RatingPlugin] 🎯 Captured [${eventType}]: Raw=${result.originalValue}/${result.maxValue} -> Norm=${result.normalizedValue}`);
                     // Build Payload using centralized method
-                    this.buildAndTrack(matchedElement, rule, eventId);
+                    this.buildAndTrack(finalMatch, rule, eventId);
                     break;
                 }
             }
@@ -4214,20 +4272,20 @@ class RecSysTracker {
                 });
                 pluginPromises.push(scrollPromise);
             }
-            // Check for Network Rules
-            const hasNetworkRules = this.config.trackingRules.some(rule => {
+            // Check for Network/RequestUrl mappings and initialize NetworkPlugin if needed
+            const hasNetworkMappings = this.config.trackingRules.some(rule => {
                 var _a;
                 return (_a = rule.payloadMappings) === null || _a === void 0 ? void 0 : _a.some(mapping => {
                     var _a;
                     const source = (_a = mapping.source) === null || _a === void 0 ? void 0 : _a.toLowerCase();
                     return source === 'requestbody' ||
-                        source === 'responsebody' ||
+                        source === 'requesturl' ||
                         source === 'request_body' ||
-                        source === 'response_body' ||
-                        source === 'network_request';
+                        source === 'request_url';
                 });
             });
-            if (hasNetworkRules) {
+            if (hasNetworkMappings) {
+                console.log('[RecSysTracker] Detected network mappings, initializing NetworkPlugin for data caching');
                 this.use(new NetworkPlugin());
             }
             // Chờ tất cả plugin được đăng ký trước khi khởi động

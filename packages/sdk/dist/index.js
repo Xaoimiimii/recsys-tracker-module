@@ -1,9 +1,9 @@
 import { ConfigLoader, ErrorBoundary, EventBuffer, EventDispatcher, MetadataNormalizer, DisplayManager, PluginManager } from './core';
 import { DEFAULT_API_URL, DEFAULT_TRACK_ENDPOINT_PATH } from './core/constants';
 import { PayloadBuilder } from './core/payload/payload-builder';
-import { NetworkPlugin } from './core/plugins/network-plugin';
 import { EventDeduplicator } from './core/utils/event-deduplicator';
 import { LoopGuard } from './core/utils/loop-guard';
+import { NetworkPlugin } from './core/plugins/network-plugin';
 // RecSysTracker - Main SDK class
 export class RecSysTracker {
     constructor() {
@@ -124,20 +124,20 @@ export class RecSysTracker {
                 });
                 pluginPromises.push(scrollPromise);
             }
-            // Check for Network Rules
-            const hasNetworkRules = this.config.trackingRules.some(rule => {
+            // Check for Network/RequestUrl mappings and initialize NetworkPlugin if needed
+            const hasNetworkMappings = this.config.trackingRules.some(rule => {
                 var _a;
                 return (_a = rule.payloadMappings) === null || _a === void 0 ? void 0 : _a.some(mapping => {
                     var _a;
                     const source = (_a = mapping.source) === null || _a === void 0 ? void 0 : _a.toLowerCase();
                     return source === 'requestbody' ||
-                        source === 'responsebody' ||
+                        source === 'requesturl' ||
                         source === 'request_body' ||
-                        source === 'response_body' ||
-                        source === 'network_request';
+                        source === 'request_url';
                 });
             });
-            if (hasNetworkRules) {
+            if (hasNetworkMappings) {
+                console.log('[RecSysTracker] Detected network mappings, initializing NetworkPlugin for data caching');
                 this.use(new NetworkPlugin());
             }
             // Chờ tất cả plugin được đăng ký trước khi khởi động

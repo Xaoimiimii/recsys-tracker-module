@@ -32,7 +32,9 @@ export declare abstract class BasePlugin implements IPlugin {
     };
     /**
      * Phương thức xây dựng và theo dõi payload
-     * Extraction → identity resolution → payload construction → tracking
+     * New Flow: Plugin detects trigger → calls payloadBuilder with callback →
+     * payloadBuilder processes and calls back → buildAndTrack constructs and tracks →
+     * add to buffer → event dispatch
      *
      * @param context - Context for extraction (HTMLElement, NetworkContext, etc.)
      * @param rule - Tracking rule with payload mappings

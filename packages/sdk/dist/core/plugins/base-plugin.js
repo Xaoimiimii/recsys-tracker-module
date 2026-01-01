@@ -1,4 +1,5 @@
 import { ErrorBoundary } from '../error-handling/error-boundary';
+import { TrackerInit } from '../tracker-init';
 export class BasePlugin {
     constructor() {
         this.tracker = null;
@@ -104,7 +105,9 @@ export class BasePlugin {
     }
     /**
      * Phương thức xây dựng và theo dõi payload
-     * Extraction → identity resolution → payload construction → tracking
+     * New Flow: Plugin detects trigger → calls payloadBuilder with callback →
+     * payloadBuilder processes and calls back → buildAndTrack constructs and tracks →
+     * add to buffer → event dispatch
      *
      * @param context - Context for extraction (HTMLElement, NetworkContext, etc.)
      * @param rule - Tracking rule with payload mappings
@@ -116,23 +119,39 @@ export class BasePlugin {
             console.warn(`[${this.name}] Cannot track: tracker not initialized`);
             return;
         }
-        // 1. Extract data using PayloadBuilder
-        const extractedData = this.tracker.payloadBuilder.build(context, rule);
-        // 2. Resolve identity fields dynamically
-        const { userField, userValue, itemField, itemValue, value } = this.resolvePayloadIdentity(extractedData, rule);
-        // 3. Construct payload
-        const payload = {
-            eventTypeId: Number(eventId),
-            trackingRuleId: Number(rule.id),
-            userField,
-            userValue,
-            itemField,
-            itemValue,
-            ratingValue: eventId === 2 ? Number(value) : undefined,
-            ratingReview: eventId === 3 ? value : undefined,
-        };
-        // 4. Track the event
-        this.tracker.track(payload);
+        console.log(`[${this.name}] buildAndTrack called for eventId:`, eventId, 'rule:', rule.name);
+        // New Flow: Call PayloadBuilder with callback
+        this.tracker.payloadBuilder.buildWithCallback(context, rule, (extractedData, processedRule, _processedContext) => {
+            console.log(`[${this.name}] Callback received - extractedData from PayloadBuilder:`, extractedData);
+            // Use TrackerInit.handleMapping like old code for proper payload extraction from DOM
+            const element = context instanceof HTMLElement ? context : null;
+            const mappedData = TrackerInit.handleMapping(processedRule, element);
+            console.log(`[${this.name}] Mapped data from TrackerInit:`, mappedData);
+            // Merge: PayloadBuilder data (network, localStorage) + TrackerInit data (DOM, static)
+            const finalData = { ...mappedData, ...extractedData };
+            console.log(`[${this.name}] Final merged data:`, finalData);
+            // Get values from finalData
+            const userField = finalData.UserId ? 'UserId' : (finalData.Username ? 'Username' : (finalData.AnonymousId ? 'AnonymousId' : 'UserId'));
+            const userValue = finalData.UserId || finalData.Username || finalData.AnonymousId || TrackerInit.getUsername() || 'guest';
+            const itemField = finalData.ItemId ? 'ItemId' : (finalData.ItemTitle ? 'ItemTitle' : 'ItemId');
+            const itemValue = finalData.ItemId || finalData.ItemTitle || '';
+            const value = finalData.Value || '';
+            // Construct payload
+            const payload = {
+                eventTypeId: Number(eventId),
+                trackingRuleId: Number(processedRule.id),
+                userField,
+                userValue,
+                itemField,
+                itemValue,
+                ratingValue: eventId === 2 ? Number(value) : undefined,
+                ratingReview: eventId === 3 ? value : undefined,
+            };
+            console.log(`[${this.name}] Final payload to track:`, payload);
+            // Track the event (this adds to buffer and dispatches)
+            this.tracker.track(payload);
+            console.log(`[${this.name}] tracker.track() called`);
+        });
     }
 }
 //# sourceMappingURL=base-plugin.js.map

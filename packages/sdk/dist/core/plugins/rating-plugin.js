@@ -23,6 +23,7 @@ export class RatingPlugin extends BasePlugin {
             // 2. Listen for Submit (Traditional Forms)
             document.addEventListener("submit", this.submitHandler, true);
             this.active = true;
+            console.log('[RatingPlugin] Started successfully');
         }, 'RatingPlugin.start');
     }
     stop() {
@@ -34,39 +35,74 @@ export class RatingPlugin extends BasePlugin {
     }
     handleInteraction(eventType, event) {
         var _a;
-        if (!this.tracker)
+        console.log('[RatingPlugin] handleInteraction called, eventType:', eventType);
+        if (!this.tracker) {
+            console.warn('[RatingPlugin] No tracker');
             return;
+        }
         // Trigger ID = 2 for Rating (Standard)
         const eventId = this.tracker.getEventTypeId('Rating') || 2;
         const config = this.tracker.getConfig();
         const rules = (_a = config === null || config === void 0 ? void 0 : config.trackingRules) === null || _a === void 0 ? void 0 : _a.filter(r => r.eventTypeId === eventId);
-        if (!rules || rules.length === 0)
+        console.log('[RatingPlugin] Found', (rules === null || rules === void 0 ? void 0 : rules.length) || 0, 'rating rules');
+        if (!rules || rules.length === 0) {
+            console.warn('[RatingPlugin] No rating rules found');
             return;
+        }
         const target = event.target;
-        if (!target)
+        if (!target) {
+            console.warn('[RatingPlugin] No target');
             return;
+        }
+        console.log('[RatingPlugin] Target:', target);
         try {
             for (const rule of rules) {
                 const selector = rule.trackingTarget.value;
-                if (!selector)
+                console.log('[RatingPlugin] Checking rule:', rule.name, 'selector:', selector);
+                if (!selector) {
+                    console.warn('[RatingPlugin] No selector for rule:', rule.name);
                     continue;
+                }
                 const matchedElement = target.closest(selector);
-                if (matchedElement) {
+                console.log('[RatingPlugin] Matched element:', matchedElement);
+                // TEMPORARY: Flexible matching for CSS modules
+                let finalMatch = matchedElement;
+                if (!finalMatch && selector.startsWith('.')) {
+                    // Extract base class name (remove leading dot and everything after underscore)
+                    const baseClassName = selector.substring(1).split('_')[0];
+                    console.log('[RatingPlugin] Trying flexible match with base class:', baseClassName);
+                    // Try to find parent with matching base class
+                    let parent = target;
+                    let depth = 0;
+                    while (parent && depth < 10) {
+                        const parentClassName = parent.className;
+                        if (typeof parentClassName === 'string' && parentClassName.includes(baseClassName)) {
+                            finalMatch = parent;
+                            console.log('[RatingPlugin] Flexible match found at depth', depth);
+                            break;
+                        }
+                        parent = parent.parentElement;
+                        depth++;
+                    }
+                }
+                if (finalMatch) {
                     // Determine Container
-                    const container = matchedElement.closest('form') ||
-                        matchedElement.closest('.rating-container') ||
-                        matchedElement.closest('.review-box') ||
-                        matchedElement.parentElement ||
+                    const container = finalMatch.closest('form') ||
+                        finalMatch.closest('.rating-container') ||
+                        finalMatch.closest('.review-box') ||
+                        finalMatch.parentElement ||
                         document.body;
                     // Process Rating
-                    const result = RatingUtils.processRating(container, matchedElement, eventType);
+                    const result = RatingUtils.processRating(container, finalMatch, eventType);
+                    console.log('[RatingPlugin] Rating result:', result);
                     // Filter garbage
                     if (result.originalValue === 0 && !result.reviewText) {
+                        console.warn('[RatingPlugin] Filtered as garbage (value=0, no review)');
                         continue;
                     }
                     console.log(`[RatingPlugin] 🎯 Captured [${eventType}]: Raw=${result.originalValue}/${result.maxValue} -> Norm=${result.normalizedValue}`);
                     // Build Payload using centralized method
-                    this.buildAndTrack(matchedElement, rule, eventId);
+                    this.buildAndTrack(finalMatch, rule, eventId);
                     break;
                 }
             }

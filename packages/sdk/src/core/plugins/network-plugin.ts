@@ -1,20 +1,9 @@
 import { BasePlugin } from './base-plugin';
-import { PathMatcher } from '../utils/path-matcher';
-
-// Hàm tiện ích: Parse JSON an toàn (tránh văng lỗi nếu chuỗi không hợp lệ)
-function safeParse(data: any) {
-    try {
-        if (typeof data === 'string') return JSON.parse(data);
-        return data;
-    } catch (e) {
-        return data;
-    }
-}
 
 /**
- * NetworkPlugin: Plugin chịu trách nhiệm theo dõi các yêu cầu mạng (XHR & Fetch).
- * Nó tự động chặn (intercept) các request, so sánh với Rules cấu hình,
- * và trích xuất dữ liệu nếu trùng khớp.
+ * NetworkPlugin: Plugin chịu trách nhiệm intercept network requests (XHR & Fetch).
+ * It caches network data so PayloadBuilder extractors (NetworkExtractor, RequestUrlExtractor) can use it.
+ * Does NOT automatically track events - only tracking plugins (click, rating, etc.) trigger tracking.
  */
 export class NetworkPlugin extends BasePlugin {
     public readonly name = 'NetworkPlugin';
@@ -131,76 +120,19 @@ export class NetworkPlugin extends BasePlugin {
 
     /**
      * Xử lý thông tin request đã chặn được.
-     * So khớp URL với các Rule trong Config và trích xuất dữ liệu.
+     * Only caches network data for PayloadBuilder extractors to use.
+     * Does NOT automatically track events.
      * @param url URL của request
      * @param method Phương thức (GET, POST, ...)
      * @param reqBody Body gửi đi (nếu có)
      * @param resBody Body trả về (nếu có)
      */
-    private handleRequest(url: string, method: string, reqBody: any, resBody: any) {
+    private handleRequest(url: string, method: string, _reqBody: any, _resBody: any) {
         this.errorBoundary.execute(() => {
-            if (!this.tracker) return;
-            const config = this.tracker.getConfig();
-            if (!config || !config.trackingRules) return;
-
-            const reqData = safeParse(reqBody);
-            const resData = safeParse(resBody);
-
-            const networkContext = {
-                reqBody: reqData,
-                resBody: resData,
-                method: method,
-                url: url
-            };
-
-            for (const rule of config.trackingRules) {
-                if (!rule.payloadMappings || rule.payloadMappings.length === 0) continue;
-
-                // Check if this rule applies to the current network request
-                let isNetworkMatch = false;
-                let hasRequestSourceMapping = false;
-
-                for (const m of rule.payloadMappings) {
-                    // Check if this mapping uses RequestBody or RequestUrl source
-                    if (m.source === 'RequestBody' || m.source === 'RequestUrl') {
-                        hasRequestSourceMapping = true;
-                    }
-
-                    if (m.requestUrlPattern) {
-                        // Check method
-                        const targetMethod = m.requestMethod?.toUpperCase();
-                        if (targetMethod && targetMethod !== method) continue;
-
-                        // Check URL
-                        if (PathMatcher.match(url, m.requestUrlPattern)) {
-                            isNetworkMatch = true;
-                            break;
-                        }
-                    }
-                }
-
-                if (isNetworkMatch) {
-                    // Loop guard: only check if rule has RequestBody or RequestUrl source mappings
-                    if (hasRequestSourceMapping) {
-                        const shouldBlock = this.tracker.loopGuard.checkAndRecord(url, method, rule.id);
-                        if (shouldBlock) {
-                            continue; // Skip this rule temporarily
-                        }
-                    }
-
-                    // Extract data using PayloadBuilder (which now handles Network/RequestUrl using the passed context)
-                    const extractedData = this.tracker.payloadBuilder.build(networkContext, rule);
-
-                    if (Object.keys(extractedData).length > 0) {
-                        this.buildAndTrack(networkContext, rule, rule.eventTypeId);
-
-                        console.groupCollapsed(`%c[TRACKER] Network Match: (${method} ${url})`, "color: orange");
-                        console.log("Rule:", rule.name);
-                        console.log("Extracted:", extractedData);
-                        console.groupEnd();
-                    }
-                }
-            }
+            // NetworkPlugin no longer auto-tracks events
+            // It only intercepts requests so NetworkExtractor and RequestUrlExtractor can cache data
+            // The cached data will be extracted by PayloadBuilder when tracking plugins call buildAndTrack
+            console.log('[NetworkPlugin] Request intercepted:', method, url);
         }, 'NetworkPlugin.handleRequest');
     }
 }

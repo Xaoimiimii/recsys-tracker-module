@@ -20,6 +20,7 @@ export class ReviewPlugin extends BasePlugin {
                 return;
             document.addEventListener('submit', this.handleSubmitBound, { capture: true });
             this.active = true;
+            console.log('[ReviewPlugin] Started successfully');
         }, 'ReviewPlugin.start');
     }
     stop() {
@@ -32,6 +33,7 @@ export class ReviewPlugin extends BasePlugin {
     }
     handleSubmit(event) {
         var _a;
+        console.log('[ReviewPlugin] handleSubmit called');
         if (!this.tracker)
             return;
         const form = event.target;

@@ -11,9 +11,9 @@ import {
 import { TrackerConfig } from './types';
 import { DEFAULT_API_URL, DEFAULT_TRACK_ENDPOINT_PATH } from './core/constants';
 import { PayloadBuilder } from './core/payload/payload-builder';
-import { NetworkPlugin } from './core/plugins/network-plugin';
 import { EventDeduplicator } from './core/utils/event-deduplicator';
 import { LoopGuard } from './core/utils/loop-guard';
+import { NetworkPlugin } from './core/plugins/network-plugin';
 
 // RecSysTracker - Main SDK class
 export class RecSysTracker {
@@ -164,22 +164,21 @@ export class RecSysTracker {
         pluginPromises.push(scrollPromise);
       }
 
-      // Check for Network Rules
-      const hasNetworkRules = this.config.trackingRules.some(rule =>
+      // Check for Network/RequestUrl mappings and initialize NetworkPlugin if needed
+      const hasNetworkMappings = this.config.trackingRules.some(rule =>
         rule.payloadMappings?.some(mapping => {
           const source = mapping.source?.toLowerCase();
           return source === 'requestbody' ||
-            source === 'responsebody' ||
+            source === 'requesturl' ||
             source === 'request_body' ||
-            source === 'response_body' ||
-            source === 'network_request';
+            source === 'request_url';
         })
       );
 
-      if (hasNetworkRules) {
+      if (hasNetworkMappings) {
+        console.log('[RecSysTracker] Detected network mappings, initializing NetworkPlugin for data caching');
         this.use(new NetworkPlugin());
       }
-
 
       // Chờ tất cả plugin được đăng ký trước khi khởi động
       if (pluginPromises.length > 0) {

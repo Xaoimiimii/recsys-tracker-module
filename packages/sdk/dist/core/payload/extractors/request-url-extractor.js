@@ -10,42 +10,67 @@ export class RequestUrlExtractor {
      */
     extract(mapping, _context) {
         var _a, _b;
-        if (!mapping.requestUrlPattern)
+        console.log('[RequestUrlExtractor] Extracting with mapping:', {
+            field: mapping.field,
+            pattern: mapping.requestUrlPattern,
+            method: mapping.requestMethod,
+            value: mapping.value
+        });
+        console.log('[RequestUrlExtractor] History size:', this.history.length);
+        console.log('[RequestUrlExtractor] Context:', _context);
+        if (!mapping.requestUrlPattern) {
+            console.warn('[RequestUrlExtractor] No requestUrlPattern');
             return null;
+        }
         const targetMethod = (_a = mapping.requestMethod) === null || _a === void 0 ? void 0 : _a.toUpperCase();
         // 1. Check strict context first (e.g. from NetworkPlugin)
         if (_context && _context.url) {
+            console.log('[RequestUrlExtractor] Checking context URL:', _context.url);
             const ctxUrl = _context.url;
             const ctxMethod = (_b = _context.method) === null || _b === void 0 ? void 0 : _b.toUpperCase();
             let methodMatch = true;
             if (targetMethod && ctxMethod && ctxMethod !== targetMethod) {
+                console.log('[RequestUrlExtractor] Method mismatch:', ctxMethod, 'vs', targetMethod);
                 methodMatch = false;
             }
             if (methodMatch) {
-                if (PathMatcher.match(ctxUrl, mapping.requestUrlPattern)) {
-                    return this.extractValueFromUrl(ctxUrl, mapping.value);
+                const patternMatch = PathMatcher.match(ctxUrl, mapping.requestUrlPattern);
+                console.log('[RequestUrlExtractor] Pattern match result:', patternMatch);
+                if (patternMatch) {
+                    const extracted = this.extractValueFromUrl(ctxUrl, mapping.value);
+                    console.log('[RequestUrlExtractor] Extracted from context:', extracted);
+                    return extracted;
                 }
             }
         }
         // 2. Fallback to history (e.g. from other plugins: 'closest request after trigger')
+        console.log('[RequestUrlExtractor] Checking history...');
         // Iterate backwards (newest first)
         for (let i = this.history.length - 1; i >= 0; i--) {
             const req = this.history[i];
+            console.log('[RequestUrlExtractor] Checking history entry:', req);
             // Check Method
-            if (targetMethod && req.method !== targetMethod)
+            if (targetMethod && req.method !== targetMethod) {
+                console.log('[RequestUrlExtractor] Method mismatch in history');
                 continue;
+            }
             // Check Pattern
             // 1. Static segments must match (optimization & requirement)
             if (!PathMatcher.matchStaticSegments(req.url, mapping.requestUrlPattern)) {
+                console.log('[RequestUrlExtractor] Static segments mismatch');
                 continue;
             }
             // 2. Full match
             if (!PathMatcher.match(req.url, mapping.requestUrlPattern)) {
+                console.log('[RequestUrlExtractor] Full pattern mismatch');
                 continue;
             }
             // Match found! Extract value.
-            return this.extractValueFromUrl(req.url, mapping.value);
+            const extracted = this.extractValueFromUrl(req.url, mapping.value);
+            console.log('[RequestUrlExtractor] Extracted from history:', extracted);
+            return extracted;
         }
+        console.warn('[RequestUrlExtractor] No match found');
         return null;
     }
     extractValueFromUrl(url, valueConfig) {
@@ -53,14 +78,22 @@ export class RequestUrlExtractor {
         // Example: /api/rating/{itemId}/add-review
         // Split: ['api', 'rating', '123', 'add-review']
         // value=2 -> '123'
+        console.log('[RequestUrlExtractor.extractValueFromUrl] URL:', url, 'valueConfig:', valueConfig);
         const index = typeof valueConfig === 'string' ? parseInt(valueConfig, 10) : valueConfig;
-        if (typeof index !== 'number' || isNaN(index))
+        if (typeof index !== 'number' || isNaN(index)) {
+            console.warn('[RequestUrlExtractor] Invalid index:', index);
             return null;
+        }
         const path = url.split('?')[0];
         const segments = path.split('/').filter(Boolean); // Remote empty strings
-        if (index < 0 || index >= segments.length)
+        console.log('[RequestUrlExtractor.extractValueFromUrl] Segments:', segments, 'index:', index);
+        if (index < 0 || index >= segments.length) {
+            console.warn('[RequestUrlExtractor] Index out of range:', index, 'segments length:', segments.length);
             return null;
-        return segments[index];
+        }
+        const result = segments[index];
+        console.log('[RequestUrlExtractor.extractValueFromUrl] Result:', result);
+        return result;
     }
     /**
      * Enable network tracking

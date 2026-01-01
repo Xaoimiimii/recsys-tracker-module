@@ -1,6 +1,5 @@
 import { BasePlugin } from "./base-plugin";
 import { TrackerConfig } from "../../types";
-import { TrackerInit } from "../tracker-init";
 import { SelectorMatcher, MatchMode } from "./utils/selector-matcher";
 
 export class ClickPlugin extends BasePlugin {
@@ -33,20 +32,41 @@ export class ClickPlugin extends BasePlugin {
   }
 
   private handleDocumentClick(event: MouseEvent, config: any): void {
-    if (!this.tracker) return;
+    console.log('[ClickPlugin] Click detected on:', event.target);
+    
+    if (!this.tracker) {
+      console.warn('[ClickPlugin] Tracker not initialized');
+      return;
+    }
 
     const rules = config.trackingRules;
-    if (!rules || rules.length === 0) return;
+    if (!rules || rules.length === 0) {
+      console.warn('[ClickPlugin] No tracking rules found');
+      return;
+    }
 
     const clickRules = rules.filter((r: any) => r.eventTypeId === 1);
+    console.log('[ClickPlugin] Found', clickRules.length, 'click rules');
 
     if (clickRules.length === 0) return;
 
     for (const rule of clickRules) {
       const selector = rule.trackingTarget?.value;
+      console.log('[ClickPlugin] Checking rule:', rule.name, 'with selector:', selector);
+      
       if (!selector) continue;
 
       const clickedElement = event.target as HTMLElement;
+      console.log('[ClickPlugin] Clicked element:', clickedElement.tagName, clickedElement.className);
+      
+      // Debug: Log parent chain
+      let parent = clickedElement.parentElement;
+      let depth = 0;
+      while (parent && depth < 5) {
+        console.log(`[ClickPlugin] Parent ${depth}:`, parent.tagName, parent.className, parent.classList?.toString());
+        parent = parent.parentElement;
+        depth++;
+      }
       
       // Strategy: 
       // 1. Try STRICT match first (element itself must match selector)
@@ -54,6 +74,16 @@ export class ClickPlugin extends BasePlugin {
       //    This prevents other interactive elements from accidentally triggering
       
       let target = SelectorMatcher.match(clickedElement, selector, MatchMode.STRICT);
+      console.log('[ClickPlugin] STRICT match result:', target);
+      
+      // TEMPORARY: If selector is .play-button, also try to match elements with "play-button" in their class
+      if (!target && selector === '.play-button') {
+        const className = clickedElement.className;
+        if (typeof className === 'string' && className.includes('play-button')) {
+          target = clickedElement;
+          console.log('[ClickPlugin] Matched via flexible class check on clicked element');
+        }
+      }
       
       if (!target) {
         // Only use CLOSEST matching if clicked element is NOT an interactive element
@@ -63,13 +93,35 @@ export class ClickPlugin extends BasePlugin {
           clickedElement.getAttribute('role') || ''
         );
 
+        console.log('[ClickPlugin] Is interactive element:', isInteractiveElement);
+
         if (!isInteractiveElement) {
           // Safe to traverse up - probably clicked on icon/text inside button
           target = SelectorMatcher.match(clickedElement, selector, MatchMode.CLOSEST);
+          console.log('[ClickPlugin] CLOSEST match result:', target);
+          
+          // TEMPORARY: If selector is .play-button and CLOSEST didn't find it, try manual parent search
+          if (!target && selector === '.play-button') {
+            let parent = clickedElement.parentElement;
+            let depth = 0;
+            while (parent && depth < 10) {
+              const parentClassName = parent.className;
+              if (typeof parentClassName === 'string' && parentClassName.includes('play-button')) {
+                target = parent;
+                console.log('[ClickPlugin] Matched via flexible class check on parent at depth', depth);
+                break;
+              }
+              parent = parent.parentElement;
+              depth++;
+            }
+          }
         }
       }
       
-      if (!target) continue;
+      if (!target) {
+        console.log('[ClickPlugin] No target matched for selector:', selector);
+        continue;
+      }
 
       // Log for debugging
       console.log('[ClickPlugin] ✓ Click matched tracking target:', {
@@ -97,60 +149,8 @@ export class ClickPlugin extends BasePlugin {
         rule.id
       );
 
-      let payload: Record<string, any> = {};
-
-      if (rule.payloadMappings?.length) {
-        rule.payloadMappings.forEach((m: any) => {
-          if (m.source === "Element" || m.source === "element") {
-            const el = (target as HTMLElement).querySelector(m.value);
-            if (el) {
-              payload[m.field] = el.textContent?.trim();
-            } else if ((target as HTMLElement).hasAttribute(m.value)) {
-              payload[m.field] = (target as HTMLElement).getAttribute(m.value);
-            }
-          }
-
-          if (m.source === "LocalStorage") {
-            payload[m.field] = localStorage.getItem(m.value);
-          }
-
-          if (m.source === "global_variable") {
-            const globalVal = (window as any)[m.value];
-            payload[m.field] =
-              typeof globalVal === "function" ? globalVal() : globalVal;
-          }
-        });
-      }
-
-      console.log("🚀 Payload collected:", payload);
-
-      const userKey =
-        Object.keys(payload).find((k) => k.toLowerCase().includes("user")) ||
-        "userId";
-      const itemKey =
-        Object.keys(payload).find((k) => k.toLowerCase().includes("item")) ||
-        "ItemId";
-
-      const rawData = TrackerInit.handleMapping(rule, target as HTMLElement);
-
-      this.tracker.track({
-        eventTypeId: rule.eventTypeId,
-        trackingRuleId: Number(rule.id),
-
-        userField: userKey,
-        userValue:
-          payload[userKey] ||
-          rawData.userId ||
-          TrackerInit.getUsername() ||
-          "guest",
-
-        itemField: itemKey,
-        itemValue:
-          payload[itemKey] ||
-          rawData.ItemId ||
-          rawData.ItemTitle ||
-          "Unknown Song",
-      });
+      // Use new flow: call buildAndTrack which handles payload extraction and tracking
+      this.buildAndTrack(target, rule, rule.eventTypeId);
 
       break;
     }
