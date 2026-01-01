@@ -58,11 +58,7 @@ export class RecommendationService {
                     }
                 });
 
-                return {
-                    // ItemId: recommendation.ItemId,
-                    // PredictionValue: recommendation.Value,
-                    ItemDetails: item,
-                };
+                return item;
             })
         );
 
