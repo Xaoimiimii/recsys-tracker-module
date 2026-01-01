@@ -877,6 +877,183 @@ var RecSysTracker = (function (exports) {
         }
     }
 
+    // Event Deduplication Utility
+    // Ngăn chặn các sự kiện trùng lặp trong một khoảng thời gian ngắn
+    // Generate fingerprint từ eventType + itemId + userId + ruleId
+    // Drops events nếu same fingerprint được gửi trong timeWindow (3s mặc định)
+    class EventDeduplicator {
+        constructor(timeWindow) {
+            this.fingerprints = new Map();
+            this.timeWindow = 3000; // 3 seconds
+            this.cleanupInterval = 5000; // cleanup every 5s
+            if (timeWindow !== undefined) {
+                this.timeWindow = timeWindow;
+            }
+            // Periodic cleanup of old fingerprints
+            if (typeof window !== 'undefined') {
+                setInterval(() => this.cleanup(), this.cleanupInterval);
+            }
+        }
+        // Generate fingerprint for an event
+        generateFingerprint(eventTypeId, trackingRuleId, userId, itemId) {
+            // Simple hash: combine all identifiers
+            const raw = `${eventTypeId}:${trackingRuleId}:${userId}:${itemId}`;
+            return this.simpleHash(raw);
+        }
+        // Simple hash function (not cryptographic, just for deduplication)
+        simpleHash(str) {
+            let hash = 0;
+            for (let i = 0; i < str.length; i++) {
+                const char = str.charCodeAt(i);
+                hash = ((hash << 5) - hash) + char;
+                hash = hash & hash; // Convert to 32bit integer
+            }
+            return hash.toString(36);
+        }
+        // Check if event is duplicate within time window
+        // Returns true if event should be DROPPED (is duplicate)
+        isDuplicate(eventTypeId, trackingRuleId, userId, itemId) {
+            const fingerprint = this.generateFingerprint(eventTypeId, trackingRuleId, userId, itemId);
+            const now = Date.now();
+            const lastSeen = this.fingerprints.get(fingerprint);
+            if (lastSeen && (now - lastSeen) < this.timeWindow) {
+                return true; // Is duplicate
+            }
+            // Record this fingerprint
+            this.fingerprints.set(fingerprint, now);
+            return false; // Not duplicate
+        }
+        // Cleanup old fingerprints to prevent memory leak
+        cleanup() {
+            const now = Date.now();
+            const toDelete = [];
+            this.fingerprints.forEach((timestamp, fingerprint) => {
+                if (now - timestamp > this.timeWindow) {
+                    toDelete.push(fingerprint);
+                }
+            });
+            toDelete.forEach(fp => this.fingerprints.delete(fp));
+        }
+        // Clear all fingerprints (for testing)
+        clear() {
+            this.fingerprints.clear();
+        }
+    }
+
+    // Loop Guard cho Network Requests
+    // Detects infinite loops hoặc excessive requests đến cùng một endpoint
+    // Block việc gửi event nếu phát hiện hành vi lặp vô hạn (không disable rule)
+    class LoopGuard {
+        constructor(options) {
+            this.requests = new Map();
+            // Configuration
+            this.maxRequestsPerSecond = 5;
+            this.windowSize = 1000; // 1 second
+            this.blockDuration = 60000; // block for 60 seconds
+            this.cleanupInterval = 10000; // cleanup every 10s
+            if ((options === null || options === void 0 ? void 0 : options.maxRequestsPerSecond) !== undefined) {
+                this.maxRequestsPerSecond = options.maxRequestsPerSecond;
+            }
+            if ((options === null || options === void 0 ? void 0 : options.windowSize) !== undefined) {
+                this.windowSize = options.windowSize;
+            }
+            if ((options === null || options === void 0 ? void 0 : options.blockDuration) !== undefined) {
+                this.blockDuration = options.blockDuration;
+            }
+            // Periodic cleanup
+            if (typeof window !== 'undefined') {
+                setInterval(() => this.cleanup(), this.cleanupInterval);
+            }
+        }
+        // Generate key for request tracking
+        generateKey(url, method, ruleId) {
+            return `${method}:${url}:${ruleId}`;
+        }
+        // Record a request and check if it exceeds threshold
+        // Returns true if request should be BLOCKED
+        checkAndRecord(url, method, ruleId) {
+            const key = this.generateKey(url, method, ruleId);
+            const now = Date.now();
+            let record = this.requests.get(key);
+            if (!record) {
+                // First request
+                this.requests.set(key, {
+                    count: 1,
+                    firstSeen: now,
+                    lastSeen: now,
+                    blocked: false
+                });
+                return false; // Allow request
+            }
+            // Check if this request pattern is currently blocked
+            if (record.blocked && record.blockedAt) {
+                if (now - record.blockedAt < this.blockDuration) {
+                    return true; // Still blocked
+                }
+                else {
+                    // Unblock and reset
+                    record.blocked = false;
+                    record.blockedAt = undefined;
+                    record.count = 1;
+                    record.firstSeen = now;
+                    record.lastSeen = now;
+                    return false; // Allow request
+                }
+            }
+            // Check if we're still in the same window
+            const timeElapsed = now - record.firstSeen;
+            if (timeElapsed > this.windowSize) {
+                // Reset window
+                record.count = 1;
+                record.firstSeen = now;
+                record.lastSeen = now;
+                return false; // Allow request
+            }
+            // Increment count
+            record.count++;
+            record.lastSeen = now;
+            // Check threshold
+            const requestsPerSecond = (record.count / timeElapsed) * 1000;
+            if (requestsPerSecond > this.maxRequestsPerSecond) {
+                // Abuse detected! Block this request pattern temporarily
+                record.blocked = true;
+                record.blockedAt = now;
+                return true; // Block this event
+            }
+            return false; // Allow request
+        }
+        // Cleanup old records
+        cleanup() {
+            const now = Date.now();
+            const toDelete = [];
+            // Cleanup request records
+            this.requests.forEach((record, key) => {
+                // Delete records that haven't been seen for a while and aren't blocked
+                if (!record.blocked && now - record.lastSeen > this.windowSize * 2) {
+                    toDelete.push(key);
+                }
+                // Delete blocked records after block duration expires
+                if (record.blocked && record.blockedAt && now - record.blockedAt > this.blockDuration * 2) {
+                    toDelete.push(key);
+                }
+            });
+            toDelete.forEach(key => this.requests.delete(key));
+        }
+        // Clear all records (for testing)
+        clear() {
+            this.requests.clear();
+        }
+        // Get stats about blocked patterns
+        getBlockedCount() {
+            let count = 0;
+            this.requests.forEach(record => {
+                if (record.blocked)
+                    count++;
+            });
+            return count;
+        }
+    }
+
     class PopupDisplay {
         constructor(domainKey, slotName, apiBaseUrl, config = {}) {
             this.popupTimeout = null;
@@ -1922,6 +2099,79 @@ var RecSysTracker = (function (exports) {
     }
     TrackerInit.usernameCache = null;
 
+    /**
+     * Selector Matcher Utility
+     * Provides strict and loose matching modes for tracking targets
+     */
+    var MatchMode;
+    (function (MatchMode) {
+        MatchMode["STRICT"] = "strict";
+        MatchMode["CLOSEST"] = "closest";
+        MatchMode["CONTAINS"] = "contains"; // Element must contain matching child
+    })(MatchMode || (MatchMode = {}));
+    class SelectorMatcher {
+        /**
+         * Match element against selector with specified mode
+         */
+        static match(element, selector, mode = MatchMode.CLOSEST) {
+            if (!element || !selector)
+                return null;
+            switch (mode) {
+                case MatchMode.STRICT:
+                    return this.strictMatch(element, selector);
+                case MatchMode.CLOSEST:
+                    return this.closestMatch(element, selector);
+                case MatchMode.CONTAINS:
+                    return this.containsMatch(element, selector);
+                default:
+                    return this.closestMatch(element, selector);
+            }
+        }
+        /**
+         * STRICT: Element itself must match selector
+         */
+        static strictMatch(element, selector) {
+            try {
+                return element.matches(selector) ? element : null;
+            }
+            catch (e) {
+                console.error('[SelectorMatcher] Invalid selector:', selector);
+                return null;
+            }
+        }
+        /**
+         * CLOSEST: Element or closest parent must match selector
+         */
+        static closestMatch(element, selector) {
+            try {
+                return element.closest(selector);
+            }
+            catch (e) {
+                console.error('[SelectorMatcher] Invalid selector:', selector);
+                return null;
+            }
+        }
+        /**
+         * CONTAINS: Element must contain a child matching selector
+         */
+        static containsMatch(element, selector) {
+            try {
+                const child = element.querySelector(selector);
+                return child ? element : null;
+            }
+            catch (e) {
+                console.error('[SelectorMatcher] Invalid selector:', selector);
+                return null;
+            }
+        }
+        /**
+         * Check if element exactly matches selector (no parent traversal)
+         */
+        static isExactMatch(element, selector) {
+            return this.strictMatch(element, selector) !== null;
+        }
+    }
+
     class ClickPlugin extends BasePlugin {
         constructor(config) {
             super();
@@ -1953,9 +2203,29 @@ var RecSysTracker = (function (exports) {
                 const selector = (_a = rule.trackingTarget) === null || _a === void 0 ? void 0 : _a.value;
                 if (!selector)
                     continue;
-                const target = event.target.closest(selector);
+                const clickedElement = event.target;
+                // Strategy: 
+                // 1. Try STRICT match first (element itself must match selector)
+                // 2. If no match, try CLOSEST (parent traversal) but ONLY if clicked element is not a button/link
+                //    This prevents other interactive elements from accidentally triggering
+                let target = SelectorMatcher.match(clickedElement, selector, MatchMode.STRICT);
+                if (!target) {
+                    // Only use CLOSEST matching if clicked element is NOT an interactive element
+                    const isInteractiveElement = ['BUTTON', 'A', 'INPUT', 'SELECT', 'TEXTAREA'].includes(clickedElement.tagName) || clickedElement.hasAttribute('role') && ['button', 'link'].includes(clickedElement.getAttribute('role') || '');
+                    if (!isInteractiveElement) {
+                        // Safe to traverse up - probably clicked on icon/text inside button
+                        target = SelectorMatcher.match(clickedElement, selector, MatchMode.CLOSEST);
+                    }
+                }
                 if (!target)
                     continue;
+                // Log for debugging
+                console.log('[ClickPlugin] ✓ Click matched tracking target:', {
+                    element: target.className || target.tagName,
+                    selector: selector,
+                    rule: rule.name,
+                    matchedDirectly: clickedElement === target
+                });
                 if ((_b = rule.conditions) === null || _b === void 0 ? void 0 : _b.length) {
                     const conditionsMet = rule.conditions.every((cond) => {
                         if (cond.patternId === 2 && cond.operatorId === 1) {
@@ -3509,7 +3779,12 @@ var RecSysTracker = (function (exports) {
                         continue;
                     // Check if this rule applies to the current network request
                     let isNetworkMatch = false;
+                    let hasRequestSourceMapping = false;
                     for (const m of rule.payloadMappings) {
+                        // Check if this mapping uses RequestBody or RequestUrl source
+                        if (m.source === 'RequestBody' || m.source === 'RequestUrl') {
+                            hasRequestSourceMapping = true;
+                        }
                         if (m.requestUrlPattern) {
                             // Check method
                             const targetMethod = (_a = m.requestMethod) === null || _a === void 0 ? void 0 : _a.toUpperCase();
@@ -3523,6 +3798,13 @@ var RecSysTracker = (function (exports) {
                         }
                     }
                     if (isNetworkMatch) {
+                        // Loop guard: only check if rule has RequestBody or RequestUrl source mappings
+                        if (hasRequestSourceMapping) {
+                            const shouldBlock = this.tracker.loopGuard.checkAndRecord(url, method, rule.id);
+                            if (shouldBlock) {
+                                continue; // Skip this rule temporarily
+                            }
+                        }
                         // Extract data using PayloadBuilder (which now handles Network/RequestUrl using the passed context)
                         const extractedData = this.tracker.payloadBuilder.build(networkContext, rule);
                         if (Object.keys(extractedData).length > 0) {
@@ -3826,6 +4108,8 @@ var RecSysTracker = (function (exports) {
             this.metadataNormalizer = new MetadataNormalizer();
             this.pluginManager = new PluginManager(this);
             this.payloadBuilder = new PayloadBuilder();
+            this.eventDeduplicator = new EventDeduplicator(3000); // 3 second window
+            this.loopGuard = new LoopGuard({ maxRequestsPerSecond: 5 });
         }
         // Khởi tạo SDK - tự động gọi khi tải script
         async init() {
@@ -3959,6 +4243,17 @@ var RecSysTracker = (function (exports) {
             this.errorBoundary.execute(() => {
                 if (!this.isInitialized || !this.config) {
                     return;
+                }
+                // Check for duplicate event (fingerprint-based deduplication)
+                const isDuplicate = this.eventDeduplicator.isDuplicate(eventData.eventTypeId, eventData.trackingRuleId, eventData.userValue, eventData.itemValue);
+                if (isDuplicate) {
+                    console.log('[RecSysTracker] Duplicate event dropped:', {
+                        eventTypeId: eventData.eventTypeId,
+                        trackingRuleId: eventData.trackingRuleId,
+                        userValue: eventData.userValue,
+                        itemValue: eventData.itemValue
+                    });
+                    return; // Drop duplicate
                 }
                 const trackedEvent = {
                     id: this.metadataNormalizer.generateEventId(),
@@ -4135,6 +4430,8 @@ var RecSysTracker = (function (exports) {
     exports.ClickPlugin = ClickPlugin;
     exports.ConfigLoader = ConfigLoader;
     exports.DisplayManager = DisplayManager;
+    exports.EventDeduplicator = EventDeduplicator;
+    exports.LoopGuard = LoopGuard;
     exports.PageViewPlugin = PageViewPlugin;
     exports.PluginManager = PluginManager;
     exports.RatingPlugin = RatingPlugin;

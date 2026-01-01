@@ -9,6 +9,8 @@ export { EventDispatcher } from './events/event-dispatcher';
 export { MetadataNormalizer } from './metadata/metadata-normalizer';
 // Utils
 export { OriginVerifier } from './utils/origin-verifier';
+export { EventDeduplicator } from './utils/event-deduplicator';
+export { LoopGuard } from './utils/loop-guard';
 // Display
 export { DisplayManager } from './display/display-manager';
 export { PopupDisplay } from './display/popup-display';

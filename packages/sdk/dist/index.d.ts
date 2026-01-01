@@ -1,6 +1,8 @@
 import { DisplayManager, PluginManager } from './core';
 import { TrackerConfig } from './types';
 import { PayloadBuilder } from './core/payload/payload-builder';
+import { EventDeduplicator } from './core/utils/event-deduplicator';
+import { LoopGuard } from './core/utils/loop-guard';
 export declare class RecSysTracker {
     private configLoader;
     private errorBoundary;
@@ -14,6 +16,8 @@ export declare class RecSysTracker {
     private isInitialized;
     private sendInterval;
     payloadBuilder: PayloadBuilder;
+    eventDeduplicator: EventDeduplicator;
+    loopGuard: LoopGuard;
     constructor();
     init(): Promise<void>;
     private autoInitializePlugins;
@@ -44,6 +48,8 @@ export declare class RecSysTracker {
 }
 export default RecSysTracker;
 export { ConfigLoader, PluginManager, DisplayManager } from './core';
+export { EventDeduplicator } from './core/utils/event-deduplicator';
+export { LoopGuard } from './core/utils/loop-guard';
 export { IPlugin, BasePlugin } from './core/plugins/base-plugin';
 export { ClickPlugin } from './core/plugins/click-plugin';
 export { PageViewPlugin } from './core/plugins/page-view-plugin';

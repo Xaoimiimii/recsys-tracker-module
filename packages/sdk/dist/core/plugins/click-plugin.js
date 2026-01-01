@@ -1,5 +1,6 @@
 import { BasePlugin } from "./base-plugin";
 import { TrackerInit } from "../tracker-init";
+import { SelectorMatcher, MatchMode } from "./utils/selector-matcher";
 export class ClickPlugin extends BasePlugin {
     constructor(config) {
         super();
@@ -31,9 +32,29 @@ export class ClickPlugin extends BasePlugin {
             const selector = (_a = rule.trackingTarget) === null || _a === void 0 ? void 0 : _a.value;
             if (!selector)
                 continue;
-            const target = event.target.closest(selector);
+            const clickedElement = event.target;
+            // Strategy: 
+            // 1. Try STRICT match first (element itself must match selector)
+            // 2. If no match, try CLOSEST (parent traversal) but ONLY if clicked element is not a button/link
+            //    This prevents other interactive elements from accidentally triggering
+            let target = SelectorMatcher.match(clickedElement, selector, MatchMode.STRICT);
+            if (!target) {
+                // Only use CLOSEST matching if clicked element is NOT an interactive element
+                const isInteractiveElement = ['BUTTON', 'A', 'INPUT', 'SELECT', 'TEXTAREA'].includes(clickedElement.tagName) || clickedElement.hasAttribute('role') && ['button', 'link'].includes(clickedElement.getAttribute('role') || '');
+                if (!isInteractiveElement) {
+                    // Safe to traverse up - probably clicked on icon/text inside button
+                    target = SelectorMatcher.match(clickedElement, selector, MatchMode.CLOSEST);
+                }
+            }
             if (!target)
                 continue;
+            // Log for debugging
+            console.log('[ClickPlugin] ✓ Click matched tracking target:', {
+                element: target.className || target.tagName,
+                selector: selector,
+                rule: rule.name,
+                matchedDirectly: clickedElement === target
+            });
             if ((_b = rule.conditions) === null || _b === void 0 ? void 0 : _b.length) {
                 const conditionsMet = rule.conditions.every((cond) => {
                     if (cond.patternId === 2 && cond.operatorId === 1) {

@@ -1,6 +1,7 @@
 import { BasePlugin } from "./base-plugin";
 import { TrackerConfig } from "../../types";
 import { TrackerInit } from "../tracker-init";
+import { SelectorMatcher, MatchMode } from "./utils/selector-matcher";
 
 export class ClickPlugin extends BasePlugin {
   public readonly name = "click-plugin";
@@ -45,8 +46,38 @@ export class ClickPlugin extends BasePlugin {
       const selector = rule.trackingTarget?.value;
       if (!selector) continue;
 
-      const target = (event.target as HTMLElement).closest(selector);
+      const clickedElement = event.target as HTMLElement;
+      
+      // Strategy: 
+      // 1. Try STRICT match first (element itself must match selector)
+      // 2. If no match, try CLOSEST (parent traversal) but ONLY if clicked element is not a button/link
+      //    This prevents other interactive elements from accidentally triggering
+      
+      let target = SelectorMatcher.match(clickedElement, selector, MatchMode.STRICT);
+      
+      if (!target) {
+        // Only use CLOSEST matching if clicked element is NOT an interactive element
+        const isInteractiveElement = ['BUTTON', 'A', 'INPUT', 'SELECT', 'TEXTAREA'].includes(
+          clickedElement.tagName
+        ) || clickedElement.hasAttribute('role') && ['button', 'link'].includes(
+          clickedElement.getAttribute('role') || ''
+        );
+
+        if (!isInteractiveElement) {
+          // Safe to traverse up - probably clicked on icon/text inside button
+          target = SelectorMatcher.match(clickedElement, selector, MatchMode.CLOSEST);
+        }
+      }
+      
       if (!target) continue;
+
+      // Log for debugging
+      console.log('[ClickPlugin] ✓ Click matched tracking target:', {
+        element: target.className || target.tagName,
+        selector: selector,
+        rule: rule.name,
+        matchedDirectly: clickedElement === target
+      });
 
       if (rule.conditions?.length) {
         const conditionsMet = rule.conditions.every((cond: any) => {

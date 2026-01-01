@@ -135,7 +135,12 @@ export class NetworkPlugin extends BasePlugin {
                     continue;
                 // Check if this rule applies to the current network request
                 let isNetworkMatch = false;
+                let hasRequestSourceMapping = false;
                 for (const m of rule.payloadMappings) {
+                    // Check if this mapping uses RequestBody or RequestUrl source
+                    if (m.source === 'RequestBody' || m.source === 'RequestUrl') {
+                        hasRequestSourceMapping = true;
+                    }
                     if (m.requestUrlPattern) {
                         // Check method
                         const targetMethod = (_a = m.requestMethod) === null || _a === void 0 ? void 0 : _a.toUpperCase();
@@ -149,6 +154,13 @@ export class NetworkPlugin extends BasePlugin {
                     }
                 }
                 if (isNetworkMatch) {
+                    // Loop guard: only check if rule has RequestBody or RequestUrl source mappings
+                    if (hasRequestSourceMapping) {
+                        const shouldBlock = this.tracker.loopGuard.checkAndRecord(url, method, rule.id);
+                        if (shouldBlock) {
+                            continue; // Skip this rule temporarily
+                        }
+                    }
                     // Extract data using PayloadBuilder (which now handles Network/RequestUrl using the passed context)
                     const extractedData = this.tracker.payloadBuilder.build(networkContext, rule);
                     if (Object.keys(extractedData).length > 0) {

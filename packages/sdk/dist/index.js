@@ -2,6 +2,8 @@ import { ConfigLoader, ErrorBoundary, EventBuffer, EventDispatcher, MetadataNorm
 import { DEFAULT_API_URL, DEFAULT_TRACK_ENDPOINT_PATH } from './core/constants';
 import { PayloadBuilder } from './core/payload/payload-builder';
 import { NetworkPlugin } from './core/plugins/network-plugin';
+import { EventDeduplicator } from './core/utils/event-deduplicator';
+import { LoopGuard } from './core/utils/loop-guard';
 // RecSysTracker - Main SDK class
 export class RecSysTracker {
     constructor() {
@@ -17,6 +19,8 @@ export class RecSysTracker {
         this.metadataNormalizer = new MetadataNormalizer();
         this.pluginManager = new PluginManager(this);
         this.payloadBuilder = new PayloadBuilder();
+        this.eventDeduplicator = new EventDeduplicator(3000); // 3 second window
+        this.loopGuard = new LoopGuard({ maxRequestsPerSecond: 5 });
     }
     // Khởi tạo SDK - tự động gọi khi tải script
     async init() {
@@ -150,6 +154,17 @@ export class RecSysTracker {
         this.errorBoundary.execute(() => {
             if (!this.isInitialized || !this.config) {
                 return;
+            }
+            // Check for duplicate event (fingerprint-based deduplication)
+            const isDuplicate = this.eventDeduplicator.isDuplicate(eventData.eventTypeId, eventData.trackingRuleId, eventData.userValue, eventData.itemValue);
+            if (isDuplicate) {
+                console.log('[RecSysTracker] Duplicate event dropped:', {
+                    eventTypeId: eventData.eventTypeId,
+                    trackingRuleId: eventData.trackingRuleId,
+                    userValue: eventData.userValue,
+                    itemValue: eventData.itemValue
+                });
+                return; // Drop duplicate
             }
             const trackedEvent = {
                 id: this.metadataNormalizer.generateEventId(),
@@ -325,6 +340,9 @@ if (typeof window !== 'undefined') {
 export default RecSysTracker;
 // Export core classes for testing and advanced usage
 export { ConfigLoader, PluginManager, DisplayManager } from './core';
+// Export utilities
+export { EventDeduplicator } from './core/utils/event-deduplicator';
+export { LoopGuard } from './core/utils/loop-guard';
 // Export plugin base classes
 export { BasePlugin } from './core/plugins/base-plugin';
 // Export built-in plugins

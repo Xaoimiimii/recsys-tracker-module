@@ -19,6 +19,8 @@ export {
 
 // Utils
 export { OriginVerifier } from './utils/origin-verifier';
+export { EventDeduplicator } from './utils/event-deduplicator';
+export { LoopGuard } from './utils/loop-guard';
 
 // Display
 export { DisplayManager } from './display/display-manager';
