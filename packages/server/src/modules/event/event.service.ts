@@ -53,6 +53,7 @@ export class EventService {
                     }
             });
         }
+        
 
         let targetItemIds: number[] = [];
         if (event.ItemField === ItemField.ITEM_ID) {
@@ -64,7 +65,7 @@ export class EventService {
                     }
                 }
             })
-            if (!item) throw new NotFoundException(`Item id '${event.ItemValue}' does not exist.`);
+            if (!item) throw new NotFoundException(`Item id '${event.ItemValue}' does not exist in domain ${domain.Id}.`);
             targetItemIds.push(item.Id);
         }
         if (event.ItemField === ItemField.ITEM_TITLE) {
@@ -78,37 +79,123 @@ export class EventService {
             targetItemIds.push(...items.map(item => item.Id));
         }
 
+        const createdEvent = await this.prisma.event.create({
+            data: {
+                EventTypeId: event.EventTypeId,
+                UserField: event.UserField,
+                UserValue: event.UserValue,
+                ItemField: event.ItemField,
+                ItemValue: event.ItemValue,
+                RatingValue: event.RatingValue,
+                ReviewValue: event.RatingReview,
+                Timestamp: event.Timestamp,
+                TrackingRuleId: event.TrackingRuleId,
+            }
+        });
+
         // 2 rate 3 review
-        if (event.EventTypeId === 2 || event.EventTypeId === 3) {
+        if (event.EventTypeId === 2) {
             if (event.RatingValue === null || event.RatingValue === undefined) throw new BadRequestException(`Rating value is required for rating events.`);
             if (event.RatingValue < 1 || event.RatingValue > 5) throw new BadRequestException(`Rating value must be between 1 and 5.`);
 
-            let validItemIds: number[] = [];
+            // let validItemIds: number[] = [];
+            // for (const itemId of targetItemIds) {
+            //     const exist = await this.prisma.rating.findUnique({
+            //         where: {
+            //             UserId_ItemId: {
+            //                 UserId: user.Id,
+            //                 ItemId: itemId,
+            //             }
+            //         }
+            //     })
+            //     if (!exist) validItemIds.push(itemId);
+            // }
+
             for (const itemId of targetItemIds) {
-                const exist = await this.prisma.rating.findUnique({
+                const rating = await this.prisma.rating.findUnique({
                     where: {
                         UserId_ItemId: {
                             UserId: user.Id,
                             ItemId: itemId,
                         }
                     }
-                })
-                if (!exist) validItemIds.push(itemId);
-            }
+                });
 
-            for (const itemId of validItemIds) {
-                await this.prisma.rating.create({
-                    data: {
-                        UserId: user.Id,
-                        ItemId: itemId,
-                        Value: event.RatingValue,
-                        ReviewText: event.RatingReview,
-                        CreatedAt: event.Timestamp,
-                        DomainId: domain.Id,
+                if (!rating) {
+                    await this.prisma.rating.create({
+                        data: {
+                            UserId: user.Id,
+                            ItemId: itemId,
+                            Value: event.RatingValue,
+                            ReviewText: event.RatingReview,
+                            CreatedAt: event.Timestamp,
+                            DomainId: domain.Id,
+                        }
+                    });
+                } else {
+                    await this.prisma.rating.update({
+                        where: {
+                            Id: rating.Id,
+                        },
+                        data: {
+                            Value: event.RatingValue,
+                            CreatedAt: event.Timestamp,
+                        }
+                    });
+                }
+                
+            }
+        }
+        else if (event.EventTypeId === 3) {
+            if (event.RatingReview === null || event.RatingReview === undefined) throw new BadRequestException(`Rating review is required for review events.`);
+
+            // let validItemIds: number[] = [];
+            // for (const itemId of targetItemIds) {
+            //     const exist = await this.prisma.rating.findUnique({
+            //         where: {
+            //             UserId_ItemId: {
+            //                 UserId: user.Id,
+            //                 ItemId: itemId,
+            //             }
+            //         }
+            //     })
+            //     if (!exist) validItemIds.push(itemId);
+            // }
+
+            for (const itemId of targetItemIds) {
+                const rating = await this.prisma.rating.findUnique({
+                    where: {
+                        UserId_ItemId: {
+                            UserId: user.Id,
+                            ItemId: itemId,
+                        }
                     }
                 });
+
+                if (!rating) {
+                    await this.prisma.rating.create({
+                        data: {
+                            UserId: user.Id,
+                            ItemId: itemId,
+                            ReviewText: event.RatingReview,
+                            CreatedAt: event.Timestamp,
+                            DomainId: domain.Id,
+                        }
+                    });
+                } else {
+                    await this.prisma.rating.update({
+                        where: {
+                            Id: rating.Id,
+                        },
+                        data: {
+                            ReviewText: event.RatingReview,
+                            CreatedAt: event.Timestamp,
+                        }
+                    });
+                }
             }
-        } else {
+        }
+        else {
             let validItemIds: number[] = [];
             for (const itemId of targetItemIds) {
                 const exist = await this.prisma.interaction.findUnique({
@@ -136,19 +223,7 @@ export class EventService {
             }
         }
 
-        const createdEvent = await this.prisma.event.create({
-            data: {
-                EventTypeId: event.EventTypeId,
-                UserField: event.UserField,
-                UserValue: event.UserValue,
-                ItemField: event.ItemField,
-                ItemValue: event.ItemValue,
-                RatingValue: event.RatingValue,
-                ReviewValue: event.RatingReview,
-                Timestamp: event.Timestamp,
-                TrackingRuleId: event.TrackingRuleId,
-            }
-        });
+        
 
         return createdEvent.Id;
     }

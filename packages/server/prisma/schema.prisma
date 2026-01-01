@@ -413,7 +413,7 @@ model Rating {
   DomainId Int
   Domain   Domain @relation(fields: [DomainId], references: [Id])
 
-  Value          Float
+  Value          Float?
   ReviewText     String?
   ConvertedScore Float    @default(3)
   CreatedAt      DateTime @default(now())
