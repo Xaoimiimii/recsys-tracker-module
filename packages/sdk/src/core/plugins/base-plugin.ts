@@ -113,13 +113,13 @@ export abstract class BasePlugin implements IPlugin {
         // Check for User fields
         if (fieldName && ['UserId', 'Username', 'AnonymousId'].some(f => f.toLowerCase() === fieldName.toLowerCase())) {
           userField = fieldName;
-          userValue = fieldValue || 'thisisusser'; // Ensure empty string if undefined
+          userValue = fieldValue || '';
         }
 
         // Check for Item fields
         if (fieldName && ['ItemId', 'ItemTitle'].some(f => f.toLowerCase() === fieldName.toLowerCase())) {
           itemField = fieldName;
-          itemValue = fieldValue || 'AO-THUN'; // Ensure empty string if undefined
+          itemValue = fieldValue || '';
         }
 
         // Check for Value field
