@@ -222,7 +222,7 @@ export type RatingGroupByOutputType = {
   UserId: number
   ItemId: number
   DomainId: number
-  Value: number
+  Value: number | null
   ReviewText: string | null
   ConvertedScore: number
   CreatedAt: Date
@@ -256,7 +256,7 @@ export type RatingWhereInput = {
   UserId?: Prisma.IntFilter<"Rating"> | number
   ItemId?: Prisma.IntFilter<"Rating"> | number
   DomainId?: Prisma.IntFilter<"Rating"> | number
-  Value?: Prisma.FloatFilter<"Rating"> | number
+  Value?: Prisma.FloatNullableFilter<"Rating"> | number | null
   ReviewText?: Prisma.StringNullableFilter<"Rating"> | string | null
   ConvertedScore?: Prisma.FloatFilter<"Rating"> | number
   CreatedAt?: Prisma.DateTimeFilter<"Rating"> | Date | string
@@ -270,7 +270,7 @@ export type RatingOrderByWithRelationInput = {
   UserId?: Prisma.SortOrder
   ItemId?: Prisma.SortOrder
   DomainId?: Prisma.SortOrder
-  Value?: Prisma.SortOrder
+  Value?: Prisma.SortOrderInput | Prisma.SortOrder
   ReviewText?: Prisma.SortOrderInput | Prisma.SortOrder
   ConvertedScore?: Prisma.SortOrder
   CreatedAt?: Prisma.SortOrder
@@ -288,7 +288,7 @@ export type RatingWhereUniqueInput = Prisma.AtLeast<{
   UserId?: Prisma.IntFilter<"Rating"> | number
   ItemId?: Prisma.IntFilter<"Rating"> | number
   DomainId?: Prisma.IntFilter<"Rating"> | number
-  Value?: Prisma.FloatFilter<"Rating"> | number
+  Value?: Prisma.FloatNullableFilter<"Rating"> | number | null
   ReviewText?: Prisma.StringNullableFilter<"Rating"> | string | null
   ConvertedScore?: Prisma.FloatFilter<"Rating"> | number
   CreatedAt?: Prisma.DateTimeFilter<"Rating"> | Date | string
@@ -302,7 +302,7 @@ export type RatingOrderByWithAggregationInput = {
   UserId?: Prisma.SortOrder
   ItemId?: Prisma.SortOrder
   DomainId?: Prisma.SortOrder
-  Value?: Prisma.SortOrder
+  Value?: Prisma.SortOrderInput | Prisma.SortOrder
   ReviewText?: Prisma.SortOrderInput | Prisma.SortOrder
   ConvertedScore?: Prisma.SortOrder
   CreatedAt?: Prisma.SortOrder
@@ -321,14 +321,14 @@ export type RatingScalarWhereWithAggregatesInput = {
   UserId?: Prisma.IntWithAggregatesFilter<"Rating"> | number
   ItemId?: Prisma.IntWithAggregatesFilter<"Rating"> | number
   DomainId?: Prisma.IntWithAggregatesFilter<"Rating"> | number
-  Value?: Prisma.FloatWithAggregatesFilter<"Rating"> | number
+  Value?: Prisma.FloatNullableWithAggregatesFilter<"Rating"> | number | null
   ReviewText?: Prisma.StringNullableWithAggregatesFilter<"Rating"> | string | null
   ConvertedScore?: Prisma.FloatWithAggregatesFilter<"Rating"> | number
   CreatedAt?: Prisma.DateTimeWithAggregatesFilter<"Rating"> | Date | string
 }
 
 export type RatingCreateInput = {
-  Value: number
+  Value?: number | null
   ReviewText?: string | null
   ConvertedScore?: number
   CreatedAt?: Date | string
@@ -342,14 +342,14 @@ export type RatingUncheckedCreateInput = {
   UserId: number
   ItemId: number
   DomainId: number
-  Value: number
+  Value?: number | null
   ReviewText?: string | null
   ConvertedScore?: number
   CreatedAt?: Date | string
 }
 
 export type RatingUpdateInput = {
-  Value?: Prisma.FloatFieldUpdateOperationsInput | number
+  Value?: Prisma.NullableFloatFieldUpdateOperationsInput | number | null
   ReviewText?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   ConvertedScore?: Prisma.FloatFieldUpdateOperationsInput | number
   CreatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -363,7 +363,7 @@ export type RatingUncheckedUpdateInput = {
   UserId?: Prisma.IntFieldUpdateOperationsInput | number
   ItemId?: Prisma.IntFieldUpdateOperationsInput | number
   DomainId?: Prisma.IntFieldUpdateOperationsInput | number
-  Value?: Prisma.FloatFieldUpdateOperationsInput | number
+  Value?: Prisma.NullableFloatFieldUpdateOperationsInput | number | null
   ReviewText?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   ConvertedScore?: Prisma.FloatFieldUpdateOperationsInput | number
   CreatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -374,14 +374,14 @@ export type RatingCreateManyInput = {
   UserId: number
   ItemId: number
   DomainId: number
-  Value: number
+  Value?: number | null
   ReviewText?: string | null
   ConvertedScore?: number
   CreatedAt?: Date | string
 }
 
 export type RatingUpdateManyMutationInput = {
-  Value?: Prisma.FloatFieldUpdateOperationsInput | number
+  Value?: Prisma.NullableFloatFieldUpdateOperationsInput | number | null
   ReviewText?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   ConvertedScore?: Prisma.FloatFieldUpdateOperationsInput | number
   CreatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -392,7 +392,7 @@ export type RatingUncheckedUpdateManyInput = {
   UserId?: Prisma.IntFieldUpdateOperationsInput | number
   ItemId?: Prisma.IntFieldUpdateOperationsInput | number
   DomainId?: Prisma.IntFieldUpdateOperationsInput | number
-  Value?: Prisma.FloatFieldUpdateOperationsInput | number
+  Value?: Prisma.NullableFloatFieldUpdateOperationsInput | number | null
   ReviewText?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   ConvertedScore?: Prisma.FloatFieldUpdateOperationsInput | number
   CreatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -591,7 +591,7 @@ export type RatingUncheckedUpdateManyWithoutUserNestedInput = {
 }
 
 export type RatingCreateWithoutDomainInput = {
-  Value: number
+  Value?: number | null
   ReviewText?: string | null
   ConvertedScore?: number
   CreatedAt?: Date | string
@@ -603,7 +603,7 @@ export type RatingUncheckedCreateWithoutDomainInput = {
   Id?: number
   UserId: number
   ItemId: number
-  Value: number
+  Value?: number | null
   ReviewText?: string | null
   ConvertedScore?: number
   CreatedAt?: Date | string
@@ -643,14 +643,14 @@ export type RatingScalarWhereInput = {
   UserId?: Prisma.IntFilter<"Rating"> | number
   ItemId?: Prisma.IntFilter<"Rating"> | number
   DomainId?: Prisma.IntFilter<"Rating"> | number
-  Value?: Prisma.FloatFilter<"Rating"> | number
+  Value?: Prisma.FloatNullableFilter<"Rating"> | number | null
   ReviewText?: Prisma.StringNullableFilter<"Rating"> | string | null
   ConvertedScore?: Prisma.FloatFilter<"Rating"> | number
   CreatedAt?: Prisma.DateTimeFilter<"Rating"> | Date | string
 }
 
 export type RatingCreateWithoutItemInput = {
-  Value: number
+  Value?: number | null
   ReviewText?: string | null
   ConvertedScore?: number
   CreatedAt?: Date | string
@@ -662,7 +662,7 @@ export type RatingUncheckedCreateWithoutItemInput = {
   Id?: number
   UserId: number
   DomainId: number
-  Value: number
+  Value?: number | null
   ReviewText?: string | null
   ConvertedScore?: number
   CreatedAt?: Date | string
@@ -695,7 +695,7 @@ export type RatingUpdateManyWithWhereWithoutItemInput = {
 }
 
 export type RatingCreateWithoutUserInput = {
-  Value: number
+  Value?: number | null
   ReviewText?: string | null
   ConvertedScore?: number
   CreatedAt?: Date | string
@@ -707,7 +707,7 @@ export type RatingUncheckedCreateWithoutUserInput = {
   Id?: number
   ItemId: number
   DomainId: number
-  Value: number
+  Value?: number | null
   ReviewText?: string | null
   ConvertedScore?: number
   CreatedAt?: Date | string
@@ -743,14 +743,14 @@ export type RatingCreateManyDomainInput = {
   Id?: number
   UserId: number
   ItemId: number
-  Value: number
+  Value?: number | null
   ReviewText?: string | null
   ConvertedScore?: number
   CreatedAt?: Date | string
 }
 
 export type RatingUpdateWithoutDomainInput = {
-  Value?: Prisma.FloatFieldUpdateOperationsInput | number
+  Value?: Prisma.NullableFloatFieldUpdateOperationsInput | number | null
   ReviewText?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   ConvertedScore?: Prisma.FloatFieldUpdateOperationsInput | number
   CreatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -762,7 +762,7 @@ export type RatingUncheckedUpdateWithoutDomainInput = {
   Id?: Prisma.IntFieldUpdateOperationsInput | number
   UserId?: Prisma.IntFieldUpdateOperationsInput | number
   ItemId?: Prisma.IntFieldUpdateOperationsInput | number
-  Value?: Prisma.FloatFieldUpdateOperationsInput | number
+  Value?: Prisma.NullableFloatFieldUpdateOperationsInput | number | null
   ReviewText?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   ConvertedScore?: Prisma.FloatFieldUpdateOperationsInput | number
   CreatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -772,7 +772,7 @@ export type RatingUncheckedUpdateManyWithoutDomainInput = {
   Id?: Prisma.IntFieldUpdateOperationsInput | number
   UserId?: Prisma.IntFieldUpdateOperationsInput | number
   ItemId?: Prisma.IntFieldUpdateOperationsInput | number
-  Value?: Prisma.FloatFieldUpdateOperationsInput | number
+  Value?: Prisma.NullableFloatFieldUpdateOperationsInput | number | null
   ReviewText?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   ConvertedScore?: Prisma.FloatFieldUpdateOperationsInput | number
   CreatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -782,14 +782,14 @@ export type RatingCreateManyItemInput = {
   Id?: number
   UserId: number
   DomainId: number
-  Value: number
+  Value?: number | null
   ReviewText?: string | null
   ConvertedScore?: number
   CreatedAt?: Date | string
 }
 
 export type RatingUpdateWithoutItemInput = {
-  Value?: Prisma.FloatFieldUpdateOperationsInput | number
+  Value?: Prisma.NullableFloatFieldUpdateOperationsInput | number | null
   ReviewText?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   ConvertedScore?: Prisma.FloatFieldUpdateOperationsInput | number
   CreatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -801,7 +801,7 @@ export type RatingUncheckedUpdateWithoutItemInput = {
   Id?: Prisma.IntFieldUpdateOperationsInput | number
   UserId?: Prisma.IntFieldUpdateOperationsInput | number
   DomainId?: Prisma.IntFieldUpdateOperationsInput | number
-  Value?: Prisma.FloatFieldUpdateOperationsInput | number
+  Value?: Prisma.NullableFloatFieldUpdateOperationsInput | number | null
   ReviewText?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   ConvertedScore?: Prisma.FloatFieldUpdateOperationsInput | number
   CreatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -811,7 +811,7 @@ export type RatingUncheckedUpdateManyWithoutItemInput = {
   Id?: Prisma.IntFieldUpdateOperationsInput | number
   UserId?: Prisma.IntFieldUpdateOperationsInput | number
   DomainId?: Prisma.IntFieldUpdateOperationsInput | number
-  Value?: Prisma.FloatFieldUpdateOperationsInput | number
+  Value?: Prisma.NullableFloatFieldUpdateOperationsInput | number | null
   ReviewText?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   ConvertedScore?: Prisma.FloatFieldUpdateOperationsInput | number
   CreatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -821,14 +821,14 @@ export type RatingCreateManyUserInput = {
   Id?: number
   ItemId: number
   DomainId: number
-  Value: number
+  Value?: number | null
   ReviewText?: string | null
   ConvertedScore?: number
   CreatedAt?: Date | string
 }
 
 export type RatingUpdateWithoutUserInput = {
-  Value?: Prisma.FloatFieldUpdateOperationsInput | number
+  Value?: Prisma.NullableFloatFieldUpdateOperationsInput | number | null
   ReviewText?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   ConvertedScore?: Prisma.FloatFieldUpdateOperationsInput | number
   CreatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -840,7 +840,7 @@ export type RatingUncheckedUpdateWithoutUserInput = {
   Id?: Prisma.IntFieldUpdateOperationsInput | number
   ItemId?: Prisma.IntFieldUpdateOperationsInput | number
   DomainId?: Prisma.IntFieldUpdateOperationsInput | number
-  Value?: Prisma.FloatFieldUpdateOperationsInput | number
+  Value?: Prisma.NullableFloatFieldUpdateOperationsInput | number | null
   ReviewText?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   ConvertedScore?: Prisma.FloatFieldUpdateOperationsInput | number
   CreatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -850,7 +850,7 @@ export type RatingUncheckedUpdateManyWithoutUserInput = {
   Id?: Prisma.IntFieldUpdateOperationsInput | number
   ItemId?: Prisma.IntFieldUpdateOperationsInput | number
   DomainId?: Prisma.IntFieldUpdateOperationsInput | number
-  Value?: Prisma.FloatFieldUpdateOperationsInput | number
+  Value?: Prisma.NullableFloatFieldUpdateOperationsInput | number | null
   ReviewText?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   ConvertedScore?: Prisma.FloatFieldUpdateOperationsInput | number
   CreatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -940,7 +940,7 @@ export type $RatingPayload<ExtArgs extends runtime.Types.Extensions.InternalArgs
     UserId: number
     ItemId: number
     DomainId: number
-    Value: number
+    Value: number | null
     ReviewText: string | null
     ConvertedScore: number
     CreatedAt: Date
