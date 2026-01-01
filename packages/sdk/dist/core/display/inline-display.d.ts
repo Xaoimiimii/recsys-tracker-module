@@ -10,6 +10,7 @@ export declare class InlineDisplay {
     start(): void;
     stop(): void;
     private scanAndRender;
+    private findContainers;
     private setupObserver;
     private processContainer;
     private isPageAllowed;

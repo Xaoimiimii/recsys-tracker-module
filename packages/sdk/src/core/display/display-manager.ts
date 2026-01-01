@@ -3,7 +3,7 @@ import { PopupDisplay } from './popup-display';
 import { InlineDisplay } from './inline-display';
 import { RecommendationFetcher, RecommendationItem } from '../recommendation';
 
-const ANON_USER_ID_KEY = 'recsys_anon_id';
+// const ANON_USER_ID_KEY = 'recsys_anon_id';
 
 export class DisplayManager {
   private popupDisplay: PopupDisplay | null = null;
@@ -60,40 +60,46 @@ export class DisplayManager {
   // Internal fetch method
   private async fetchRecommendationsInternal(): Promise<RecommendationItem[]> {
     try {
-      const anonymousId = this.getAnonymousId();
-      if (!anonymousId) {
-        console.warn('[DisplayManager] No anonymous ID found');
-        return [];
-      }
+      // MOCK: Temporarily using UserId="1" for testing
+      // TODO: Uncomment below code when enough data is available
+      
+      // const anonymousId = this.getAnonymousId();
+      // if (!anonymousId) {
+      //   console.warn('[DisplayManager] No anonymous ID found');
+      //   return [];
+      // }
+      // console.log(`[DisplayManager] Fetching recommendations for anonymous ID: ${anonymousId}`);
+      // const items = await this.recommendationFetcher.fetchRecommendations(
+      //   anonymousId,
+      //   'AnonymousId',
+      //   { numberItems: 10 }
+      // );
 
-      console.log(`[DisplayManager] Fetching recommendations for anonymous ID: ${anonymousId}`);
       const items = await this.recommendationFetcher.fetchRecommendations(
-        anonymousId,
-        'AnonymousId',
+        '1',
+        'UserId',
         { numberItems: 10 }
       );
-      console.log(`[DisplayManager] Fetched ${items.length} recommendations`);
       return items;
     } catch (error) {
-      console.error('[DisplayManager] Error fetching recommendations:', error);
       return [];
     }
   }
 
   // Lấy anonymous ID từ localStorage (recsys_anon_id)
-  private getAnonymousId(): string | null {
-    try {
-      const anonId = localStorage.getItem(ANON_USER_ID_KEY);
-      if (anonId) {
-        return anonId;
-      }
-      console.warn('[DisplayManager] recsys_anon_id not found in localStorage');
-      return null;
-    } catch (error) {
-      console.error('[DisplayManager] Error reading localStorage:', error);
-      return null;
-    }
-  }
+  // private getAnonymousId(): string | null {
+  //   try {
+  //     const anonId = localStorage.getItem(ANON_USER_ID_KEY);
+  //     if (anonId) {
+  //       return anonId;
+  //     }
+  //     console.warn('[DisplayManager] recsys_anon_id not found in localStorage');
+  //     return null;
+  //   } catch (error) {
+  //     console.error('[DisplayManager] Error reading localStorage:', error);
+  //     return null;
+  //   }
+  // }
 
   // Get cached recommendations
   async getRecommendations(): Promise<RecommendationItem[]> {
@@ -109,12 +115,14 @@ export class DisplayManager {
         this.initializePopup(configurationName, value);
         break;
       
-      case 'INLINE-INJECTION': // Inline
+      case 'INLINE-INJECTION': // Inline (with hyphen)
+      case 'INLINE_INJECTION': // Inline (with underscore)
         this.initializeInline(configurationName, value);
         break;
       
       default:
-        console.warn(`[DisplayManager] Unknown returnType: ${returnType}`);
+        // do nothing
+        break;
     }
   }
 
@@ -140,7 +148,6 @@ export class DisplayManager {
       );
       
       this.popupDisplay.start();
-      console.log(`[DisplayManager] Popup initialized for slot: ${slotName}`);
     } catch (error) {
       console.error('[DisplayManager] Error initializing popup:', error);
     }
@@ -150,7 +157,6 @@ export class DisplayManager {
   private initializeInline(slotName: string, selector: string): void {
     try {
       if (!selector) {
-        console.warn('[DisplayManager] Inline display requires a selector');
         return;
       }
 
@@ -164,7 +170,6 @@ export class DisplayManager {
       );
       
       this.inlineDisplay.start();
-      console.log(`[DisplayManager] Inline initialized for slot: ${slotName}, selector: ${selector}`);
     } catch (error) {
       console.error('[DisplayManager] Error initializing inline:', error);
     }

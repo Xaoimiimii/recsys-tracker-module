@@ -109,7 +109,8 @@ export class PlaceholderImage {
       </svg>
     `;
     
-    return `data:image/svg+xml;base64,${btoa(svg)}`;
+    // Use URL encoding instead of btoa to support Unicode characters
+    return `data:image/svg+xml;charset=utf-8,${encodeURIComponent(svg)}`;
   }
 
   /**

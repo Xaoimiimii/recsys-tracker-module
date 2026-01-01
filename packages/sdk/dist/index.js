@@ -52,14 +52,12 @@ export class RecSysTracker {
                     const apiBaseUrl = process.env.API_URL || 'https://recsys-tracker-module.onrender.com';
                     this.displayManager = new DisplayManager(this.config.domainKey, apiBaseUrl);
                     await this.displayManager.initialize(this.config.returnMethods);
-                    console.log('[RecSysTracker] Display methods initialized');
                 }
                 // Tự động khởi tạo plugins dựa trên rules
                 this.autoInitializePlugins();
             }
             else {
                 // Nếu origin verification thất bại, không khởi tạo SDK
-                console.error('[RecSysTracker] Failed to initialize SDK: origin verification failed');
                 this.config = null;
                 this.eventDispatcher = null;
                 return;
@@ -96,7 +94,6 @@ export class RecSysTracker {
                 const currentConfig = this.config; // TypeScript sẽ hiểu currentConfig chắc chắn là TrackerConfig
                 const clickPromise = import('./core/plugins/click-plugin').then(({ ClickPlugin }) => {
                     this.use(new ClickPlugin(currentConfig));
-                    console.log('[RecSysTracker] Auto-registered ClickPlugin');
                 });
                 pluginPromises.push(clickPromise);
             }
@@ -158,12 +155,6 @@ export class RecSysTracker {
             // Check for duplicate event (fingerprint-based deduplication)
             const isDuplicate = this.eventDeduplicator.isDuplicate(eventData.eventTypeId, eventData.trackingRuleId, eventData.userValue, eventData.itemValue);
             if (isDuplicate) {
-                console.log('[RecSysTracker] Duplicate event dropped:', {
-                    eventTypeId: eventData.eventTypeId,
-                    trackingRuleId: eventData.trackingRuleId,
-                    userValue: eventData.userValue,
-                    itemValue: eventData.itemValue
-                });
                 return; // Drop duplicate
             }
             const trackedEvent = {

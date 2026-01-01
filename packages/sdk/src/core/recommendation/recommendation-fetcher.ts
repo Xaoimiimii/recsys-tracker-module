@@ -40,7 +40,6 @@ export class RecommendationFetcher {
       const cacheKey = this.getCacheKey(userValue, userField);
       const cached = this.getFromCache(cacheKey);
       if (cached) {
-        console.log('[RecommendationFetcher] Returning cached results');
         return cached;
       }
 
@@ -51,8 +50,6 @@ export class RecommendationFetcher {
         DomainKey: this.domainKey,
         NumberItems: options.numberItems || 10,
       };
-
-      console.log('[RecommendationFetcher] Fetching recommendations:', requestBody);
 
       // Call API
       const response = await fetch(`${this.apiBaseUrl}/recommendation`, {
@@ -75,11 +72,9 @@ export class RecommendationFetcher {
       // Cache results
       this.saveToCache(cacheKey, items);
 
-      console.log(`[RecommendationFetcher] Fetched ${items.length} recommendations`);
       return items;
 
     } catch (error) {
-      console.error('[RecommendationFetcher] Error fetching recommendations:', error);
       throw error;
     }
   }
@@ -154,7 +149,6 @@ export class RecommendationFetcher {
       return anonymousId;
     } catch (error) {
       // Fallback if localStorage not available
-      console.warn('[RecommendationFetcher] localStorage not available, using session ID');
       return `anon_${Date.now()}_${this.generateRandomString(8)}`;
     }
   }

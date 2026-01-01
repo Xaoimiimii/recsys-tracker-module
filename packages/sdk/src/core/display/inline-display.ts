@@ -25,11 +25,8 @@ export class InlineDisplay {
 
   // Bắt đầu inline display
   start(): void {
-    console.log(`[InlineDisplay] Starting watcher for: "${this.selector}"`);
-
     // Kiểm tra page có được phép không
     if (!this.isPageAllowed(window.location.pathname)) {
-      console.log('[InlineDisplay] Page not allowed');
       return;
     }
 
@@ -55,10 +52,31 @@ export class InlineDisplay {
 
   // Quét và render tất cả containers
   private scanAndRender(): void {
-    const containers = document.querySelectorAll(this.selector);
+    const containers = this.findContainers();
     containers.forEach(container => {
       this.processContainer(container as HTMLElement);
     });
+  }
+
+  // Tìm containers với fallback logic
+  private findContainers(): NodeListOf<Element> {
+    // Thử selector gốc trước
+    let containers = document.querySelectorAll(this.selector);
+    
+    if (containers.length === 0) {
+      // Thử thêm . (class selector)
+      const classSelector = `.${this.selector}`;
+      containers = document.querySelectorAll(classSelector);
+      
+      if (containers.length === 0) {
+        // Thử thêm # (id selector)
+        const idSelector = `#${this.selector}`;
+        containers = document.querySelectorAll(idSelector);
+        
+      }
+    }
+    
+    return containers;
   }
 
   // Setup MutationObserver để theo dõi DOM changes
@@ -96,8 +114,6 @@ export class InlineDisplay {
 
       if (items && items.length > 0) {
         this.renderWidget(container, items);
-      } else {
-        console.log(`[InlineDisplay] No items for ${this.selector}`);
       }
     } catch (error) {
       console.error('[InlineDisplay] Error processing container:', error);
@@ -131,7 +147,6 @@ export class InlineDisplay {
       const items = await this.recommendationGetter();
       return items;
     } catch (error) {
-      console.error('[InlineDisplay] Error getting recommendations:', error);
       return [];
     }
   }
@@ -187,8 +202,7 @@ export class InlineDisplay {
       wrapper.addEventListener('click', (e) => {
         const itemEl = (e.target as HTMLElement).closest('.recsys-item') as HTMLElement;
         if (itemEl) {
-          const itemId = itemEl.getAttribute('data-id');
-          console.log('[InlineDisplay] Item clicked:', itemId);
+          // const itemId = itemEl.getAttribute('data-id');
           // TODO: Track click event
         }
       });

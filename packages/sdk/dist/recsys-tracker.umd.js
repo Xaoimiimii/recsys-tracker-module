@@ -1063,8 +1063,8 @@
             this.autoCloseTimeout = null;
             this.autoSlideTimeout = null;
             this.shadowHost = null;
-            this.DEFAULT_MIN_DELAY = 10000; // 10s
-            this.DEFAULT_MAX_DELAY = 20000; // 20s
+            this.DEFAULT_MIN_DELAY = 5000; // 5s
+            this.DEFAULT_MAX_DELAY = 10000; // 10s
             this.AUTO_SLIDE_DELAY = 5000; // 5s auto slide
             this.recommendationGetter = recommendationGetter;
             this.config = {
@@ -1087,13 +1087,11 @@
         scheduleNextPopup() {
             this.clearTimeouts();
             const delay = this.getRandomDelay();
-            console.log(`[PopupDisplay] Next popup in ${delay / 1000}s`);
             this.popupTimeout = setTimeout(() => {
                 if (this.isPageAllowed(window.location.pathname)) {
                     this.showPopup();
                 }
                 else {
-                    console.log('[PopupDisplay] Skipped (Page not allowed)');
                     this.scheduleNextPopup();
                 }
             }, delay);
@@ -1141,7 +1139,6 @@
                 }
             }
             catch (error) {
-                console.error('[PopupDisplay] Error showing popup:', error);
                 this.scheduleNextPopup();
             }
         }
@@ -1152,7 +1149,6 @@
                 return items;
             }
             catch (error) {
-                console.error('[PopupDisplay] Error getting recommendations:', error);
                 return [];
             }
         }
@@ -1237,12 +1233,7 @@
             nextBtn === null || nextBtn === void 0 ? void 0 : nextBtn.addEventListener('click', next);
             // Click handler for items
             slideContainer === null || slideContainer === void 0 ? void 0 : slideContainer.addEventListener('click', (e) => {
-                const itemEl = e.target.closest('.recsys-item');
-                if (itemEl) {
-                    const itemId = itemEl.getAttribute('data-id');
-                    console.log('[PopupDisplay] Item clicked:', itemId);
-                    // TODO: Track click event
-                }
+                e.target.closest('.recsys-item');
             });
             // Start carousel
             renderSlide();
@@ -1425,10 +1416,8 @@
         }
         // Bắt đầu inline display
         start() {
-            console.log(`[InlineDisplay] Starting watcher for: "${this.selector}"`);
             // Kiểm tra page có được phép không
             if (!this.isPageAllowed(window.location.pathname)) {
-                console.log('[InlineDisplay] Page not allowed');
                 return;
             }
             // Quét lần đầu
@@ -1449,10 +1438,26 @@
         }
         // Quét và render tất cả containers
         scanAndRender() {
-            const containers = document.querySelectorAll(this.selector);
+            const containers = this.findContainers();
             containers.forEach(container => {
                 this.processContainer(container);
             });
+        }
+        // Tìm containers với fallback logic
+        findContainers() {
+            // Thử selector gốc trước
+            let containers = document.querySelectorAll(this.selector);
+            if (containers.length === 0) {
+                // Thử thêm . (class selector)
+                const classSelector = `.${this.selector}`;
+                containers = document.querySelectorAll(classSelector);
+                if (containers.length === 0) {
+                    // Thử thêm # (id selector)
+                    const idSelector = `#${this.selector}`;
+                    containers = document.querySelectorAll(idSelector);
+                }
+            }
+            return containers;
         }
         // Setup MutationObserver để theo dõi DOM changes
         setupObserver() {
@@ -1484,9 +1489,6 @@
                 if (items && items.length > 0) {
                     this.renderWidget(container, items);
                 }
-                else {
-                    console.log(`[InlineDisplay] No items for ${this.selector}`);
-                }
             }
             catch (error) {
                 console.error('[InlineDisplay] Error processing container:', error);
@@ -1516,7 +1518,6 @@
                 return items;
             }
             catch (error) {
-                console.error('[InlineDisplay] Error getting recommendations:', error);
                 return [];
             }
         }
@@ -1562,8 +1563,7 @@
                 wrapper.addEventListener('click', (e) => {
                     const itemEl = e.target.closest('.recsys-item');
                     if (itemEl) {
-                        const itemId = itemEl.getAttribute('data-id');
-                        console.log('[InlineDisplay] Item clicked:', itemId);
+                        // const itemId = itemEl.getAttribute('data-id');
                         // TODO: Track click event
                     }
                 });
@@ -1742,7 +1742,8 @@
         </text>
       </svg>
     `;
-            return `data:image/svg+xml;base64,${btoa(svg)}`;
+            // Use URL encoding instead of btoa to support Unicode characters
+            return `data:image/svg+xml;charset=utf-8,${encodeURIComponent(svg)}`;
         }
         /**
          * Fallback image khi không thể tạo canvas
@@ -1785,7 +1786,6 @@
                 const cacheKey = this.getCacheKey(userValue, userField);
                 const cached = this.getFromCache(cacheKey);
                 if (cached) {
-                    console.log('[RecommendationFetcher] Returning cached results');
                     return cached;
                 }
                 // Prepare request payload
@@ -1795,7 +1795,6 @@
                     DomainKey: this.domainKey,
                     NumberItems: options.numberItems || 10,
                 };
-                console.log('[RecommendationFetcher] Fetching recommendations:', requestBody);
                 // Call API
                 const response = await fetch(`${this.apiBaseUrl}/recommendation`, {
                     method: 'POST',
@@ -1812,11 +1811,9 @@
                 const items = this.transformResponse(data);
                 // Cache results
                 this.saveToCache(cacheKey, items);
-                console.log(`[RecommendationFetcher] Fetched ${items.length} recommendations`);
                 return items;
             }
             catch (error) {
-                console.error('[RecommendationFetcher] Error fetching recommendations:', error);
                 throw error;
             }
         }
@@ -1883,7 +1880,6 @@
             }
             catch (error) {
                 // Fallback if localStorage not available
-                console.warn('[RecommendationFetcher] localStorage not available, using session ID');
                 return `anon_${Date.now()}_${this.generateRandomString(8)}`;
             }
         }
@@ -1954,7 +1950,7 @@
         }
     }
 
-    const ANON_USER_ID_KEY = 'recsys_anon_id';
+    // const ANON_USER_ID_KEY = 'recsys_anon_id';
     class DisplayManager {
         constructor(domainKey, apiBaseUrl = 'https://recsys-tracker-module.onrender.com') {
             this.popupDisplay = null;
@@ -2000,36 +1996,40 @@
         // Internal fetch method
         async fetchRecommendationsInternal() {
             try {
-                const anonymousId = this.getAnonymousId();
-                if (!anonymousId) {
-                    console.warn('[DisplayManager] No anonymous ID found');
-                    return [];
-                }
-                console.log(`[DisplayManager] Fetching recommendations for anonymous ID: ${anonymousId}`);
-                const items = await this.recommendationFetcher.fetchRecommendations(anonymousId, 'AnonymousId', { numberItems: 10 });
-                console.log(`[DisplayManager] Fetched ${items.length} recommendations`);
+                // MOCK: Temporarily using UserId="1" for testing
+                // TODO: Uncomment below code when enough data is available
+                // const anonymousId = this.getAnonymousId();
+                // if (!anonymousId) {
+                //   console.warn('[DisplayManager] No anonymous ID found');
+                //   return [];
+                // }
+                // console.log(`[DisplayManager] Fetching recommendations for anonymous ID: ${anonymousId}`);
+                // const items = await this.recommendationFetcher.fetchRecommendations(
+                //   anonymousId,
+                //   'AnonymousId',
+                //   { numberItems: 10 }
+                // );
+                const items = await this.recommendationFetcher.fetchRecommendations('1', 'UserId', { numberItems: 10 });
                 return items;
             }
             catch (error) {
-                console.error('[DisplayManager] Error fetching recommendations:', error);
                 return [];
             }
         }
         // Lấy anonymous ID từ localStorage (recsys_anon_id)
-        getAnonymousId() {
-            try {
-                const anonId = localStorage.getItem(ANON_USER_ID_KEY);
-                if (anonId) {
-                    return anonId;
-                }
-                console.warn('[DisplayManager] recsys_anon_id not found in localStorage');
-                return null;
-            }
-            catch (error) {
-                console.error('[DisplayManager] Error reading localStorage:', error);
-                return null;
-            }
-        }
+        // private getAnonymousId(): string | null {
+        //   try {
+        //     const anonId = localStorage.getItem(ANON_USER_ID_KEY);
+        //     if (anonId) {
+        //       return anonId;
+        //     }
+        //     console.warn('[DisplayManager] recsys_anon_id not found in localStorage');
+        //     return null;
+        //   } catch (error) {
+        //     console.error('[DisplayManager] Error reading localStorage:', error);
+        //     return null;
+        //   }
+        // }
         // Get cached recommendations
         async getRecommendations() {
             return this.fetchRecommendationsOnce();
@@ -2041,11 +2041,10 @@
                 case 'POPUP': // Popup
                     this.initializePopup(configurationName, value);
                     break;
-                case 'INLINE-INJECTION': // Inline
+                case 'INLINE-INJECTION': // Inline (with hyphen)
+                case 'INLINE_INJECTION': // Inline (with underscore)
                     this.initializeInline(configurationName, value);
                     break;
-                default:
-                    console.warn(`[DisplayManager] Unknown returnType: ${returnType}`);
             }
         }
         // Khởi tạo Popup Display
@@ -2064,7 +2063,6 @@
                 this.popupDisplay = new PopupDisplay(this.domainKey, slotName, this.apiBaseUrl, popupConfig, () => this.getRecommendations() // Provide getter function
                 );
                 this.popupDisplay.start();
-                console.log(`[DisplayManager] Popup initialized for slot: ${slotName}`);
             }
             catch (error) {
                 console.error('[DisplayManager] Error initializing popup:', error);
@@ -2074,13 +2072,11 @@
         initializeInline(slotName, selector) {
             try {
                 if (!selector) {
-                    console.warn('[DisplayManager] Inline display requires a selector');
                     return;
                 }
                 this.inlineDisplay = new InlineDisplay(this.domainKey, slotName, selector, this.apiBaseUrl, {}, () => this.getRecommendations() // Provide getter function
                 );
                 this.inlineDisplay.start();
-                console.log(`[DisplayManager] Inline initialized for slot: ${slotName}, selector: ${selector}`);
             }
             catch (error) {
                 console.error('[DisplayManager] Error initializing inline:', error);
@@ -2504,7 +2500,7 @@
                 console.warn("[ClickPlugin] No tracking rules found. Plugin stopped.");
                 return;
             }
-            console.log("[ClickPlugin] Started with config:", configToUse.domainUrl);
+            console.log("[ClickPlugin] initialized.");
             document.addEventListener("click", (event) => {
                 this.handleDocumentClick(event, configToUse);
             }, true);
@@ -4129,10 +4125,10 @@
                         const extractedData = this.tracker.payloadBuilder.build(networkContext, rule);
                         if (Object.keys(extractedData).length > 0) {
                             this.buildAndTrack(networkContext, rule, rule.eventTypeId);
-                            console.groupCollapsed(`%c[TRACKER] Network Match: (${method} ${url})`, "color: orange");
-                            console.log("Rule:", rule.name);
-                            console.log("Extracted:", extractedData);
-                            console.groupEnd();
+                            // console.groupCollapsed(`%c[TRACKER] Network Match: (${method} ${url})`, "color: orange");
+                            // console.log("Rule:", rule.name);
+                            // console.log("Extracted:", extractedData);
+                            // console.groupEnd();
                         }
                     }
                 }
@@ -4461,14 +4457,12 @@
                         const apiBaseUrl = "https://recsys-tracker-module.onrender.com";
                         this.displayManager = new DisplayManager(this.config.domainKey, apiBaseUrl);
                         await this.displayManager.initialize(this.config.returnMethods);
-                        console.log('[RecSysTracker] Display methods initialized');
                     }
                     // Tự động khởi tạo plugins dựa trên rules
                     this.autoInitializePlugins();
                 }
                 else {
                     // Nếu origin verification thất bại, không khởi tạo SDK
-                    console.error('[RecSysTracker] Failed to initialize SDK: origin verification failed');
                     this.config = null;
                     this.eventDispatcher = null;
                     return;
@@ -4505,7 +4499,6 @@
                     const currentConfig = this.config; // TypeScript sẽ hiểu currentConfig chắc chắn là TrackerConfig
                     const clickPromise = Promise.resolve().then(function () { return clickPlugin; }).then(({ ClickPlugin }) => {
                         this.use(new ClickPlugin(currentConfig));
-                        console.log('[RecSysTracker] Auto-registered ClickPlugin');
                     });
                     pluginPromises.push(clickPromise);
                 }
@@ -4567,12 +4560,6 @@
                 // Check for duplicate event (fingerprint-based deduplication)
                 const isDuplicate = this.eventDeduplicator.isDuplicate(eventData.eventTypeId, eventData.trackingRuleId, eventData.userValue, eventData.itemValue);
                 if (isDuplicate) {
-                    console.log('[RecSysTracker] Duplicate event dropped:', {
-                        eventTypeId: eventData.eventTypeId,
-                        trackingRuleId: eventData.trackingRuleId,
-                        userValue: eventData.userValue,
-                        itemValue: eventData.itemValue
-                    });
                     return; // Drop duplicate
                 }
                 const trackedEvent = {

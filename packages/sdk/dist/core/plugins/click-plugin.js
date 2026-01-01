@@ -13,7 +13,7 @@ export class ClickPlugin extends BasePlugin {
             console.warn("[ClickPlugin] No tracking rules found. Plugin stopped.");
             return;
         }
-        console.log("[ClickPlugin] Started with config:", configToUse.domainUrl);
+        console.log("[ClickPlugin] initialized.");
         document.addEventListener("click", (event) => {
             this.handleDocumentClick(event, configToUse);
         }, true);

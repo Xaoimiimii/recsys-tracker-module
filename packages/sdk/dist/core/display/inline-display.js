@@ -10,10 +10,8 @@ export class InlineDisplay {
     }
     // Bắt đầu inline display
     start() {
-        console.log(`[InlineDisplay] Starting watcher for: "${this.selector}"`);
         // Kiểm tra page có được phép không
         if (!this.isPageAllowed(window.location.pathname)) {
-            console.log('[InlineDisplay] Page not allowed');
             return;
         }
         // Quét lần đầu
@@ -34,10 +32,26 @@ export class InlineDisplay {
     }
     // Quét và render tất cả containers
     scanAndRender() {
-        const containers = document.querySelectorAll(this.selector);
+        const containers = this.findContainers();
         containers.forEach(container => {
             this.processContainer(container);
         });
+    }
+    // Tìm containers với fallback logic
+    findContainers() {
+        // Thử selector gốc trước
+        let containers = document.querySelectorAll(this.selector);
+        if (containers.length === 0) {
+            // Thử thêm . (class selector)
+            const classSelector = `.${this.selector}`;
+            containers = document.querySelectorAll(classSelector);
+            if (containers.length === 0) {
+                // Thử thêm # (id selector)
+                const idSelector = `#${this.selector}`;
+                containers = document.querySelectorAll(idSelector);
+            }
+        }
+        return containers;
     }
     // Setup MutationObserver để theo dõi DOM changes
     setupObserver() {
@@ -69,9 +83,6 @@ export class InlineDisplay {
             if (items && items.length > 0) {
                 this.renderWidget(container, items);
             }
-            else {
-                console.log(`[InlineDisplay] No items for ${this.selector}`);
-            }
         }
         catch (error) {
             console.error('[InlineDisplay] Error processing container:', error);
@@ -101,7 +112,6 @@ export class InlineDisplay {
             return items;
         }
         catch (error) {
-            console.error('[InlineDisplay] Error getting recommendations:', error);
             return [];
         }
     }
@@ -147,8 +157,7 @@ export class InlineDisplay {
             wrapper.addEventListener('click', (e) => {
                 const itemEl = e.target.closest('.recsys-item');
                 if (itemEl) {
-                    const itemId = itemEl.getAttribute('data-id');
-                    console.log('[InlineDisplay] Item clicked:', itemId);
+                    // const itemId = itemEl.getAttribute('data-id');
                     // TODO: Track click event
                 }
             });

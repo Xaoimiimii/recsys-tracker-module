@@ -9,8 +9,8 @@ export class PopupDisplay {
   private autoSlideTimeout: NodeJS.Timeout | null = null;
   private shadowHost: HTMLElement | null = null;
 
-  private readonly DEFAULT_MIN_DELAY = 10000; // 10s
-  private readonly DEFAULT_MAX_DELAY = 20000; // 20s
+  private readonly DEFAULT_MIN_DELAY = 5000; // 5s
+  private readonly DEFAULT_MAX_DELAY = 10000; // 10s
   private readonly AUTO_SLIDE_DELAY = 5000; // 5s auto slide
 
   constructor(
@@ -45,13 +45,11 @@ export class PopupDisplay {
     this.clearTimeouts();
 
     const delay = this.getRandomDelay();
-    console.log(`[PopupDisplay] Next popup in ${delay / 1000}s`);
 
     this.popupTimeout = setTimeout(() => {
       if (this.isPageAllowed(window.location.pathname)) {
         this.showPopup();
       } else {
-        console.log('[PopupDisplay] Skipped (Page not allowed)');
         this.scheduleNextPopup();
       }
     }, delay);
@@ -105,7 +103,6 @@ export class PopupDisplay {
         this.scheduleNextPopup();
       }
     } catch (error) {
-      console.error('[PopupDisplay] Error showing popup:', error);
       this.scheduleNextPopup();
     }
   }
@@ -116,7 +113,6 @@ export class PopupDisplay {
       const items = await this.recommendationGetter();
       return items;
     } catch (error) {
-      console.error('[PopupDisplay] Error getting recommendations:', error);
       return [];
     }
   }
@@ -219,8 +215,7 @@ export class PopupDisplay {
     slideContainer?.addEventListener('click', (e) => {
       const itemEl = (e.target as HTMLElement).closest('.recsys-item') as HTMLElement;
       if (itemEl) {
-        const itemId = itemEl.getAttribute('data-id');
-        console.log('[PopupDisplay] Item clicked:', itemId);
+        // const itemId = itemEl.getAttribute('data-id');
         // TODO: Track click event
       }
     });

@@ -165,10 +165,10 @@ export class NetworkPlugin extends BasePlugin {
                     const extractedData = this.tracker.payloadBuilder.build(networkContext, rule);
                     if (Object.keys(extractedData).length > 0) {
                         this.buildAndTrack(networkContext, rule, rule.eventTypeId);
-                        console.groupCollapsed(`%c[TRACKER] Network Match: (${method} ${url})`, "color: orange");
-                        console.log("Rule:", rule.name);
-                        console.log("Extracted:", extractedData);
-                        console.groupEnd();
+                        // console.groupCollapsed(`%c[TRACKER] Network Match: (${method} ${url})`, "color: orange");
+                        // console.log("Rule:", rule.name);
+                        // console.log("Extracted:", extractedData);
+                        // console.groupEnd();
                     }
                 }
             }

@@ -1,7 +1,7 @@
 import { PopupDisplay } from './popup-display';
 import { InlineDisplay } from './inline-display';
 import { RecommendationFetcher } from '../recommendation';
-const ANON_USER_ID_KEY = 'recsys_anon_id';
+// const ANON_USER_ID_KEY = 'recsys_anon_id';
 export class DisplayManager {
     constructor(domainKey, apiBaseUrl = 'https://recsys-tracker-module.onrender.com') {
         this.popupDisplay = null;
@@ -47,36 +47,40 @@ export class DisplayManager {
     // Internal fetch method
     async fetchRecommendationsInternal() {
         try {
-            const anonymousId = this.getAnonymousId();
-            if (!anonymousId) {
-                console.warn('[DisplayManager] No anonymous ID found');
-                return [];
-            }
-            console.log(`[DisplayManager] Fetching recommendations for anonymous ID: ${anonymousId}`);
-            const items = await this.recommendationFetcher.fetchRecommendations(anonymousId, 'AnonymousId', { numberItems: 10 });
-            console.log(`[DisplayManager] Fetched ${items.length} recommendations`);
+            // MOCK: Temporarily using UserId="1" for testing
+            // TODO: Uncomment below code when enough data is available
+            // const anonymousId = this.getAnonymousId();
+            // if (!anonymousId) {
+            //   console.warn('[DisplayManager] No anonymous ID found');
+            //   return [];
+            // }
+            // console.log(`[DisplayManager] Fetching recommendations for anonymous ID: ${anonymousId}`);
+            // const items = await this.recommendationFetcher.fetchRecommendations(
+            //   anonymousId,
+            //   'AnonymousId',
+            //   { numberItems: 10 }
+            // );
+            const items = await this.recommendationFetcher.fetchRecommendations('1', 'UserId', { numberItems: 10 });
             return items;
         }
         catch (error) {
-            console.error('[DisplayManager] Error fetching recommendations:', error);
             return [];
         }
     }
     // Lấy anonymous ID từ localStorage (recsys_anon_id)
-    getAnonymousId() {
-        try {
-            const anonId = localStorage.getItem(ANON_USER_ID_KEY);
-            if (anonId) {
-                return anonId;
-            }
-            console.warn('[DisplayManager] recsys_anon_id not found in localStorage');
-            return null;
-        }
-        catch (error) {
-            console.error('[DisplayManager] Error reading localStorage:', error);
-            return null;
-        }
-    }
+    // private getAnonymousId(): string | null {
+    //   try {
+    //     const anonId = localStorage.getItem(ANON_USER_ID_KEY);
+    //     if (anonId) {
+    //       return anonId;
+    //     }
+    //     console.warn('[DisplayManager] recsys_anon_id not found in localStorage');
+    //     return null;
+    //   } catch (error) {
+    //     console.error('[DisplayManager] Error reading localStorage:', error);
+    //     return null;
+    //   }
+    // }
     // Get cached recommendations
     async getRecommendations() {
         return this.fetchRecommendationsOnce();
@@ -88,11 +92,13 @@ export class DisplayManager {
             case 'POPUP': // Popup
                 this.initializePopup(configurationName, value);
                 break;
-            case 'INLINE-INJECTION': // Inline
+            case 'INLINE-INJECTION': // Inline (with hyphen)
+            case 'INLINE_INJECTION': // Inline (with underscore)
                 this.initializeInline(configurationName, value);
                 break;
             default:
-                console.warn(`[DisplayManager] Unknown returnType: ${returnType}`);
+                // do nothing
+                break;
         }
     }
     // Khởi tạo Popup Display
@@ -111,7 +117,6 @@ export class DisplayManager {
             this.popupDisplay = new PopupDisplay(this.domainKey, slotName, this.apiBaseUrl, popupConfig, () => this.getRecommendations() // Provide getter function
             );
             this.popupDisplay.start();
-            console.log(`[DisplayManager] Popup initialized for slot: ${slotName}`);
         }
         catch (error) {
             console.error('[DisplayManager] Error initializing popup:', error);
@@ -121,13 +126,11 @@ export class DisplayManager {
     initializeInline(slotName, selector) {
         try {
             if (!selector) {
-                console.warn('[DisplayManager] Inline display requires a selector');
                 return;
             }
             this.inlineDisplay = new InlineDisplay(this.domainKey, slotName, selector, this.apiBaseUrl, {}, () => this.getRecommendations() // Provide getter function
             );
             this.inlineDisplay.start();
-            console.log(`[DisplayManager] Inline initialized for slot: ${slotName}, selector: ${selector}`);
         }
         catch (error) {
             console.error('[DisplayManager] Error initializing inline:', error);

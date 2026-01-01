@@ -21,7 +21,7 @@ export class ClickPlugin extends BasePlugin {
       return;
     }
 
-    console.log("[ClickPlugin] Started with config:", configToUse.domainUrl);
+    console.log("[ClickPlugin] initialized.");
 
     document.addEventListener(
       "click",
