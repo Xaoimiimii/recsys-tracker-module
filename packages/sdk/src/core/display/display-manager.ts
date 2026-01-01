@@ -1,28 +1,103 @@
 import { ReturnMethod } from '../../types';
 import { PopupDisplay } from './popup-display';
 import { InlineDisplay } from './inline-display';
+import { RecommendationFetcher, RecommendationItem } from '../recommendation';
+
+const ANON_USER_ID_KEY = 'recsys_anon_id';
 
 export class DisplayManager {
   private popupDisplay: PopupDisplay | null = null;
   private inlineDisplay: InlineDisplay | null = null;
   private domainKey: string;
   private apiBaseUrl: string;
+  private recommendationFetcher: RecommendationFetcher;
+  private cachedRecommendations: RecommendationItem[] | null = null;
+  private fetchPromise: Promise<RecommendationItem[]> | null = null;
 
-  constructor(domainKey: string, apiBaseUrl: string = 'http://localhost:3000') {
+  constructor(domainKey: string, apiBaseUrl: string = 'https://recsys-tracker-module.onrender.com') {
     this.domainKey = domainKey;
     this.apiBaseUrl = apiBaseUrl;
+    this.recommendationFetcher = new RecommendationFetcher(domainKey, apiBaseUrl);
   }
 
   // Khởi tạo display methods dựa trên config
-  initialize(returnMethods: ReturnMethod[]): void {
+  async initialize(returnMethods: ReturnMethod[]): Promise<void> {
     if (!returnMethods || returnMethods.length === 0) {
       console.log('[DisplayManager] No return methods configured');
       return;
     }
 
+    // Fetch recommendations 1 lần duy nhất cho tất cả display methods
+    await this.fetchRecommendationsOnce();
+
     returnMethods.forEach(method => {
       this.activateDisplayMethod(method);
     });
+  }
+
+  // Fetch recommendations 1 lần duy nhất và cache kết quả
+  private async fetchRecommendationsOnce(): Promise<RecommendationItem[]> {
+    // Nếu đã có cache, return ngay
+    if (this.cachedRecommendations) {
+      return this.cachedRecommendations;
+    }
+
+    // Nếu đang fetch, đợi kết quả
+    if (this.fetchPromise) {
+      return this.fetchPromise;
+    }
+
+    // Fetch mới
+    this.fetchPromise = this.fetchRecommendationsInternal();
+    try {
+      this.cachedRecommendations = await this.fetchPromise;
+      return this.cachedRecommendations;
+    } finally {
+      this.fetchPromise = null;
+    }
+  }
+
+  // Internal fetch method
+  private async fetchRecommendationsInternal(): Promise<RecommendationItem[]> {
+    try {
+      const anonymousId = this.getAnonymousId();
+      if (!anonymousId) {
+        console.warn('[DisplayManager] No anonymous ID found');
+        return [];
+      }
+
+      console.log(`[DisplayManager] Fetching recommendations for anonymous ID: ${anonymousId}`);
+      const items = await this.recommendationFetcher.fetchRecommendations(
+        anonymousId,
+        'AnonymousId',
+        { numberItems: 10 }
+      );
+      console.log(`[DisplayManager] Fetched ${items.length} recommendations`);
+      return items;
+    } catch (error) {
+      console.error('[DisplayManager] Error fetching recommendations:', error);
+      return [];
+    }
+  }
+
+  // Lấy anonymous ID từ localStorage (recsys_anon_id)
+  private getAnonymousId(): string | null {
+    try {
+      const anonId = localStorage.getItem(ANON_USER_ID_KEY);
+      if (anonId) {
+        return anonId;
+      }
+      console.warn('[DisplayManager] recsys_anon_id not found in localStorage');
+      return null;
+    } catch (error) {
+      console.error('[DisplayManager] Error reading localStorage:', error);
+      return null;
+    }
+  }
+
+  // Get cached recommendations
+  async getRecommendations(): Promise<RecommendationItem[]> {
+    return this.fetchRecommendationsOnce();
   }
 
   // Kích hoạt display method tương ứng
@@ -60,7 +135,8 @@ export class DisplayManager {
         this.domainKey,
         slotName,
         this.apiBaseUrl,
-        popupConfig
+        popupConfig,
+        () => this.getRecommendations() // Provide getter function
       );
       
       this.popupDisplay.start();
@@ -82,7 +158,9 @@ export class DisplayManager {
         this.domainKey,
         slotName,
         selector,
-        this.apiBaseUrl
+        this.apiBaseUrl,
+        {},
+        () => this.getRecommendations() // Provide getter function
       );
       
       this.inlineDisplay.start();

@@ -1,13 +1,12 @@
 import { InlineConfig } from './types';
+import { RecommendationItem } from '../recommendation';
 export declare class InlineDisplay {
-    private domainKey;
-    private slotName;
     private selector;
-    private apiBaseUrl;
     private config;
+    private recommendationGetter;
     private observer;
     private debounceTimer;
-    constructor(domainKey: string, slotName: string, selector: string, apiBaseUrl: string, config?: InlineConfig);
+    constructor(_domainKey: string, _slotName: string, selector: string, _apiBaseUrl: string, config: InlineConfig | undefined, recommendationGetter: () => Promise<RecommendationItem[]>);
     start(): void;
     stop(): void;
     private scanAndRender;

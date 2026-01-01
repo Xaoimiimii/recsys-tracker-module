@@ -1052,7 +1052,7 @@ class LoopGuard {
 }
 
 class PopupDisplay {
-    constructor(domainKey, slotName, apiBaseUrl, config = {}) {
+    constructor(_domainKey, _slotName, _apiBaseUrl, config = {}, recommendationGetter) {
         this.popupTimeout = null;
         this.autoCloseTimeout = null;
         this.autoSlideTimeout = null;
@@ -1060,9 +1060,7 @@ class PopupDisplay {
         this.DEFAULT_MIN_DELAY = 10000; // 10s
         this.DEFAULT_MAX_DELAY = 20000; // 20s
         this.AUTO_SLIDE_DELAY = 5000; // 5s auto slide
-        this.domainKey = domainKey;
-        this.slotName = slotName;
-        this.apiBaseUrl = apiBaseUrl;
+        this.recommendationGetter = recommendationGetter;
         this.config = {
             minDelay: config.minDelay || this.DEFAULT_MIN_DELAY,
             maxDelay: config.maxDelay || this.DEFAULT_MAX_DELAY,
@@ -1141,39 +1139,15 @@ class PopupDisplay {
             this.scheduleNextPopup();
         }
     }
-    // Fetch recommendations từ API
+    // Fetch recommendations từ DisplayManager (đã cached)
     async fetchRecommendations() {
         try {
-            const response = await fetch(`${this.apiBaseUrl}/recommendations?domainKey=${this.domainKey}&slot=${this.slotName}`);
-            if (!response.ok) {
-                throw new Error('API Error');
-            }
-            const data = await response.json();
-            return data;
+            const items = await this.recommendationGetter();
+            return items;
         }
         catch (error) {
-            console.error('[PopupDisplay] Error fetching recommendations:', error);
-            // Fallback mock data for development
-            return [
-                {
-                    id: 1,
-                    name: 'Sản phẩm 1',
-                    img: 'https://via.placeholder.com/180x130',
-                    price: '199.000đ'
-                },
-                {
-                    id: 2,
-                    name: 'Sản phẩm 2',
-                    img: 'https://via.placeholder.com/180x130',
-                    price: '299.000đ'
-                },
-                {
-                    id: 3,
-                    name: 'Sản phẩm 3',
-                    img: 'https://via.placeholder.com/180x130',
-                    price: '399.000đ'
-                }
-            ];
+            console.error('[PopupDisplay] Error getting recommendations:', error);
+            return [];
         }
     }
     // Render popup với Shadow DOM
@@ -1226,13 +1200,14 @@ class PopupDisplay {
         const nextBtn = shadow.querySelector('.recsys-next');
         const renderSlide = () => {
             const item = items[currentIndex];
-            const name = item.name || item.title || 'Sản phẩm';
-            const img = item.img || item.image || '';
+            const title = item.title || 'Sản phẩm';
+            const description = item.description || '';
+            const img = item.img;
             slideContainer.innerHTML = `
-        <div class="recsys-item" data-id="${item.id}">
-          <img src="${img}" alt="${name}" />
-          <div class="recsys-name">${name}</div>
-          <div class="recsys-price">${item.price}</div>
+        <div class="recsys-item" data-id="${item.id}" data-domain-item-id="${item.domainItemId}">
+          <img src="${img}" alt="${title}" />
+          <div class="recsys-name">${title}</div>
+          <div class="recsys-description">${description}</div>
         </div>
       `;
         };
@@ -1418,23 +1393,26 @@ class PopupDisplay {
         color: #333;
       }
 
-      .recsys-price {
-        font-size: 14px;
-        color: #d10000;
-        font-weight: bold;
+      .recsys-description {
+        font-size: 12px;
+        color: #666;
+        margin-top: 4px;
+        display: -webkit-box;
+        -webkit-line-clamp: 2;
+        -webkit-box-orient: vertical;
+        overflow: hidden;
+        text-overflow: ellipsis;
       }
     `;
     }
 }
 
 class InlineDisplay {
-    constructor(domainKey, slotName, selector, apiBaseUrl, config = {}) {
+    constructor(_domainKey, _slotName, selector, _apiBaseUrl, config = {}, recommendationGetter) {
         this.observer = null;
         this.debounceTimer = null;
-        this.domainKey = domainKey;
-        this.slotName = slotName;
         this.selector = selector;
-        this.apiBaseUrl = apiBaseUrl;
+        this.recommendationGetter = recommendationGetter;
         this.config = {
             pages: config.pages || ['*'], // Default show on all pages
         };
@@ -1525,45 +1503,15 @@ class InlineDisplay {
             return currentPath === pattern;
         });
     }
-    // Fetch recommendations từ API
+    // Fetch recommendations từ DisplayManager (đã cached)
     async fetchRecommendations() {
         try {
-            const response = await fetch(`${this.apiBaseUrl}/recommendations?domainKey=${this.domainKey}&slot=${this.slotName}`);
-            if (!response.ok) {
-                throw new Error('API Error');
-            }
-            const data = await response.json();
-            return data;
+            const items = await this.recommendationGetter();
+            return items;
         }
         catch (error) {
-            console.error('[InlineDisplay] Error fetching recommendations:', error);
-            // Fallback mock data for development
-            return [
-                {
-                    id: 1,
-                    name: 'Sản phẩm 1',
-                    img: 'https://via.placeholder.com/150',
-                    price: '199.000đ'
-                },
-                {
-                    id: 2,
-                    name: 'Sản phẩm 2',
-                    img: 'https://via.placeholder.com/150',
-                    price: '299.000đ'
-                },
-                {
-                    id: 3,
-                    name: 'Sản phẩm 3',
-                    img: 'https://via.placeholder.com/150',
-                    price: '399.000đ'
-                },
-                {
-                    id: 4,
-                    name: 'Sản phẩm 4',
-                    img: 'https://via.placeholder.com/150',
-                    price: '499.000đ'
-                }
-            ];
+            console.error('[InlineDisplay] Error getting recommendations:', error);
+            return [];
         }
     }
     // Render widget với Shadow DOM
@@ -1585,18 +1533,20 @@ class InlineDisplay {
             wrapper.className = 'recsys-wrapper';
             // Create items
             items.forEach(item => {
-                const name = item.name || item.title || 'Sản phẩm';
-                const img = item.img || item.image || '';
+                const title = item.title || 'Sản phẩm';
+                const description = item.description || '';
+                const img = item.img;
                 const itemEl = document.createElement('div');
                 itemEl.className = 'recsys-item';
                 itemEl.setAttribute('data-id', String(item.id));
+                itemEl.setAttribute('data-domain-item-id', item.domainItemId);
                 itemEl.innerHTML = `
           <div class="recsys-img-box">
-            <img src="${img}" alt="${name}">
+            <img src="${img}" alt="${title}">
           </div>
           <div class="recsys-info">
-            <div class="recsys-title">${name}</div>
-            <div class="recsys-price">${item.price}</div>
+            <div class="recsys-title">${title}</div>
+            <div class="recsys-description">${description}</div>
           </div>
         `;
                 wrapper.appendChild(itemEl);
@@ -1686,32 +1636,397 @@ class InlineDisplay {
         overflow: hidden;
       }
 
-      .recsys-price {
-        font-size: 14px;
-        color: #d0021b;
-        font-weight: bold;
+      .recsys-description {
+        font-size: 12px;
+        color: #666;
         margin-top: auto;
+        display: -webkit-box;
+        -webkit-line-clamp: 2;
+        -webkit-box-orient: vertical;
+        overflow: hidden;
+        text-overflow: ellipsis;
       }
     `;
     }
 }
 
-class DisplayManager {
-    constructor(domainKey, apiBaseUrl = 'http://localhost:3000') {
-        this.popupDisplay = null;
-        this.inlineDisplay = null;
+class PlaceholderImage {
+    /**
+     * Tạo base64 placeholder image với text
+     * @param width - Width của image
+     * @param height - Height của image
+     * @param text - Text hiển thị trên image
+     * @param bgColor - Background color (hex)
+     * @param textColor - Text color (hex)
+     * @returns Base64 data URL của image
+     */
+    static generate(width = 180, height = 130, text = 'No Image', bgColor = '#e0e0e0', textColor = '#666') {
+        // Create canvas element
+        const canvas = document.createElement('canvas');
+        canvas.width = width;
+        canvas.height = height;
+        const ctx = canvas.getContext('2d');
+        if (!ctx) {
+            return this.getFallbackImage();
+        }
+        // Fill background
+        ctx.fillStyle = bgColor;
+        ctx.fillRect(0, 0, width, height);
+        // Add text
+        ctx.fillStyle = textColor;
+        ctx.font = 'bold 16px Arial';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText(text, width / 2, height / 2);
+        // Convert to data URL
+        return canvas.toDataURL('image/png');
+    }
+    /**
+     * Tạo gradient placeholder image
+     * @param width - Width của image
+     * @param height - Height của image
+     * @returns Base64 data URL của image
+     */
+    static generateGradient(width = 180, height = 130) {
+        const canvas = document.createElement('canvas');
+        canvas.width = width;
+        canvas.height = height;
+        const ctx = canvas.getContext('2d');
+        if (!ctx) {
+            return this.getFallbackImage();
+        }
+        // Create gradient
+        const gradient = ctx.createLinearGradient(0, 0, width, height);
+        gradient.addColorStop(0, '#f5f5f5');
+        gradient.addColorStop(0.5, '#e0e0e0');
+        gradient.addColorStop(1, '#d5d5d5');
+        // Fill with gradient
+        ctx.fillStyle = gradient;
+        ctx.fillRect(0, 0, width, height);
+        // Add icon
+        ctx.fillStyle = '#999';
+        ctx.font = 'bold 48px Arial';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText('📦', width / 2, height / 2);
+        return canvas.toDataURL('image/png');
+    }
+    /**
+     * SVG placeholder image (nhỏ gọn hơn)
+     * @param width - Width của image
+     * @param height - Height của image
+     * @param text - Text hiển thị
+     * @returns SVG data URL
+     */
+    static generateSVG(width = 180, height = 130, text = 'No Image') {
+        const svg = `
+      <svg width="${width}" height="${height}" xmlns="http://www.w3.org/2000/svg">
+        <rect width="100%" height="100%" fill="#e0e0e0"/>
+        <text 
+          x="50%" 
+          y="50%" 
+          font-family="Arial, sans-serif" 
+          font-size="16" 
+          font-weight="bold" 
+          fill="#666" 
+          text-anchor="middle" 
+          dominant-baseline="middle"
+        >
+          ${text}
+        </text>
+      </svg>
+    `;
+        return `data:image/svg+xml;base64,${btoa(svg)}`;
+    }
+    /**
+     * Fallback image khi không thể tạo canvas
+     * @returns Base64 data URL của 1x1 transparent pixel
+     */
+    static getFallbackImage() {
+        // 1x1 transparent pixel
+        return 'data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7';
+    }
+    /**
+     * Get default placeholder cho recommendation items
+     * @returns Base64 data URL
+     */
+    static getDefaultRecommendation() {
+        return this.generateSVG(180, 130, '📦');
+    }
+}
+
+/**
+ * RecommendationFetcher - Class để fetch và quản lý recommendation data
+ * Design pattern tương tự ConfigLoader
+ */
+class RecommendationFetcher {
+    constructor(domainKey, apiBaseUrl = 'https://recsys-tracker-module.onrender.com') {
+        this.CACHE_TTL = 5 * 60 * 1000; // 5 minutes cache
         this.domainKey = domainKey;
         this.apiBaseUrl = apiBaseUrl;
+        this.cache = new Map();
+    }
+    /**
+     * Fetch recommendations cho user hiện tại
+     * @param userValue - User ID/Username/AnonymousId
+     * @param userField - Loại user field (UserId, Username, AnonymousId)
+     * @param options - Optional configuration
+     * @returns Promise<RecommendationItem[]>
+     */
+    async fetchRecommendations(userValue, userField = 'AnonymousId', options = {}) {
+        try {
+            // Check cache first
+            const cacheKey = this.getCacheKey(userValue, userField);
+            const cached = this.getFromCache(cacheKey);
+            if (cached) {
+                console.log('[RecommendationFetcher] Returning cached results');
+                return cached;
+            }
+            // Prepare request payload
+            const requestBody = {
+                UserValue: userValue,
+                UserField: userField,
+                DomainKey: this.domainKey,
+                NumberItems: options.numberItems || 10,
+            };
+            console.log('[RecommendationFetcher] Fetching recommendations:', requestBody);
+            // Call API
+            const response = await fetch(`${this.apiBaseUrl}/recommendation`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify(requestBody),
+            });
+            if (!response.ok) {
+                throw new Error(`API Error: ${response.status} ${response.statusText}`);
+            }
+            const data = await response.json();
+            // Transform response to RecommendationItem
+            const items = this.transformResponse(data);
+            // Cache results
+            this.saveToCache(cacheKey, items);
+            console.log(`[RecommendationFetcher] Fetched ${items.length} recommendations`);
+            return items;
+        }
+        catch (error) {
+            console.error('[RecommendationFetcher] Error fetching recommendations:', error);
+            throw error;
+        }
+    }
+    /**
+     * Get recommendations cho anonymous user (auto-detect)
+     * @param options - Optional configuration
+     * @returns Promise<RecommendationItem[]>
+     */
+    async fetchForAnonymousUser(options = {}) {
+        // Get or generate anonymous ID
+        const anonymousId = this.getOrCreateAnonymousId();
+        return this.fetchRecommendations(anonymousId, 'AnonymousId', options);
+    }
+    /**
+     * Get recommendations cho logged-in user by ID
+     * @param userId - User ID
+     * @param options - Optional configuration
+     * @returns Promise<RecommendationItem[]>
+     */
+    async fetchForUserId(userId, options = {}) {
+        return this.fetchRecommendations(userId, 'UserId', options);
+    }
+    /**
+     * Get recommendations cho logged-in user by Username
+     * @param username - Username
+     * @param options - Optional configuration
+     * @returns Promise<RecommendationItem[]>
+     */
+    async fetchForUsername(username, options = {}) {
+        return this.fetchRecommendations(username, 'Username', options);
+    }
+    /**
+     * Transform API response sang RecommendationItem format
+     * @param data - Response từ API
+     * @returns RecommendationItem[]
+     */
+    transformResponse(data) {
+        if (!Array.isArray(data)) {
+            return [];
+        }
+        return data.map(item => ({
+            id: item.Id,
+            domainItemId: item.DomainItemId,
+            title: item.Title,
+            description: item.Description,
+            img: PlaceholderImage.getDefaultRecommendation(), // Use placeholder
+        }));
+    }
+    /**
+     * Get or create anonymous ID cho user
+     * @returns Anonymous ID string
+     */
+    getOrCreateAnonymousId() {
+        const storageKey = 'recsys_anonymous_id';
+        try {
+            // Try to get existing ID from localStorage
+            let anonymousId = localStorage.getItem(storageKey);
+            if (!anonymousId) {
+                // Generate new anonymous ID
+                anonymousId = `anon_${Date.now()}_${this.generateRandomString(8)}`;
+                localStorage.setItem(storageKey, anonymousId);
+            }
+            return anonymousId;
+        }
+        catch (error) {
+            // Fallback if localStorage not available
+            console.warn('[RecommendationFetcher] localStorage not available, using session ID');
+            return `anon_${Date.now()}_${this.generateRandomString(8)}`;
+        }
+    }
+    /**
+     * Generate random string cho anonymous ID
+     * @param length - Length của string
+     * @returns Random string
+     */
+    generateRandomString(length) {
+        const chars = 'abcdefghijklmnopqrstuvwxyz0123456789';
+        let result = '';
+        for (let i = 0; i < length; i++) {
+            result += chars.charAt(Math.floor(Math.random() * chars.length));
+        }
+        return result;
+    }
+    /**
+     * Generate cache key
+     * @param userValue - User value
+     * @param userField - User field type
+     * @returns Cache key string
+     */
+    getCacheKey(userValue, userField) {
+        return `${userField}:${userValue}`;
+    }
+    /**
+     * Get items from cache if not expired
+     * @param key - Cache key
+     * @returns Cached items or null
+     */
+    getFromCache(key) {
+        const cached = this.cache.get(key);
+        if (!cached) {
+            return null;
+        }
+        // Check if cache expired
+        const now = Date.now();
+        if (now - cached.timestamp > this.CACHE_TTL) {
+            this.cache.delete(key);
+            return null;
+        }
+        return cached.items;
+    }
+    /**
+     * Save items to cache
+     * @param key - Cache key
+     * @param items - Items to cache
+     */
+    saveToCache(key, items) {
+        this.cache.set(key, {
+            items,
+            timestamp: Date.now(),
+        });
+    }
+    /**
+     * Clear cache
+     */
+    clearCache() {
+        this.cache.clear();
+    }
+    /**
+     * Update API base URL
+     * @param url - New API base URL
+     */
+    setApiBaseUrl(url) {
+        this.apiBaseUrl = url;
+        this.clearCache(); // Clear cache when API URL changes
+    }
+}
+
+const ANON_USER_ID_KEY = 'recsys_anon_id';
+class DisplayManager {
+    constructor(domainKey, apiBaseUrl = 'https://recsys-tracker-module.onrender.com') {
+        this.popupDisplay = null;
+        this.inlineDisplay = null;
+        this.cachedRecommendations = null;
+        this.fetchPromise = null;
+        this.domainKey = domainKey;
+        this.apiBaseUrl = apiBaseUrl;
+        this.recommendationFetcher = new RecommendationFetcher(domainKey, apiBaseUrl);
     }
     // Khởi tạo display methods dựa trên config
-    initialize(returnMethods) {
+    async initialize(returnMethods) {
         if (!returnMethods || returnMethods.length === 0) {
             console.log('[DisplayManager] No return methods configured');
             return;
         }
+        // Fetch recommendations 1 lần duy nhất cho tất cả display methods
+        await this.fetchRecommendationsOnce();
         returnMethods.forEach(method => {
             this.activateDisplayMethod(method);
         });
+    }
+    // Fetch recommendations 1 lần duy nhất và cache kết quả
+    async fetchRecommendationsOnce() {
+        // Nếu đã có cache, return ngay
+        if (this.cachedRecommendations) {
+            return this.cachedRecommendations;
+        }
+        // Nếu đang fetch, đợi kết quả
+        if (this.fetchPromise) {
+            return this.fetchPromise;
+        }
+        // Fetch mới
+        this.fetchPromise = this.fetchRecommendationsInternal();
+        try {
+            this.cachedRecommendations = await this.fetchPromise;
+            return this.cachedRecommendations;
+        }
+        finally {
+            this.fetchPromise = null;
+        }
+    }
+    // Internal fetch method
+    async fetchRecommendationsInternal() {
+        try {
+            const anonymousId = this.getAnonymousId();
+            if (!anonymousId) {
+                console.warn('[DisplayManager] No anonymous ID found');
+                return [];
+            }
+            console.log(`[DisplayManager] Fetching recommendations for anonymous ID: ${anonymousId}`);
+            const items = await this.recommendationFetcher.fetchRecommendations(anonymousId, 'AnonymousId', { numberItems: 10 });
+            console.log(`[DisplayManager] Fetched ${items.length} recommendations`);
+            return items;
+        }
+        catch (error) {
+            console.error('[DisplayManager] Error fetching recommendations:', error);
+            return [];
+        }
+    }
+    // Lấy anonymous ID từ localStorage (recsys_anon_id)
+    getAnonymousId() {
+        try {
+            const anonId = localStorage.getItem(ANON_USER_ID_KEY);
+            if (anonId) {
+                return anonId;
+            }
+            console.warn('[DisplayManager] recsys_anon_id not found in localStorage');
+            return null;
+        }
+        catch (error) {
+            console.error('[DisplayManager] Error reading localStorage:', error);
+            return null;
+        }
+    }
+    // Get cached recommendations
+    async getRecommendations() {
+        return this.fetchRecommendationsOnce();
     }
     // Kích hoạt display method tương ứng
     activateDisplayMethod(method) {
@@ -1740,7 +2055,8 @@ class DisplayManager {
                     popupConfig = {};
                 }
             }
-            this.popupDisplay = new PopupDisplay(this.domainKey, slotName, this.apiBaseUrl, popupConfig);
+            this.popupDisplay = new PopupDisplay(this.domainKey, slotName, this.apiBaseUrl, popupConfig, () => this.getRecommendations() // Provide getter function
+            );
             this.popupDisplay.start();
             console.log(`[DisplayManager] Popup initialized for slot: ${slotName}`);
         }
@@ -1755,7 +2071,8 @@ class DisplayManager {
                 console.warn('[DisplayManager] Inline display requires a selector');
                 return;
             }
-            this.inlineDisplay = new InlineDisplay(this.domainKey, slotName, selector, this.apiBaseUrl);
+            this.inlineDisplay = new InlineDisplay(this.domainKey, slotName, selector, this.apiBaseUrl, {}, () => this.getRecommendations() // Provide getter function
+            );
             this.inlineDisplay.start();
             console.log(`[DisplayManager] Inline initialized for slot: ${slotName}, selector: ${selector}`);
         }
@@ -4137,7 +4454,7 @@ class RecSysTracker {
                 if (this.config.returnMethods && this.config.returnMethods.length > 0) {
                     const apiBaseUrl = "https://recsys-tracker-module.onrender.com";
                     this.displayManager = new DisplayManager(this.config.domainKey, apiBaseUrl);
-                    this.displayManager.initialize(this.config.returnMethods);
+                    await this.displayManager.initialize(this.config.returnMethods);
                     console.log('[RecSysTracker] Display methods initialized');
                 }
                 // Tự động khởi tạo plugins dựa trên rules

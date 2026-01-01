@@ -1,11 +1,3 @@
-export interface RecommendationItem {
-    id: string | number;
-    name?: string;
-    title?: string;
-    img?: string;
-    image?: string;
-    price: string;
-}
 export interface PopupConfig {
     minDelay?: number;
     maxDelay?: number;

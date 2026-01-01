@@ -28,6 +28,11 @@ export { PopupDisplay } from './display/popup-display';
 export { InlineDisplay } from './display/inline-display';
 export * from './display/types';
 
+// Recommendation
+export { RecommendationFetcher } from './recommendation/recommendation-fetcher';
+export { PlaceholderImage } from './recommendation/placeholder-image';
+export * from './recommendation/types';
+
 // Plugins
 export { IPlugin, BasePlugin } from './plugins/base-plugin';
 export { PluginManager } from './plugins/plugin-manager';

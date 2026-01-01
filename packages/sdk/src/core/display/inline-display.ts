@@ -1,25 +1,23 @@
-import { RecommendationItem, InlineConfig } from './types';
+import { InlineConfig } from './types';
+import { RecommendationItem } from '../recommendation';
 
 export class InlineDisplay {
-  private domainKey: string;
-  private slotName: string;
   private selector: string;
-  private apiBaseUrl: string;
   private config: InlineConfig;
+  private recommendationGetter: () => Promise<RecommendationItem[]>;
   private observer: MutationObserver | null = null;
   private debounceTimer: NodeJS.Timeout | null = null;
 
   constructor(
-    domainKey: string,
-    slotName: string,
+    _domainKey: string,
+    _slotName: string,
     selector: string,
-    apiBaseUrl: string,
-    config: InlineConfig = {}
+    _apiBaseUrl: string,
+    config: InlineConfig = {},
+    recommendationGetter: () => Promise<RecommendationItem[]>
   ) {
-    this.domainKey = domainKey;
-    this.slotName = slotName;
     this.selector = selector;
-    this.apiBaseUrl = apiBaseUrl;
+    this.recommendationGetter = recommendationGetter;
     this.config = {
       pages: config.pages || ['*'], // Default show on all pages
     };
@@ -127,49 +125,14 @@ export class InlineDisplay {
     });
   }
 
-  // Fetch recommendations từ API
+  // Fetch recommendations từ DisplayManager (đã cached)
   private async fetchRecommendations(): Promise<RecommendationItem[]> {
     try {
-      const response = await fetch(
-        `${this.apiBaseUrl}/recommendations?domainKey=${this.domainKey}&slot=${this.slotName}`
-      );
-
-      if (!response.ok) {
-        throw new Error('API Error');
-      }
-
-      const data = await response.json();
-      return data;
+      const items = await this.recommendationGetter();
+      return items;
     } catch (error) {
-      console.error('[InlineDisplay] Error fetching recommendations:', error);
-
-      // Fallback mock data for development
-      return [
-        {
-          id: 1,
-          name: 'Sản phẩm 1',
-          img: 'https://via.placeholder.com/150',
-          price: '199.000đ'
-        },
-        {
-          id: 2,
-          name: 'Sản phẩm 2',
-          img: 'https://via.placeholder.com/150',
-          price: '299.000đ'
-        },
-        {
-          id: 3,
-          name: 'Sản phẩm 3',
-          img: 'https://via.placeholder.com/150',
-          price: '399.000đ'
-        },
-        {
-          id: 4,
-          name: 'Sản phẩm 4',
-          img: 'https://via.placeholder.com/150',
-          price: '499.000đ'
-        }
-      ];
+      console.error('[InlineDisplay] Error getting recommendations:', error);
+      return [];
     }
   }
 
@@ -196,20 +159,22 @@ export class InlineDisplay {
 
       // Create items
       items.forEach(item => {
-        const name = item.name || item.title || 'Sản phẩm';
-        const img = item.img || item.image || '';
+        const title = item.title || 'Sản phẩm';
+        const description = item.description || '';
+        const img = item.img;
 
         const itemEl = document.createElement('div');
         itemEl.className = 'recsys-item';
         itemEl.setAttribute('data-id', String(item.id));
+        itemEl.setAttribute('data-domain-item-id', item.domainItemId);
 
         itemEl.innerHTML = `
           <div class="recsys-img-box">
-            <img src="${img}" alt="${name}">
+            <img src="${img}" alt="${title}">
           </div>
           <div class="recsys-info">
-            <div class="recsys-title">${name}</div>
-            <div class="recsys-price">${item.price}</div>
+            <div class="recsys-title">${title}</div>
+            <div class="recsys-description">${description}</div>
           </div>
         `;
 
@@ -302,11 +267,15 @@ export class InlineDisplay {
         overflow: hidden;
       }
 
-      .recsys-price {
-        font-size: 14px;
-        color: #d0021b;
-        font-weight: bold;
+      .recsys-description {
+        font-size: 12px;
+        color: #666;
         margin-top: auto;
+        display: -webkit-box;
+        -webkit-line-clamp: 2;
+        -webkit-box-orient: vertical;
+        overflow: hidden;
+        text-overflow: ellipsis;
       }
     `;
   }

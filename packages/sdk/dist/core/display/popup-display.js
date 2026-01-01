@@ -1,5 +1,5 @@
 export class PopupDisplay {
-    constructor(domainKey, slotName, apiBaseUrl, config = {}) {
+    constructor(_domainKey, _slotName, _apiBaseUrl, config = {}, recommendationGetter) {
         this.popupTimeout = null;
         this.autoCloseTimeout = null;
         this.autoSlideTimeout = null;
@@ -7,9 +7,7 @@ export class PopupDisplay {
         this.DEFAULT_MIN_DELAY = 10000; // 10s
         this.DEFAULT_MAX_DELAY = 20000; // 20s
         this.AUTO_SLIDE_DELAY = 5000; // 5s auto slide
-        this.domainKey = domainKey;
-        this.slotName = slotName;
-        this.apiBaseUrl = apiBaseUrl;
+        this.recommendationGetter = recommendationGetter;
         this.config = {
             minDelay: config.minDelay || this.DEFAULT_MIN_DELAY,
             maxDelay: config.maxDelay || this.DEFAULT_MAX_DELAY,
@@ -88,39 +86,15 @@ export class PopupDisplay {
             this.scheduleNextPopup();
         }
     }
-    // Fetch recommendations từ API
+    // Fetch recommendations từ DisplayManager (đã cached)
     async fetchRecommendations() {
         try {
-            const response = await fetch(`${this.apiBaseUrl}/recommendations?domainKey=${this.domainKey}&slot=${this.slotName}`);
-            if (!response.ok) {
-                throw new Error('API Error');
-            }
-            const data = await response.json();
-            return data;
+            const items = await this.recommendationGetter();
+            return items;
         }
         catch (error) {
-            console.error('[PopupDisplay] Error fetching recommendations:', error);
-            // Fallback mock data for development
-            return [
-                {
-                    id: 1,
-                    name: 'Sản phẩm 1',
-                    img: 'https://via.placeholder.com/180x130',
-                    price: '199.000đ'
-                },
-                {
-                    id: 2,
-                    name: 'Sản phẩm 2',
-                    img: 'https://via.placeholder.com/180x130',
-                    price: '299.000đ'
-                },
-                {
-                    id: 3,
-                    name: 'Sản phẩm 3',
-                    img: 'https://via.placeholder.com/180x130',
-                    price: '399.000đ'
-                }
-            ];
+            console.error('[PopupDisplay] Error getting recommendations:', error);
+            return [];
         }
     }
     // Render popup với Shadow DOM
@@ -173,13 +147,14 @@ export class PopupDisplay {
         const nextBtn = shadow.querySelector('.recsys-next');
         const renderSlide = () => {
             const item = items[currentIndex];
-            const name = item.name || item.title || 'Sản phẩm';
-            const img = item.img || item.image || '';
+            const title = item.title || 'Sản phẩm';
+            const description = item.description || '';
+            const img = item.img;
             slideContainer.innerHTML = `
-        <div class="recsys-item" data-id="${item.id}">
-          <img src="${img}" alt="${name}" />
-          <div class="recsys-name">${name}</div>
-          <div class="recsys-price">${item.price}</div>
+        <div class="recsys-item" data-id="${item.id}" data-domain-item-id="${item.domainItemId}">
+          <img src="${img}" alt="${title}" />
+          <div class="recsys-name">${title}</div>
+          <div class="recsys-description">${description}</div>
         </div>
       `;
         };
@@ -365,10 +340,15 @@ export class PopupDisplay {
         color: #333;
       }
 
-      .recsys-price {
-        font-size: 14px;
-        color: #d10000;
-        font-weight: bold;
+      .recsys-description {
+        font-size: 12px;
+        color: #666;
+        margin-top: 4px;
+        display: -webkit-box;
+        -webkit-line-clamp: 2;
+        -webkit-box-orient: vertical;
+        overflow: hidden;
+        text-overflow: ellipsis;
       }
     `;
     }

@@ -1,11 +1,9 @@
 export class InlineDisplay {
-    constructor(domainKey, slotName, selector, apiBaseUrl, config = {}) {
+    constructor(_domainKey, _slotName, selector, _apiBaseUrl, config = {}, recommendationGetter) {
         this.observer = null;
         this.debounceTimer = null;
-        this.domainKey = domainKey;
-        this.slotName = slotName;
         this.selector = selector;
-        this.apiBaseUrl = apiBaseUrl;
+        this.recommendationGetter = recommendationGetter;
         this.config = {
             pages: config.pages || ['*'], // Default show on all pages
         };
@@ -96,45 +94,15 @@ export class InlineDisplay {
             return currentPath === pattern;
         });
     }
-    // Fetch recommendations từ API
+    // Fetch recommendations từ DisplayManager (đã cached)
     async fetchRecommendations() {
         try {
-            const response = await fetch(`${this.apiBaseUrl}/recommendations?domainKey=${this.domainKey}&slot=${this.slotName}`);
-            if (!response.ok) {
-                throw new Error('API Error');
-            }
-            const data = await response.json();
-            return data;
+            const items = await this.recommendationGetter();
+            return items;
         }
         catch (error) {
-            console.error('[InlineDisplay] Error fetching recommendations:', error);
-            // Fallback mock data for development
-            return [
-                {
-                    id: 1,
-                    name: 'Sản phẩm 1',
-                    img: 'https://via.placeholder.com/150',
-                    price: '199.000đ'
-                },
-                {
-                    id: 2,
-                    name: 'Sản phẩm 2',
-                    img: 'https://via.placeholder.com/150',
-                    price: '299.000đ'
-                },
-                {
-                    id: 3,
-                    name: 'Sản phẩm 3',
-                    img: 'https://via.placeholder.com/150',
-                    price: '399.000đ'
-                },
-                {
-                    id: 4,
-                    name: 'Sản phẩm 4',
-                    img: 'https://via.placeholder.com/150',
-                    price: '499.000đ'
-                }
-            ];
+            console.error('[InlineDisplay] Error getting recommendations:', error);
+            return [];
         }
     }
     // Render widget với Shadow DOM
@@ -156,18 +124,20 @@ export class InlineDisplay {
             wrapper.className = 'recsys-wrapper';
             // Create items
             items.forEach(item => {
-                const name = item.name || item.title || 'Sản phẩm';
-                const img = item.img || item.image || '';
+                const title = item.title || 'Sản phẩm';
+                const description = item.description || '';
+                const img = item.img;
                 const itemEl = document.createElement('div');
                 itemEl.className = 'recsys-item';
                 itemEl.setAttribute('data-id', String(item.id));
+                itemEl.setAttribute('data-domain-item-id', item.domainItemId);
                 itemEl.innerHTML = `
           <div class="recsys-img-box">
-            <img src="${img}" alt="${name}">
+            <img src="${img}" alt="${title}">
           </div>
           <div class="recsys-info">
-            <div class="recsys-title">${name}</div>
-            <div class="recsys-price">${item.price}</div>
+            <div class="recsys-title">${title}</div>
+            <div class="recsys-description">${description}</div>
           </div>
         `;
                 wrapper.appendChild(itemEl);
@@ -257,11 +227,15 @@ export class InlineDisplay {
         overflow: hidden;
       }
 
-      .recsys-price {
-        font-size: 14px;
-        color: #d0021b;
-        font-weight: bold;
+      .recsys-description {
+        font-size: 12px;
+        color: #666;
         margin-top: auto;
+        display: -webkit-box;
+        -webkit-line-clamp: 2;
+        -webkit-box-orient: vertical;
+        overflow: hidden;
+        text-overflow: ellipsis;
       }
     `;
     }

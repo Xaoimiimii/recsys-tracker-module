@@ -78,7 +78,7 @@ export class RecSysTracker {
         if (this.config.returnMethods && this.config.returnMethods.length > 0) {
           const apiBaseUrl = process.env.API_URL || 'https://recsys-tracker-module.onrender.com';
           this.displayManager = new DisplayManager(this.config.domainKey, apiBaseUrl);
-          this.displayManager.initialize(this.config.returnMethods);
+          await this.displayManager.initialize(this.config.returnMethods);
           console.log('[RecSysTracker] Display methods initialized');
         }
 
