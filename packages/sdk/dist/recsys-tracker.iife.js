@@ -613,7 +613,7 @@ var RecSysTracker = (function (exports) {
                 }
             }
             // Chuyển đổi TrackedEvent sang định dạng CreateEventDto
-            const payload = JSON.stringify({
+            const payloadObject = {
                 Timestamp: event.timestamp,
                 EventTypeId: event.eventTypeId,
                 TrackingRuleId: event.trackingRuleId,
@@ -624,28 +624,16 @@ var RecSysTracker = (function (exports) {
                 ItemValue: event.itemValue,
                 ...(event.ratingValue !== undefined && { RatingValue: event.ratingValue }),
                 ...(event.ratingReview !== undefined && { RatingReview: event.ratingReview })
-            });
+            };
+            const payload = JSON.stringify(payloadObject);
+            // Log payload sẽ gửi đi
+            console.log('[EventDispatcher] Sending payload to API:', payloadObject);
             // Thử từng phương thức gửi theo thứ tự ưu tiên
             const strategies = ['beacon', 'fetch'];
             for (const strategy of strategies) {
                 try {
                     const success = await this.sendWithStrategy(payload, strategy);
                     if (success) {
-                        console.log('[EventDispatcher] Payload đã được gửi thành công:', {
-                            strategy,
-                            eventId: event.id,
-                            eventTypeId: event.eventTypeId,
-                            trackingRuleId: event.trackingRuleId,
-                            domainKey: event.domainKey,
-                            userField: event.userField,
-                            userValue: event.userValue,
-                            itemField: event.itemField,
-                            itemValue: event.itemValue,
-                            ratingValue: event.ratingValue,
-                            ratingReview: event.ratingReview,
-                            timestamp: event.timestamp,
-                            endpoint: this.endpoint
-                        });
                         return true;
                     }
                 }
@@ -654,7 +642,6 @@ var RecSysTracker = (function (exports) {
                 }
             }
             // Trả về false nếu tất cả phương thức gửi đều thất bại
-            console.error('[EventDispatcher] Tất cả phương thức gửi thất bại cho event:', event.id);
             return false;
         }
         // Gửi nhiều events cùng lúc (gọi send cho từng event)
