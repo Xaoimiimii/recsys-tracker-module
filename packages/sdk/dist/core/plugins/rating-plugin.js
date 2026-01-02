@@ -64,7 +64,7 @@ export class RatingPlugin extends BasePlugin {
                     if (result.originalValue === 0 && !result.reviewText) {
                         continue;
                     }
-                    console.log(`[RatingPlugin] 🎯 Captured [${eventType}]: Raw=${result.originalValue}/${result.maxValue} -> Norm=${result.normalizedValue}`);
+                    // console.log(`[RatingPlugin] 🎯 Captured [${eventType}]: Raw=${result.originalValue}/${result.maxValue} -> Norm=${result.normalizedValue}`);
                     // Build Payload using centralized method
                     this.buildAndTrack(matchedElement, rule, eventId);
                     break;

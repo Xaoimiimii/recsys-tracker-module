@@ -10,7 +10,6 @@ export class ClickPlugin extends BasePlugin {
     start() {
         const configToUse = this.config || (this.tracker ? this.tracker.getConfig() : null);
         if (!configToUse || !configToUse.trackingRules) {
-            console.warn("[ClickPlugin] No tracking rules found. Plugin stopped.");
             return;
         }
         console.log("[ClickPlugin] initialized.");
@@ -48,13 +47,6 @@ export class ClickPlugin extends BasePlugin {
             }
             if (!target)
                 continue;
-            // Log for debugging
-            console.log('[ClickPlugin] ✓ Click matched tracking target:', {
-                element: target.className || target.tagName,
-                selector: selector,
-                rule: rule.name,
-                matchedDirectly: clickedElement === target
-            });
             if ((_b = rule.conditions) === null || _b === void 0 ? void 0 : _b.length) {
                 const conditionsMet = rule.conditions.every((cond) => {
                     if (cond.patternId === 2 && cond.operatorId === 1) {
@@ -65,7 +57,6 @@ export class ClickPlugin extends BasePlugin {
                 if (!conditionsMet)
                     continue;
             }
-            console.log("🎯 [ClickPlugin] Rule matched:", rule.name, "| ID:", rule.id);
             let payload = {};
             if ((_c = rule.payloadMappings) === null || _c === void 0 ? void 0 : _c.length) {
                 rule.payloadMappings.forEach((m) => {
@@ -89,7 +80,6 @@ export class ClickPlugin extends BasePlugin {
                     }
                 });
             }
-            console.log("🚀 Payload collected:", payload);
             const userKey = Object.keys(payload).find((k) => k.toLowerCase().includes("user")) ||
                 "userId";
             const itemKey = Object.keys(payload).find((k) => k.toLowerCase().includes("item")) ||

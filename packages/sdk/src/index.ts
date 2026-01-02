@@ -14,6 +14,7 @@ import { PayloadBuilder } from './core/payload/payload-builder';
 import { NetworkPlugin } from './core/plugins/network-plugin';
 import { EventDeduplicator } from './core/utils/event-deduplicator';
 import { LoopGuard } from './core/utils/loop-guard';
+import { getOrCreateAnonymousId, saveCachedUserInfo, getCachedUserInfo, log } from './core/plugins/utils/plugin-utils';
 
 // RecSysTracker - Main SDK class
 export class RecSysTracker {
@@ -96,6 +97,9 @@ export class RecSysTracker {
 
       // Setup page unload handler
       this.setupUnloadHandler();
+
+      // Khởi tạo Anonymous ID ngay khi SDK init
+      getOrCreateAnonymousId();
 
       this.isInitialized = true;
     }, 'init');
@@ -205,11 +209,43 @@ export class RecSysTracker {
         return;
       }
 
+      // 3-tier fallback strategy:
+      // 1. Dùng userValue từ event hiện tại nếu valid
+      // 2. Dùng cached user info nếu có
+      // 3. Dùng AnonymousId (fallback cuối cùng)
+      let finalUserField = eventData.userField;
+      let finalUserValue = eventData.userValue;
+      
+      // Nếu userValue hiện tại valid và không phải AnonymousId → lưu vào cache
+      if (finalUserValue && 
+          finalUserValue.trim() !== '' && 
+          finalUserValue !== 'guest' &&
+          !finalUserValue.startsWith('anon_') &&
+          eventData.userField !== 'AnonymousId') {
+        saveCachedUserInfo(eventData.userField, finalUserValue);
+      }
+      // Nếu userValue không valid → thử lấy từ cache
+      else if (!finalUserValue || finalUserValue.trim() === '' || finalUserValue === 'guest') {
+        const cachedUserInfo = getCachedUserInfo();
+        
+        if (cachedUserInfo) {
+          // Dùng cached user info
+          finalUserField = cachedUserInfo.userField;
+          finalUserValue = cachedUserInfo.userValue;
+          log('Using cached user info:', cachedUserInfo);
+        } else {
+          // Fallback cuối cùng: AnonymousId
+          finalUserField = 'AnonymousId';
+          finalUserValue = getOrCreateAnonymousId();
+          log('No cached user info, using AnonymousId');
+        }
+      }
+
       // Check for duplicate event (fingerprint-based deduplication)
       const isDuplicate = this.eventDeduplicator.isDuplicate(
         eventData.eventTypeId,
         eventData.trackingRuleId,
-        eventData.userValue,
+        finalUserValue,
         eventData.itemValue
       );
 
@@ -223,8 +259,8 @@ export class RecSysTracker {
         eventTypeId: eventData.eventTypeId,
         trackingRuleId: eventData.trackingRuleId,
         domainKey: this.config.domainKey,
-        userField: eventData.userField,
-        userValue: eventData.userValue,
+        userField: finalUserField,
+        userValue: finalUserValue,
         itemField: eventData.itemField,
         itemValue: eventData.itemValue,
         ...(eventData.ratingValue !== undefined && { ratingValue: eventData.ratingValue }),

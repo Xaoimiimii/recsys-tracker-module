@@ -88,7 +88,9 @@ export class PayloadBuilder {
         const hasNetworkRules = this.trackerConfig.trackingRules.some((rule: any) =>
             rule.payloadMappings && rule.payloadMappings.some((m: any) => {
                 const source = (m.source || '').toLowerCase();
-                return source === 'request_body';
+                // Hỗ trợ cả RequestBody và request_body format
+                return source === 'request_body' || source === 'requestbody' || 
+                       source === 'response_body' || source === 'responsebody';
             })
         );
 
@@ -108,7 +110,8 @@ export class PayloadBuilder {
         const hasRequestUrlRules = this.trackerConfig.trackingRules.some((rule: any) =>
             rule.payloadMappings && rule.payloadMappings.some((m: any) => {
                 const source = (m.source || '').toLowerCase();
-                return source === 'request_url';
+                // Hỗ trợ cả RequestUrl và request_url format
+                return source === 'request_url' || source === 'requesturl';
             })
         );
 

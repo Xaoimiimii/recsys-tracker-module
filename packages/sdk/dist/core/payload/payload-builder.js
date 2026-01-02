@@ -41,11 +41,16 @@ export class PayloadBuilder {
             const extractor = this.extractors.get(source);
             if (extractor) {
                 val = extractor.extract(mapping, context);
+                console.log(`[PayloadBuilder] Extracting ${mapping.field} from ${source}:`, val);
+            }
+            else {
+                console.warn(`[PayloadBuilder] No extractor found for source: ${source}`);
             }
             if (this.isValid(val)) {
                 payload[mapping.field] = val;
             }
         }
+        console.log('[PayloadBuilder] Final payload:', payload);
         return payload;
     }
     /**
@@ -64,9 +69,12 @@ export class PayloadBuilder {
             return;
         const hasNetworkRules = this.trackerConfig.trackingRules.some((rule) => rule.payloadMappings && rule.payloadMappings.some((m) => {
             const source = (m.source || '').toLowerCase();
-            return source === 'request_body';
+            // Hỗ trợ cả RequestBody và request_body format
+            return source === 'request_body' || source === 'requestbody' ||
+                source === 'response_body' || source === 'responsebody';
         }));
         if (hasNetworkRules && !this.networkExtractor.isTracking()) {
+            console.log('[PayloadBuilder] Enabling network tracking');
             this.enableNetworkTracking();
         }
         else if (!hasNetworkRules && this.networkExtractor.isTracking()) {
@@ -81,9 +89,11 @@ export class PayloadBuilder {
             return;
         const hasRequestUrlRules = this.trackerConfig.trackingRules.some((rule) => rule.payloadMappings && rule.payloadMappings.some((m) => {
             const source = (m.source || '').toLowerCase();
-            return source === 'request_url';
+            // Hỗ trợ cả RequestUrl và request_url format
+            return source === 'request_url' || source === 'requesturl';
         }));
         if (hasRequestUrlRules) {
+            console.log('[PayloadBuilder] Enabling request URL tracking');
             this.requestUrlExtractor.enableTracking();
         }
         else {

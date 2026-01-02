@@ -17,7 +17,6 @@ export class ClickPlugin extends BasePlugin {
       this.config || (this.tracker ? this.tracker.getConfig() : null);
 
     if (!configToUse || !configToUse.trackingRules) {
-      console.warn("[ClickPlugin] No tracking rules found. Plugin stopped.");
       return;
     }
 
@@ -71,14 +70,6 @@ export class ClickPlugin extends BasePlugin {
       
       if (!target) continue;
 
-      // Log for debugging
-      console.log('[ClickPlugin] ✓ Click matched tracking target:', {
-        element: target.className || target.tagName,
-        selector: selector,
-        rule: rule.name,
-        matchedDirectly: clickedElement === target
-      });
-
       if (rule.conditions?.length) {
         const conditionsMet = rule.conditions.every((cond: any) => {
           if (cond.patternId === 2 && cond.operatorId === 1) {
@@ -89,13 +80,6 @@ export class ClickPlugin extends BasePlugin {
 
         if (!conditionsMet) continue;
       }
-
-      console.log(
-        "🎯 [ClickPlugin] Rule matched:",
-        rule.name,
-        "| ID:",
-        rule.id
-      );
 
       let payload: Record<string, any> = {};
 
@@ -121,8 +105,6 @@ export class ClickPlugin extends BasePlugin {
           }
         });
       }
-
-      console.log("🚀 Payload collected:", payload);
 
       const userKey =
         Object.keys(payload).find((k) => k.toLowerCase().includes("user")) ||

@@ -85,7 +85,7 @@ export class RatingPlugin extends BasePlugin {
                         continue;
                     }
 
-                    console.log(`[RatingPlugin] 🎯 Captured [${eventType}]: Raw=${result.originalValue}/${result.maxValue} -> Norm=${result.normalizedValue}`);
+                    // console.log(`[RatingPlugin] 🎯 Captured [${eventType}]: Raw=${result.originalValue}/${result.maxValue} -> Norm=${result.normalizedValue}`);
 
                     // Build Payload using centralized method
                     this.buildAndTrack(matchedElement, rule, eventId);

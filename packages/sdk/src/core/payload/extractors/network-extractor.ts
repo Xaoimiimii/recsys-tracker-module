@@ -30,7 +30,6 @@ export class NetworkExtractor implements IPayloadExtractor {
     extract(mapping: PayloadMapping, context?: any): any {
         if (!context) return null;
 
-        // Validate Context Type mapping if needed, or assume caller provides correct context
         // Check if mapping matches context URL (basic validation)
         if (mapping.requestUrlPattern && context.url) {
             if (!this.matchesUrl(context.url, mapping.requestUrlPattern)) {
@@ -41,14 +40,24 @@ export class NetworkExtractor implements IPayloadExtractor {
         const source = (mapping.source || '').toLowerCase();
         const path = mapping.value || mapping.requestBodyPath; // Backward compat or direct value
 
-        if (!path) return null;
+        if (!path) {
+            return null;
+        }
 
         if (source === 'requestbody' || source === 'request_body') {
-            return this.traverseObject(context.reqBody, path);
+            let result = this.traverseObject(context.reqBody, path);
+            
+            // Fallback: If GET request has no request body, try response body
+            if (!this.isValid(result) && context.method?.toUpperCase() === 'GET') {
+                result = this.traverseObject(context.resBody, path);
+            }
+            
+            return result;
         }
 
         if (source === 'responsebody' || source === 'response_body') {
-            return this.traverseObject(context.resBody, path);
+            const result = this.traverseObject(context.resBody, path);
+            return result;
         }
 
         if (source === 'network_request') {

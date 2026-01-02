@@ -2491,7 +2491,6 @@ class ClickPlugin extends BasePlugin {
     start() {
         const configToUse = this.config || (this.tracker ? this.tracker.getConfig() : null);
         if (!configToUse || !configToUse.trackingRules) {
-            console.warn("[ClickPlugin] No tracking rules found. Plugin stopped.");
             return;
         }
         console.log("[ClickPlugin] initialized.");
@@ -2529,13 +2528,6 @@ class ClickPlugin extends BasePlugin {
             }
             if (!target)
                 continue;
-            // Log for debugging
-            console.log('[ClickPlugin] ✓ Click matched tracking target:', {
-                element: target.className || target.tagName,
-                selector: selector,
-                rule: rule.name,
-                matchedDirectly: clickedElement === target
-            });
             if ((_b = rule.conditions) === null || _b === void 0 ? void 0 : _b.length) {
                 const conditionsMet = rule.conditions.every((cond) => {
                     if (cond.patternId === 2 && cond.operatorId === 1) {
@@ -2546,7 +2538,6 @@ class ClickPlugin extends BasePlugin {
                 if (!conditionsMet)
                     continue;
             }
-            console.log("🎯 [ClickPlugin] Rule matched:", rule.name, "| ID:", rule.id);
             let payload = {};
             if ((_c = rule.payloadMappings) === null || _c === void 0 ? void 0 : _c.length) {
                 rule.payloadMappings.forEach((m) => {
@@ -2570,7 +2561,6 @@ class ClickPlugin extends BasePlugin {
                     }
                 });
             }
-            console.log("🚀 Payload collected:", payload);
             const userKey = Object.keys(payload).find((k) => k.toLowerCase().includes("user")) ||
                 "userId";
             const itemKey = Object.keys(payload).find((k) => k.toLowerCase().includes("item")) ||
@@ -2600,6 +2590,87 @@ var clickPlugin = /*#__PURE__*/Object.freeze({
     ClickPlugin: ClickPlugin
 });
 
+const STORAGE_KEYS = {
+    ANON_USER_ID: 'recsys_anon_id',
+    USER_ID: 'recsys_user_id',
+    SESSION_ID: 'recsys_session',
+    IDENTIFIERS: 'recsys_identifiers',
+    LAST_USER_ID: 'recsys_last_user_id',
+    CACHED_USER_INFO: 'recsys_cached_user_info' // Lưu user info đã bắt được
+};
+function log(...args) {
+}
+/**
+ * Lưu user info vào localStorage khi bắt được từ rule
+ * @param userField - UserId hoặc Username
+ * @param userValue - Giá trị user đã bắt được
+ */
+function saveCachedUserInfo(userField, userValue) {
+    // Chỉ lưu nếu userValue valid (không phải AnonymousId, guest, empty)
+    if (!userValue ||
+        userValue === 'guest' ||
+        userValue.startsWith('anon_') ||
+        userField === 'AnonymousId') {
+        return;
+    }
+    try {
+        const cachedInfo = {
+            userField,
+            userValue,
+            timestamp: Date.now()
+        };
+        localStorage.setItem(STORAGE_KEYS.CACHED_USER_INFO, JSON.stringify(cachedInfo));
+        log('Saved cached user info:', cachedInfo);
+    }
+    catch (error) {
+        console.warn('[RecSysTracker] Failed to save cached user info:', error);
+    }
+}
+/**
+ * Lấy cached user info từ localStorage
+ * @returns CachedUserInfo hoặc null nếu không có
+ */
+function getCachedUserInfo() {
+    try {
+        const cached = localStorage.getItem(STORAGE_KEYS.CACHED_USER_INFO);
+        if (!cached) {
+            return null;
+        }
+        const userInfo = JSON.parse(cached);
+        // Validate cached data
+        if (userInfo.userField && userInfo.userValue && userInfo.timestamp) {
+            log('Retrieved cached user info:', userInfo);
+            return userInfo;
+        }
+        return null;
+    }
+    catch (error) {
+        console.warn('[RecSysTracker] Failed to get cached user info:', error);
+        return null;
+    }
+}
+/**
+ * Khởi tạo và lấy Anonymous ID từ localStorage
+ * Tự động tạo mới nếu chưa tồn tại
+ */
+function getOrCreateAnonymousId() {
+    try {
+        let anonId = localStorage.getItem(STORAGE_KEYS.ANON_USER_ID);
+        if (!anonId) {
+            // Generate new anonymous ID: anon_timestamp_randomstring
+            const timestamp = Date.now();
+            const randomStr = Math.random().toString(36).substring(2, 10);
+            anonId = `anon_${timestamp}_${randomStr}`;
+            localStorage.setItem(STORAGE_KEYS.ANON_USER_ID, anonId);
+            log('Created new anonymous ID:', anonId);
+        }
+        return anonId;
+    }
+    catch (error) {
+        // Fallback nếu localStorage không available
+        return `anon_${Date.now()}_${Math.random().toString(36).substring(2, 10)}`;
+    }
+}
 function throttle(fn, delay) {
     let lastCall = 0;
     let timeoutId = null;
@@ -2776,13 +2847,10 @@ class ReviewPlugin extends BasePlugin {
             // 2. Check Condition
             if (!this.checkConditions(form, rule))
                 continue;
-            console.log(`✅ [ReviewPlugin] Match Rule: "${rule.name}"`);
-            // 3. Auto-detect review content if needed
-            const reviewContent = this.autoDetectReviewContent(form);
-            console.log(`[ReviewPlugin] Detected review content: "${reviewContent}"`);
+            // // 3. Auto-detect review content if needed
+            // const reviewContent = this.autoDetectReviewContent(form);
             // 4. Build and track using centralized method
             this.buildAndTrack(form, rule, eventId);
-            console.log(`[ReviewPlugin] 📤 Event tracked successfully`);
             return;
         }
     }
@@ -2834,6 +2902,7 @@ class ReviewPlugin extends BasePlugin {
         }
         return true;
     }
+    // @ts-ignore - Method reserved for future use
     autoDetectReviewContent(form) {
         const formData = new FormData(form);
         let content = '';
@@ -3328,29 +3397,45 @@ class NetworkExtractor {
      * This is called by PayloadBuilder when processing network_request mappings
      */
     extract(mapping, context) {
-        var _a;
-        if (!context)
+        var _a, _b;
+        if (!context) {
+            console.warn('[NetworkExtractor] No context provided');
             return null;
-        // Validate Context Type mapping if needed, or assume caller provides correct context
+        }
         // Check if mapping matches context URL (basic validation)
         if (mapping.requestUrlPattern && context.url) {
             if (!this.matchesUrl(context.url, mapping.requestUrlPattern)) {
+                console.log(`[NetworkExtractor] URL ${context.url} does not match pattern ${mapping.requestUrlPattern}`);
                 return null;
             }
         }
         const source = (mapping.source || '').toLowerCase();
         const path = mapping.value || mapping.requestBodyPath; // Backward compat or direct value
-        if (!path)
+        console.log(`[NetworkExtractor] Extracting from source: ${source}, path: ${path}`);
+        console.log('[NetworkExtractor] Context:', { url: context.url, method: context.method, hasReqBody: !!context.reqBody, hasResBody: !!context.resBody });
+        if (!path) {
+            console.warn('[NetworkExtractor] No path specified');
             return null;
+        }
         if (source === 'requestbody' || source === 'request_body') {
-            return this.traverseObject(context.reqBody, path);
+            let result = this.traverseObject(context.reqBody, path);
+            console.log(`[NetworkExtractor] RequestBody result:`, result);
+            // Smart fallback: If GET request has no request body, try response body
+            if (!this.isValid(result) && ((_a = context.method) === null || _a === void 0 ? void 0 : _a.toUpperCase()) === 'GET') {
+                console.log('[NetworkExtractor] GET request with no RequestBody data, falling back to ResponseBody');
+                result = this.traverseObject(context.resBody, path);
+                console.log(`[NetworkExtractor] ResponseBody fallback result:`, result);
+            }
+            return result;
         }
         if (source === 'responsebody' || source === 'response_body') {
-            return this.traverseObject(context.resBody, path);
+            const result = this.traverseObject(context.resBody, path);
+            console.log(`[NetworkExtractor] ResponseBody result:`, result);
+            return result;
         }
         if (source === 'network_request') {
             // Smart inference based on HTTP method
-            const method = (_a = context.method) === null || _a === void 0 ? void 0 : _a.toUpperCase();
+            const method = (_b = context.method) === null || _b === void 0 ? void 0 : _b.toUpperCase();
             if (method === 'GET') {
                 // For GET requests, data typically comes from response
                 return this.traverseObject(context.resBody, path);
@@ -3863,11 +3948,16 @@ class PayloadBuilder {
             const extractor = this.extractors.get(source);
             if (extractor) {
                 val = extractor.extract(mapping, context);
+                console.log(`[PayloadBuilder] Extracting ${mapping.field} from ${source}:`, val);
+            }
+            else {
+                console.warn(`[PayloadBuilder] No extractor found for source: ${source}`);
             }
             if (this.isValid(val)) {
                 payload[mapping.field] = val;
             }
         }
+        console.log('[PayloadBuilder] Final payload:', payload);
         return payload;
     }
     /**
@@ -3886,9 +3976,12 @@ class PayloadBuilder {
             return;
         const hasNetworkRules = this.trackerConfig.trackingRules.some((rule) => rule.payloadMappings && rule.payloadMappings.some((m) => {
             const source = (m.source || '').toLowerCase();
-            return source === 'request_body';
+            // Hỗ trợ cả RequestBody và request_body format
+            return source === 'request_body' || source === 'requestbody' ||
+                source === 'response_body' || source === 'responsebody';
         }));
         if (hasNetworkRules && !this.networkExtractor.isTracking()) {
+            console.log('[PayloadBuilder] Enabling network tracking');
             this.enableNetworkTracking();
         }
         else if (!hasNetworkRules && this.networkExtractor.isTracking()) {
@@ -3903,9 +3996,11 @@ class PayloadBuilder {
             return;
         const hasRequestUrlRules = this.trackerConfig.trackingRules.some((rule) => rule.payloadMappings && rule.payloadMappings.some((m) => {
             const source = (m.source || '').toLowerCase();
-            return source === 'request_url';
+            // Hỗ trợ cả RequestUrl và request_url format
+            return source === 'request_url' || source === 'requesturl';
         }));
         if (hasRequestUrlRules) {
+            console.log('[PayloadBuilder] Enabling request URL tracking');
             this.requestUrlExtractor.enableTracking();
         }
         else {
@@ -4385,7 +4480,7 @@ class RatingPlugin extends BasePlugin {
                     if (result.originalValue === 0 && !result.reviewText) {
                         continue;
                     }
-                    console.log(`[RatingPlugin] 🎯 Captured [${eventType}]: Raw=${result.originalValue}/${result.maxValue} -> Norm=${result.normalizedValue}`);
+                    // console.log(`[RatingPlugin] 🎯 Captured [${eventType}]: Raw=${result.originalValue}/${result.maxValue} -> Norm=${result.normalizedValue}`);
                     // Build Payload using centralized method
                     this.buildAndTrack(matchedElement, rule, eventId);
                     break;
@@ -4465,6 +4560,8 @@ class RecSysTracker {
             this.setupBatchSending();
             // Setup page unload handler
             this.setupUnloadHandler();
+            // Khởi tạo Anonymous ID ngay khi SDK init
+            getOrCreateAnonymousId();
             this.isInitialized = true;
         }, 'init');
     }
@@ -4551,8 +4648,36 @@ class RecSysTracker {
             if (!this.isInitialized || !this.config) {
                 return;
             }
+            // 3-tier fallback strategy:
+            // 1. Dùng userValue từ event hiện tại nếu valid
+            // 2. Dùng cached user info nếu có
+            // 3. Dùng AnonymousId (fallback cuối cùng)
+            let finalUserField = eventData.userField;
+            let finalUserValue = eventData.userValue;
+            // Nếu userValue hiện tại valid và không phải AnonymousId → lưu vào cache
+            if (finalUserValue &&
+                finalUserValue.trim() !== '' &&
+                finalUserValue !== 'guest' &&
+                !finalUserValue.startsWith('anon_') &&
+                eventData.userField !== 'AnonymousId') {
+                saveCachedUserInfo(eventData.userField, finalUserValue);
+            }
+            // Nếu userValue không valid → thử lấy từ cache
+            else if (!finalUserValue || finalUserValue.trim() === '' || finalUserValue === 'guest') {
+                const cachedUserInfo = getCachedUserInfo();
+                if (cachedUserInfo) {
+                    // Dùng cached user info
+                    finalUserField = cachedUserInfo.userField;
+                    finalUserValue = cachedUserInfo.userValue;
+                }
+                else {
+                    // Fallback cuối cùng: AnonymousId
+                    finalUserField = 'AnonymousId';
+                    finalUserValue = getOrCreateAnonymousId();
+                }
+            }
             // Check for duplicate event (fingerprint-based deduplication)
-            const isDuplicate = this.eventDeduplicator.isDuplicate(eventData.eventTypeId, eventData.trackingRuleId, eventData.userValue, eventData.itemValue);
+            const isDuplicate = this.eventDeduplicator.isDuplicate(eventData.eventTypeId, eventData.trackingRuleId, finalUserValue, eventData.itemValue);
             if (isDuplicate) {
                 return; // Drop duplicate
             }
@@ -4562,8 +4687,8 @@ class RecSysTracker {
                 eventTypeId: eventData.eventTypeId,
                 trackingRuleId: eventData.trackingRuleId,
                 domainKey: this.config.domainKey,
-                userField: eventData.userField,
-                userValue: eventData.userValue,
+                userField: finalUserField,
+                userValue: finalUserValue,
                 itemField: eventData.itemField,
                 itemValue: eventData.itemValue,
                 ...(eventData.ratingValue !== undefined && { ratingValue: eventData.ratingValue }),

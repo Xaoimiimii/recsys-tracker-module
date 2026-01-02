@@ -53,16 +53,12 @@ export class ReviewPlugin extends BasePlugin {
             // 2. Check Condition
             if (!this.checkConditions(form, rule)) continue;
 
-            console.log(`✅ [ReviewPlugin] Match Rule: "${rule.name}"`);
-
-            // 3. Auto-detect review content if needed
-            const reviewContent = this.autoDetectReviewContent(form);
-            console.log(`[ReviewPlugin] Detected review content: "${reviewContent}"`);
+            // // 3. Auto-detect review content if needed
+            // const reviewContent = this.autoDetectReviewContent(form);
 
             // 4. Build and track using centralized method
             this.buildAndTrack(form, rule, eventId);
 
-            console.log(`[ReviewPlugin] 📤 Event tracked successfully`);
             return;
         }
     }
@@ -112,6 +108,7 @@ export class ReviewPlugin extends BasePlugin {
         return true;
     }
 
+    // @ts-ignore - Method reserved for future use
     private autoDetectReviewContent(form: HTMLFormElement): string {
         const formData = new FormData(form);
         let content = '';

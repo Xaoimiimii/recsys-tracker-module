@@ -15,29 +15,45 @@ export class NetworkExtractor {
      * This is called by PayloadBuilder when processing network_request mappings
      */
     extract(mapping, context) {
-        var _a;
-        if (!context)
+        var _a, _b;
+        if (!context) {
+            console.warn('[NetworkExtractor] No context provided');
             return null;
-        // Validate Context Type mapping if needed, or assume caller provides correct context
+        }
         // Check if mapping matches context URL (basic validation)
         if (mapping.requestUrlPattern && context.url) {
             if (!this.matchesUrl(context.url, mapping.requestUrlPattern)) {
+                console.log(`[NetworkExtractor] URL ${context.url} does not match pattern ${mapping.requestUrlPattern}`);
                 return null;
             }
         }
         const source = (mapping.source || '').toLowerCase();
         const path = mapping.value || mapping.requestBodyPath; // Backward compat or direct value
-        if (!path)
+        console.log(`[NetworkExtractor] Extracting from source: ${source}, path: ${path}`);
+        console.log('[NetworkExtractor] Context:', { url: context.url, method: context.method, hasReqBody: !!context.reqBody, hasResBody: !!context.resBody });
+        if (!path) {
+            console.warn('[NetworkExtractor] No path specified');
             return null;
+        }
         if (source === 'requestbody' || source === 'request_body') {
-            return this.traverseObject(context.reqBody, path);
+            let result = this.traverseObject(context.reqBody, path);
+            console.log(`[NetworkExtractor] RequestBody result:`, result);
+            // Smart fallback: If GET request has no request body, try response body
+            if (!this.isValid(result) && ((_a = context.method) === null || _a === void 0 ? void 0 : _a.toUpperCase()) === 'GET') {
+                console.log('[NetworkExtractor] GET request with no RequestBody data, falling back to ResponseBody');
+                result = this.traverseObject(context.resBody, path);
+                console.log(`[NetworkExtractor] ResponseBody fallback result:`, result);
+            }
+            return result;
         }
         if (source === 'responsebody' || source === 'response_body') {
-            return this.traverseObject(context.resBody, path);
+            const result = this.traverseObject(context.resBody, path);
+            console.log(`[NetworkExtractor] ResponseBody result:`, result);
+            return result;
         }
         if (source === 'network_request') {
             // Smart inference based on HTTP method
-            const method = (_a = context.method) === null || _a === void 0 ? void 0 : _a.toUpperCase();
+            const method = (_b = context.method) === null || _b === void 0 ? void 0 : _b.toUpperCase();
             if (method === 'GET') {
                 // For GET requests, data typically comes from response
                 return this.traverseObject(context.resBody, path);
