@@ -45,7 +45,7 @@ export class EventDispatcher {
     if (this.domainUrl) {
       const isOriginValid = OriginVerifier.verify(this.domainUrl);
       if (!isOriginValid) {
-        console.warn('[RecSysTracker] Origin verification failed. Event not sent.');
+        // console.warn('[RecSysTracker] Origin verification failed. Event not sent.');
         return false;
       }
     }
@@ -117,14 +117,16 @@ export class EventDispatcher {
   // SendBeacon --> API không đồng bộ, không chặn browser, gửi dữ liệu khi trang unload
   private sendBeacon(payload: string): boolean {
     if (typeof navigator === 'undefined' || !navigator.sendBeacon) {
-      throw new Error('sendBeacon not available');
+      // throw new Error('sendBeacon not available');
+      return false;
     }
 
     const blob = new Blob([payload], { type: 'application/json' });
     const success = navigator.sendBeacon(this.endpoint, blob);
 
     if (!success) {
-      throw new Error('sendBeacon returned false');
+      // throw new Error('sendBeacon returned false');
+      return false;
     }
 
     return true;
@@ -133,7 +135,8 @@ export class EventDispatcher {
   // Fetch với keepalive
   private async sendFetch(payload: string): Promise<boolean> {
     if (typeof fetch === 'undefined') {
-      throw new Error('fetch not available');
+      // throw new Error('fetch not available');
+      return false;
     }
 
     const controller = new AbortController();
@@ -154,13 +157,15 @@ export class EventDispatcher {
       clearTimeout(timeoutId);
 
       if (!response.ok) {
-        throw new Error(`HTTP ${response.status}`);
+        // throw new Error(`HTTP ${response.status}`);
+        return false;
       }
 
       return true;
     } catch (error) {
       clearTimeout(timeoutId);
-      throw error;
+      // throw error;
+      return false;
     }
   }
 

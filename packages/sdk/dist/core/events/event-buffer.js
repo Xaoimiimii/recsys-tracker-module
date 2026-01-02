@@ -57,20 +57,20 @@ export class EventBuffer {
         if (this.queue.length >= this.maxQueueSize) {
             this.queue.shift();
         }
-        console.log('[EventBuffer] Payload được thêm vào queue:', {
-            id: event.id,
-            eventTypeId: event.eventTypeId,
-            trackingRuleId: event.trackingRuleId,
-            domainKey: event.domainKey,
-            userField: event.userField,
-            userValue: event.userValue,
-            itemField: event.itemField,
-            itemValue: event.itemValue,
-            ratingValue: event.ratingValue,
-            ratingReview: event.ratingReview,
-            timestamp: event.timestamp,
-            queueSize: this.queue.length + 1
-        });
+        // console.log('[EventBuffer] Payload được thêm vào queue:', {
+        //   id: event.id,
+        //   eventTypeId: event.eventTypeId,
+        //   trackingRuleId: event.trackingRuleId,
+        //   domainKey: event.domainKey,
+        //   userField: event.userField,
+        //   userValue: event.userValue,
+        //   itemField: event.itemField,
+        //   itemValue: event.itemValue,
+        //   ratingValue: event.ratingValue,
+        //   ratingReview: event.ratingReview,
+        //   timestamp: event.timestamp,
+        //   queueSize: this.queue.length + 1
+        // });
         this.queue.push(event);
         this.persistToStorage();
     }
@@ -100,7 +100,6 @@ export class EventBuffer {
                 32000 // Max 32 seconds
                 );
                 event.nextRetryAt = now + backoffDelay;
-                console.log(`[EventBuffer] Event ${event.id} will retry in ${backoffDelay / 1000}s (attempt ${event.retryCount}/${this.maxRetries})`);
             }
         });
         // Xóa các sự kiện vượt quá số lần thử lại tối đa

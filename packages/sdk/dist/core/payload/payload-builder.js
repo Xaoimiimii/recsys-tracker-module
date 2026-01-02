@@ -41,16 +41,11 @@ export class PayloadBuilder {
             const extractor = this.extractors.get(source);
             if (extractor) {
                 val = extractor.extract(mapping, context);
-                console.log(`[PayloadBuilder] Extracting ${mapping.field} from ${source}:`, val);
-            }
-            else {
-                console.warn(`[PayloadBuilder] No extractor found for source: ${source}`);
             }
             if (this.isValid(val)) {
                 payload[mapping.field] = val;
             }
         }
-        console.log('[PayloadBuilder] Final payload:', payload);
         return payload;
     }
     /**
@@ -74,7 +69,6 @@ export class PayloadBuilder {
                 source === 'response_body' || source === 'responsebody';
         }));
         if (hasNetworkRules && !this.networkExtractor.isTracking()) {
-            console.log('[PayloadBuilder] Enabling network tracking');
             this.enableNetworkTracking();
         }
         else if (!hasNetworkRules && this.networkExtractor.isTracking()) {
@@ -93,7 +87,6 @@ export class PayloadBuilder {
             return source === 'request_url' || source === 'requesturl';
         }));
         if (hasRequestUrlRules) {
-            console.log('[PayloadBuilder] Enabling request URL tracking');
             this.requestUrlExtractor.enableTracking();
         }
         else {

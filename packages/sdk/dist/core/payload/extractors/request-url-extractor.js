@@ -23,7 +23,8 @@ export class RequestUrlExtractor {
             }
             if (methodMatch) {
                 if (PathMatcher.match(ctxUrl, mapping.requestUrlPattern)) {
-                    return this.extractValueFromUrl(ctxUrl, mapping.value);
+                    const extracted = this.extractValueFromUrl(ctxUrl, mapping.value);
+                    return extracted;
                 }
             }
         }
@@ -54,13 +55,16 @@ export class RequestUrlExtractor {
         // Split: ['api', 'rating', '123', 'add-review']
         // value=2 -> '123'
         const index = typeof valueConfig === 'string' ? parseInt(valueConfig, 10) : valueConfig;
-        if (typeof index !== 'number' || isNaN(index))
+        if (typeof index !== 'number' || isNaN(index)) {
             return null;
+        }
         const path = url.split('?')[0];
-        const segments = path.split('/').filter(Boolean); // Remote empty strings
-        if (index < 0 || index >= segments.length)
+        const segments = path.split('/').filter(Boolean); // Remove empty strings
+        if (index < 0 || index >= segments.length) {
             return null;
-        return segments[index];
+        }
+        const result = segments[index];
+        return result;
     }
     /**
      * Enable network tracking

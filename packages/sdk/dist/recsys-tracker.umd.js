@@ -495,20 +495,20 @@
             if (this.queue.length >= this.maxQueueSize) {
                 this.queue.shift();
             }
-            console.log('[EventBuffer] Payload được thêm vào queue:', {
-                id: event.id,
-                eventTypeId: event.eventTypeId,
-                trackingRuleId: event.trackingRuleId,
-                domainKey: event.domainKey,
-                userField: event.userField,
-                userValue: event.userValue,
-                itemField: event.itemField,
-                itemValue: event.itemValue,
-                ratingValue: event.ratingValue,
-                ratingReview: event.ratingReview,
-                timestamp: event.timestamp,
-                queueSize: this.queue.length + 1
-            });
+            // console.log('[EventBuffer] Payload được thêm vào queue:', {
+            //   id: event.id,
+            //   eventTypeId: event.eventTypeId,
+            //   trackingRuleId: event.trackingRuleId,
+            //   domainKey: event.domainKey,
+            //   userField: event.userField,
+            //   userValue: event.userValue,
+            //   itemField: event.itemField,
+            //   itemValue: event.itemValue,
+            //   ratingValue: event.ratingValue,
+            //   ratingReview: event.ratingReview,
+            //   timestamp: event.timestamp,
+            //   queueSize: this.queue.length + 1
+            // });
             this.queue.push(event);
             this.persistToStorage();
         }
@@ -538,7 +538,6 @@
                     32000 // Max 32 seconds
                     );
                     event.nextRetryAt = now + backoffDelay;
-                    console.log(`[EventBuffer] Event ${event.id} will retry in ${backoffDelay / 1000}s (attempt ${event.retryCount}/${this.maxRetries})`);
                 }
             });
             // Xóa các sự kiện vượt quá số lần thử lại tối đa
@@ -611,7 +610,7 @@
             if (this.domainUrl) {
                 const isOriginValid = OriginVerifier.verify(this.domainUrl);
                 if (!isOriginValid) {
-                    console.warn('[RecSysTracker] Origin verification failed. Event not sent.');
+                    // console.warn('[RecSysTracker] Origin verification failed. Event not sent.');
                     return false;
                 }
             }
@@ -671,19 +670,22 @@
         // SendBeacon --> API không đồng bộ, không chặn browser, gửi dữ liệu khi trang unload
         sendBeacon(payload) {
             if (typeof navigator === 'undefined' || !navigator.sendBeacon) {
-                throw new Error('sendBeacon not available');
+                // throw new Error('sendBeacon not available');
+                return false;
             }
             const blob = new Blob([payload], { type: 'application/json' });
             const success = navigator.sendBeacon(this.endpoint, blob);
             if (!success) {
-                throw new Error('sendBeacon returned false');
+                // throw new Error('sendBeacon returned false');
+                return false;
             }
             return true;
         }
         // Fetch với keepalive
         async sendFetch(payload) {
             if (typeof fetch === 'undefined') {
-                throw new Error('fetch not available');
+                // throw new Error('fetch not available');
+                return false;
             }
             const controller = new AbortController();
             const timeoutId = setTimeout(() => controller.abort(), this.timeout);
@@ -700,13 +702,15 @@
                 });
                 clearTimeout(timeoutId);
                 if (!response.ok) {
-                    throw new Error(`HTTP ${response.status}`);
+                    // throw new Error(`HTTP ${response.status}`);
+                    return false;
                 }
                 return true;
             }
             catch (error) {
                 clearTimeout(timeoutId);
-                throw error;
+                // throw error;
+                return false;
             }
         }
         // Utility methods
@@ -3404,39 +3408,29 @@
          */
         extract(mapping, context) {
             var _a, _b;
-            if (!context) {
-                console.warn('[NetworkExtractor] No context provided');
+            if (!context)
                 return null;
-            }
             // Check if mapping matches context URL (basic validation)
             if (mapping.requestUrlPattern && context.url) {
                 if (!this.matchesUrl(context.url, mapping.requestUrlPattern)) {
-                    console.log(`[NetworkExtractor] URL ${context.url} does not match pattern ${mapping.requestUrlPattern}`);
                     return null;
                 }
             }
             const source = (mapping.source || '').toLowerCase();
             const path = mapping.value || mapping.requestBodyPath; // Backward compat or direct value
-            console.log(`[NetworkExtractor] Extracting from source: ${source}, path: ${path}`);
-            console.log('[NetworkExtractor] Context:', { url: context.url, method: context.method, hasReqBody: !!context.reqBody, hasResBody: !!context.resBody });
             if (!path) {
-                console.warn('[NetworkExtractor] No path specified');
                 return null;
             }
             if (source === 'requestbody' || source === 'request_body') {
                 let result = this.traverseObject(context.reqBody, path);
-                console.log(`[NetworkExtractor] RequestBody result:`, result);
-                // Smart fallback: If GET request has no request body, try response body
+                // Fallback: If GET request has no request body, try response body
                 if (!this.isValid(result) && ((_a = context.method) === null || _a === void 0 ? void 0 : _a.toUpperCase()) === 'GET') {
-                    console.log('[NetworkExtractor] GET request with no RequestBody data, falling back to ResponseBody');
                     result = this.traverseObject(context.resBody, path);
-                    console.log(`[NetworkExtractor] ResponseBody fallback result:`, result);
                 }
                 return result;
             }
             if (source === 'responsebody' || source === 'response_body') {
                 const result = this.traverseObject(context.resBody, path);
-                console.log(`[NetworkExtractor] ResponseBody result:`, result);
                 return result;
             }
             if (source === 'network_request') {
@@ -3789,7 +3783,8 @@
                 }
                 if (methodMatch) {
                     if (PathMatcher.match(ctxUrl, mapping.requestUrlPattern)) {
-                        return this.extractValueFromUrl(ctxUrl, mapping.value);
+                        const extracted = this.extractValueFromUrl(ctxUrl, mapping.value);
+                        return extracted;
                     }
                 }
             }
@@ -3820,13 +3815,16 @@
             // Split: ['api', 'rating', '123', 'add-review']
             // value=2 -> '123'
             const index = typeof valueConfig === 'string' ? parseInt(valueConfig, 10) : valueConfig;
-            if (typeof index !== 'number' || isNaN(index))
+            if (typeof index !== 'number' || isNaN(index)) {
                 return null;
+            }
             const path = url.split('?')[0];
-            const segments = path.split('/').filter(Boolean); // Remote empty strings
-            if (index < 0 || index >= segments.length)
+            const segments = path.split('/').filter(Boolean); // Remove empty strings
+            if (index < 0 || index >= segments.length) {
                 return null;
-            return segments[index];
+            }
+            const result = segments[index];
+            return result;
         }
         /**
          * Enable network tracking
@@ -3954,16 +3952,11 @@
                 const extractor = this.extractors.get(source);
                 if (extractor) {
                     val = extractor.extract(mapping, context);
-                    console.log(`[PayloadBuilder] Extracting ${mapping.field} from ${source}:`, val);
-                }
-                else {
-                    console.warn(`[PayloadBuilder] No extractor found for source: ${source}`);
                 }
                 if (this.isValid(val)) {
                     payload[mapping.field] = val;
                 }
             }
-            console.log('[PayloadBuilder] Final payload:', payload);
             return payload;
         }
         /**
@@ -3987,7 +3980,6 @@
                     source === 'response_body' || source === 'responsebody';
             }));
             if (hasNetworkRules && !this.networkExtractor.isTracking()) {
-                console.log('[PayloadBuilder] Enabling network tracking');
                 this.enableNetworkTracking();
             }
             else if (!hasNetworkRules && this.networkExtractor.isTracking()) {
@@ -4006,7 +3998,6 @@
                 return source === 'request_url' || source === 'requesturl';
             }));
             if (hasRequestUrlRules) {
-                console.log('[PayloadBuilder] Enabling request URL tracking');
                 this.requestUrlExtractor.enableTracking();
             }
             else {
