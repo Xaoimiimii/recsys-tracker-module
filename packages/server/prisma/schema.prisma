@@ -40,6 +40,7 @@ model Domain {
   Users         User[]
   Ratings       Rating[]
   Models        Model[]
+  WidgetDesigns WidgetDesign[]
 }
 
 // model DomainReturn {
@@ -312,6 +313,9 @@ model Item {
   Description     String?
   EmbeddingVector Float[]
   ModifiedAt      DateTime @updatedAt
+  ImageUrl        String?
+  
+  Attributes      Json?
 
   ItemCategories ItemCategory[]
   ItemFactors    ItemFactor[]
@@ -320,6 +324,25 @@ model Item {
   interactions   Interaction[]
 
   @@unique([DomainId, DomainItemId])
+}
+
+enum WidgetType {
+  INLINE_INJECTION
+  POPUP
+}
+
+model WidgetDesign {
+  Id        Int    @id @default(autoincrement())
+
+  DomainId  Int
+  Domain    Domain @relation(fields: [DomainId], references: [Id])
+
+  CustomizingFields Json
+  Type              WidgetType
+  Layout            Json
+  Style             Json
+  IsEnabled         Boolean @default(false)
+  DelayDuration     Int @default(120)
 }
 
 model Model {

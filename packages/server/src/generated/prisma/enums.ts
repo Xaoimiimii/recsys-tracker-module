@@ -85,3 +85,11 @@ export const EventItemField = {
 } as const
 
 export type EventItemField = (typeof EventItemField)[keyof typeof EventItemField]
+
+
+export const WidgetType = {
+  INLINE_INJECTION: 'INLINE_INJECTION',
+  POPUP: 'POPUP'
+} as const
+
+export type WidgetType = (typeof WidgetType)[keyof typeof WidgetType]

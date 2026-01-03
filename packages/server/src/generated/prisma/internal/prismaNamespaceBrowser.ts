@@ -65,6 +65,7 @@ export const ModelName = {
   Category: 'Category',
   ItemCategory: 'ItemCategory',
   Item: 'Item',
+  WidgetDesign: 'WidgetDesign',
   Model: 'Model',
   ItemFactor: 'ItemFactor',
   User: 'User',
@@ -237,10 +238,26 @@ export const ItemScalarFieldEnum = {
   DomainId: 'DomainId',
   Description: 'Description',
   EmbeddingVector: 'EmbeddingVector',
-  ModifiedAt: 'ModifiedAt'
+  ModifiedAt: 'ModifiedAt',
+  ImageUrl: 'ImageUrl',
+  Attributes: 'Attributes'
 } as const
 
 export type ItemScalarFieldEnum = (typeof ItemScalarFieldEnum)[keyof typeof ItemScalarFieldEnum]
+
+
+export const WidgetDesignScalarFieldEnum = {
+  Id: 'Id',
+  DomainId: 'DomainId',
+  CustomizingFields: 'CustomizingFields',
+  Type: 'Type',
+  Layout: 'Layout',
+  Style: 'Style',
+  IsEnabled: 'IsEnabled',
+  DelayDuration: 'DelayDuration'
+} as const
+
+export type WidgetDesignScalarFieldEnum = (typeof WidgetDesignScalarFieldEnum)[keyof typeof WidgetDesignScalarFieldEnum]
 
 
 export const ModelScalarFieldEnum = {
@@ -334,6 +351,21 @@ export const SortOrder = {
 export type SortOrder = (typeof SortOrder)[keyof typeof SortOrder]
 
 
+export const NullableJsonNullValueInput = {
+  DbNull: 'DbNull',
+  JsonNull: 'JsonNull'
+} as const
+
+export type NullableJsonNullValueInput = (typeof NullableJsonNullValueInput)[keyof typeof NullableJsonNullValueInput]
+
+
+export const JsonNullValueInput = {
+  JsonNull: 'JsonNull'
+} as const
+
+export type JsonNullValueInput = (typeof JsonNullValueInput)[keyof typeof JsonNullValueInput]
+
+
 export const QueryMode = {
   default: 'default',
   insensitive: 'insensitive'
@@ -348,4 +380,13 @@ export const NullsOrder = {
 } as const
 
 export type NullsOrder = (typeof NullsOrder)[keyof typeof NullsOrder]
+
+
+export const JsonNullValueFilter = {
+  DbNull: 'DbNull',
+  JsonNull: 'JsonNull',
+  AnyNull: 'AnyNull'
+} as const
+
+export type JsonNullValueFilter = (typeof JsonNullValueFilter)[keyof typeof JsonNullValueFilter]
 
