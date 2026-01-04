@@ -1,0 +1,37 @@
+import { BasePlugin } from './base-plugin';
+import { RecSysTracker } from '../..';
+export declare class ScrollPlugin extends BasePlugin {
+    readonly name = "ScrollPlugin";
+    private milestones;
+    private sentMilestones;
+    private maxScrollDepth;
+    private startTime;
+    private totalActiveTime;
+    private isTabVisible;
+    private currentItemContext;
+    private activeRule;
+    private targetScrollElement;
+    private lastScrollProcessTime;
+    private readonly THROTTLE_MS;
+    private handleScrollBound;
+    private handleVisibilityChangeBound;
+    private handleUnloadBound;
+    init(tracker: RecSysTracker): void;
+    start(): void;
+    stop(): void;
+    private resetState;
+    private resolveContextFromRules;
+    private findTargetElement;
+    private detectContextForItem;
+    private checkConditions;
+    private compareValues;
+    private scanSurroundingContext;
+    private handleScroll;
+    private sendScrollEvent;
+    private handleUnload;
+    private handleVisibilityChange;
+    private calculateActiveTime;
+    private createSyntheticItem;
+    private createDefaultRule;
+}
+//# sourceMappingURL=scroll-plugin.d.ts.map

@@ -2056,7 +2056,8 @@ export const TrackingRuleScalarFieldEnum = {
   Name: 'Name',
   DomainID: 'DomainID',
   EventTypeID: 'EventTypeID',
-  TrackingTargetId: 'TrackingTargetId'
+  TrackingTargetId: 'TrackingTargetId',
+  IntentLevel: 'IntentLevel'
 } as const
 
 export type TrackingRuleScalarFieldEnum = (typeof TrackingRuleScalarFieldEnum)[keyof typeof TrackingRuleScalarFieldEnum]
@@ -2104,6 +2105,7 @@ export const PayloadMappingScalarFieldEnum = {
   Field: 'Field',
   Source: 'Source',
   Value: 'Value',
+  RequestUrl: 'RequestUrl',
   RequestUrlPattern: 'RequestUrlPattern',
   RequestMethod: 'RequestMethod',
   RequestBodyPath: 'RequestBodyPath',
@@ -2334,6 +2336,20 @@ export type EnumReturnTypeFieldRefInput<$PrismaModel> = FieldRefInputType<$Prism
  * Reference to a field of type 'ReturnType[]'
  */
 export type ListEnumReturnTypeFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'ReturnType[]'>
+    
+
+
+/**
+ * Reference to a field of type 'IntentLevel'
+ */
+export type EnumIntentLevelFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'IntentLevel'>
+    
+
+
+/**
+ * Reference to a field of type 'IntentLevel[]'
+ */
+export type ListEnumIntentLevelFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'IntentLevel[]'>
     
 
 

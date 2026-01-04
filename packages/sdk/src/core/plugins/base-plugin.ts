@@ -90,42 +90,67 @@ export abstract class BasePlugin implements IPlugin {
   }
 
   // Xử lý thông tin user, item, rating/review_value từ extracted data
-  protected resolvePayloadIdentity(extractedData: any): {
+  protected resolvePayloadIdentity(extractedData: any, rule?: any): {
     userField: string;
     userValue: string;
     itemField: string;
     itemValue: string;
     value: string;
   } {
-    // Common user field patterns (prioritized)
-    const userFieldPatterns = ['UserId', 'Username'];
-    // Common item field patterns (prioritized)
-    const itemFieldPatterns = ['ItemId', 'ItemTitle'];
-    // Common rating/review_value patterns (prioritized)
-    const valuePatterns = ['Value'];
-
+    // Default values
     let userField = 'UserId';
     let userValue = '';
     let itemField = 'ItemId';
     let itemValue = '';
     let value = '';
 
+    // If rule is provided, use its mappings to determine fields
+    if (rule && rule.payloadMappings && Array.isArray(rule.payloadMappings)) {
+      for (const mapping of rule.payloadMappings) {
+        const fieldName = mapping.Field || mapping.field; // Handle potential case differences
+        const fieldValue = extractedData[fieldName];
 
-    // Find first available user field
-    for (const key of Object.keys(extractedData)) {
-      if (!userValue && userFieldPatterns.some(pattern => key.toLowerCase().includes(pattern.toLowerCase()))) {
-        userField = key;
-        userValue = extractedData[key];
+        // Check for User fields
+        if (fieldName && ['UserId', 'Username'].some(f => f.toLowerCase() === fieldName.toLowerCase())) {
+          userField = fieldName;
+          userValue = fieldValue || ''; // Ensure empty string if undefined
+        }
+
+        // Check for Item fields
+        if (fieldName && ['ItemId', 'ItemTitle'].some(f => f.toLowerCase() === fieldName.toLowerCase())) {
+          itemField = fieldName;
+          itemValue = fieldValue || ''; // Ensure empty string if undefined
+        }
+
+        // Check for Value field
+        if (fieldName && ['Value'].some(f => f.toLowerCase() === fieldName.toLowerCase())) {
+          value = fieldValue || '';
+        }
       }
-      if (!itemValue && itemFieldPatterns.some(pattern => key.toLowerCase().includes(pattern.toLowerCase()))) {
-        itemField = key;
-        itemValue = extractedData[key];
+    } else {
+      // Fallback if no rule provided
+      // Common user field patterns (prioritized)
+      const userFieldPatterns = ['UserId', 'Username'];
+      // Common item field patterns (prioritized)
+      const itemFieldPatterns = ['ItemId', 'ItemTitle'];
+      // Common rating/review_value patterns (prioritized)
+      const valuePatterns = ['Value'];
+
+      // Find first available user field
+      for (const key of Object.keys(extractedData)) {
+        if (!userValue && userFieldPatterns.some(pattern => key.toLowerCase().includes(pattern.toLowerCase()))) {
+          userField = key;
+          userValue = extractedData[key];
+        }
+        if (!itemValue && itemFieldPatterns.some(pattern => key.toLowerCase().includes(pattern.toLowerCase()))) {
+          itemField = key;
+          itemValue = extractedData[key];
+        }
+        if (!value && valuePatterns.some(pattern => key.toLowerCase().includes(pattern.toLowerCase()))) {
+          value = extractedData[key];
+        }
+        if (userValue && itemValue && value) break;
       }
-      if (!value && valuePatterns.some(pattern => key.toLowerCase().includes(pattern.toLowerCase()))) {
-        value = key;
-        value = extractedData[key];
-      }
-      if (userValue && itemValue && value) break;
     }
 
     return { userField, userValue, itemField, itemValue, value };
@@ -158,7 +183,7 @@ export abstract class BasePlugin implements IPlugin {
     const extractedData = this.tracker.payloadBuilder.build(context, rule);
 
     // 2. Resolve identity fields dynamically
-    const { userField, userValue, itemField, itemValue, value } = this.resolvePayloadIdentity(extractedData);
+    const { userField, userValue, itemField, itemValue, value } = this.resolvePayloadIdentity(extractedData, rule);
 
     // 3. Construct payload
     const payload: any = {

@@ -17,6 +17,15 @@ export const ReturnType = {
 export type ReturnType = (typeof ReturnType)[keyof typeof ReturnType]
 
 
+export const IntentLevel = {
+  High: 'High',
+  Medium: 'Medium',
+  Normal: 'Normal'
+} as const
+
+export type IntentLevel = (typeof IntentLevel)[keyof typeof IntentLevel]
+
+
 export const PayloadField = {
   UserId: 'UserId',
   Username: 'Username',
@@ -34,7 +43,8 @@ export const PayloadSource = {
   Cookie: 'Cookie',
   LocalStorage: 'LocalStorage',
   SessionStorage: 'SessionStorage',
-  Url: 'Url'
+  Url: 'Url',
+  RequestUrl: 'RequestUrl'
 } as const
 
 export type PayloadSource = (typeof PayloadSource)[keyof typeof PayloadSource]
@@ -61,7 +71,8 @@ export type PayloadUrlPart = (typeof PayloadUrlPart)[keyof typeof PayloadUrlPart
 
 export const EventUserField = {
   UserId: 'UserId',
-  Username: 'Username'
+  Username: 'Username',
+  AnonymousId: 'AnonymousId'
 } as const
 
 export type EventUserField = (typeof EventUserField)[keyof typeof EventUserField]
