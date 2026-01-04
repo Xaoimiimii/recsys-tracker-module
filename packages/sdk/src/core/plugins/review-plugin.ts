@@ -79,15 +79,23 @@ export class ReviewPlugin extends BasePlugin {
     }
 
     private checkTargetMatch(form: HTMLFormElement, rule: any): boolean {
-        const target = rule.targetElement;
+        const target = rule.trackingTarget || rule.targetElement;
         if (!target) return false;
-
-        const patternId = Number(target.targetEventPatternId);
+        const rawValue = target.value || target.targetElementValue;
+        if (!rawValue) return false;
+        const operatorId = Number(target.operatorId) || OPERATOR_ID.EQUALS;
+        const patternId = Number(target.patternId || target.targetEventPatternId);
+        const finalSelector = this.transformSelector(rawValue, operatorId);
+        console.log(`Checking: "${rawValue}" -> "${finalSelector}"`);
         if (patternId !== TARGET_PATTERN_ID.CSS_SELECTOR) return false;
-
         try {
-            return form.matches(target.targetElementValue);
-        } catch { return false; }
+            if (form.matches(finalSelector) || form.closest(finalSelector)) {
+                return true;
+            }
+        } catch (e) {
+            console.warn(`Invalid selector: ${finalSelector}`);
+        }
+        return false;
     }
 
     private checkConditions(form: HTMLFormElement, rule: any): boolean {
@@ -143,5 +151,28 @@ export class ReviewPlugin extends BasePlugin {
         if (op === OPERATOR_ID.STARTS_WITH) return actual.startsWith(expected);
         if (op === OPERATOR_ID.ENDS_WITH) return actual.endsWith(expected);
         return false;
+    }
+
+    private buildAttributeSelector(className: string, operatorId: number): string {
+        switch (operatorId) {
+            case OPERATOR_ID.CONTAINS:    return `[class*="${className}"]`;
+            case OPERATOR_ID.STARTS_WITH: return `[class^="${className}"]`;
+            case OPERATOR_ID.ENDS_WITH:   return `[class$="${className}"]`;
+            case OPERATOR_ID.EQUALS:      return `.${className}`; 
+            default:                      return `.${className}`;
+        }
+    }
+
+    private transformSelector(input: string, operatorId: number): string {
+        const trimmed = input.trim();
+        const isComplexSelector = /[.#\[\s>]/.test(trimmed);
+
+        if (isComplexSelector) {
+            return trimmed.replace(/\.([\w-]+)/g, (match, className) => {
+                if (operatorId === OPERATOR_ID.EQUALS) return match;
+                return this.buildAttributeSelector(className, operatorId);
+            });
+        }
+        return this.buildAttributeSelector(trimmed, operatorId);
     }
 }
