@@ -398,7 +398,6 @@ export const ModelName = {
   Category: 'Category',
   ItemCategory: 'ItemCategory',
   Item: 'Item',
-  WidgetDesign: 'WidgetDesign',
   Model: 'Model',
   ItemFactor: 'ItemFactor',
   User: 'User',
@@ -421,7 +420,7 @@ export type TypeMap<ExtArgs extends runtime.Types.Extensions.InternalArgs = runt
     omit: GlobalOmitOptions
   }
   meta: {
-    modelProps: "ternant" | "domain" | "returnMethod" | "trackingRule" | "eventType" | "trackingTarget" | "condition" | "pattern" | "payloadMapping" | "operator" | "event" | "category" | "itemCategory" | "item" | "widgetDesign" | "model" | "itemFactor" | "user" | "userFactor" | "predict" | "rating" | "interaction"
+    modelProps: "ternant" | "domain" | "returnMethod" | "trackingRule" | "eventType" | "trackingTarget" | "condition" | "pattern" | "payloadMapping" | "operator" | "event" | "category" | "itemCategory" | "item" | "model" | "itemFactor" | "user" | "userFactor" | "predict" | "rating" | "interaction"
     txIsolationLevel: TransactionIsolationLevel
   }
   model: {
@@ -1461,80 +1460,6 @@ export type TypeMap<ExtArgs extends runtime.Types.Extensions.InternalArgs = runt
         }
       }
     }
-    WidgetDesign: {
-      payload: Prisma.$WidgetDesignPayload<ExtArgs>
-      fields: Prisma.WidgetDesignFieldRefs
-      operations: {
-        findUnique: {
-          args: Prisma.WidgetDesignFindUniqueArgs<ExtArgs>
-          result: runtime.Types.Utils.PayloadToResult<Prisma.$WidgetDesignPayload> | null
-        }
-        findUniqueOrThrow: {
-          args: Prisma.WidgetDesignFindUniqueOrThrowArgs<ExtArgs>
-          result: runtime.Types.Utils.PayloadToResult<Prisma.$WidgetDesignPayload>
-        }
-        findFirst: {
-          args: Prisma.WidgetDesignFindFirstArgs<ExtArgs>
-          result: runtime.Types.Utils.PayloadToResult<Prisma.$WidgetDesignPayload> | null
-        }
-        findFirstOrThrow: {
-          args: Prisma.WidgetDesignFindFirstOrThrowArgs<ExtArgs>
-          result: runtime.Types.Utils.PayloadToResult<Prisma.$WidgetDesignPayload>
-        }
-        findMany: {
-          args: Prisma.WidgetDesignFindManyArgs<ExtArgs>
-          result: runtime.Types.Utils.PayloadToResult<Prisma.$WidgetDesignPayload>[]
-        }
-        create: {
-          args: Prisma.WidgetDesignCreateArgs<ExtArgs>
-          result: runtime.Types.Utils.PayloadToResult<Prisma.$WidgetDesignPayload>
-        }
-        createMany: {
-          args: Prisma.WidgetDesignCreateManyArgs<ExtArgs>
-          result: BatchPayload
-        }
-        createManyAndReturn: {
-          args: Prisma.WidgetDesignCreateManyAndReturnArgs<ExtArgs>
-          result: runtime.Types.Utils.PayloadToResult<Prisma.$WidgetDesignPayload>[]
-        }
-        delete: {
-          args: Prisma.WidgetDesignDeleteArgs<ExtArgs>
-          result: runtime.Types.Utils.PayloadToResult<Prisma.$WidgetDesignPayload>
-        }
-        update: {
-          args: Prisma.WidgetDesignUpdateArgs<ExtArgs>
-          result: runtime.Types.Utils.PayloadToResult<Prisma.$WidgetDesignPayload>
-        }
-        deleteMany: {
-          args: Prisma.WidgetDesignDeleteManyArgs<ExtArgs>
-          result: BatchPayload
-        }
-        updateMany: {
-          args: Prisma.WidgetDesignUpdateManyArgs<ExtArgs>
-          result: BatchPayload
-        }
-        updateManyAndReturn: {
-          args: Prisma.WidgetDesignUpdateManyAndReturnArgs<ExtArgs>
-          result: runtime.Types.Utils.PayloadToResult<Prisma.$WidgetDesignPayload>[]
-        }
-        upsert: {
-          args: Prisma.WidgetDesignUpsertArgs<ExtArgs>
-          result: runtime.Types.Utils.PayloadToResult<Prisma.$WidgetDesignPayload>
-        }
-        aggregate: {
-          args: Prisma.WidgetDesignAggregateArgs<ExtArgs>
-          result: runtime.Types.Utils.Optional<Prisma.AggregateWidgetDesign>
-        }
-        groupBy: {
-          args: Prisma.WidgetDesignGroupByArgs<ExtArgs>
-          result: runtime.Types.Utils.Optional<Prisma.WidgetDesignGroupByOutputType>[]
-        }
-        count: {
-          args: Prisma.WidgetDesignCountArgs<ExtArgs>
-          result: runtime.Types.Utils.Optional<Prisma.WidgetDesignCountAggregateOutputType> | number
-        }
-      }
-    }
     Model: {
       payload: Prisma.$ModelPayload<ExtArgs>
       fields: Prisma.ModelFieldRefs
@@ -2120,7 +2045,11 @@ export const ReturnMethodScalarFieldEnum = {
   OperatorID: 'OperatorID',
   ReturnType: 'ReturnType',
   Value: 'Value',
-  ConfigurationName: 'ConfigurationName'
+  ConfigurationName: 'ConfigurationName',
+  Customizing: 'Customizing',
+  Layout: 'Layout',
+  Style: 'Style',
+  Delay: 'Delay'
 } as const
 
 export type ReturnMethodScalarFieldEnum = (typeof ReturnMethodScalarFieldEnum)[keyof typeof ReturnMethodScalarFieldEnum]
@@ -2247,20 +2176,6 @@ export const ItemScalarFieldEnum = {
 export type ItemScalarFieldEnum = (typeof ItemScalarFieldEnum)[keyof typeof ItemScalarFieldEnum]
 
 
-export const WidgetDesignScalarFieldEnum = {
-  Id: 'Id',
-  DomainId: 'DomainId',
-  CustomizingFields: 'CustomizingFields',
-  Type: 'Type',
-  Layout: 'Layout',
-  Style: 'Style',
-  IsEnabled: 'IsEnabled',
-  DelayDuration: 'DelayDuration'
-} as const
-
-export type WidgetDesignScalarFieldEnum = (typeof WidgetDesignScalarFieldEnum)[keyof typeof WidgetDesignScalarFieldEnum]
-
-
 export const ModelScalarFieldEnum = {
   Id: 'Id',
   Name: 'Name',
@@ -2360,13 +2275,6 @@ export const NullableJsonNullValueInput = {
 export type NullableJsonNullValueInput = (typeof NullableJsonNullValueInput)[keyof typeof NullableJsonNullValueInput]
 
 
-export const JsonNullValueInput = {
-  JsonNull: JsonNull
-} as const
-
-export type JsonNullValueInput = (typeof JsonNullValueInput)[keyof typeof JsonNullValueInput]
-
-
 export const QueryMode = {
   default: 'default',
   insensitive: 'insensitive'
@@ -2451,6 +2359,34 @@ export type EnumReturnTypeFieldRefInput<$PrismaModel> = FieldRefInputType<$Prism
  * Reference to a field of type 'ReturnType[]'
  */
 export type ListEnumReturnTypeFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'ReturnType[]'>
+    
+
+
+/**
+ * Reference to a field of type 'Json'
+ */
+export type JsonFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'Json'>
+    
+
+
+/**
+ * Reference to a field of type 'QueryMode'
+ */
+export type EnumQueryModeFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'QueryMode'>
+    
+
+
+/**
+ * Reference to a field of type 'Float'
+ */
+export type FloatFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'Float'>
+    
+
+
+/**
+ * Reference to a field of type 'Float[]'
+ */
+export type ListFloatFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'Float[]'>
     
 
 
@@ -2549,55 +2485,6 @@ export type EnumEventItemFieldFieldRefInput<$PrismaModel> = FieldRefInputType<$P
  * Reference to a field of type 'EventItemField[]'
  */
 export type ListEnumEventItemFieldFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'EventItemField[]'>
-    
-
-
-/**
- * Reference to a field of type 'Float[]'
- */
-export type ListFloatFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'Float[]'>
-    
-
-
-/**
- * Reference to a field of type 'Float'
- */
-export type FloatFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'Float'>
-    
-
-
-/**
- * Reference to a field of type 'Json'
- */
-export type JsonFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'Json'>
-    
-
-
-/**
- * Reference to a field of type 'QueryMode'
- */
-export type EnumQueryModeFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'QueryMode'>
-    
-
-
-/**
- * Reference to a field of type 'WidgetType'
- */
-export type EnumWidgetTypeFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'WidgetType'>
-    
-
-
-/**
- * Reference to a field of type 'WidgetType[]'
- */
-export type ListEnumWidgetTypeFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'WidgetType[]'>
-    
-
-
-/**
- * Reference to a field of type 'Boolean'
- */
-export type BooleanFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'Boolean'>
     
 
 /**
@@ -2709,7 +2596,6 @@ export type GlobalOmitConfig = {
   category?: Prisma.CategoryOmit
   itemCategory?: Prisma.ItemCategoryOmit
   item?: Prisma.ItemOmit
-  widgetDesign?: Prisma.WidgetDesignOmit
   model?: Prisma.ModelOmit
   itemFactor?: Prisma.ItemFactorOmit
   user?: Prisma.UserOmit

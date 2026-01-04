@@ -485,14 +485,6 @@ export type ModelCreateLearnableParametersInput = {
   set: number[]
 }
 
-export type NullableFloatFieldUpdateOperationsInput = {
-  set?: number | null
-  increment?: number
-  decrement?: number
-  multiply?: number
-  divide?: number
-}
-
 export type ModelUpdateLearnableParametersInput = {
   set?: number[]
   push?: number | number[]

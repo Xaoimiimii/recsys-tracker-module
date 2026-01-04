@@ -30,12 +30,14 @@ export type ReturnMethodAvgAggregateOutputType = {
   Id: number | null
   DomainID: number | null
   OperatorID: number | null
+  Delay: number | null
 }
 
 export type ReturnMethodSumAggregateOutputType = {
   Id: number | null
   DomainID: number | null
   OperatorID: number | null
+  Delay: number | null
 }
 
 export type ReturnMethodMinAggregateOutputType = {
@@ -45,6 +47,7 @@ export type ReturnMethodMinAggregateOutputType = {
   ReturnType: $Enums.ReturnType | null
   Value: string | null
   ConfigurationName: string | null
+  Delay: number | null
 }
 
 export type ReturnMethodMaxAggregateOutputType = {
@@ -54,6 +57,7 @@ export type ReturnMethodMaxAggregateOutputType = {
   ReturnType: $Enums.ReturnType | null
   Value: string | null
   ConfigurationName: string | null
+  Delay: number | null
 }
 
 export type ReturnMethodCountAggregateOutputType = {
@@ -63,6 +67,10 @@ export type ReturnMethodCountAggregateOutputType = {
   ReturnType: number
   Value: number
   ConfigurationName: number
+  Customizing: number
+  Layout: number
+  Style: number
+  Delay: number
   _all: number
 }
 
@@ -71,12 +79,14 @@ export type ReturnMethodAvgAggregateInputType = {
   Id?: true
   DomainID?: true
   OperatorID?: true
+  Delay?: true
 }
 
 export type ReturnMethodSumAggregateInputType = {
   Id?: true
   DomainID?: true
   OperatorID?: true
+  Delay?: true
 }
 
 export type ReturnMethodMinAggregateInputType = {
@@ -86,6 +96,7 @@ export type ReturnMethodMinAggregateInputType = {
   ReturnType?: true
   Value?: true
   ConfigurationName?: true
+  Delay?: true
 }
 
 export type ReturnMethodMaxAggregateInputType = {
@@ -95,6 +106,7 @@ export type ReturnMethodMaxAggregateInputType = {
   ReturnType?: true
   Value?: true
   ConfigurationName?: true
+  Delay?: true
 }
 
 export type ReturnMethodCountAggregateInputType = {
@@ -104,6 +116,10 @@ export type ReturnMethodCountAggregateInputType = {
   ReturnType?: true
   Value?: true
   ConfigurationName?: true
+  Customizing?: true
+  Layout?: true
+  Style?: true
+  Delay?: true
   _all?: true
 }
 
@@ -200,6 +216,10 @@ export type ReturnMethodGroupByOutputType = {
   ReturnType: $Enums.ReturnType
   Value: string
   ConfigurationName: string
+  Customizing: runtime.JsonValue | null
+  Layout: runtime.JsonValue | null
+  Style: runtime.JsonValue | null
+  Delay: number | null
   _count: ReturnMethodCountAggregateOutputType | null
   _avg: ReturnMethodAvgAggregateOutputType | null
   _sum: ReturnMethodSumAggregateOutputType | null
@@ -232,6 +252,10 @@ export type ReturnMethodWhereInput = {
   ReturnType?: Prisma.EnumReturnTypeFilter<"ReturnMethod"> | $Enums.ReturnType
   Value?: Prisma.StringFilter<"ReturnMethod"> | string
   ConfigurationName?: Prisma.StringFilter<"ReturnMethod"> | string
+  Customizing?: Prisma.JsonNullableFilter<"ReturnMethod">
+  Layout?: Prisma.JsonNullableFilter<"ReturnMethod">
+  Style?: Prisma.JsonNullableFilter<"ReturnMethod">
+  Delay?: Prisma.FloatNullableFilter<"ReturnMethod"> | number | null
   Domain?: Prisma.XOR<Prisma.DomainScalarRelationFilter, Prisma.DomainWhereInput>
   Operator?: Prisma.XOR<Prisma.OperatorScalarRelationFilter, Prisma.OperatorWhereInput>
 }
@@ -243,6 +267,10 @@ export type ReturnMethodOrderByWithRelationInput = {
   ReturnType?: Prisma.SortOrder
   Value?: Prisma.SortOrder
   ConfigurationName?: Prisma.SortOrder
+  Customizing?: Prisma.SortOrderInput | Prisma.SortOrder
+  Layout?: Prisma.SortOrderInput | Prisma.SortOrder
+  Style?: Prisma.SortOrderInput | Prisma.SortOrder
+  Delay?: Prisma.SortOrderInput | Prisma.SortOrder
   Domain?: Prisma.DomainOrderByWithRelationInput
   Operator?: Prisma.OperatorOrderByWithRelationInput
 }
@@ -257,6 +285,10 @@ export type ReturnMethodWhereUniqueInput = Prisma.AtLeast<{
   ReturnType?: Prisma.EnumReturnTypeFilter<"ReturnMethod"> | $Enums.ReturnType
   Value?: Prisma.StringFilter<"ReturnMethod"> | string
   ConfigurationName?: Prisma.StringFilter<"ReturnMethod"> | string
+  Customizing?: Prisma.JsonNullableFilter<"ReturnMethod">
+  Layout?: Prisma.JsonNullableFilter<"ReturnMethod">
+  Style?: Prisma.JsonNullableFilter<"ReturnMethod">
+  Delay?: Prisma.FloatNullableFilter<"ReturnMethod"> | number | null
   Domain?: Prisma.XOR<Prisma.DomainScalarRelationFilter, Prisma.DomainWhereInput>
   Operator?: Prisma.XOR<Prisma.OperatorScalarRelationFilter, Prisma.OperatorWhereInput>
 }, "Id">
@@ -268,6 +300,10 @@ export type ReturnMethodOrderByWithAggregationInput = {
   ReturnType?: Prisma.SortOrder
   Value?: Prisma.SortOrder
   ConfigurationName?: Prisma.SortOrder
+  Customizing?: Prisma.SortOrderInput | Prisma.SortOrder
+  Layout?: Prisma.SortOrderInput | Prisma.SortOrder
+  Style?: Prisma.SortOrderInput | Prisma.SortOrder
+  Delay?: Prisma.SortOrderInput | Prisma.SortOrder
   _count?: Prisma.ReturnMethodCountOrderByAggregateInput
   _avg?: Prisma.ReturnMethodAvgOrderByAggregateInput
   _max?: Prisma.ReturnMethodMaxOrderByAggregateInput
@@ -285,12 +321,20 @@ export type ReturnMethodScalarWhereWithAggregatesInput = {
   ReturnType?: Prisma.EnumReturnTypeWithAggregatesFilter<"ReturnMethod"> | $Enums.ReturnType
   Value?: Prisma.StringWithAggregatesFilter<"ReturnMethod"> | string
   ConfigurationName?: Prisma.StringWithAggregatesFilter<"ReturnMethod"> | string
+  Customizing?: Prisma.JsonNullableWithAggregatesFilter<"ReturnMethod">
+  Layout?: Prisma.JsonNullableWithAggregatesFilter<"ReturnMethod">
+  Style?: Prisma.JsonNullableWithAggregatesFilter<"ReturnMethod">
+  Delay?: Prisma.FloatNullableWithAggregatesFilter<"ReturnMethod"> | number | null
 }
 
 export type ReturnMethodCreateInput = {
   ReturnType: $Enums.ReturnType
   Value: string
   ConfigurationName: string
+  Customizing?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  Layout?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  Style?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  Delay?: number | null
   Domain: Prisma.DomainCreateNestedOneWithoutReturnMethodsInput
   Operator: Prisma.OperatorCreateNestedOneWithoutReturnMethodsInput
 }
@@ -302,12 +346,20 @@ export type ReturnMethodUncheckedCreateInput = {
   ReturnType: $Enums.ReturnType
   Value: string
   ConfigurationName: string
+  Customizing?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  Layout?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  Style?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  Delay?: number | null
 }
 
 export type ReturnMethodUpdateInput = {
   ReturnType?: Prisma.EnumReturnTypeFieldUpdateOperationsInput | $Enums.ReturnType
   Value?: Prisma.StringFieldUpdateOperationsInput | string
   ConfigurationName?: Prisma.StringFieldUpdateOperationsInput | string
+  Customizing?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  Layout?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  Style?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  Delay?: Prisma.NullableFloatFieldUpdateOperationsInput | number | null
   Domain?: Prisma.DomainUpdateOneRequiredWithoutReturnMethodsNestedInput
   Operator?: Prisma.OperatorUpdateOneRequiredWithoutReturnMethodsNestedInput
 }
@@ -319,6 +371,10 @@ export type ReturnMethodUncheckedUpdateInput = {
   ReturnType?: Prisma.EnumReturnTypeFieldUpdateOperationsInput | $Enums.ReturnType
   Value?: Prisma.StringFieldUpdateOperationsInput | string
   ConfigurationName?: Prisma.StringFieldUpdateOperationsInput | string
+  Customizing?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  Layout?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  Style?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  Delay?: Prisma.NullableFloatFieldUpdateOperationsInput | number | null
 }
 
 export type ReturnMethodCreateManyInput = {
@@ -328,12 +384,20 @@ export type ReturnMethodCreateManyInput = {
   ReturnType: $Enums.ReturnType
   Value: string
   ConfigurationName: string
+  Customizing?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  Layout?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  Style?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  Delay?: number | null
 }
 
 export type ReturnMethodUpdateManyMutationInput = {
   ReturnType?: Prisma.EnumReturnTypeFieldUpdateOperationsInput | $Enums.ReturnType
   Value?: Prisma.StringFieldUpdateOperationsInput | string
   ConfigurationName?: Prisma.StringFieldUpdateOperationsInput | string
+  Customizing?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  Layout?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  Style?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  Delay?: Prisma.NullableFloatFieldUpdateOperationsInput | number | null
 }
 
 export type ReturnMethodUncheckedUpdateManyInput = {
@@ -343,6 +407,10 @@ export type ReturnMethodUncheckedUpdateManyInput = {
   ReturnType?: Prisma.EnumReturnTypeFieldUpdateOperationsInput | $Enums.ReturnType
   Value?: Prisma.StringFieldUpdateOperationsInput | string
   ConfigurationName?: Prisma.StringFieldUpdateOperationsInput | string
+  Customizing?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  Layout?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  Style?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  Delay?: Prisma.NullableFloatFieldUpdateOperationsInput | number | null
 }
 
 export type ReturnMethodListRelationFilter = {
@@ -362,12 +430,17 @@ export type ReturnMethodCountOrderByAggregateInput = {
   ReturnType?: Prisma.SortOrder
   Value?: Prisma.SortOrder
   ConfigurationName?: Prisma.SortOrder
+  Customizing?: Prisma.SortOrder
+  Layout?: Prisma.SortOrder
+  Style?: Prisma.SortOrder
+  Delay?: Prisma.SortOrder
 }
 
 export type ReturnMethodAvgOrderByAggregateInput = {
   Id?: Prisma.SortOrder
   DomainID?: Prisma.SortOrder
   OperatorID?: Prisma.SortOrder
+  Delay?: Prisma.SortOrder
 }
 
 export type ReturnMethodMaxOrderByAggregateInput = {
@@ -377,6 +450,7 @@ export type ReturnMethodMaxOrderByAggregateInput = {
   ReturnType?: Prisma.SortOrder
   Value?: Prisma.SortOrder
   ConfigurationName?: Prisma.SortOrder
+  Delay?: Prisma.SortOrder
 }
 
 export type ReturnMethodMinOrderByAggregateInput = {
@@ -386,12 +460,14 @@ export type ReturnMethodMinOrderByAggregateInput = {
   ReturnType?: Prisma.SortOrder
   Value?: Prisma.SortOrder
   ConfigurationName?: Prisma.SortOrder
+  Delay?: Prisma.SortOrder
 }
 
 export type ReturnMethodSumOrderByAggregateInput = {
   Id?: Prisma.SortOrder
   DomainID?: Prisma.SortOrder
   OperatorID?: Prisma.SortOrder
+  Delay?: Prisma.SortOrder
 }
 
 export type ReturnMethodCreateNestedManyWithoutDomainInput = {
@@ -440,6 +516,14 @@ export type EnumReturnTypeFieldUpdateOperationsInput = {
   set?: $Enums.ReturnType
 }
 
+export type NullableFloatFieldUpdateOperationsInput = {
+  set?: number | null
+  increment?: number
+  decrement?: number
+  multiply?: number
+  divide?: number
+}
+
 export type ReturnMethodCreateNestedManyWithoutOperatorInput = {
   create?: Prisma.XOR<Prisma.ReturnMethodCreateWithoutOperatorInput, Prisma.ReturnMethodUncheckedCreateWithoutOperatorInput> | Prisma.ReturnMethodCreateWithoutOperatorInput[] | Prisma.ReturnMethodUncheckedCreateWithoutOperatorInput[]
   connectOrCreate?: Prisma.ReturnMethodCreateOrConnectWithoutOperatorInput | Prisma.ReturnMethodCreateOrConnectWithoutOperatorInput[]
@@ -486,6 +570,10 @@ export type ReturnMethodCreateWithoutDomainInput = {
   ReturnType: $Enums.ReturnType
   Value: string
   ConfigurationName: string
+  Customizing?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  Layout?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  Style?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  Delay?: number | null
   Operator: Prisma.OperatorCreateNestedOneWithoutReturnMethodsInput
 }
 
@@ -495,6 +583,10 @@ export type ReturnMethodUncheckedCreateWithoutDomainInput = {
   ReturnType: $Enums.ReturnType
   Value: string
   ConfigurationName: string
+  Customizing?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  Layout?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  Style?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  Delay?: number | null
 }
 
 export type ReturnMethodCreateOrConnectWithoutDomainInput = {
@@ -533,12 +625,20 @@ export type ReturnMethodScalarWhereInput = {
   ReturnType?: Prisma.EnumReturnTypeFilter<"ReturnMethod"> | $Enums.ReturnType
   Value?: Prisma.StringFilter<"ReturnMethod"> | string
   ConfigurationName?: Prisma.StringFilter<"ReturnMethod"> | string
+  Customizing?: Prisma.JsonNullableFilter<"ReturnMethod">
+  Layout?: Prisma.JsonNullableFilter<"ReturnMethod">
+  Style?: Prisma.JsonNullableFilter<"ReturnMethod">
+  Delay?: Prisma.FloatNullableFilter<"ReturnMethod"> | number | null
 }
 
 export type ReturnMethodCreateWithoutOperatorInput = {
   ReturnType: $Enums.ReturnType
   Value: string
   ConfigurationName: string
+  Customizing?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  Layout?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  Style?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  Delay?: number | null
   Domain: Prisma.DomainCreateNestedOneWithoutReturnMethodsInput
 }
 
@@ -548,6 +648,10 @@ export type ReturnMethodUncheckedCreateWithoutOperatorInput = {
   ReturnType: $Enums.ReturnType
   Value: string
   ConfigurationName: string
+  Customizing?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  Layout?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  Style?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  Delay?: number | null
 }
 
 export type ReturnMethodCreateOrConnectWithoutOperatorInput = {
@@ -582,12 +686,20 @@ export type ReturnMethodCreateManyDomainInput = {
   ReturnType: $Enums.ReturnType
   Value: string
   ConfigurationName: string
+  Customizing?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  Layout?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  Style?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  Delay?: number | null
 }
 
 export type ReturnMethodUpdateWithoutDomainInput = {
   ReturnType?: Prisma.EnumReturnTypeFieldUpdateOperationsInput | $Enums.ReturnType
   Value?: Prisma.StringFieldUpdateOperationsInput | string
   ConfigurationName?: Prisma.StringFieldUpdateOperationsInput | string
+  Customizing?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  Layout?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  Style?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  Delay?: Prisma.NullableFloatFieldUpdateOperationsInput | number | null
   Operator?: Prisma.OperatorUpdateOneRequiredWithoutReturnMethodsNestedInput
 }
 
@@ -597,6 +709,10 @@ export type ReturnMethodUncheckedUpdateWithoutDomainInput = {
   ReturnType?: Prisma.EnumReturnTypeFieldUpdateOperationsInput | $Enums.ReturnType
   Value?: Prisma.StringFieldUpdateOperationsInput | string
   ConfigurationName?: Prisma.StringFieldUpdateOperationsInput | string
+  Customizing?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  Layout?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  Style?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  Delay?: Prisma.NullableFloatFieldUpdateOperationsInput | number | null
 }
 
 export type ReturnMethodUncheckedUpdateManyWithoutDomainInput = {
@@ -605,6 +721,10 @@ export type ReturnMethodUncheckedUpdateManyWithoutDomainInput = {
   ReturnType?: Prisma.EnumReturnTypeFieldUpdateOperationsInput | $Enums.ReturnType
   Value?: Prisma.StringFieldUpdateOperationsInput | string
   ConfigurationName?: Prisma.StringFieldUpdateOperationsInput | string
+  Customizing?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  Layout?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  Style?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  Delay?: Prisma.NullableFloatFieldUpdateOperationsInput | number | null
 }
 
 export type ReturnMethodCreateManyOperatorInput = {
@@ -613,12 +733,20 @@ export type ReturnMethodCreateManyOperatorInput = {
   ReturnType: $Enums.ReturnType
   Value: string
   ConfigurationName: string
+  Customizing?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  Layout?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  Style?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  Delay?: number | null
 }
 
 export type ReturnMethodUpdateWithoutOperatorInput = {
   ReturnType?: Prisma.EnumReturnTypeFieldUpdateOperationsInput | $Enums.ReturnType
   Value?: Prisma.StringFieldUpdateOperationsInput | string
   ConfigurationName?: Prisma.StringFieldUpdateOperationsInput | string
+  Customizing?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  Layout?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  Style?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  Delay?: Prisma.NullableFloatFieldUpdateOperationsInput | number | null
   Domain?: Prisma.DomainUpdateOneRequiredWithoutReturnMethodsNestedInput
 }
 
@@ -628,6 +756,10 @@ export type ReturnMethodUncheckedUpdateWithoutOperatorInput = {
   ReturnType?: Prisma.EnumReturnTypeFieldUpdateOperationsInput | $Enums.ReturnType
   Value?: Prisma.StringFieldUpdateOperationsInput | string
   ConfigurationName?: Prisma.StringFieldUpdateOperationsInput | string
+  Customizing?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  Layout?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  Style?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  Delay?: Prisma.NullableFloatFieldUpdateOperationsInput | number | null
 }
 
 export type ReturnMethodUncheckedUpdateManyWithoutOperatorInput = {
@@ -636,6 +768,10 @@ export type ReturnMethodUncheckedUpdateManyWithoutOperatorInput = {
   ReturnType?: Prisma.EnumReturnTypeFieldUpdateOperationsInput | $Enums.ReturnType
   Value?: Prisma.StringFieldUpdateOperationsInput | string
   ConfigurationName?: Prisma.StringFieldUpdateOperationsInput | string
+  Customizing?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  Layout?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  Style?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  Delay?: Prisma.NullableFloatFieldUpdateOperationsInput | number | null
 }
 
 
@@ -647,6 +783,10 @@ export type ReturnMethodSelect<ExtArgs extends runtime.Types.Extensions.Internal
   ReturnType?: boolean
   Value?: boolean
   ConfigurationName?: boolean
+  Customizing?: boolean
+  Layout?: boolean
+  Style?: boolean
+  Delay?: boolean
   Domain?: boolean | Prisma.DomainDefaultArgs<ExtArgs>
   Operator?: boolean | Prisma.OperatorDefaultArgs<ExtArgs>
 }, ExtArgs["result"]["returnMethod"]>
@@ -658,6 +798,10 @@ export type ReturnMethodSelectCreateManyAndReturn<ExtArgs extends runtime.Types.
   ReturnType?: boolean
   Value?: boolean
   ConfigurationName?: boolean
+  Customizing?: boolean
+  Layout?: boolean
+  Style?: boolean
+  Delay?: boolean
   Domain?: boolean | Prisma.DomainDefaultArgs<ExtArgs>
   Operator?: boolean | Prisma.OperatorDefaultArgs<ExtArgs>
 }, ExtArgs["result"]["returnMethod"]>
@@ -669,6 +813,10 @@ export type ReturnMethodSelectUpdateManyAndReturn<ExtArgs extends runtime.Types.
   ReturnType?: boolean
   Value?: boolean
   ConfigurationName?: boolean
+  Customizing?: boolean
+  Layout?: boolean
+  Style?: boolean
+  Delay?: boolean
   Domain?: boolean | Prisma.DomainDefaultArgs<ExtArgs>
   Operator?: boolean | Prisma.OperatorDefaultArgs<ExtArgs>
 }, ExtArgs["result"]["returnMethod"]>
@@ -680,9 +828,13 @@ export type ReturnMethodSelectScalar = {
   ReturnType?: boolean
   Value?: boolean
   ConfigurationName?: boolean
+  Customizing?: boolean
+  Layout?: boolean
+  Style?: boolean
+  Delay?: boolean
 }
 
-export type ReturnMethodOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"Id" | "DomainID" | "OperatorID" | "ReturnType" | "Value" | "ConfigurationName", ExtArgs["result"]["returnMethod"]>
+export type ReturnMethodOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"Id" | "DomainID" | "OperatorID" | "ReturnType" | "Value" | "ConfigurationName" | "Customizing" | "Layout" | "Style" | "Delay", ExtArgs["result"]["returnMethod"]>
 export type ReturnMethodInclude<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   Domain?: boolean | Prisma.DomainDefaultArgs<ExtArgs>
   Operator?: boolean | Prisma.OperatorDefaultArgs<ExtArgs>
@@ -709,6 +861,10 @@ export type $ReturnMethodPayload<ExtArgs extends runtime.Types.Extensions.Intern
     ReturnType: $Enums.ReturnType
     Value: string
     ConfigurationName: string
+    Customizing: runtime.JsonValue | null
+    Layout: runtime.JsonValue | null
+    Style: runtime.JsonValue | null
+    Delay: number | null
   }, ExtArgs["result"]["returnMethod"]>
   composites: {}
 }
@@ -1140,6 +1296,10 @@ export interface ReturnMethodFieldRefs {
   readonly ReturnType: Prisma.FieldRef<"ReturnMethod", 'ReturnType'>
   readonly Value: Prisma.FieldRef<"ReturnMethod", 'String'>
   readonly ConfigurationName: Prisma.FieldRef<"ReturnMethod", 'String'>
+  readonly Customizing: Prisma.FieldRef<"ReturnMethod", 'Json'>
+  readonly Layout: Prisma.FieldRef<"ReturnMethod", 'Json'>
+  readonly Style: Prisma.FieldRef<"ReturnMethod", 'Json'>
+  readonly Delay: Prisma.FieldRef<"ReturnMethod", 'Float'>
 }
     
 

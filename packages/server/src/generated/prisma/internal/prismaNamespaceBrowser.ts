@@ -65,7 +65,6 @@ export const ModelName = {
   Category: 'Category',
   ItemCategory: 'ItemCategory',
   Item: 'Item',
-  WidgetDesign: 'WidgetDesign',
   Model: 'Model',
   ItemFactor: 'ItemFactor',
   User: 'User',
@@ -119,7 +118,11 @@ export const ReturnMethodScalarFieldEnum = {
   OperatorID: 'OperatorID',
   ReturnType: 'ReturnType',
   Value: 'Value',
-  ConfigurationName: 'ConfigurationName'
+  ConfigurationName: 'ConfigurationName',
+  Customizing: 'Customizing',
+  Layout: 'Layout',
+  Style: 'Style',
+  Delay: 'Delay'
 } as const
 
 export type ReturnMethodScalarFieldEnum = (typeof ReturnMethodScalarFieldEnum)[keyof typeof ReturnMethodScalarFieldEnum]
@@ -246,20 +249,6 @@ export const ItemScalarFieldEnum = {
 export type ItemScalarFieldEnum = (typeof ItemScalarFieldEnum)[keyof typeof ItemScalarFieldEnum]
 
 
-export const WidgetDesignScalarFieldEnum = {
-  Id: 'Id',
-  DomainId: 'DomainId',
-  CustomizingFields: 'CustomizingFields',
-  Type: 'Type',
-  Layout: 'Layout',
-  Style: 'Style',
-  IsEnabled: 'IsEnabled',
-  DelayDuration: 'DelayDuration'
-} as const
-
-export type WidgetDesignScalarFieldEnum = (typeof WidgetDesignScalarFieldEnum)[keyof typeof WidgetDesignScalarFieldEnum]
-
-
 export const ModelScalarFieldEnum = {
   Id: 'Id',
   Name: 'Name',
@@ -357,13 +346,6 @@ export const NullableJsonNullValueInput = {
 } as const
 
 export type NullableJsonNullValueInput = (typeof NullableJsonNullValueInput)[keyof typeof NullableJsonNullValueInput]
-
-
-export const JsonNullValueInput = {
-  JsonNull: 'JsonNull'
-} as const
-
-export type JsonNullValueInput = (typeof JsonNullValueInput)[keyof typeof JsonNullValueInput]
 
 
 export const QueryMode = {

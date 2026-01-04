@@ -88,11 +88,6 @@ export type ItemCategory = Prisma.ItemCategoryModel
  */
 export type Item = Prisma.ItemModel
 /**
- * Model WidgetDesign
- * 
- */
-export type WidgetDesign = Prisma.WidgetDesignModel
-/**
  * Model Model
  * 
  */
