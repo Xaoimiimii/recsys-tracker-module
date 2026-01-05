@@ -55,6 +55,7 @@ export class RecommendationService {
                         DomainItemId: true,
                         Title: true,
                         Description: true,
+                        ImageUrl: true,
                     }
                 });
 
