@@ -81,7 +81,7 @@ export class RatingPlugin extends BasePlugin {
             for (const rule of rules) {
                 const selector = rule.trackingTarget.value;
                 console.log('[RatingPlugin] Checking rule:', rule.name, 'selector:', selector);
-                
+
                 if (!selector) {
                     console.warn('[RatingPlugin] No selector for rule:', rule.name);
                     continue;
@@ -96,7 +96,7 @@ export class RatingPlugin extends BasePlugin {
                     // Extract base class name (remove leading dot and everything after underscore)
                     const baseClassName = selector.substring(1).split('_')[0];
                     console.log('[RatingPlugin] Trying flexible match with base class:', baseClassName);
-                    
+
                     // Try to find parent with matching base class
                     let parent: Element | null = target;
                     let depth = 0;
@@ -131,6 +131,33 @@ export class RatingPlugin extends BasePlugin {
                     }
 
                     console.log(`[RatingPlugin] 🎯 Captured [${eventType}]: Raw=${result.originalValue}/${result.maxValue} -> Norm=${result.normalizedValue}`);
+
+                    // DUPLICATE PREVENTION & NETWORK DATA STRATEGY
+                    // Check if this rule requires network data
+                    let requiresNetworkData = false;
+                    if (rule.payloadMappings) {
+                        requiresNetworkData = rule.payloadMappings.some((m: any) => {
+                            const s = (m.source || '').toLowerCase();
+                            return [
+                                'requestbody',
+                                'responsebody',
+                                'request_body',
+                                'response_body',
+                                'requesturl',
+                                'request_url'
+                            ].includes(s);
+                        });
+                    }
+
+                    if (requiresNetworkData) {
+                        console.log('[RatingPlugin] Rule requires network data. Signaling pending network event for rule:', rule.id);
+                        if (this.tracker && typeof this.tracker.addPendingNetworkRule === 'function') {
+                            this.tracker.addPendingNetworkRule(rule.id);
+                        } else {
+                            console.warn('[RatingPlugin] Tracker does not support addPendingNetworkRule');
+                        }
+                        break;
+                    }
 
                     // Build Payload using centralized method
                     this.buildAndTrack(finalMatch, rule, eventId);

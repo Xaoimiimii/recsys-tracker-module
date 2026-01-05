@@ -38,13 +38,16 @@ export class ReviewPlugin extends BasePlugin {
     private handleSubmit(event: Event): void {
         console.log('[ReviewPlugin] handleSubmit called');
         if (!this.tracker) return;
-        
+
         const form = event.target as HTMLFormElement;
 
         // Trigger ID for Review is typically 3 (or configured)
         const eventId = this.tracker.getEventTypeId('Review') || 3;
         const config = this.tracker.getConfig();
         const reviewRules = config?.trackingRules?.filter(r => r.eventTypeId === eventId) || [];
+
+        console.log('[ReviewPlugin] Event ID:', eventId);
+        console.log('[ReviewPlugin] Rules found:', reviewRules.length);
 
         if (reviewRules.length === 0) return;
 
@@ -61,7 +64,33 @@ export class ReviewPlugin extends BasePlugin {
             const reviewContent = this.autoDetectReviewContent(form);
             console.log(`[ReviewPlugin] Detected review content: "${reviewContent}"`);
 
-            // 4. Build and track using centralized method
+            // 4. Check if rule requires network data
+            let requiresNetworkData = false;
+            if (rule.payloadMappings) {
+                requiresNetworkData = rule.payloadMappings.some((m: any) => {
+                    const s = (m.source || '').toLowerCase();
+                    return [
+                        'requestbody',
+                        'responsebody',
+                        'request_body',
+                        'response_body',
+                        'requesturl',
+                        'request_url'
+                    ].includes(s);
+                });
+            }
+
+            if (requiresNetworkData) {
+                console.log('[ReviewPlugin] Rule requires network data. Signaling pending network event for rule:', rule.id);
+                if (this.tracker && typeof this.tracker.addPendingNetworkRule === 'function') {
+                    this.tracker.addPendingNetworkRule(rule.id);
+                } else {
+                    console.warn('[ReviewPlugin] Tracker does not support addPendingNetworkRule');
+                }
+                return;
+            }
+
+            // 5. Build and track using centralized method
             this.buildAndTrack(form, rule, eventId);
 
             console.log(`[ReviewPlugin] 📤 Event tracked successfully`);
@@ -77,8 +106,21 @@ export class ReviewPlugin extends BasePlugin {
         if (patternId !== TARGET_PATTERN_ID.CSS_SELECTOR) return false;
 
         try {
-            return form.matches(target.targetElementValue);
-        } catch { return false; }
+            console.log('[ReviewPlugin] Checking target match against:', target.targetElementValue);
+            console.log('[ReviewPlugin] Form classes:', form.className);
+
+            if (form.matches(target.targetElementValue)) {
+                console.log('[ReviewPlugin] Strict match success');
+                return true;
+            }
+            // Flexible match: Check if form is inside the target element
+            const closest = form.closest(target.targetElementValue);
+            console.log('[ReviewPlugin] Flexible match result:', closest);
+            return !!closest;
+        } catch (e) {
+            console.error('[ReviewPlugin] Match error:', e);
+            return false;
+        }
     }
 
     private checkConditions(form: HTMLFormElement, rule: any): boolean {

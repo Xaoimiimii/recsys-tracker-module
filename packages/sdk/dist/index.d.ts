@@ -21,6 +21,7 @@ export declare class RecSysTracker {
     private pendingNetworkRules;
     constructor();
     addPendingNetworkRule(ruleId: number): void;
+    checkPendingNetworkRule(ruleId: number): boolean;
     checkAndConsumePendingNetworkRule(ruleId: number): boolean;
     init(): Promise<void>;
     private autoInitializePlugins;

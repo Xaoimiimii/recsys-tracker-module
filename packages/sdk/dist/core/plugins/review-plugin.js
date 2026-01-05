@@ -54,7 +54,32 @@ export class ReviewPlugin extends BasePlugin {
             // 3. Auto-detect review content if needed
             const reviewContent = this.autoDetectReviewContent(form);
             console.log(`[ReviewPlugin] Detected review content: "${reviewContent}"`);
-            // 4. Build and track using centralized method
+            // 4. Check if rule requires network data
+            let requiresNetworkData = false;
+            if (rule.payloadMappings) {
+                requiresNetworkData = rule.payloadMappings.some((m) => {
+                    const s = (m.source || '').toLowerCase();
+                    return [
+                        'requestbody',
+                        'responsebody',
+                        'request_body',
+                        'response_body',
+                        'requesturl',
+                        'request_url'
+                    ].includes(s);
+                });
+            }
+            if (requiresNetworkData) {
+                console.log('[ReviewPlugin] Rule requires network data. Signaling pending network event for rule:', rule.id);
+                if (this.tracker && typeof this.tracker.addPendingNetworkRule === 'function') {
+                    this.tracker.addPendingNetworkRule(rule.id);
+                }
+                else {
+                    console.warn('[ReviewPlugin] Tracker does not support addPendingNetworkRule');
+                }
+                return;
+            }
+            // 5. Build and track using centralized method
             this.buildAndTrack(form, rule, eventId);
             console.log(`[ReviewPlugin] 📤 Event tracked successfully`);
             return;
@@ -68,9 +93,19 @@ export class ReviewPlugin extends BasePlugin {
         if (patternId !== TARGET_PATTERN_ID.CSS_SELECTOR)
             return false;
         try {
-            return form.matches(target.targetElementValue);
+            console.log('[ReviewPlugin] Checking target match against:', target.targetElementValue);
+            console.log('[ReviewPlugin] Form classes:', form.className);
+            if (form.matches(target.targetElementValue)) {
+                console.log('[ReviewPlugin] Strict match success');
+                return true;
+            }
+            // Flexible match: Check if form is inside the target element
+            const closest = form.closest(target.targetElementValue);
+            console.log('[ReviewPlugin] Flexible match result:', closest);
+            return !!closest;
         }
-        catch {
+        catch (e) {
+            console.error('[ReviewPlugin] Match error:', e);
             return false;
         }
     }

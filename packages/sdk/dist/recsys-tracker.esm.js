@@ -2518,7 +2518,32 @@ class ReviewPlugin extends BasePlugin {
             // 3. Auto-detect review content if needed
             const reviewContent = this.autoDetectReviewContent(form);
             console.log(`[ReviewPlugin] Detected review content: "${reviewContent}"`);
-            // 4. Build and track using centralized method
+            // 4. Check if rule requires network data
+            let requiresNetworkData = false;
+            if (rule.payloadMappings) {
+                requiresNetworkData = rule.payloadMappings.some((m) => {
+                    const s = (m.source || '').toLowerCase();
+                    return [
+                        'requestbody',
+                        'responsebody',
+                        'request_body',
+                        'response_body',
+                        'requesturl',
+                        'request_url'
+                    ].includes(s);
+                });
+            }
+            if (requiresNetworkData) {
+                console.log('[ReviewPlugin] Rule requires network data. Signaling pending network event for rule:', rule.id);
+                if (this.tracker && typeof this.tracker.addPendingNetworkRule === 'function') {
+                    this.tracker.addPendingNetworkRule(rule.id);
+                }
+                else {
+                    console.warn('[ReviewPlugin] Tracker does not support addPendingNetworkRule');
+                }
+                return;
+            }
+            // 5. Build and track using centralized method
             this.buildAndTrack(form, rule, eventId);
             console.log(`[ReviewPlugin] 📤 Event tracked successfully`);
             return;
@@ -2532,9 +2557,19 @@ class ReviewPlugin extends BasePlugin {
         if (patternId !== TARGET_PATTERN_ID.CSS_SELECTOR)
             return false;
         try {
-            return form.matches(target.targetElementValue);
+            console.log('[ReviewPlugin] Checking target match against:', target.targetElementValue);
+            console.log('[ReviewPlugin] Form classes:', form.className);
+            if (form.matches(target.targetElementValue)) {
+                console.log('[ReviewPlugin] Strict match success');
+                return true;
+            }
+            // Flexible match: Check if form is inside the target element
+            const closest = form.closest(target.targetElementValue);
+            console.log('[ReviewPlugin] Flexible match result:', closest);
+            return !!closest;
         }
-        catch {
+        catch (e) {
+            console.error('[ReviewPlugin] Match error:', e);
             return false;
         }
     }
@@ -3912,16 +3947,23 @@ class NetworkPlugin extends BasePlugin {
                 // If it's a UI event that DOES require network data -> CHECK SIGNAL
                 // We only proceed if ClickPlugin signaled strict correlation
                 if (isUiEvent && requiresNetworkData) {
-                    if (this.tracker && typeof this.tracker.checkAndConsumePendingNetworkRule === 'function') {
-                        const hasPendingSignal = this.tracker.checkAndConsumePendingNetworkRule(rule.id);
+                    if (this.tracker && typeof this.tracker.checkPendingNetworkRule === 'function') {
+                        // FIX: Use checkPendingNetworkRule (PEEK) first
+                        // Do NOT consume it yet. Wait until we confirm the URL matches.
+                        const hasPendingSignal = this.tracker.checkPendingNetworkRule(rule.id);
                         if (!hasPendingSignal) {
                             // console.log('[NetworkPlugin] Ignoring unrelated network request for rule:', rule.name);
                             continue;
                         }
-                        console.log('[NetworkPlugin] Correlation matched! Tracking pending event for rule:', rule.name);
+                    }
+                    else if (this.tracker && typeof this.tracker.checkAndConsumePendingNetworkRule === 'function') {
+                        console.warn('[NetworkPlugin] Tracker does not support checkPendingNetworkRule (peek), falling back to consume pattern which may cause race conditions');
+                        const hasPendingSignal = this.tracker.checkAndConsumePendingNetworkRule(rule.id);
+                        if (!hasPendingSignal)
+                            continue;
                     }
                     else {
-                        console.warn('[NetworkPlugin] Tracker does not support checkAndConsumePendingNetworkRule');
+                        console.warn('[NetworkPlugin] Tracker does not support pending network rules');
                     }
                 }
                 // Check Matching
@@ -3942,6 +3984,21 @@ class NetworkPlugin extends BasePlugin {
                     }
                 }
                 if (isNetworkMatch) {
+                    // FIX: Consume the signal HERE, only if we have a match
+                    if (isUiEvent && requiresNetworkData && this.tracker && typeof this.tracker.checkAndConsumePendingNetworkRule === 'function') {
+                        const consumed = this.tracker.checkAndConsumePendingNetworkRule(rule.id);
+                        if (!consumed) {
+                            // This might happen if another request just consumed it (rare race)
+                            // or if we only peeked and it expired (also rare)
+                            console.log('[NetworkPlugin] Signal lost or consumed by another request for rule:', rule.name);
+                            // Decide strictness: continue or break? 
+                            // If strict, we might want to skip. But let's assume if it was pending a moment ago, it's ours.
+                            // ideally checkAndConsume returns true if it successfully consumed.
+                        }
+                        else {
+                            console.log('[NetworkPlugin] Correlation matched and consumed! Tracking pending event for rule:', rule.name);
+                        }
+                    }
                     // Loop guard
                     if (hasRequestSourceMapping) {
                         const shouldBlock = this.tracker.loopGuard.checkAndRecord(url, method, rule.id);
@@ -4253,6 +4310,32 @@ class RatingPlugin extends BasePlugin {
                         continue;
                     }
                     console.log(`[RatingPlugin] 🎯 Captured [${eventType}]: Raw=${result.originalValue}/${result.maxValue} -> Norm=${result.normalizedValue}`);
+                    // DUPLICATE PREVENTION & NETWORK DATA STRATEGY
+                    // Check if this rule requires network data
+                    let requiresNetworkData = false;
+                    if (rule.payloadMappings) {
+                        requiresNetworkData = rule.payloadMappings.some((m) => {
+                            const s = (m.source || '').toLowerCase();
+                            return [
+                                'requestbody',
+                                'responsebody',
+                                'request_body',
+                                'response_body',
+                                'requesturl',
+                                'request_url'
+                            ].includes(s);
+                        });
+                    }
+                    if (requiresNetworkData) {
+                        console.log('[RatingPlugin] Rule requires network data. Signaling pending network event for rule:', rule.id);
+                        if (this.tracker && typeof this.tracker.addPendingNetworkRule === 'function') {
+                            this.tracker.addPendingNetworkRule(rule.id);
+                        }
+                        else {
+                            console.warn('[RatingPlugin] Tracker does not support addPendingNetworkRule');
+                        }
+                        break;
+                    }
                     // Build Payload using centralized method
                     this.buildAndTrack(finalMatch, rule, eventId);
                     break;
@@ -4298,6 +4381,10 @@ class RecSysTracker {
                 this.pendingNetworkRules.delete(ruleId);
             }
         }, 5000);
+    }
+    // Check if a rule is pending (without consuming it)
+    checkPendingNetworkRule(ruleId) {
+        return this.pendingNetworkRules.has(ruleId);
     }
     // Check if a rule is pending (signaled by UI) and consume it
     checkAndConsumePendingNetworkRule(ruleId) {
@@ -4362,18 +4449,18 @@ class RecSysTracker {
         if (!((_a = this.config) === null || _a === void 0 ? void 0 : _a.trackingRules) || this.config.trackingRules.length === 0) {
             return;
         }
-        // Get dynamic IDs
-        const clickId = this.getEventTypeId('Click');
-        const rateId = this.getEventTypeId('Rating');
-        const reviewId = this.getEventTypeId('Review');
-        const pageViewId = this.getEventTypeId('Page View');
-        const scrollId = this.getEventTypeId('Scroll');
+        // Get dynamic IDs with fallbacks
+        const clickId = this.getEventTypeId('Click') || 1;
+        const rateId = this.getEventTypeId('Rating') || 2;
+        const reviewId = this.getEventTypeId('Review') || 3;
+        const pageViewId = this.getEventTypeId('Page View') || 4;
+        const scrollId = this.getEventTypeId('Scroll') || 6;
         // Check specific rules (chỉ check nếu tìm thấy ID)
-        const hasClickRules = clickId ? this.config.trackingRules.some(rule => rule.eventTypeId === clickId) : false;
-        const hasRateRules = rateId ? this.config.trackingRules.some(rule => rule.eventTypeId === rateId) : false;
-        const hasReviewRules = reviewId ? this.config.trackingRules.some(rule => rule.eventTypeId === reviewId) : false;
-        const hasPageViewRules = pageViewId ? this.config.trackingRules.some(rule => rule.eventTypeId === pageViewId) : false;
-        const hasScrollRules = scrollId ? this.config.trackingRules.some(rule => rule.eventTypeId === scrollId) : false;
+        const hasClickRules = this.config.trackingRules.some(rule => rule.eventTypeId === clickId) ;
+        const hasRateRules = this.config.trackingRules.some(rule => rule.eventTypeId === rateId) ;
+        const hasReviewRules = this.config.trackingRules.some(rule => rule.eventTypeId === reviewId) ;
+        const hasPageViewRules = this.config.trackingRules.some(rule => rule.eventTypeId === pageViewId) ;
+        const hasScrollRules = this.config.trackingRules.some(rule => rule.eventTypeId === scrollId) ;
         // Chỉ tự động đăng ký nếu chưa có plugin nào được đăng ký
         if (this.pluginManager.getPluginNames().length === 0) {
             const pluginPromises = [];

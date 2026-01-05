@@ -33,6 +33,10 @@ export class RecSysTracker {
             }
         }, 5000);
     }
+    // Check if a rule is pending (without consuming it)
+    checkPendingNetworkRule(ruleId) {
+        return this.pendingNetworkRules.has(ruleId);
+    }
     // Check if a rule is pending (signaled by UI) and consume it
     checkAndConsumePendingNetworkRule(ruleId) {
         if (this.pendingNetworkRules.has(ruleId)) {
@@ -96,12 +100,12 @@ export class RecSysTracker {
         if (!((_a = this.config) === null || _a === void 0 ? void 0 : _a.trackingRules) || this.config.trackingRules.length === 0) {
             return;
         }
-        // Get dynamic IDs
-        const clickId = this.getEventTypeId('Click');
-        const rateId = this.getEventTypeId('Rating');
-        const reviewId = this.getEventTypeId('Review');
-        const pageViewId = this.getEventTypeId('Page View');
-        const scrollId = this.getEventTypeId('Scroll');
+        // Get dynamic IDs with fallbacks
+        const clickId = this.getEventTypeId('Click') || 1;
+        const rateId = this.getEventTypeId('Rating') || 2;
+        const reviewId = this.getEventTypeId('Review') || 3;
+        const pageViewId = this.getEventTypeId('Page View') || 4;
+        const scrollId = this.getEventTypeId('Scroll') || 6;
         // Check specific rules (chỉ check nếu tìm thấy ID)
         const hasClickRules = clickId ? this.config.trackingRules.some(rule => rule.eventTypeId === clickId) : false;
         const hasRateRules = rateId ? this.config.trackingRules.some(rule => rule.eventTypeId === rateId) : false;

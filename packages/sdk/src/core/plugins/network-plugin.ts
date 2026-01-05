@@ -173,15 +173,20 @@ export class NetworkPlugin extends BasePlugin {
                 // If it's a UI event that DOES require network data -> CHECK SIGNAL
                 // We only proceed if ClickPlugin signaled strict correlation
                 if (isUiEvent && requiresNetworkData) {
-                    if (this.tracker && typeof this.tracker.checkAndConsumePendingNetworkRule === 'function') {
-                        const hasPendingSignal = this.tracker.checkAndConsumePendingNetworkRule(rule.id);
+                    if (this.tracker && typeof this.tracker.checkPendingNetworkRule === 'function') {
+                        // FIX: Use checkPendingNetworkRule (PEEK) first
+                        // Do NOT consume it yet. Wait until we confirm the URL matches.
+                        const hasPendingSignal = this.tracker.checkPendingNetworkRule(rule.id);
                         if (!hasPendingSignal) {
                             // console.log('[NetworkPlugin] Ignoring unrelated network request for rule:', rule.name);
                             continue;
                         }
-                        console.log('[NetworkPlugin] Correlation matched! Tracking pending event for rule:', rule.name);
+                    } else if (this.tracker && typeof this.tracker.checkAndConsumePendingNetworkRule === 'function') {
+                        console.warn('[NetworkPlugin] Tracker does not support checkPendingNetworkRule (peek), falling back to consume pattern which may cause race conditions');
+                        const hasPendingSignal = this.tracker.checkAndConsumePendingNetworkRule(rule.id);
+                        if (!hasPendingSignal) continue;
                     } else {
-                        console.warn('[NetworkPlugin] Tracker does not support checkAndConsumePendingNetworkRule');
+                        console.warn('[NetworkPlugin] Tracker does not support pending network rules');
                     }
                 }
 
@@ -204,6 +209,21 @@ export class NetworkPlugin extends BasePlugin {
                 }
 
                 if (isNetworkMatch) {
+                    // FIX: Consume the signal HERE, only if we have a match
+                    if (isUiEvent && requiresNetworkData && this.tracker && typeof this.tracker.checkAndConsumePendingNetworkRule === 'function') {
+                        const consumed = this.tracker.checkAndConsumePendingNetworkRule(rule.id);
+                        if (!consumed) {
+                            // This might happen if another request just consumed it (rare race)
+                            // or if we only peeked and it expired (also rare)
+                            console.log('[NetworkPlugin] Signal lost or consumed by another request for rule:', rule.name);
+                            // Decide strictness: continue or break? 
+                            // If strict, we might want to skip. But let's assume if it was pending a moment ago, it's ours.
+                            // ideally checkAndConsume returns true if it successfully consumed.
+                        } else {
+                            console.log('[NetworkPlugin] Correlation matched and consumed! Tracking pending event for rule:', rule.name);
+                        }
+                    }
+
                     // Loop guard
                     if (hasRequestSourceMapping) {
                         const shouldBlock = this.tracker.loopGuard.checkAndRecord(url, method, rule.id);

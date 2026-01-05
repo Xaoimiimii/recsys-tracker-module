@@ -101,6 +101,32 @@ export class RatingPlugin extends BasePlugin {
                         continue;
                     }
                     console.log(`[RatingPlugin] 🎯 Captured [${eventType}]: Raw=${result.originalValue}/${result.maxValue} -> Norm=${result.normalizedValue}`);
+                    // DUPLICATE PREVENTION & NETWORK DATA STRATEGY
+                    // Check if this rule requires network data
+                    let requiresNetworkData = false;
+                    if (rule.payloadMappings) {
+                        requiresNetworkData = rule.payloadMappings.some((m) => {
+                            const s = (m.source || '').toLowerCase();
+                            return [
+                                'requestbody',
+                                'responsebody',
+                                'request_body',
+                                'response_body',
+                                'requesturl',
+                                'request_url'
+                            ].includes(s);
+                        });
+                    }
+                    if (requiresNetworkData) {
+                        console.log('[RatingPlugin] Rule requires network data. Signaling pending network event for rule:', rule.id);
+                        if (this.tracker && typeof this.tracker.addPendingNetworkRule === 'function') {
+                            this.tracker.addPendingNetworkRule(rule.id);
+                        }
+                        else {
+                            console.warn('[RatingPlugin] Tracker does not support addPendingNetworkRule');
+                        }
+                        break;
+                    }
                     // Build Payload using centralized method
                     this.buildAndTrack(finalMatch, rule, eventId);
                     break;
