@@ -28,7 +28,7 @@ model Domain {
   Key       String   @unique
   Url       String
   Type      Int?
-  CreatedAt DateTime @default(now())
+  CreatedAt DateTime @default(now()) @db.Timestamptz
 
   TernantID Int
   Ternant   Ternant @relation(fields: [TernantID], references: [Id])
@@ -284,7 +284,7 @@ model Event {
   RatingValue Int?
   ReviewValue String?
 
-  Timestamp DateTime
+  Timestamp DateTime @db.Timestamptz
 
   TrackingRuleId Int
   TrackingRule   TrackingRule @relation(fields: [TrackingRuleId], references: [Id])
@@ -316,7 +316,7 @@ model Item {
 
   Description     String?
   EmbeddingVector Float[]
-  ModifiedAt      DateTime @updatedAt
+  ModifiedAt      DateTime @updatedAt @db.Timestamptz
   ImageUrl        String?
   
   Attributes      Json?
@@ -336,7 +336,7 @@ model Model {
   Description         String?
   AverageRating       Float?
   LearnableParameters Float[]
-  ModifiedAt          DateTime @default(now()) @updatedAt
+  ModifiedAt          DateTime @default(now()) @updatedAt @db.Timestamptz
 
   DomainId Int
   Domain   Domain @relation(fields: [DomainId], references: [Id])
@@ -371,8 +371,8 @@ model User {
   Domain   Domain @relation(fields: [DomainId], references: [Id])
 
   UserEmbeddingVector Float[]
-  CreatedAt           DateTime @default(now())
-  ModifiedAt          DateTime @default(now()) @updatedAt
+  CreatedAt           DateTime @default(now())  @db.Timestamptz
+  ModifiedAt          DateTime @default(now()) @updatedAt @db.Timestamptz
 
   UserFactors  UserFactor[]
   Predicts     Predict[]
@@ -424,7 +424,7 @@ model Rating {
   Value          Float?
   ReviewText     String?
   ConvertedScore Float    @default(3)
-  CreatedAt      DateTime @default(now())
+  CreatedAt      DateTime @default(now()) @db.Timestamptz
 
   @@unique([UserId, ItemId])
 }
@@ -444,7 +444,7 @@ model Interaction {
   DomainId Int
   Domain   Domain @relation(fields: [DomainId], references: [Id])
 
-  CreatedAt DateTime @default(now())
+  CreatedAt DateTime @default(now())  @db.Timestamptz
 
   @@unique([UserId, ItemId, InteractionTypeId])
 }
