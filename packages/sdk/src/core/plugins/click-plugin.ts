@@ -33,7 +33,7 @@ export class ClickPlugin extends BasePlugin {
 
   private handleDocumentClick(event: MouseEvent, config: any): void {
     console.log('[ClickPlugin] Click detected on:', event.target);
-    
+
     if (!this.tracker) {
       console.warn('[ClickPlugin] Tracker not initialized');
       return;
@@ -53,12 +53,12 @@ export class ClickPlugin extends BasePlugin {
     for (const rule of clickRules) {
       const selector = rule.trackingTarget?.value;
       console.log('[ClickPlugin] Checking rule:', rule.name, 'with selector:', selector);
-      
+
       if (!selector) continue;
 
       const clickedElement = event.target as HTMLElement;
       console.log('[ClickPlugin] Clicked element:', clickedElement.tagName, clickedElement.className);
-      
+
       // Debug: Log parent chain
       let parent = clickedElement.parentElement;
       let depth = 0;
@@ -67,15 +67,15 @@ export class ClickPlugin extends BasePlugin {
         parent = parent.parentElement;
         depth++;
       }
-      
+
       // Strategy: 
       // 1. Try STRICT match first (element itself must match selector)
       // 2. If no match, try CLOSEST (parent traversal) but ONLY if clicked element is not a button/link
       //    This prevents other interactive elements from accidentally triggering
-      
+
       let target = SelectorMatcher.match(clickedElement, selector, MatchMode.STRICT);
       console.log('[ClickPlugin] STRICT match result:', target);
-      
+
       // TEMPORARY: If selector is .play-button, also try to match elements with "play-button" in their class
       if (!target && selector === '.play-button') {
         const className = clickedElement.className;
@@ -84,7 +84,7 @@ export class ClickPlugin extends BasePlugin {
           console.log('[ClickPlugin] Matched via flexible class check on clicked element');
         }
       }
-      
+
       if (!target) {
         // Only use CLOSEST matching if clicked element is NOT an interactive element
         const isInteractiveElement = ['BUTTON', 'A', 'INPUT', 'SELECT', 'TEXTAREA'].includes(
@@ -99,7 +99,7 @@ export class ClickPlugin extends BasePlugin {
           // Safe to traverse up - probably clicked on icon/text inside button
           target = SelectorMatcher.match(clickedElement, selector, MatchMode.CLOSEST);
           console.log('[ClickPlugin] CLOSEST match result:', target);
-          
+
           // TEMPORARY: If selector is .play-button and CLOSEST didn't find it, try manual parent search
           if (!target && selector === '.play-button') {
             let parent = clickedElement.parentElement;
@@ -117,7 +117,7 @@ export class ClickPlugin extends BasePlugin {
           }
         }
       }
-      
+
       if (!target) {
         console.log('[ClickPlugin] No target matched for selector:', selector);
         continue;
@@ -148,6 +148,35 @@ export class ClickPlugin extends BasePlugin {
         "| ID:",
         rule.id
       );
+
+      // DUPLICATE PREVENTION STRATEGY
+      // Check if this rule requires network data (RequestBody, ResponseBody, RequestUrl).
+      // If so, we SKIP tracking here because ClickPlugin cannot access that data.
+      // We rely on NetworkPlugin to pick up the corresponding network request and track it with full data.
+      let requiresNetworkData = false;
+      if (rule.payloadMappings) {
+        requiresNetworkData = rule.payloadMappings.some((m: any) => {
+          const s = (m.source || '').toLowerCase();
+          return [
+            'requestbody',
+            'responsebody',
+            'request_body',
+            'response_body',
+            'requesturl',
+            'request_url'
+          ].includes(s);
+        });
+      }
+
+      if (requiresNetworkData) {
+        console.log('[ClickPlugin] Rule requires network data. Signaling pending network event for rule:', rule.id);
+        if (this.tracker && typeof this.tracker.addPendingNetworkRule === 'function') {
+          this.tracker.addPendingNetworkRule(rule.id);
+        } else {
+          console.warn('[ClickPlugin] Tracker does not support addPendingNetworkRule');
+        }
+        break;
+      }
 
       // Use new flow: call buildAndTrack which handles payload extraction and tracking
       this.buildAndTrack(target, rule, rule.eventTypeId);

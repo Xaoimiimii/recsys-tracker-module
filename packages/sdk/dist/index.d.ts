@@ -18,7 +18,10 @@ export declare class RecSysTracker {
     payloadBuilder: PayloadBuilder;
     eventDeduplicator: EventDeduplicator;
     loopGuard: LoopGuard;
+    private pendingNetworkRules;
     constructor();
+    addPendingNetworkRule(ruleId: number): void;
+    checkAndConsumePendingNetworkRule(ruleId: number): boolean;
     init(): Promise<void>;
     private autoInitializePlugins;
     track(eventData: {

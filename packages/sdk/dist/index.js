@@ -13,6 +13,7 @@ export class RecSysTracker {
         this.userId = null;
         this.isInitialized = false;
         this.sendInterval = null;
+        this.pendingNetworkRules = new Map(); // ruleId -> timestamp
         this.configLoader = new ConfigLoader();
         this.errorBoundary = new ErrorBoundary();
         this.eventBuffer = new EventBuffer();
@@ -21,6 +22,24 @@ export class RecSysTracker {
         this.payloadBuilder = new PayloadBuilder();
         this.eventDeduplicator = new EventDeduplicator(3000); // 3 second window
         this.loopGuard = new LoopGuard({ maxRequestsPerSecond: 5 });
+    }
+    // Signal that a UI event (like Click) expects a network request for a specific rule
+    addPendingNetworkRule(ruleId) {
+        this.pendingNetworkRules.set(ruleId, Date.now());
+        // Auto-cleanup after 5 seconds to prevent stale flags
+        setTimeout(() => {
+            if (this.pendingNetworkRules.has(ruleId)) {
+                this.pendingNetworkRules.delete(ruleId);
+            }
+        }, 5000);
+    }
+    // Check if a rule is pending (signaled by UI) and consume it
+    checkAndConsumePendingNetworkRule(ruleId) {
+        if (this.pendingNetworkRules.has(ruleId)) {
+            this.pendingNetworkRules.delete(ruleId);
+            return true;
+        }
+        return false;
     }
     // Khởi tạo SDK - tự động gọi khi tải script
     async init() {

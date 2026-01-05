@@ -2302,6 +2302,34 @@
                         continue;
                 }
                 console.log("🎯 [ClickPlugin] Rule matched:", rule.name, "| ID:", rule.id);
+                // DUPLICATE PREVENTION STRATEGY
+                // Check if this rule requires network data (RequestBody, ResponseBody, RequestUrl).
+                // If so, we SKIP tracking here because ClickPlugin cannot access that data.
+                // We rely on NetworkPlugin to pick up the corresponding network request and track it with full data.
+                let requiresNetworkData = false;
+                if (rule.payloadMappings) {
+                    requiresNetworkData = rule.payloadMappings.some((m) => {
+                        const s = (m.source || '').toLowerCase();
+                        return [
+                            'requestbody',
+                            'responsebody',
+                            'request_body',
+                            'response_body',
+                            'requesturl',
+                            'request_url'
+                        ].includes(s);
+                    });
+                }
+                if (requiresNetworkData) {
+                    console.log('[ClickPlugin] Rule requires network data. Signaling pending network event for rule:', rule.id);
+                    if (this.tracker && typeof this.tracker.addPendingNetworkRule === 'function') {
+                        this.tracker.addPendingNetworkRule(rule.id);
+                    }
+                    else {
+                        console.warn('[ClickPlugin] Tracker does not support addPendingNetworkRule');
+                    }
+                    break;
+                }
                 // Use new flow: call buildAndTrack which handles payload extraction and tracking
                 this.buildAndTrack(target, rule, rule.eventTypeId);
                 break;
@@ -3731,10 +3759,22 @@
         }
     }
 
+    // Hàm tiện ích: Parse JSON an toàn
+    function safeParse(data) {
+        try {
+            if (typeof data === 'string')
+                return JSON.parse(data);
+            return data;
+        }
+        catch (e) {
+            return data;
+        }
+    }
     /**
      * NetworkPlugin: Plugin chịu trách nhiệm intercept network requests (XHR & Fetch).
-     * It caches network data so PayloadBuilder extractors (NetworkExtractor, RequestUrlExtractor) can use it.
-     * Does NOT automatically track events - only tracking plugins (click, rating, etc.) trigger tracking.
+     * - Nó parse request/response body.
+     * - Nó so khớp với Tracking Rules.
+     * - NÓ CÓ BỘ LỌC THÔNG MINH (SMART FILTER) để tránh trùng lặp sự kiện với các plugin UI.
      */
     class NetworkPlugin extends BasePlugin {
         constructor() {
@@ -3743,7 +3783,6 @@
         }
         /**
          * Khởi động plugin.
-         * Bắt đầu ghi đè (hook) XHR và Fetch để lắng nghe request.
          */
         start() {
             if (this.active)
@@ -3751,11 +3790,10 @@
             this.hookXhr();
             this.hookFetch();
             this.active = true;
-            console.log(`[NetworkPlugin] initialized.`);
+            console.log(`[NetworkPlugin] initialized with Smart Filter.`);
         }
         /**
          * Dừng plugin.
-         * Khôi phục (restore) lại XHR và Fetch gốc của trình duyệt.
          */
         stop() {
             if (!this.active)
@@ -3765,22 +3803,19 @@
             this.active = false;
         }
         /**
-         * Ghi đè XMLHttpRequest để theo dõi request cũ.
+         * Ghi đè XMLHTTPRequest
          */
         hookXhr() {
             this.originalXmlOpen = XMLHttpRequest.prototype.open;
             this.originalXmlSend = XMLHttpRequest.prototype.send;
             const plugin = this;
-            // Ghi đè phương thức open để lấy thông tin method và url
             XMLHttpRequest.prototype.open = function (method, url) {
                 this._networkTrackInfo = { method, url, startTime: Date.now() };
                 return plugin.originalXmlOpen.apply(this, arguments);
             };
-            // Ghi đè phương thức send để lấy body gửi đi và body trả về
             XMLHttpRequest.prototype.send = function (body) {
                 const info = this._networkTrackInfo;
                 if (info) {
-                    // Lắng nghe sự kiện load để bắt response
                     this.addEventListener('load', () => {
                         plugin.handleRequest(info.url, info.method, body, this.response);
                     });
@@ -3788,9 +3823,6 @@
                 return plugin.originalXmlSend.apply(this, arguments);
             };
         }
-        /**
-         * Khôi phục XMLHttpRequest về nguyên bản.
-         */
         restoreXhr() {
             if (this.originalXmlOpen)
                 XMLHttpRequest.prototype.open = this.originalXmlOpen;
@@ -3798,7 +3830,7 @@
                 XMLHttpRequest.prototype.send = this.originalXmlSend;
         }
         /**
-         * Ghi đè window.fetch để theo dõi request hiện đại.
+         * Ghi đè Fetch
          */
         hookFetch() {
             this.originalFetch = window.fetch;
@@ -3809,9 +3841,7 @@
                 const url = typeof resource === 'string' ? resource : resource.url;
                 const method = ((_a = config === null || config === void 0 ? void 0 : config.method) === null || _a === void 0 ? void 0 : _a.toUpperCase()) || 'GET';
                 const body = config === null || config === void 0 ? void 0 : config.body;
-                // Gọi fetch gốc
                 const response = await plugin.originalFetch.apply(this, args);
-                // Clone response để đọc dữ liệu mà không làm hỏng luồng chính
                 const clone = response.clone();
                 clone.text().then((text) => {
                     plugin.handleRequest(url, method, body, text);
@@ -3819,28 +3849,120 @@
                 return response;
             };
         }
-        /**
-         * Khôi phục window.fetch về nguyên bản.
-         */
         restoreFetch() {
             if (this.originalFetch)
                 window.fetch = this.originalFetch;
         }
         /**
-         * Xử lý thông tin request đã chặn được.
-         * Only caches network data for PayloadBuilder extractors to use.
-         * Does NOT automatically track events.
-         * @param url URL của request
-         * @param method Phương thức (GET, POST, ...)
-         * @param reqBody Body gửi đi (nếu có)
-         * @param resBody Body trả về (nếu có)
+         * Xử lý request đã chặn được
          */
-        handleRequest(url, method, _reqBody, _resBody) {
+        handleRequest(url, method, reqBody, resBody) {
             this.errorBoundary.execute(() => {
-                // NetworkPlugin no longer auto-tracks events
-                // It only intercepts requests so NetworkExtractor and RequestUrlExtractor can cache data
-                // The cached data will be extracted by PayloadBuilder when tracking plugins call buildAndTrack
-                console.log('[NetworkPlugin] Request intercepted:', method, url);
+                var _a;
+                if (!this.tracker)
+                    return;
+                const config = this.tracker.getConfig();
+                if (!config || !config.trackingRules)
+                    return;
+                const reqData = safeParse(reqBody);
+                const resData = safeParse(resBody);
+                const networkContext = {
+                    reqBody: reqData,
+                    resBody: resData,
+                    method: method,
+                    url: url
+                };
+                for (const rule of config.trackingRules) {
+                    if (!rule.payloadMappings || rule.payloadMappings.length === 0)
+                        continue;
+                    /*
+                     * SMART FILTER: DUPLICATE PREVENTION
+                     * Kiểm tra xem rule này có phải là rule UI không.
+                     * Nếu EventTypeId thuộc nhóm UI (Click, Rating, etc.), ta BỎ QUA.
+                     * Tránh trường hợp: Click Button -> Trigger API -> NetworkPlugin thấy API khớp -> Gửi event thứ 2.
+                     *
+                     * Danh sách UI Event IDs (giả định theo hệ thống RecSys):
+                     * 1: Click
+                     * 2: Rating
+                     * 3: Review
+                     * 5: Input
+                     * 6: Scroll
+                     * (Bạn có thể điều chỉnh list này tùy theo config thực tế của DB)
+                     */
+                    /*
+                     * SMART FILTER: DUPLICATE PREVENTION & CORRELATION
+                     * Check 1: Is this a UI-related rule? (Click, Rate, etc.)
+                     * Check 2: Does it require network data?
+                     * Check 3: Did the UI Plugin signal that it's waiting for this event?
+                     */
+                    const uiEventIds = [1, 2, 3, 5, 6];
+                    const isUiEvent = uiEventIds.includes(rule.eventTypeId);
+                    let requiresNetworkData = false;
+                    if (rule.payloadMappings) {
+                        requiresNetworkData = rule.payloadMappings.some((m) => {
+                            const s = (m.source || '').toLowerCase();
+                            return [
+                                'requestbody',
+                                'responsebody',
+                                'request_body',
+                                'response_body',
+                                'requesturl',
+                                'request_url'
+                            ].includes(s);
+                        });
+                    }
+                    // If it's a UI event that DOES NOT require network data -> SKIP (ClickPlugin handled it)
+                    if (isUiEvent && !requiresNetworkData) {
+                        continue;
+                    }
+                    // If it's a UI event that DOES require network data -> CHECK SIGNAL
+                    // We only proceed if ClickPlugin signaled strict correlation
+                    if (isUiEvent && requiresNetworkData) {
+                        if (this.tracker && typeof this.tracker.checkAndConsumePendingNetworkRule === 'function') {
+                            const hasPendingSignal = this.tracker.checkAndConsumePendingNetworkRule(rule.id);
+                            if (!hasPendingSignal) {
+                                // console.log('[NetworkPlugin] Ignoring unrelated network request for rule:', rule.name);
+                                continue;
+                            }
+                            console.log('[NetworkPlugin] Correlation matched! Tracking pending event for rule:', rule.name);
+                        }
+                        else {
+                            console.warn('[NetworkPlugin] Tracker does not support checkAndConsumePendingNetworkRule');
+                        }
+                    }
+                    // Check Matching
+                    let isNetworkMatch = false;
+                    let hasRequestSourceMapping = false;
+                    for (const m of rule.payloadMappings) {
+                        if (m.source === 'RequestBody' || m.source === 'RequestUrl') {
+                            hasRequestSourceMapping = true;
+                        }
+                        if (m.requestUrlPattern) {
+                            const targetMethod = (_a = m.requestMethod) === null || _a === void 0 ? void 0 : _a.toUpperCase();
+                            if (targetMethod && targetMethod !== method)
+                                continue;
+                            if (PathMatcher.match(url, m.requestUrlPattern)) {
+                                isNetworkMatch = true;
+                                break;
+                            }
+                        }
+                    }
+                    if (isNetworkMatch) {
+                        // Loop guard
+                        if (hasRequestSourceMapping) {
+                            const shouldBlock = this.tracker.loopGuard.checkAndRecord(url, method, rule.id);
+                            if (shouldBlock)
+                                continue;
+                        }
+                        // Extract Data
+                        const extractedData = this.tracker.payloadBuilder.build(networkContext, rule);
+                        // Track if valid
+                        if (Object.keys(extractedData).length > 0) {
+                            // console.log('[NetworkPlugin] Sending filtered event:', rule.name);
+                            this.buildAndTrack(networkContext, rule, rule.eventTypeId);
+                        }
+                    }
+                }
             }, 'NetworkPlugin.handleRequest');
         }
     }
@@ -4163,6 +4285,7 @@
             this.userId = null;
             this.isInitialized = false;
             this.sendInterval = null;
+            this.pendingNetworkRules = new Map(); // ruleId -> timestamp
             this.configLoader = new ConfigLoader();
             this.errorBoundary = new ErrorBoundary();
             this.eventBuffer = new EventBuffer();
@@ -4171,6 +4294,24 @@
             this.payloadBuilder = new PayloadBuilder();
             this.eventDeduplicator = new EventDeduplicator(3000); // 3 second window
             this.loopGuard = new LoopGuard({ maxRequestsPerSecond: 5 });
+        }
+        // Signal that a UI event (like Click) expects a network request for a specific rule
+        addPendingNetworkRule(ruleId) {
+            this.pendingNetworkRules.set(ruleId, Date.now());
+            // Auto-cleanup after 5 seconds to prevent stale flags
+            setTimeout(() => {
+                if (this.pendingNetworkRules.has(ruleId)) {
+                    this.pendingNetworkRules.delete(ruleId);
+                }
+            }, 5000);
+        }
+        // Check if a rule is pending (signaled by UI) and consume it
+        checkAndConsumePendingNetworkRule(ruleId) {
+            if (this.pendingNetworkRules.has(ruleId)) {
+                this.pendingNetworkRules.delete(ruleId);
+                return true;
+            }
+            return false;
         }
         // Khởi tạo SDK - tự động gọi khi tải script
         async init() {

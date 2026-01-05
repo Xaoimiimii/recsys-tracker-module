@@ -109,6 +109,34 @@ export class ClickPlugin extends BasePlugin {
                     continue;
             }
             console.log("🎯 [ClickPlugin] Rule matched:", rule.name, "| ID:", rule.id);
+            // DUPLICATE PREVENTION STRATEGY
+            // Check if this rule requires network data (RequestBody, ResponseBody, RequestUrl).
+            // If so, we SKIP tracking here because ClickPlugin cannot access that data.
+            // We rely on NetworkPlugin to pick up the corresponding network request and track it with full data.
+            let requiresNetworkData = false;
+            if (rule.payloadMappings) {
+                requiresNetworkData = rule.payloadMappings.some((m) => {
+                    const s = (m.source || '').toLowerCase();
+                    return [
+                        'requestbody',
+                        'responsebody',
+                        'request_body',
+                        'response_body',
+                        'requesturl',
+                        'request_url'
+                    ].includes(s);
+                });
+            }
+            if (requiresNetworkData) {
+                console.log('[ClickPlugin] Rule requires network data. Signaling pending network event for rule:', rule.id);
+                if (this.tracker && typeof this.tracker.addPendingNetworkRule === 'function') {
+                    this.tracker.addPendingNetworkRule(rule.id);
+                }
+                else {
+                    console.warn('[ClickPlugin] Tracker does not support addPendingNetworkRule');
+                }
+                break;
+            }
             // Use new flow: call buildAndTrack which handles payload extraction and tracking
             this.buildAndTrack(target, rule, rule.eventTypeId);
             break;

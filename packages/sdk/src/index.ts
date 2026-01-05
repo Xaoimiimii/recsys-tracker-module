@@ -31,6 +31,7 @@ export class RecSysTracker {
   public payloadBuilder: PayloadBuilder;
   public eventDeduplicator: EventDeduplicator;
   public loopGuard: LoopGuard;
+  private pendingNetworkRules: Map<number, number> = new Map(); // ruleId -> timestamp
 
   constructor() {
     this.configLoader = new ConfigLoader();
@@ -41,6 +42,26 @@ export class RecSysTracker {
     this.payloadBuilder = new PayloadBuilder();
     this.eventDeduplicator = new EventDeduplicator(3000); // 3 second window
     this.loopGuard = new LoopGuard({ maxRequestsPerSecond: 5 });
+  }
+
+  // Signal that a UI event (like Click) expects a network request for a specific rule
+  public addPendingNetworkRule(ruleId: number): void {
+    this.pendingNetworkRules.set(ruleId, Date.now());
+    // Auto-cleanup after 5 seconds to prevent stale flags
+    setTimeout(() => {
+      if (this.pendingNetworkRules.has(ruleId)) {
+        this.pendingNetworkRules.delete(ruleId);
+      }
+    }, 5000);
+  }
+
+  // Check if a rule is pending (signaled by UI) and consume it
+  public checkAndConsumePendingNetworkRule(ruleId: number): boolean {
+    if (this.pendingNetworkRules.has(ruleId)) {
+      this.pendingNetworkRules.delete(ruleId);
+      return true;
+    }
+    return false;
   }
 
   // Khởi tạo SDK - tự động gọi khi tải script
@@ -130,12 +151,12 @@ export class RecSysTracker {
       if (hasClickRules && this.config) {
         const currentConfig = this.config; // TypeScript sẽ hiểu currentConfig chắc chắn là TrackerConfig
         const clickPromise = import('./core/plugins/click-plugin').then(({ ClickPlugin }) => {
-          this.use(new ClickPlugin(currentConfig)); 
+          this.use(new ClickPlugin(currentConfig));
           console.log('[RecSysTracker] Auto-registered ClickPlugin');
         });
         pluginPromises.push(clickPromise);
       }
-        
+
       if (hasRateRules) {
         const ratingPromise = import('./core/plugins/rating-plugin').then(({ RatingPlugin }) => {
           this.use(new RatingPlugin());
