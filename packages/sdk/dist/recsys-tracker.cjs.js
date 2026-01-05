@@ -1952,7 +1952,7 @@ class RecommendationFetcher {
     }
 }
 
-// const ANON_USER_ID_KEY = 'recsys_anon_id';
+const ANON_USER_ID_KEY = 'recsys_anon_id';
 class DisplayManager {
     constructor(domainKey, apiBaseUrl = 'https://recsys-tracker-module.onrender.com') {
         this.popupDisplay = null;
@@ -2000,18 +2000,13 @@ class DisplayManager {
         try {
             // MOCK: Temporarily using UserId="1" for testing
             // TODO: Uncomment below code when enough data is available
-            // const anonymousId = this.getAnonymousId();
-            // if (!anonymousId) {
-            //   console.warn('[DisplayManager] No anonymous ID found');
-            //   return [];
-            // }
-            // console.log(`[DisplayManager] Fetching recommendations for anonymous ID: ${anonymousId}`);
-            // const items = await this.recommendationFetcher.fetchRecommendations(
-            //   anonymousId,
-            //   'AnonymousId',
-            //   { numberItems: 10 }
-            // );
-            const items = await this.recommendationFetcher.fetchRecommendations('1', 'UserId', { numberItems: 10 });
+            const anonymousId = this.getAnonymousId();
+            if (!anonymousId) {
+                console.warn('[DisplayManager] No anonymous ID found');
+                return [];
+            }
+            console.log(`[DisplayManager] Fetching recommendations for anonymous ID: ${anonymousId}`);
+            const items = await this.recommendationFetcher.fetchRecommendations(anonymousId, 'AnonymousId', { numberItems: 6 });
             return items;
         }
         catch (error) {
@@ -2019,19 +2014,20 @@ class DisplayManager {
         }
     }
     // Lấy anonymous ID từ localStorage (recsys_anon_id)
-    // private getAnonymousId(): string | null {
-    //   try {
-    //     const anonId = localStorage.getItem(ANON_USER_ID_KEY);
-    //     if (anonId) {
-    //       return anonId;
-    //     }
-    //     console.warn('[DisplayManager] recsys_anon_id not found in localStorage');
-    //     return null;
-    //   } catch (error) {
-    //     console.error('[DisplayManager] Error reading localStorage:', error);
-    //     return null;
-    //   }
-    // }
+    getAnonymousId() {
+        try {
+            const anonId = localStorage.getItem(ANON_USER_ID_KEY);
+            if (anonId) {
+                return anonId;
+            }
+            console.warn('[DisplayManager] recsys_anon_id not found in localStorage');
+            return null;
+        }
+        catch (error) {
+            console.error('[DisplayManager] Error reading localStorage:', error);
+            return null;
+        }
+    }
     // Get cached recommendations
     async getRecommendations() {
         return this.fetchRecommendationsOnce();

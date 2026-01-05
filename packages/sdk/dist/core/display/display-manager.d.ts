@@ -12,6 +12,7 @@ export declare class DisplayManager {
     initialize(returnMethods: ReturnMethod[]): Promise<void>;
     private fetchRecommendationsOnce;
     private fetchRecommendationsInternal;
+    private getAnonymousId;
     getRecommendations(): Promise<RecommendationItem[]>;
     private activateDisplayMethod;
     private initializePopup;
