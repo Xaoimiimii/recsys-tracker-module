@@ -1590,7 +1590,7 @@ var RecSysTracker = (function (exports) {
         display: grid;
         grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
         gap: 16px;
-        padding: 10px 0;
+        padding: 0px 0px 32px 0px;
       }
 
       .recsys-item {
