@@ -2302,10 +2302,7 @@
                         continue;
                 }
                 console.log("🎯 [ClickPlugin] Rule matched:", rule.name, "| ID:", rule.id);
-                // DUPLICATE PREVENTION STRATEGY
-                // Check if this rule requires network data (RequestBody, ResponseBody, RequestUrl).
-                // If so, we SKIP tracking here because ClickPlugin cannot access that data.
-                // We rely on NetworkPlugin to pick up the corresponding network request and track it with full data.
+                // NEW FLOW: Check if rule requires network data
                 let requiresNetworkData = false;
                 if (rule.payloadMappings) {
                     requiresNetworkData = rule.payloadMappings.some((m) => {
@@ -2321,16 +2318,27 @@
                     });
                 }
                 if (requiresNetworkData) {
-                    console.log('[ClickPlugin] Rule requires network data. Signaling pending network event for rule:', rule.id);
-                    if (this.tracker && typeof this.tracker.addPendingNetworkRule === 'function') {
-                        this.tracker.addPendingNetworkRule(rule.id);
+                    console.log('[ClickPlugin] ⏳ Rule requires network data. Starting collection for rule:', rule.id);
+                    // NEW FLOW: Gọi startCollection với đầy đủ context
+                    if (this.tracker && this.tracker.payloadBuilder) {
+                        const context = {
+                            element: target,
+                            eventType: 'click',
+                            triggerTimestamp: Date.now()
+                        };
+                        this.tracker.payloadBuilder.startCollection(context, rule, (finalPayload) => {
+                            console.log('[ClickPlugin] ✅ Collection complete, tracking event with payload:', finalPayload);
+                            // Sau khi có đủ dữ liệu → Track event
+                            this.buildAndTrack(target, rule, rule.eventTypeId);
+                        });
                     }
                     else {
-                        console.warn('[ClickPlugin] Tracker does not support addPendingNetworkRule');
+                        console.warn('[ClickPlugin] Tracker or PayloadBuilder not available');
                     }
                     break;
                 }
-                // Use new flow: call buildAndTrack which handles payload extraction and tracking
+                // Không cần network data → Track ngay
+                console.log('[ClickPlugin] No network data required, tracking immediately');
                 this.buildAndTrack(target, rule, rule.eventTypeId);
                 break;
             }
@@ -2511,6 +2519,8 @@
             const eventId = this.tracker.getEventTypeId('Review') || 3;
             const config = this.tracker.getConfig();
             const reviewRules = ((_a = config === null || config === void 0 ? void 0 : config.trackingRules) === null || _a === void 0 ? void 0 : _a.filter(r => r.eventTypeId === eventId)) || [];
+            console.log('[ReviewPlugin] Event ID:', eventId);
+            console.log('[ReviewPlugin] Rules found:', reviewRules.length);
             if (reviewRules.length === 0)
                 return;
             for (const rule of reviewRules) {
@@ -2539,17 +2549,30 @@
                         ].includes(s);
                     });
                 }
+                // 4. NEW FLOW: Check if rule requires network data
                 if (requiresNetworkData) {
-                    console.log('[ReviewPlugin] Rule requires network data. Signaling pending network event for rule:', rule.id);
-                    if (this.tracker && typeof this.tracker.addPendingNetworkRule === 'function') {
-                        this.tracker.addPendingNetworkRule(rule.id);
+                    console.log('[ReviewPlugin] ⏳ Rule requires network data. Starting collection for rule:', rule.id);
+                    // NEW FLOW: Gọi startCollection với đầy đủ context
+                    if (this.tracker && this.tracker.payloadBuilder) {
+                        const context = {
+                            element: form,
+                            eventType: 'review',
+                            triggerTimestamp: Date.now(),
+                            reviewContent: reviewContent
+                        };
+                        this.tracker.payloadBuilder.startCollection(context, rule, (finalPayload) => {
+                            console.log('[ReviewPlugin] ✅ Collection complete, tracking event with payload:', finalPayload);
+                            // Sau khi có đủ dữ liệu → Track event
+                            this.buildAndTrack(form, rule, eventId);
+                        });
                     }
                     else {
-                        console.warn('[ReviewPlugin] Tracker does not support addPendingNetworkRule');
+                        console.warn('[ReviewPlugin] Tracker or PayloadBuilder not available');
                     }
                     return;
                 }
-                // 5. Build and track using centralized method
+                // 5. Không cần network data → Track ngay
+                console.log('[ReviewPlugin] No network data required, tracking immediately');
                 this.buildAndTrack(form, rule, eventId);
                 console.log(`[ReviewPlugin] 📤 Event tracked successfully`);
                 return;
@@ -3100,7 +3123,13 @@
     class NetworkExtractor {
         constructor() {
             this.isTrackingActive = false;
-            this.trackerConfig = null;
+            this.payloadBuilder = null; // Reference to PayloadBuilder
+        }
+        /**
+         * NEW: Set reference to PayloadBuilder
+         */
+        setPayloadBuilder(builder) {
+            this.payloadBuilder = builder;
         }
         /**
          * Extract data from network request/response based on mapping
@@ -3149,12 +3178,11 @@
         /**
          * Enable network tracking by hooking into XHR and Fetch APIs
          */
-        enableTracking(config, onMatch) {
+        enableTracking(_config, onMatch) {
             if (this.isTrackingActive) {
                 console.warn('[NetworkExtractor] Network tracking is already active');
                 return;
             }
-            this.trackerConfig = config;
             this.onNetworkMatchCallback = onMatch;
             this.hookXhr();
             this.hookFetch();
@@ -3170,7 +3198,6 @@
             this.restoreXhr();
             this.restoreFetch();
             this.isTrackingActive = false;
-            this.trackerConfig = null;
             this.onNetworkMatchCallback = undefined;
             console.log('[NetworkExtractor] Network tracking disabled');
         }
@@ -3243,12 +3270,16 @@
         }
         // --- REQUEST HANDLING ---
         /**
-         * Handle intercepted network request
-         * Match against rules and extract data
+         * NEW FLOW: Handle intercepted network request
+         * Chỉ bắt request khi có pending collection + anti-duplicate
          */
         handleNetworkRequest(url, method, reqBody, resBody) {
-            if (!this.trackerConfig || !this.trackerConfig.trackingRules)
+            var _a;
+            if (!this.payloadBuilder || !this.payloadBuilder.pendingCollections) {
+                // Không có pending collections → Ignore
                 return;
+            }
+            const timestamp = Date.now();
             const reqData = this.safeParse(reqBody);
             const resData = this.safeParse(resBody);
             const networkContext = {
@@ -3257,12 +3288,32 @@
                 method: method,
                 url: url
             };
-            // Match against each tracking rule
-            for (const rule of this.trackerConfig.trackingRules) {
-                if (!rule.payloadMappings)
+            console.log('[NetworkExtractor] Intercepted request:', method, url);
+            console.log('[NetworkExtractor] Pending collections:', this.payloadBuilder.pendingCollections.size);
+            // Lặp qua các pending collections
+            for (const [ruleId, pending] of this.payloadBuilder.pendingCollections) {
+                console.log('[NetworkExtractor] Checking pending rule:', ruleId, pending.rule.name);
+                // 1. Check xem request có xảy ra SAU trigger không (trong 5s)
+                const timeSinceTrigger = timestamp - pending.timestamp;
+                if (timeSinceTrigger > 5000) {
+                    console.log('[NetworkExtractor] Request too late (>5s) for rule:', ruleId);
                     continue;
-                // Filter mappings that match this request
-                const applicableMappings = rule.payloadMappings.filter((mapping) => {
+                }
+                if (timeSinceTrigger < 0) {
+                    console.log('[NetworkExtractor] Request before trigger for rule:', ruleId);
+                    continue;
+                }
+                // 2. Check xem đã bắt request cho rule này chưa (anti-duplicate)
+                if (pending.networkCaptured) {
+                    console.log('[NetworkExtractor] Already captured network data for rule:', ruleId, '- IGNORING duplicate');
+                    continue;
+                }
+                // 3. Check xem request có khớp với rule không
+                const matchedMappings = (_a = pending.rule.payloadMappings) === null || _a === void 0 ? void 0 : _a.filter((mapping) => {
+                    const source = (mapping.source || '').toLowerCase();
+                    if (!['requestbody', 'request_body', 'responsebody', 'response_body'].includes(source)) {
+                        return false;
+                    }
                     if (!mapping.requestUrlPattern)
                         return false;
                     // Check method match
@@ -3279,32 +3330,50 @@
                     }
                     return true;
                 });
-                if (applicableMappings.length > 0) {
-                    // Extract data from matched mappings
-                    const extractedData = {};
-                    for (const mapping of applicableMappings) {
-                        const normalizedMapping = {
-                            ...mapping,
-                            source: 'network_request',
-                            value: mapping.value || mapping.requestBodyPath
-                        };
-                        const value = this.extract(normalizedMapping, networkContext);
-                        if (this.isValid(value)) {
-                            extractedData[mapping.field] = value;
-                        }
-                    }
-                    // If we extracted any data, invoke callback
-                    if (Object.keys(extractedData).length > 0) {
-                        if (this.onNetworkMatchCallback) {
-                            this.onNetworkMatchCallback(rule, extractedData, networkContext);
-                        }
-                        // Log for debugging
-                        console.groupCollapsed(`%c[NetworkExtractor] Match: ${method} ${url}`, 'color: orange');
-                        console.log('Rule:', rule.name);
-                        console.log('Extracted:', extractedData);
-                        console.groupEnd();
+                if (!matchedMappings || matchedMappings.length === 0) {
+                    console.log('[NetworkExtractor] Request URL does not match rule patterns');
+                    continue;
+                }
+                console.log('[NetworkExtractor] ✅ Request matched!', matchedMappings.length, 'mappings');
+                // 4. Validate xem request có chứa dữ liệu cần thiết không
+                let hasRequiredData = false;
+                const extractedData = {};
+                for (const mapping of matchedMappings) {
+                    const normalizedMapping = {
+                        ...mapping,
+                        source: 'network_request',
+                        value: mapping.value || mapping.requestBodyPath
+                    };
+                    const value = this.extract(normalizedMapping, networkContext);
+                    if (this.isValid(value)) {
+                        extractedData[mapping.field] = value;
+                        hasRequiredData = true;
                     }
                 }
+                if (!hasRequiredData) {
+                    console.log('[NetworkExtractor] Request missing required data, continuing to wait...');
+                    continue;
+                }
+                // ✅ Đã bắt được request đúng!
+                console.log('[NetworkExtractor] 🎯 Captured matching request for rule:', ruleId);
+                console.log('[NetworkExtractor] Extracted data:', extractedData);
+                // Notify PayloadBuilder về dữ liệu mới
+                for (const [field, value] of Object.entries(extractedData)) {
+                    this.payloadBuilder.notifyNetworkData(ruleId, field, value);
+                }
+                // Invoke callback if exists
+                if (this.onNetworkMatchCallback) {
+                    this.onNetworkMatchCallback(pending.rule, extractedData, networkContext);
+                }
+                // Log for debugging
+                console.groupCollapsed(`%c[NetworkExtractor] ✅ Captured: ${method} ${url}`, 'color: green; font-weight: bold');
+                console.log('Rule:', pending.rule.name);
+                console.log('Time since trigger:', timeSinceTrigger, 'ms');
+                console.log('Extracted:', extractedData);
+                console.groupEnd();
+                // IMPORTANT: Sau khi bắt được → Đánh dấu đã capture
+                // Các requests tiếp theo sẽ bị ignore
+                break;
             }
         }
         // --- HELPER METHODS ---
@@ -3458,12 +3527,20 @@
             this.history = [];
             this.MAX_HISTORY = 50;
             this.isTrackingActive = false;
+            this.payloadBuilder = null; // Reference to PayloadBuilder
         }
         /**
-         * Extract data from the most recent matching network request
+         * NEW: Set reference to PayloadBuilder
+         */
+        setPayloadBuilder(builder) {
+            this.payloadBuilder = builder;
+        }
+        /**
+         * NEW FLOW: Extract data from the most recent matching network request
+         * Chỉ tìm requests xảy ra SAU trigger trong window 5s
          */
         extract(mapping, _context) {
-            var _a, _b;
+            var _a, _b, _c;
             console.log('[RequestUrlExtractor] Extracting with mapping:', {
                 field: mapping.field,
                 pattern: mapping.requestUrlPattern,
@@ -3477,6 +3554,9 @@
                 return null;
             }
             const targetMethod = (_a = mapping.requestMethod) === null || _a === void 0 ? void 0 : _a.toUpperCase();
+            // NEW: Lấy trigger timestamp từ context
+            const triggerTime = (_context === null || _context === void 0 ? void 0 : _context.triggerTimestamp) || 0;
+            console.log('[RequestUrlExtractor] Trigger timestamp:', triggerTime);
             // 1. Check strict context first (e.g. from NetworkPlugin)
             if (_context && _context.url) {
                 console.log('[RequestUrlExtractor] Checking context URL:', _context.url);
@@ -3497,12 +3577,25 @@
                     }
                 }
             }
-            // 2. Fallback to history (e.g. from other plugins: 'closest request after trigger')
+            // 2. Fallback to history - CHỈ LẤY REQUESTS SAU TRIGGER
             console.log('[RequestUrlExtractor] Checking history...');
             // Iterate backwards (newest first)
             for (let i = this.history.length - 1; i >= 0; i--) {
                 const req = this.history[i];
                 console.log('[RequestUrlExtractor] Checking history entry:', req);
+                // NEW: Check timestamp - Request phải xảy ra SAU trigger
+                if (triggerTime > 0) {
+                    if (req.timestamp < triggerTime) {
+                        console.log('[RequestUrlExtractor] Request before trigger, skipping');
+                        continue;
+                    }
+                    // Check timeout - Không quá 5s sau trigger
+                    if (req.timestamp - triggerTime > 5000) {
+                        console.log('[RequestUrlExtractor] Request too late (>5s after trigger), skipping');
+                        continue;
+                    }
+                    console.log('[RequestUrlExtractor] Request within window:', req.timestamp - triggerTime, 'ms after trigger');
+                }
                 // Check Method
                 if (targetMethod && req.method !== targetMethod) {
                     console.log('[RequestUrlExtractor] Method mismatch in history');
@@ -3519,9 +3612,23 @@
                     console.log('[RequestUrlExtractor] Full pattern mismatch');
                     continue;
                 }
-                // Match found! Extract value.
+                // ✅ Match found! Extract value.
                 const extracted = this.extractValueFromUrl(req.url, mapping.value);
-                console.log('[RequestUrlExtractor] Extracted from history:', extracted);
+                console.log('[RequestUrlExtractor] ✅ Extracted from history:', extracted, 'from URL:', req.url);
+                // NEW: Notify PayloadBuilder về data mới (nếu được set)
+                if (this.payloadBuilder && this.payloadBuilder.pendingCollections) {
+                    // Tìm pending collection phù hợp
+                    for (const [ruleId, pending] of this.payloadBuilder.pendingCollections) {
+                        // Check xem mapping này có thuộc rule này không
+                        const belongsToRule = (_c = pending.rule.payloadMappings) === null || _c === void 0 ? void 0 : _c.some((m) => m.field === mapping.field &&
+                            m.requestUrlPattern === mapping.requestUrlPattern);
+                        if (belongsToRule) {
+                            console.log('[RequestUrlExtractor] Notifying PayloadBuilder for rule:', ruleId);
+                            this.payloadBuilder.notifyNetworkData(ruleId, mapping.field, extracted);
+                            break;
+                        }
+                    }
+                }
                 return extracted;
             }
             console.warn('[RequestUrlExtractor] No match found');
@@ -3641,12 +3748,17 @@
         constructor() {
             this.extractors = new Map();
             this.trackerConfig = null;
+            // NEW: Quản lý các pending collections (đang chờ thu thập dữ liệu)
+            this.pendingCollections = new Map();
             this.elementExtractor = new ElementExtractor();
             this.networkExtractor = new NetworkExtractor();
             this.storageExtractor = new StorageExtractor();
             this.urlExtractor = new UrlExtractor();
             this.requestUrlExtractor = new RequestUrlExtractor();
             this.registerExtractors();
+            // Pass reference to self so extractors can notify when data is ready
+            this.networkExtractor.setPayloadBuilder(this);
+            this.requestUrlExtractor.setPayloadBuilder(this);
         }
         registerExtractors() {
             // Element
@@ -3698,12 +3810,54 @@
             return payload;
         }
         /**
-         * Build payload and call back with the result
+         * NEW FLOW: Bắt đầu thu thập dữ liệu cho một rule
+         * Được gọi bởi tracking plugins khi phát hiện trigger event
+         *
+         * @param context - Context của trigger event (element, timestamp, etc.)
+         * @param rule - Tracking rule cần thu thập dữ liệu
+         * @param callback - Callback được gọi khi đã thu thập đủ dữ liệu
+         */
+        startCollection(context, rule, callback) {
+            console.log('[PayloadBuilder] startCollection for rule:', rule.name);
+            // Phân tích xem cần thu thập những field nào
+            const requiredFields = this.analyzeRequiredFields(rule);
+            const hasNetworkFields = this.hasNetworkFields(rule);
+            console.log('[PayloadBuilder] Required fields:', Array.from(requiredFields));
+            console.log('[PayloadBuilder] Has network fields:', hasNetworkFields);
+            // Tạo pending collection
+            const pending = {
+                rule,
+                context: {
+                    ...context,
+                    triggerTimestamp: Date.now() // Lưu timestamp của trigger để so sánh với requests
+                },
+                timestamp: Date.now(),
+                callback,
+                collectedData: new Map(),
+                requiredFields,
+                networkCaptured: false
+            };
+            this.pendingCollections.set(rule.id, pending);
+            console.log('[PayloadBuilder] Created pending collection for rule:', rule.id);
+            // Nếu cần network data → Enable interceptor NGAY LÚC NÀY
+            if (hasNetworkFields) {
+                console.log('[PayloadBuilder] Enabling network interceptor for rule:', rule.id);
+                this.enableNetworkInterceptorForRule(rule);
+            }
+            // Thu thập non-network data ngay (localStorage, cookie, element, url, etc.)
+            this.collectNonNetworkData(pending);
+            // Check xem đã đủ chưa (trường hợp không cần network data)
+            this.checkAndComplete(rule.id);
+        }
+        /**
+         * LEGACY: Build payload and call back with the result (OLD FLOW - Deprecated)
          * Used by tracking plugins (click, rating, review, scroll, pageview)
          * NOT used by network plugin
+         *
+         * @deprecated Use startCollection() instead for better async handling
          */
         buildWithCallback(context, rule, callback) {
-            console.log('[PayloadBuilder] buildWithCallback called for rule:', rule.name);
+            console.log('[PayloadBuilder] buildWithCallback (LEGACY) called for rule:', rule.name);
             const payload = this.build(context, rule);
             console.log('[PayloadBuilder] Payload built:', payload);
             callback(payload, rule, context);
@@ -3714,68 +3868,196 @@
          */
         setConfig(config) {
             this.trackerConfig = config;
-            this.checkAndEnableNetworkTracking();
-            this.checkAndEnableRequestUrlTracking();
+            // REMOVED: Không enable network tracking lúc init nữa
+            // Network tracking sẽ được enable on-demand khi có trigger event
+            // this.checkAndEnableNetworkTracking();
+            // this.checkAndEnableRequestUrlTracking();
+            console.log('[PayloadBuilder] Config set, network tracking will be enabled on-demand');
         }
         /**
-         * Check if config has network rules and enable tracking if needed
+         * NEW: Phân tích xem rule cần thu thập những field nào
          */
-        checkAndEnableNetworkTracking() {
-            if (!this.trackerConfig || !this.trackerConfig.trackingRules)
-                return;
-            const hasNetworkRules = this.trackerConfig.trackingRules.some((rule) => rule.payloadMappings && rule.payloadMappings.some((m) => {
-                const source = (m.source || '').toLowerCase();
-                return source === 'request_body' || source === 'requestbody';
-            }));
-            if (hasNetworkRules && !this.networkExtractor.isTracking()) {
-                this.enableNetworkTracking();
+        analyzeRequiredFields(rule) {
+            const fields = new Set();
+            if (rule.payloadMappings) {
+                for (const mapping of rule.payloadMappings) {
+                    fields.add(mapping.field);
+                }
             }
-            else if (!hasNetworkRules && this.networkExtractor.isTracking()) {
-                this.disableNetworkTracking();
-            }
+            return fields;
         }
         /**
-         * Check if config has request url rules and enable tracking if needed
+         * NEW: Check xem rule có field nào cần network data không
          */
-        checkAndEnableRequestUrlTracking() {
-            if (!this.trackerConfig || !this.trackerConfig.trackingRules)
-                return;
-            const hasRequestUrlRules = this.trackerConfig.trackingRules.some((rule) => rule.payloadMappings && rule.payloadMappings.some((m) => {
+        hasNetworkFields(rule) {
+            if (!rule.payloadMappings)
+                return false;
+            return rule.payloadMappings.some((m) => {
                 const source = (m.source || '').toLowerCase();
-                return source === 'request_url' || source === 'requesturl';
-            }));
-            console.log('[PayloadBuilder] hasRequestUrlRules:', hasRequestUrlRules);
-            if (hasRequestUrlRules) {
+                return [
+                    'requestbody',
+                    'responsebody',
+                    'request_body',
+                    'response_body',
+                    'requesturl',
+                    'request_url'
+                ].includes(source);
+            });
+        }
+        /**
+         * NEW: Enable network interceptor cho một rule cụ thể
+         */
+        enableNetworkInterceptorForRule(rule) {
+            var _a, _b;
+            console.log('[PayloadBuilder] Enabling network interceptor for rule:', rule.name);
+            // Enable RequestUrl tracking
+            const hasRequestUrlMappings = (_a = rule.payloadMappings) === null || _a === void 0 ? void 0 : _a.some((m) => {
+                const source = (m.source || '').toLowerCase();
+                return source === 'requesturl' || source === 'request_url';
+            });
+            if (hasRequestUrlMappings) {
                 this.requestUrlExtractor.enableTracking();
             }
-            else {
-                this.requestUrlExtractor.disableTracking();
+            // Enable NetworkExtractor tracking
+            const hasRequestBodyMappings = (_b = rule.payloadMappings) === null || _b === void 0 ? void 0 : _b.some((m) => {
+                const source = (m.source || '').toLowerCase();
+                return source === 'requestbody' || source === 'request_body';
+            });
+            if (hasRequestBodyMappings) {
+                if (!this.trackerConfig) {
+                    console.warn('[PayloadBuilder] Cannot enable network tracking: config not set');
+                    return;
+                }
+                // Only enable if not already enabled
+                if (!this.networkExtractor.isTracking()) {
+                    this.networkExtractor.enableTracking(this.trackerConfig, (matchedRule, extractedData, _context) => {
+                        console.log('[PayloadBuilder] Network match callback:', {
+                            rule: matchedRule.name,
+                            data: extractedData
+                        });
+                        // This callback can be used for additional logic if needed
+                    });
+                }
             }
         }
         /**
-         * Enable network tracking
+         * NEW: Thu thập non-network data ngay lập tức
          */
-        enableNetworkTracking() {
-            if (!this.trackerConfig) {
-                console.warn('[PayloadBuilder] Cannot enable network tracking: config not set');
+        collectNonNetworkData(pending) {
+            console.log('[PayloadBuilder] Collecting non-network data for rule:', pending.rule.name);
+            for (const mapping of pending.rule.payloadMappings) {
+                const source = (mapping.source || '').toLowerCase();
+                // Skip network sources (sẽ được xử lý bởi interceptor)
+                if ([
+                    'requestbody',
+                    'responsebody',
+                    'request_body',
+                    'response_body',
+                    'requesturl',
+                    'request_url'
+                ].includes(source)) {
+                    console.log('[PayloadBuilder] Skipping network source:', source, 'for field:', mapping.field);
+                    continue;
+                }
+                // Thu thập data từ non-network sources
+                const extractor = this.extractors.get(source);
+                if (extractor) {
+                    const val = extractor.extract(mapping, pending.context);
+                    if (this.isValid(val)) {
+                        pending.collectedData.set(mapping.field, val);
+                        console.log('[PayloadBuilder] Collected:', mapping.field, '=', val);
+                    }
+                }
+            }
+        }
+        /**
+         * NEW: Được gọi bởi NetworkExtractor/RequestUrlExtractor khi có network data
+         */
+        notifyNetworkData(ruleId, field, value) {
+            const pending = this.pendingCollections.get(ruleId);
+            if (!pending) {
+                console.warn('[PayloadBuilder] No pending collection for rule:', ruleId);
                 return;
             }
-            this.networkExtractor.enableTracking(this.trackerConfig, (rule, extractedData, context) => {
-                // Callback when network request matches a rule
-                // This can be extended to dispatch events or perform other actions
-                console.log('[PayloadBuilder] Network match:', {
-                    rule: rule.name,
-                    data: extractedData,
-                    url: context.url,
-                    method: context.method
-                });
+            console.log('[PayloadBuilder] Network data received for rule:', ruleId, 'field:', field, 'value:', value);
+            pending.collectedData.set(field, value);
+            pending.networkCaptured = true;
+            // Check xem đã đủ dữ liệu chưa
+            this.checkAndComplete(ruleId);
+        }
+        /**
+         * NEW: Check xem đã thu thập đủ dữ liệu chưa và complete nếu đủ
+         */
+        checkAndComplete(ruleId) {
+            const pending = this.pendingCollections.get(ruleId);
+            if (!pending)
+                return;
+            // Check timeout (5 giây)
+            if (Date.now() - pending.timestamp > 5000) {
+                console.warn('[PayloadBuilder] Timeout waiting for data for rule:', ruleId);
+                this.completePendingCollection(ruleId, true); // Complete with timeout flag
+                return;
+            }
+            // Check xem đã có tất cả required fields chưa
+            const collectedFields = Array.from(pending.collectedData.keys());
+            const missingFields = Array.from(pending.requiredFields).filter(field => !pending.collectedData.has(field));
+            console.log('[PayloadBuilder] Check complete for rule:', ruleId);
+            console.log('[PayloadBuilder] Collected fields:', collectedFields);
+            console.log('[PayloadBuilder] Missing fields:', missingFields);
+            // Nếu còn thiếu network fields nhưng đã bắt được network request → wait
+            const hasNetworkFields = this.hasNetworkFields(pending.rule);
+            if (hasNetworkFields && !pending.networkCaptured) {
+                console.log('[PayloadBuilder] Waiting for network data...');
+                // Set timeout để tự động complete sau 5s
+                setTimeout(() => {
+                    if (this.pendingCollections.has(ruleId)) {
+                        console.warn('[PayloadBuilder] Network timeout for rule:', ruleId);
+                        this.completePendingCollection(ruleId, true);
+                    }
+                }, 5000);
+                return;
+            }
+            // Nếu đã đủ dữ liệu hoặc đã timeout → Complete
+            if (missingFields.length === 0 || pending.networkCaptured) {
+                this.completePendingCollection(ruleId, false);
+            }
+        }
+        /**
+         * NEW: Hoàn thành việc thu thập và gọi callback
+         */
+        completePendingCollection(ruleId, isTimeout) {
+            const pending = this.pendingCollections.get(ruleId);
+            if (!pending)
+                return;
+            console.log('[PayloadBuilder] Completing collection for rule:', ruleId, 'timeout:', isTimeout);
+            // Build final payload
+            const finalPayload = {};
+            pending.collectedData.forEach((value, key) => {
+                finalPayload[key] = value;
             });
+            console.log('[PayloadBuilder] Final payload:', finalPayload);
+            // Cleanup
+            this.pendingCollections.delete(ruleId);
+            // Disable network interceptor nếu không còn pending nào
+            if (this.pendingCollections.size === 0) {
+                console.log('[PayloadBuilder] No more pending collections, disabling network tracking');
+                this.disableNetworkTracking();
+            }
+            // Call callback
+            pending.callback(finalPayload);
+        }
+        /**
+         * LEGACY: Enable network tracking (kept for backward compatibility)
+         */
+        enableNetworkTracking() {
+            console.warn('[PayloadBuilder] enableNetworkTracking() is deprecated. Network tracking is now on-demand.');
         }
         /**
          * Disable network tracking
          */
         disableNetworkTracking() {
             this.networkExtractor.disableTracking();
+            this.requestUrlExtractor.disableTracking();
         }
         /**
          * Check if network tracking is currently active
@@ -4332,17 +4614,30 @@
                                 ].includes(s);
                             });
                         }
+                        // NEW FLOW: Check if rule requires network data
                         if (requiresNetworkData) {
-                            console.log('[RatingPlugin] Rule requires network data. Signaling pending network event for rule:', rule.id);
-                            if (this.tracker && typeof this.tracker.addPendingNetworkRule === 'function') {
-                                this.tracker.addPendingNetworkRule(rule.id);
+                            console.log('[RatingPlugin] ⏳ Rule requires network data. Starting collection for rule:', rule.id);
+                            // NEW FLOW: Gọi startCollection với đầy đủ context
+                            if (this.tracker && this.tracker.payloadBuilder) {
+                                const context = {
+                                    element: finalMatch,
+                                    eventType: 'rating',
+                                    triggerTimestamp: Date.now(),
+                                    ratingValue: result.normalizedValue
+                                };
+                                this.tracker.payloadBuilder.startCollection(context, rule, (finalPayload) => {
+                                    console.log('[RatingPlugin] ✅ Collection complete, tracking event with payload:', finalPayload);
+                                    // Sau khi có đủ dữ liệu → Track event
+                                    this.buildAndTrack(finalMatch, rule, eventId);
+                                });
                             }
                             else {
-                                console.warn('[RatingPlugin] Tracker does not support addPendingNetworkRule');
+                                console.warn('[RatingPlugin] Tracker or PayloadBuilder not available');
                             }
                             break;
                         }
-                        // Build Payload using centralized method
+                        // Không cần network data → Track ngay
+                        console.log('[RatingPlugin] No network data required, tracking immediately');
                         this.buildAndTrack(finalMatch, rule, eventId);
                         break;
                     }

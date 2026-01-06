@@ -7,8 +7,14 @@ export declare class RequestUrlExtractor implements IPayloadExtractor {
     private originalXmlOpen;
     private originalXmlSend;
     private originalFetch;
+    private payloadBuilder;
     /**
-     * Extract data from the most recent matching network request
+     * NEW: Set reference to PayloadBuilder
+     */
+    setPayloadBuilder(builder: any): void;
+    /**
+     * NEW FLOW: Extract data from the most recent matching network request
+     * Chỉ tìm requests xảy ra SAU trigger trong window 5s
      */
     extract(mapping: PayloadMapping, _context?: any): any;
     private extractValueFromUrl;

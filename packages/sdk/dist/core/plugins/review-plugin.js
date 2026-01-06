@@ -41,6 +41,8 @@ export class ReviewPlugin extends BasePlugin {
         const eventId = this.tracker.getEventTypeId('Review') || 3;
         const config = this.tracker.getConfig();
         const reviewRules = ((_a = config === null || config === void 0 ? void 0 : config.trackingRules) === null || _a === void 0 ? void 0 : _a.filter(r => r.eventTypeId === eventId)) || [];
+        console.log('[ReviewPlugin] Event ID:', eventId);
+        console.log('[ReviewPlugin] Rules found:', reviewRules.length);
         if (reviewRules.length === 0)
             return;
         for (const rule of reviewRules) {
@@ -69,17 +71,30 @@ export class ReviewPlugin extends BasePlugin {
                     ].includes(s);
                 });
             }
+            // 4. NEW FLOW: Check if rule requires network data
             if (requiresNetworkData) {
-                console.log('[ReviewPlugin] Rule requires network data. Signaling pending network event for rule:', rule.id);
-                if (this.tracker && typeof this.tracker.addPendingNetworkRule === 'function') {
-                    this.tracker.addPendingNetworkRule(rule.id);
+                console.log('[ReviewPlugin] ⏳ Rule requires network data. Starting collection for rule:', rule.id);
+                // NEW FLOW: Gọi startCollection với đầy đủ context
+                if (this.tracker && this.tracker.payloadBuilder) {
+                    const context = {
+                        element: form,
+                        eventType: 'review',
+                        triggerTimestamp: Date.now(),
+                        reviewContent: reviewContent
+                    };
+                    this.tracker.payloadBuilder.startCollection(context, rule, (finalPayload) => {
+                        console.log('[ReviewPlugin] ✅ Collection complete, tracking event with payload:', finalPayload);
+                        // Sau khi có đủ dữ liệu → Track event
+                        this.buildAndTrack(form, rule, eventId);
+                    });
                 }
                 else {
-                    console.warn('[ReviewPlugin] Tracker does not support addPendingNetworkRule');
+                    console.warn('[ReviewPlugin] Tracker or PayloadBuilder not available');
                 }
                 return;
             }
-            // 5. Build and track using centralized method
+            // 5. Không cần network data → Track ngay
+            console.log('[ReviewPlugin] No network data required, tracking immediately');
             this.buildAndTrack(form, rule, eventId);
             console.log(`[ReviewPlugin] 📤 Event tracked successfully`);
             return;

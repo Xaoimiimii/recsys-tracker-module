@@ -8,7 +8,13 @@ import { PathMatcher } from '../../utils/path-matcher';
 export class NetworkExtractor {
     constructor() {
         this.isTrackingActive = false;
-        this.trackerConfig = null;
+        this.payloadBuilder = null; // Reference to PayloadBuilder
+    }
+    /**
+     * NEW: Set reference to PayloadBuilder
+     */
+    setPayloadBuilder(builder) {
+        this.payloadBuilder = builder;
     }
     /**
      * Extract data from network request/response based on mapping
@@ -57,12 +63,11 @@ export class NetworkExtractor {
     /**
      * Enable network tracking by hooking into XHR and Fetch APIs
      */
-    enableTracking(config, onMatch) {
+    enableTracking(_config, onMatch) {
         if (this.isTrackingActive) {
             console.warn('[NetworkExtractor] Network tracking is already active');
             return;
         }
-        this.trackerConfig = config;
         this.onNetworkMatchCallback = onMatch;
         this.hookXhr();
         this.hookFetch();
@@ -78,7 +83,6 @@ export class NetworkExtractor {
         this.restoreXhr();
         this.restoreFetch();
         this.isTrackingActive = false;
-        this.trackerConfig = null;
         this.onNetworkMatchCallback = undefined;
         console.log('[NetworkExtractor] Network tracking disabled');
     }
@@ -151,12 +155,16 @@ export class NetworkExtractor {
     }
     // --- REQUEST HANDLING ---
     /**
-     * Handle intercepted network request
-     * Match against rules and extract data
+     * NEW FLOW: Handle intercepted network request
+     * Chỉ bắt request khi có pending collection + anti-duplicate
      */
     handleNetworkRequest(url, method, reqBody, resBody) {
-        if (!this.trackerConfig || !this.trackerConfig.trackingRules)
+        var _a;
+        if (!this.payloadBuilder || !this.payloadBuilder.pendingCollections) {
+            // Không có pending collections → Ignore
             return;
+        }
+        const timestamp = Date.now();
         const reqData = this.safeParse(reqBody);
         const resData = this.safeParse(resBody);
         const networkContext = {
@@ -165,12 +173,32 @@ export class NetworkExtractor {
             method: method,
             url: url
         };
-        // Match against each tracking rule
-        for (const rule of this.trackerConfig.trackingRules) {
-            if (!rule.payloadMappings)
+        console.log('[NetworkExtractor] Intercepted request:', method, url);
+        console.log('[NetworkExtractor] Pending collections:', this.payloadBuilder.pendingCollections.size);
+        // Lặp qua các pending collections
+        for (const [ruleId, pending] of this.payloadBuilder.pendingCollections) {
+            console.log('[NetworkExtractor] Checking pending rule:', ruleId, pending.rule.name);
+            // 1. Check xem request có xảy ra SAU trigger không (trong 5s)
+            const timeSinceTrigger = timestamp - pending.timestamp;
+            if (timeSinceTrigger > 5000) {
+                console.log('[NetworkExtractor] Request too late (>5s) for rule:', ruleId);
                 continue;
-            // Filter mappings that match this request
-            const applicableMappings = rule.payloadMappings.filter((mapping) => {
+            }
+            if (timeSinceTrigger < 0) {
+                console.log('[NetworkExtractor] Request before trigger for rule:', ruleId);
+                continue;
+            }
+            // 2. Check xem đã bắt request cho rule này chưa (anti-duplicate)
+            if (pending.networkCaptured) {
+                console.log('[NetworkExtractor] Already captured network data for rule:', ruleId, '- IGNORING duplicate');
+                continue;
+            }
+            // 3. Check xem request có khớp với rule không
+            const matchedMappings = (_a = pending.rule.payloadMappings) === null || _a === void 0 ? void 0 : _a.filter((mapping) => {
+                const source = (mapping.source || '').toLowerCase();
+                if (!['requestbody', 'request_body', 'responsebody', 'response_body'].includes(source)) {
+                    return false;
+                }
                 if (!mapping.requestUrlPattern)
                     return false;
                 // Check method match
@@ -187,32 +215,50 @@ export class NetworkExtractor {
                 }
                 return true;
             });
-            if (applicableMappings.length > 0) {
-                // Extract data from matched mappings
-                const extractedData = {};
-                for (const mapping of applicableMappings) {
-                    const normalizedMapping = {
-                        ...mapping,
-                        source: 'network_request',
-                        value: mapping.value || mapping.requestBodyPath
-                    };
-                    const value = this.extract(normalizedMapping, networkContext);
-                    if (this.isValid(value)) {
-                        extractedData[mapping.field] = value;
-                    }
-                }
-                // If we extracted any data, invoke callback
-                if (Object.keys(extractedData).length > 0) {
-                    if (this.onNetworkMatchCallback) {
-                        this.onNetworkMatchCallback(rule, extractedData, networkContext);
-                    }
-                    // Log for debugging
-                    console.groupCollapsed(`%c[NetworkExtractor] Match: ${method} ${url}`, 'color: orange');
-                    console.log('Rule:', rule.name);
-                    console.log('Extracted:', extractedData);
-                    console.groupEnd();
+            if (!matchedMappings || matchedMappings.length === 0) {
+                console.log('[NetworkExtractor] Request URL does not match rule patterns');
+                continue;
+            }
+            console.log('[NetworkExtractor] ✅ Request matched!', matchedMappings.length, 'mappings');
+            // 4. Validate xem request có chứa dữ liệu cần thiết không
+            let hasRequiredData = false;
+            const extractedData = {};
+            for (const mapping of matchedMappings) {
+                const normalizedMapping = {
+                    ...mapping,
+                    source: 'network_request',
+                    value: mapping.value || mapping.requestBodyPath
+                };
+                const value = this.extract(normalizedMapping, networkContext);
+                if (this.isValid(value)) {
+                    extractedData[mapping.field] = value;
+                    hasRequiredData = true;
                 }
             }
+            if (!hasRequiredData) {
+                console.log('[NetworkExtractor] Request missing required data, continuing to wait...');
+                continue;
+            }
+            // ✅ Đã bắt được request đúng!
+            console.log('[NetworkExtractor] 🎯 Captured matching request for rule:', ruleId);
+            console.log('[NetworkExtractor] Extracted data:', extractedData);
+            // Notify PayloadBuilder về dữ liệu mới
+            for (const [field, value] of Object.entries(extractedData)) {
+                this.payloadBuilder.notifyNetworkData(ruleId, field, value);
+            }
+            // Invoke callback if exists
+            if (this.onNetworkMatchCallback) {
+                this.onNetworkMatchCallback(pending.rule, extractedData, networkContext);
+            }
+            // Log for debugging
+            console.groupCollapsed(`%c[NetworkExtractor] ✅ Captured: ${method} ${url}`, 'color: green; font-weight: bold');
+            console.log('Rule:', pending.rule.name);
+            console.log('Time since trigger:', timeSinceTrigger, 'ms');
+            console.log('Extracted:', extractedData);
+            console.groupEnd();
+            // IMPORTANT: Sau khi bắt được → Đánh dấu đã capture
+            // Các requests tiếp theo sẽ bị ignore
+            break;
         }
     }
     // --- HELPER METHODS ---

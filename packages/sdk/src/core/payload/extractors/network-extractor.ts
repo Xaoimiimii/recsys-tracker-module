@@ -20,7 +20,6 @@ export class NetworkExtractor implements IPayloadExtractor {
     private originalXmlSend: any;
     private originalFetch: any;
     private isTrackingActive: boolean = false;
-    private trackerConfig: any = null;
     private onNetworkMatchCallback?: (rule: any, extractedData: any, context: NetworkContext) => void;
     private payloadBuilder: any = null; // Reference to PayloadBuilder
 
@@ -82,13 +81,12 @@ export class NetworkExtractor implements IPayloadExtractor {
     /**
      * Enable network tracking by hooking into XHR and Fetch APIs
      */
-    public enableTracking(config: any, onMatch?: (rule: any, data: any, context: NetworkContext) => void): void {
+    public enableTracking(_config: any, onMatch?: (rule: any, data: any, context: NetworkContext) => void): void {
         if (this.isTrackingActive) {
             console.warn('[NetworkExtractor] Network tracking is already active');
             return;
         }
 
-        this.trackerConfig = config;
         this.onNetworkMatchCallback = onMatch;
         this.hookXhr();
         this.hookFetch();
@@ -105,7 +103,6 @@ export class NetworkExtractor implements IPayloadExtractor {
         this.restoreXhr();
         this.restoreFetch();
         this.isTrackingActive = false;
-        this.trackerConfig = null;
         this.onNetworkMatchCallback = undefined;
         console.log('[NetworkExtractor] Network tracking disabled');
     }

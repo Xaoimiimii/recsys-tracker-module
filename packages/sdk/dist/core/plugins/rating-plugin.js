@@ -117,17 +117,30 @@ export class RatingPlugin extends BasePlugin {
                             ].includes(s);
                         });
                     }
+                    // NEW FLOW: Check if rule requires network data
                     if (requiresNetworkData) {
-                        console.log('[RatingPlugin] Rule requires network data. Signaling pending network event for rule:', rule.id);
-                        if (this.tracker && typeof this.tracker.addPendingNetworkRule === 'function') {
-                            this.tracker.addPendingNetworkRule(rule.id);
+                        console.log('[RatingPlugin] ⏳ Rule requires network data. Starting collection for rule:', rule.id);
+                        // NEW FLOW: Gọi startCollection với đầy đủ context
+                        if (this.tracker && this.tracker.payloadBuilder) {
+                            const context = {
+                                element: finalMatch,
+                                eventType: 'rating',
+                                triggerTimestamp: Date.now(),
+                                ratingValue: result.normalizedValue
+                            };
+                            this.tracker.payloadBuilder.startCollection(context, rule, (finalPayload) => {
+                                console.log('[RatingPlugin] ✅ Collection complete, tracking event with payload:', finalPayload);
+                                // Sau khi có đủ dữ liệu → Track event
+                                this.buildAndTrack(finalMatch, rule, eventId);
+                            });
                         }
                         else {
-                            console.warn('[RatingPlugin] Tracker does not support addPendingNetworkRule');
+                            console.warn('[RatingPlugin] Tracker or PayloadBuilder not available');
                         }
                         break;
                     }
-                    // Build Payload using centralized method
+                    // Không cần network data → Track ngay
+                    console.log('[RatingPlugin] No network data required, tracking immediately');
                     this.buildAndTrack(finalMatch, rule, eventId);
                     break;
                 }

@@ -4,12 +4,20 @@ export class RequestUrlExtractor {
         this.history = [];
         this.MAX_HISTORY = 50;
         this.isTrackingActive = false;
+        this.payloadBuilder = null; // Reference to PayloadBuilder
     }
     /**
-     * Extract data from the most recent matching network request
+     * NEW: Set reference to PayloadBuilder
+     */
+    setPayloadBuilder(builder) {
+        this.payloadBuilder = builder;
+    }
+    /**
+     * NEW FLOW: Extract data from the most recent matching network request
+     * Chỉ tìm requests xảy ra SAU trigger trong window 5s
      */
     extract(mapping, _context) {
-        var _a, _b;
+        var _a, _b, _c;
         console.log('[RequestUrlExtractor] Extracting with mapping:', {
             field: mapping.field,
             pattern: mapping.requestUrlPattern,
@@ -23,6 +31,9 @@ export class RequestUrlExtractor {
             return null;
         }
         const targetMethod = (_a = mapping.requestMethod) === null || _a === void 0 ? void 0 : _a.toUpperCase();
+        // NEW: Lấy trigger timestamp từ context
+        const triggerTime = (_context === null || _context === void 0 ? void 0 : _context.triggerTimestamp) || 0;
+        console.log('[RequestUrlExtractor] Trigger timestamp:', triggerTime);
         // 1. Check strict context first (e.g. from NetworkPlugin)
         if (_context && _context.url) {
             console.log('[RequestUrlExtractor] Checking context URL:', _context.url);
@@ -43,12 +54,25 @@ export class RequestUrlExtractor {
                 }
             }
         }
-        // 2. Fallback to history (e.g. from other plugins: 'closest request after trigger')
+        // 2. Fallback to history - CHỈ LẤY REQUESTS SAU TRIGGER
         console.log('[RequestUrlExtractor] Checking history...');
         // Iterate backwards (newest first)
         for (let i = this.history.length - 1; i >= 0; i--) {
             const req = this.history[i];
             console.log('[RequestUrlExtractor] Checking history entry:', req);
+            // NEW: Check timestamp - Request phải xảy ra SAU trigger
+            if (triggerTime > 0) {
+                if (req.timestamp < triggerTime) {
+                    console.log('[RequestUrlExtractor] Request before trigger, skipping');
+                    continue;
+                }
+                // Check timeout - Không quá 5s sau trigger
+                if (req.timestamp - triggerTime > 5000) {
+                    console.log('[RequestUrlExtractor] Request too late (>5s after trigger), skipping');
+                    continue;
+                }
+                console.log('[RequestUrlExtractor] Request within window:', req.timestamp - triggerTime, 'ms after trigger');
+            }
             // Check Method
             if (targetMethod && req.method !== targetMethod) {
                 console.log('[RequestUrlExtractor] Method mismatch in history');
@@ -65,9 +89,23 @@ export class RequestUrlExtractor {
                 console.log('[RequestUrlExtractor] Full pattern mismatch');
                 continue;
             }
-            // Match found! Extract value.
+            // ✅ Match found! Extract value.
             const extracted = this.extractValueFromUrl(req.url, mapping.value);
-            console.log('[RequestUrlExtractor] Extracted from history:', extracted);
+            console.log('[RequestUrlExtractor] ✅ Extracted from history:', extracted, 'from URL:', req.url);
+            // NEW: Notify PayloadBuilder về data mới (nếu được set)
+            if (this.payloadBuilder && this.payloadBuilder.pendingCollections) {
+                // Tìm pending collection phù hợp
+                for (const [ruleId, pending] of this.payloadBuilder.pendingCollections) {
+                    // Check xem mapping này có thuộc rule này không
+                    const belongsToRule = (_c = pending.rule.payloadMappings) === null || _c === void 0 ? void 0 : _c.some((m) => m.field === mapping.field &&
+                        m.requestUrlPattern === mapping.requestUrlPattern);
+                    if (belongsToRule) {
+                        console.log('[RequestUrlExtractor] Notifying PayloadBuilder for rule:', ruleId);
+                        this.payloadBuilder.notifyNetworkData(ruleId, mapping.field, extracted);
+                        break;
+                    }
+                }
+            }
             return extracted;
         }
         console.warn('[RequestUrlExtractor] No match found');

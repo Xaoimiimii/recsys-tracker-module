@@ -17,8 +17,12 @@ export declare class NetworkExtractor implements IPayloadExtractor {
     private originalXmlSend;
     private originalFetch;
     private isTrackingActive;
-    private trackerConfig;
     private onNetworkMatchCallback?;
+    private payloadBuilder;
+    /**
+     * NEW: Set reference to PayloadBuilder
+     */
+    setPayloadBuilder(builder: any): void;
     /**
      * Extract data from network request/response based on mapping
      * This is called by PayloadBuilder when processing network_request mappings
@@ -27,7 +31,7 @@ export declare class NetworkExtractor implements IPayloadExtractor {
     /**
      * Enable network tracking by hooking into XHR and Fetch APIs
      */
-    enableTracking(config: any, onMatch?: (rule: any, data: any, context: NetworkContext) => void): void;
+    enableTracking(_config: any, onMatch?: (rule: any, data: any, context: NetworkContext) => void): void;
     /**
      * Disable network tracking and restore original XHR/Fetch
      */
@@ -41,8 +45,8 @@ export declare class NetworkExtractor implements IPayloadExtractor {
     private hookFetch;
     private restoreFetch;
     /**
-     * Handle intercepted network request
-     * Match against rules and extract data
+     * NEW FLOW: Handle intercepted network request
+     * Chỉ bắt request khi có pending collection + anti-duplicate
      */
     private handleNetworkRequest;
     private matchesUrl;
