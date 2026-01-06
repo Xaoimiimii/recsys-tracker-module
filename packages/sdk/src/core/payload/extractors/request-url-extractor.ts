@@ -15,9 +15,18 @@ export class RequestUrlExtractor implements IPayloadExtractor {
     private originalXmlOpen: any;
     private originalXmlSend: any;
     private originalFetch: any;
+    private payloadBuilder: any = null; // Reference to PayloadBuilder
 
     /**
-     * Extract data from the most recent matching network request
+     * NEW: Set reference to PayloadBuilder
+     */
+    public setPayloadBuilder(builder: any): void {
+        this.payloadBuilder = builder;
+    }
+
+    /**
+     * NEW FLOW: Extract data from the most recent matching network request
+     * Chỉ tìm requests xảy ra SAU trigger trong window 5s
      */
     extract(mapping: PayloadMapping, _context?: any): any {
         console.log('[RequestUrlExtractor] Extracting with mapping:', {
@@ -35,6 +44,10 @@ export class RequestUrlExtractor implements IPayloadExtractor {
         }
 
         const targetMethod = mapping.requestMethod?.toUpperCase();
+        
+        // NEW: Lấy trigger timestamp từ context
+        const triggerTime = _context?.triggerTimestamp || 0;
+        console.log('[RequestUrlExtractor] Trigger timestamp:', triggerTime);
 
         // 1. Check strict context first (e.g. from NetworkPlugin)
         if (_context && _context.url) {
@@ -59,12 +72,29 @@ export class RequestUrlExtractor implements IPayloadExtractor {
             }
         }
 
-        // 2. Fallback to history (e.g. from other plugins: 'closest request after trigger')
+        // 2. Fallback to history - CHỈ LẤY REQUESTS SAU TRIGGER
         console.log('[RequestUrlExtractor] Checking history...');
+        
         // Iterate backwards (newest first)
         for (let i = this.history.length - 1; i >= 0; i--) {
             const req = this.history[i];
             console.log('[RequestUrlExtractor] Checking history entry:', req);
+
+            // NEW: Check timestamp - Request phải xảy ra SAU trigger
+            if (triggerTime > 0) {
+                if (req.timestamp < triggerTime) {
+                    console.log('[RequestUrlExtractor] Request before trigger, skipping');
+                    continue;
+                }
+                
+                // Check timeout - Không quá 5s sau trigger
+                if (req.timestamp - triggerTime > 5000) {
+                    console.log('[RequestUrlExtractor] Request too late (>5s after trigger), skipping');
+                    continue;
+                }
+                
+                console.log('[RequestUrlExtractor] Request within window:', req.timestamp - triggerTime, 'ms after trigger');
+            }
 
             // Check Method
             if (targetMethod && req.method !== targetMethod) {
@@ -84,9 +114,28 @@ export class RequestUrlExtractor implements IPayloadExtractor {
                 continue;
             }
 
-            // Match found! Extract value.
+            // ✅ Match found! Extract value.
             const extracted = this.extractValueFromUrl(req.url, mapping.value);
-            console.log('[RequestUrlExtractor] Extracted from history:', extracted);
+            console.log('[RequestUrlExtractor] ✅ Extracted from history:', extracted, 'from URL:', req.url);
+            
+            // NEW: Notify PayloadBuilder về data mới (nếu được set)
+            if (this.payloadBuilder && this.payloadBuilder.pendingCollections) {
+                // Tìm pending collection phù hợp
+                for (const [ruleId, pending] of this.payloadBuilder.pendingCollections) {
+                    // Check xem mapping này có thuộc rule này không
+                    const belongsToRule = pending.rule.payloadMappings?.some((m: any) => 
+                        m.field === mapping.field && 
+                        m.requestUrlPattern === mapping.requestUrlPattern
+                    );
+                    
+                    if (belongsToRule) {
+                        console.log('[RequestUrlExtractor] Notifying PayloadBuilder for rule:', ruleId);
+                        this.payloadBuilder.notifyNetworkData(ruleId, mapping.field, extracted);
+                        break;
+                    }
+                }
+            }
+            
             return extracted;
         }
 

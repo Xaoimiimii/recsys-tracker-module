@@ -149,10 +149,7 @@ export class ClickPlugin extends BasePlugin {
         rule.id
       );
 
-      // DUPLICATE PREVENTION STRATEGY
-      // Check if this rule requires network data (RequestBody, ResponseBody, RequestUrl).
-      // If so, we SKIP tracking here because ClickPlugin cannot access that data.
-      // We rely on NetworkPlugin to pick up the corresponding network request and track it with full data.
+      // NEW FLOW: Check if rule requires network data
       let requiresNetworkData = false;
       if (rule.payloadMappings) {
         requiresNetworkData = rule.payloadMappings.some((m: any) => {
@@ -169,16 +166,33 @@ export class ClickPlugin extends BasePlugin {
       }
 
       if (requiresNetworkData) {
-        console.log('[ClickPlugin] Rule requires network data. Signaling pending network event for rule:', rule.id);
-        if (this.tracker && typeof this.tracker.addPendingNetworkRule === 'function') {
-          this.tracker.addPendingNetworkRule(rule.id);
+        console.log('[ClickPlugin] ⏳ Rule requires network data. Starting collection for rule:', rule.id);
+        
+        // NEW FLOW: Gọi startCollection với đầy đủ context
+        if (this.tracker && this.tracker.payloadBuilder) {
+          const context = {
+            element: target,
+            eventType: 'click',
+            triggerTimestamp: Date.now()
+          };
+          
+          this.tracker.payloadBuilder.startCollection(
+            context,
+            rule,
+            (finalPayload: Record<string, any>) => {
+              console.log('[ClickPlugin] ✅ Collection complete, tracking event with payload:', finalPayload);
+              // Sau khi có đủ dữ liệu → Track event
+              this.buildAndTrack(target, rule, rule.eventTypeId);
+            }
+          );
         } else {
-          console.warn('[ClickPlugin] Tracker does not support addPendingNetworkRule');
+          console.warn('[ClickPlugin] Tracker or PayloadBuilder not available');
         }
         break;
       }
 
-      // Use new flow: call buildAndTrack which handles payload extraction and tracking
+      // Không cần network data → Track ngay
+      console.log('[ClickPlugin] No network data required, tracking immediately');
       this.buildAndTrack(target, rule, rule.eventTypeId);
 
       break;
