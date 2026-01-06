@@ -1,9 +1,15 @@
 import { Module } from '@nestjs/common';
-import { RecommendationController } from './recommendation.controller';
 import { RecommendationService } from './recommendation.service';
+import { HttpModule } from '@nestjs/axios';
+import { RecommendationController } from './recommendation.controller';
 
 @Module({
-  controllers: [RecommendationController],
-  providers: [RecommendationService]
+  imports: [HttpModule.register({
+    timeout: 10000,
+    maxRedirects: 5,
+  })],
+  providers: [RecommendationService],
+  exports: [RecommendationService],
+  controllers: [RecommendationController]
 })
-export class RecommendationModule {}
+export class RecommendationModule { }

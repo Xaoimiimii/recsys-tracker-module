@@ -1,11 +1,15 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { Injectable, Logger, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { UserField } from 'src/common/enums/event.enum';
+import { firstValueFrom } from 'rxjs';
+import { HttpService } from '@nestjs/axios';
 
 @Injectable()
 export class RecommendationService {
+    private readonly logger = new Logger(RecommendationService.name);
     constructor(
         private readonly prisma: PrismaService,
+        private readonly httpService: HttpService,
     ) { }
 
     async getRecommendations(userValue: string, userField: UserField, domainKey: string, numberItems: number = 10) {
@@ -64,5 +68,28 @@ export class RecommendationService {
         );
 
         return detailedRecommendations.slice(0, numberItems);
+    }
+
+    async triggerTrainModels() {
+        const url =
+            process.env.MODEL_URL
+                ? `${process.env.MODEL_URL}/api/train`
+                : 'http://localhost:8000/api/train';
+
+        const allDomains = await this.prisma.domain.findMany();
+
+        for (const domain of allDomains) {
+            try {
+                const response = await firstValueFrom(
+                    this.httpService.post(url, {
+                        domain_id: domain.Id,
+                    }),
+                );
+                this.logger.log(`Domain ${domain.Id} train success`);
+            } catch (error) {
+                this.logger.error(`Domain ${domain.Id} train failed`);
+            }
+            
+        }
     }
 }
