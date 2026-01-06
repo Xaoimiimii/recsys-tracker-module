@@ -252,7 +252,7 @@ export class RecSysTracker {
         id: this.metadataNormalizer.generateEventId(),
         timestamp: new Date(eventData.timestamp),
         eventTypeId: eventData.eventType,
-        trackingRuleId: ruleId || 0,
+        trackingRuleId: Number(ruleId) || 0,
         domainKey: this.config.domainKey,
         userField: userField,
         userValue: userValue,

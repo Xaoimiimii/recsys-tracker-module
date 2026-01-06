@@ -3586,13 +3586,17 @@ class NetworkObserver {
             default:
                 // If no urlPart specified, try to extract from value
                 // Check if value is a number (path segment index)
+                const segments = url.pathname.split('/').filter(s => s);
+                console.log('[NetworkObserver] URL pathname:', url.pathname);
+                console.log('[NetworkObserver] Segments:', segments);
+                console.log('[NetworkObserver] Mapping value:', mapping.value, 'Type:', typeof mapping.value);
                 if (mapping.value && !isNaN(Number(mapping.value))) {
-                    const segments = url.pathname.split('/').filter(s => s);
                     const index = Number(mapping.value);
                     const result = segments[index] || null;
                     console.log('[NetworkObserver] Default path extraction:', { segments, index, result });
                     return result;
                 }
+                console.warn('[NetworkObserver] Could not extract segment, returning full URL');
                 return url.href;
         }
     }
@@ -4585,7 +4589,7 @@ class RecSysTracker {
                 id: this.metadataNormalizer.generateEventId(),
                 timestamp: new Date(eventData.timestamp),
                 eventTypeId: eventData.eventType,
-                trackingRuleId: ruleId || 0,
+                trackingRuleId: Number(ruleId) || 0,
                 domainKey: this.config.domainKey,
                 userField: userField,
                 userValue: userValue,

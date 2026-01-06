@@ -273,13 +273,17 @@ export class NetworkObserver {
             default:
                 // If no urlPart specified, try to extract from value
                 // Check if value is a number (path segment index)
+                const segments = url.pathname.split('/').filter(s => s);
+                console.log('[NetworkObserver] URL pathname:', url.pathname);
+                console.log('[NetworkObserver] Segments:', segments);
+                console.log('[NetworkObserver] Mapping value:', mapping.value, 'Type:', typeof mapping.value);
                 if (mapping.value && !isNaN(Number(mapping.value))) {
-                    const segments = url.pathname.split('/').filter(s => s);
                     const index = Number(mapping.value);
                     const result = segments[index] || null;
                     console.log('[NetworkObserver] Default path extraction:', { segments, index, result });
                     return result;
                 }
+                console.warn('[NetworkObserver] Could not extract segment, returning full URL');
                 return url.href;
         }
     }
