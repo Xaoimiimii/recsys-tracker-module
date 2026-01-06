@@ -1,199 +1,318 @@
+/**
+ * ReviewPlugin - UI Trigger Layer
+ * 
+ * TRÁCH NHIỆM:
+ * 1. Phát hiện hành vi review (form submit)
+ * 2. Match với tracking rules
+ * 3. Gọi PayloadBuilder.handleTrigger()
+ * 4. KHÔNG lấy payload, KHÔNG bắt network
+ * 
+ * FLOW:
+ * submit event → check rules → handleTrigger → DONE
+ */
+
 import { BasePlugin } from './base-plugin';
 import { RecSysTracker } from '../..';
+import { TrackingRule } from '../../types';
 
 const TARGET_PATTERN_ID = { CSS_SELECTOR: 1 };
 const CONDITION_PATTERN_ID = { CSS_SELECTOR: 1, URL: 2, DATA_ATTRIBUTE: 3 };
 const OPERATOR_ID = { CONTAINS: 1, EQUALS: 2, STARTS_WITH: 3, ENDS_WITH: 4 };
 
 export class ReviewPlugin extends BasePlugin {
-    public readonly name = 'ReviewPlugin';
+  public readonly name = 'ReviewPlugin';
+  
+  private handleSubmitBound = this.handleSubmit.bind(this);
 
-    private handleSubmitBound = this.handleSubmit.bind(this);
+  public init(tracker: RecSysTracker): void {
+    this.errorBoundary.execute(() => {
+      super.init(tracker);
+      console.log('[ReviewPlugin] Initialized');
+    }, 'ReviewPlugin.init');
+  }
 
-    public init(tracker: RecSysTracker): void {
-        this.errorBoundary.execute(() => {
-            super.init(tracker);
-            console.log(`[ReviewPlugin] initialized.`);
-        }, 'ReviewPlugin.init');
-    }
+  public start(): void {
+    this.errorBoundary.execute(() => {
+      if (!this.ensureInitialized()) return;
+      
+      document.addEventListener('submit', this.handleSubmitBound, { capture: true });
+      this.active = true;
+      
+      console.log('[ReviewPlugin] ✅ Started');
+    }, 'ReviewPlugin.start');
+  }
 
-    public start(): void {
-        this.errorBoundary.execute(() => {
-            if (!this.ensureInitialized()) return;
-            document.addEventListener('submit', this.handleSubmitBound, { capture: true });
-            this.active = true;
-            console.log('[ReviewPlugin] Started successfully');
-        }, 'ReviewPlugin.start');
-    }
+  public stop(): void {
+    this.errorBoundary.execute(() => {
+      if (this.tracker) {
+        document.removeEventListener('submit', this.handleSubmitBound, { capture: true });
+      }
+      super.stop();
+      console.log('[ReviewPlugin] Stopped');
+    }, 'ReviewPlugin.stop');
+  }
 
-    public stop(): void {
-        this.errorBoundary.execute(() => {
-            if (this.tracker) {
-                document.removeEventListener('submit', this.handleSubmitBound, { capture: true });
-            }
-            super.stop();
-        }, 'ReviewPlugin.stop'); // Using stop/destroy consistency?
-    }
+  /**
+   * Handle submit event - TRIGGER PHASE
+   */
+  private handleSubmit(event: Event): void {
+    if (!this.tracker) return;
 
-    private handleSubmit(event: Event): void {
-        console.log('[ReviewPlugin] handleSubmit called');
-        if (!this.tracker) return;
+    const form = event.target as HTMLFormElement;
+    if (!form) return;
 
-        const form = event.target as HTMLFormElement;
+    // Get review rules
+    const eventId = this.tracker.getEventTypeId('Review') || 3;
+    const config = this.tracker.getConfig();
+    const reviewRules = config?.trackingRules?.filter(r => r.eventTypeId === eventId) || [];
 
-        // Trigger ID for Review is typically 3 (or configured)
-        const eventId = this.tracker.getEventTypeId('Review') || 3;
-        const config = this.tracker.getConfig();
-        const reviewRules = config?.trackingRules?.filter(r => r.eventTypeId === eventId) || [];
+    if (reviewRules.length === 0) return;
 
-        console.log('[ReviewPlugin] Event ID:', eventId);
-        console.log('[ReviewPlugin] Rules found:', reviewRules.length);
+    console.log(`[ReviewPlugin] 📝 Submit detected, checking ${reviewRules.length} rules`);
 
-        if (reviewRules.length === 0) return;
+    // Check each rule
+    for (const rule of reviewRules) {
+      if (!this.matchesRule(form, rule)) {
+        continue;
+      }
 
-        for (const rule of reviewRules) {
-            // 1. Check Target
-            if (!this.checkTargetMatch(form, rule)) continue;
+      console.log(`[ReviewPlugin] ✅ Matched rule: "${rule.name}"`);
 
-            // 2. Check Condition
-            if (!this.checkConditions(form, rule)) continue;
+      // Auto-detect review content
+      const reviewContent = this.autoDetectReviewContent(form);
+      
+      // Create trigger context
+      const triggerContext = {
+        element: form,
+        target: form,
+        eventType: 'review',
+        reviewContent: reviewContent,
+        form: form
+      };
 
-            console.log(`✅ [ReviewPlugin] Match Rule: "${rule.name}"`);
-
-            // 3. Auto-detect review content if needed
-            const reviewContent = this.autoDetectReviewContent(form);
-            console.log(`[ReviewPlugin] Detected review content: "${reviewContent}"`);
-
-            // 4. Check if rule requires network data
-            let requiresNetworkData = false;
-            if (rule.payloadMappings) {
-                requiresNetworkData = rule.payloadMappings.some((m: any) => {
-                    const s = (m.source || '').toLowerCase();
-                    return [
-                        'requestbody',
-                        'responsebody',
-                        'request_body',
-                        'response_body',
-                        'requesturl',
-                        'request_url'
-                    ].includes(s);
-                });
-            }
-
-            // 4. NEW FLOW: Check if rule requires network data
-            if (requiresNetworkData) {
-                console.log('[ReviewPlugin] ⏳ Rule requires network data. Starting collection for rule:', rule.id);
-                
-                // NEW FLOW: Gọi startCollection với đầy đủ context
-                if (this.tracker && this.tracker.payloadBuilder) {
-                    const context = {
-                        element: form,
-                        eventType: 'review',
-                        triggerTimestamp: Date.now(),
-                        reviewContent: reviewContent
-                    };
-                    
-                    this.tracker.payloadBuilder.startCollection(
-                        context,
-                        rule,
-                        (finalPayload: Record<string, any>) => {
-                            console.log('[ReviewPlugin] ✅ Collection complete, tracking event with payload:', finalPayload);
-                            // Sau khi có đủ dữ liệu → Track event
-                            this.buildAndTrack(form, rule, eventId);
-                        }
-                    );
-                } else {
-                    console.warn('[ReviewPlugin] Tracker or PayloadBuilder not available');
-                }
-                return;
-            }
-
-            // 5. Không cần network data → Track ngay
-            console.log('[ReviewPlugin] No network data required, tracking immediately');
-            this.buildAndTrack(form, rule, eventId);
-
-            console.log(`[ReviewPlugin] 📤 Event tracked successfully`);
-            return;
+      // Delegate to PayloadBuilder
+      this.tracker.payloadBuilder.handleTrigger(
+        rule,
+        triggerContext,
+        (payload) => {
+          // Callback khi payload ready
+          this.dispatchEvent(payload, rule, eventId);
         }
+      );
+
+      // Chỉ track rule đầu tiên match
+      return;
+    }
+  }
+
+  /**
+   * Check if form matches rule
+   */
+  private matchesRule(form: HTMLFormElement, rule: TrackingRule): boolean {
+    // Check target
+    if (!this.checkTargetMatch(form, rule)) {
+      return false;
     }
 
-    private checkTargetMatch(form: HTMLFormElement, rule: any): boolean {
-        const target = rule.targetElement;
-        if (!target) return false;
-
-        const patternId = Number(target.targetEventPatternId);
-        if (patternId !== TARGET_PATTERN_ID.CSS_SELECTOR) return false;
-
-        try {
-            console.log('[ReviewPlugin] Checking target match against:', target.targetElementValue);
-            console.log('[ReviewPlugin] Form classes:', form.className);
-
-            if (form.matches(target.targetElementValue)) {
-                console.log('[ReviewPlugin] Strict match success');
-                return true;
-            }
-            // Flexible match: Check if form is inside the target element
-            const closest = form.closest(target.targetElementValue);
-            console.log('[ReviewPlugin] Flexible match result:', closest);
-            return !!closest;
-        } catch (e) {
-            console.error('[ReviewPlugin] Match error:', e);
-            return false;
-        }
+    // Check conditions
+    if (!this.checkConditions(form, rule)) {
+      return false;
     }
 
-    private checkConditions(form: HTMLFormElement, rule: any): boolean {
-        const conditions = rule.conditions;
-        if (!conditions || conditions.length === 0) return true;
+    return true;
+  }
 
-        for (const cond of conditions) {
-            const pattern = Number(cond.eventPatternId);
-            const operator = Number(cond.operatorId);
-            const val = cond.value;
-            let actual: string | null = null;
-            let isMet = false;
+  /**
+   * Check target match
+   */
+  private checkTargetMatch(form: HTMLFormElement, rule: TrackingRule): boolean {
+    const target = rule.trackingTarget;
+    if (!target) return false;
 
-            switch (pattern) {
-                case CONDITION_PATTERN_ID.URL:
-                    actual = location.href;
-                    break;
-                case CONDITION_PATTERN_ID.CSS_SELECTOR:
-                    try {
-                        isMet = form.matches(val);
-                        actual = isMet ? 'true' : 'false';
-                    } catch { return false; }
-                    break;
-                case CONDITION_PATTERN_ID.DATA_ATTRIBUTE:
-                    actual = form.getAttribute(val);
-                    break;
-            }
+    const patternId = Number(target.patternId);
+    if (patternId !== TARGET_PATTERN_ID.CSS_SELECTOR) {
+      return false;
+    }
 
-            if (pattern === CONDITION_PATTERN_ID.CSS_SELECTOR) continue;
+    const selector = target.value;
+    if (!selector) return false;
 
-            if (!this.compareValues(actual, val, operator)) return false;
-        }
+    try {
+      // Strict match
+      if (form.matches(selector)) {
+        return true;
+      }
+
+      // Flexible match - form inside target
+      const closest = form.closest(selector);
+      return !!closest;
+    } catch (e) {
+      console.error('[ReviewPlugin] Selector error:', e);
+      return false;
+    }
+  }
+
+  /**
+   * Check conditions
+   */
+  private checkConditions(form: HTMLFormElement, rule: TrackingRule): boolean {
+    const conditions = rule.conditions;
+    if (!conditions || conditions.length === 0) {
+      return true;
+    }
+
+    for (const cond of conditions) {
+      if (!this.checkCondition(form, cond)) {
+        return false;
+      }
+    }
+
+    return true;
+  }
+
+  /**
+   * Check single condition
+   */
+  private checkCondition(form: HTMLFormElement, condition: any): boolean {
+    const patternId = Number(condition.patternId);
+    const operatorId = Number(condition.operatorId);
+    const value = condition.value;
+
+    switch (patternId) {
+      case CONDITION_PATTERN_ID.URL:
+        return this.checkUrlCondition(operatorId, value);
+      
+      case CONDITION_PATTERN_ID.CSS_SELECTOR:
+        return this.checkSelectorCondition(form, operatorId, value);
+      
+      case CONDITION_PATTERN_ID.DATA_ATTRIBUTE:
+        return this.checkDataAttributeCondition(form, operatorId, value);
+      
+      default:
         return true;
     }
+  }
 
-    private autoDetectReviewContent(form: HTMLFormElement): string {
-        const formData = new FormData(form);
-        let content = '';
-        for (const [key, val] of (formData as any)) {
-            const k = key.toLowerCase();
-            const vStr = String(val);
-            if (k.includes('review') || k.includes('comment') || k.includes('body') || k.includes('content')) {
-                if (vStr.length > content.length) content = vStr;
-            }
-        }
-        return content;
-    }
+  /**
+   * Check URL condition
+   */
+  private checkUrlCondition(operatorId: number, value: string): boolean {
+    const url = window.location.href;
 
-    private compareValues(actual: any, expected: any, op: number): boolean {
-        if (!actual) actual = '';
-        if (op === OPERATOR_ID.EQUALS) return actual == expected;
-        if (op === OPERATOR_ID.CONTAINS) return actual.includes(expected);
-        if (op === OPERATOR_ID.STARTS_WITH) return actual.startsWith(expected);
-        if (op === OPERATOR_ID.ENDS_WITH) return actual.endsWith(expected);
+    switch (operatorId) {
+      case OPERATOR_ID.CONTAINS:
+        return url.includes(value);
+      
+      case OPERATOR_ID.EQUALS:
+        return url === value;
+      
+      case OPERATOR_ID.STARTS_WITH:
+        return url.startsWith(value);
+      
+      case OPERATOR_ID.ENDS_WITH:
+        return url.endsWith(value);
+      
+      default:
         return false;
     }
+  }
+
+  /**
+   * Check selector condition
+   */
+  private checkSelectorCondition(form: HTMLFormElement, _operatorId: number, value: string): boolean {
+    try {
+      const element = form.querySelector(value);
+      return !!element; // Exists or not
+    } catch {
+      return false;
+    }
+  }
+
+  /**
+   * Check data attribute condition
+   */
+  private checkDataAttributeCondition(form: HTMLFormElement, operatorId: number, value: string): boolean {
+    const [attrName, expectedValue] = value.split('=');
+    const actualValue = form.getAttribute(attrName);
+
+    if (!actualValue) return false;
+
+    switch (operatorId) {
+      case OPERATOR_ID.CONTAINS:
+        return actualValue.includes(expectedValue);
+      
+      case OPERATOR_ID.EQUALS:
+        return actualValue === expectedValue;
+      
+      default:
+        return false;
+    }
+  }
+
+  /**
+   * Auto-detect review content from form
+   */
+  private autoDetectReviewContent(form: HTMLFormElement): string {
+    // Strategy 1: textarea với name/id có 'review', 'comment', 'content'
+    const textareas = Array.from(form.querySelectorAll('textarea'));
+    for (const textarea of textareas) {
+      const name = textarea.name?.toLowerCase() || '';
+      const id = textarea.id?.toLowerCase() || '';
+      
+      if (name.includes('review') || name.includes('comment') || name.includes('content') ||
+          id.includes('review') || id.includes('comment') || id.includes('content')) {
+        const value = (textarea as HTMLTextAreaElement).value.trim();
+        if (value) return value;
+      }
+    }
+
+    // Strategy 2: textarea lớn nhất
+    let largestTextarea: HTMLTextAreaElement | null = null;
+    let maxLength = 0;
+    
+    for (const textarea of textareas) {
+      const value = (textarea as HTMLTextAreaElement).value.trim();
+      if (value.length > maxLength) {
+        maxLength = value.length;
+        largestTextarea = textarea as HTMLTextAreaElement;
+      }
+    }
+
+    if (largestTextarea) {
+      return largestTextarea.value.trim();
+    }
+
+    // Strategy 3: input[type="text"] lớn
+    const textInputs = Array.from(form.querySelectorAll('input[type="text"]'));
+    for (const input of textInputs) {
+      const value = (input as HTMLInputElement).value.trim();
+      if (value.length > 20) { // Assume review > 20 chars
+        return value;
+      }
+    }
+
+    return '';
+  }
+
+  /**
+   * Dispatch tracking event
+   */
+  private dispatchEvent(payload: Record<string, any>, rule: TrackingRule, eventId: number): void {
+    if (!this.tracker) return;
+
+    console.log('[ReviewPlugin] 📤 Dispatching event with payload:', payload);
+
+    this.tracker.track({
+      eventType: eventId,
+      eventData: payload,
+      timestamp: Date.now(),
+      url: window.location.href,
+      metadata: {
+        ruleId: rule.id,
+        ruleName: rule.name,
+        plugin: this.name
+      }
+    });
+  }
 }

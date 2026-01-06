@@ -104,6 +104,42 @@ export class BasePlugin {
         return { userField, userValue, itemField, itemValue, value };
     }
     /**
+     * NEW: Track directly with pre-collected payload from startCollection
+     * Used after async data collection is complete
+     */
+    trackWithPayload(collectedData, rule, eventId) {
+        if (!this.tracker) {
+            console.warn(`[${this.name}] Cannot track: tracker not initialized`);
+            return;
+        }
+        console.log(`[${this.name}] trackWithPayload called for eventId:`, eventId, 'rule:', rule.name);
+        console.log(`[${this.name}] Collected data:`, collectedData);
+        // Get values from collectedData
+        const userField = collectedData.UserId ? 'UserId' : (collectedData.Username ? 'Username' : (collectedData.AnonymousId ? 'AnonymousId' : 'UserId'));
+        const userValue = collectedData.UserId || collectedData.Username || collectedData.AnonymousId || TrackerInit.getUsername() || 'guest';
+        const itemField = collectedData.ItemId ? 'ItemId' : (collectedData.ItemTitle ? 'ItemTitle' : 'ItemId');
+        const itemValue = collectedData.ItemId || collectedData.ItemTitle || '';
+        const value = collectedData.Value || '';
+        // Construct payload
+        const payload = {
+            eventTypeId: Number(eventId),
+            trackingRuleId: Number(rule.id),
+            userField,
+            userValue,
+            itemField,
+            itemValue,
+            ratingValue: eventId === 2 ? Number(value) : undefined,
+            ratingReview: eventId === 3 ? value : undefined,
+        };
+        console.log(`[${this.name}] Final payload to track:`, payload);
+        // Track the event
+        this.tracker.track(payload);
+        console.log(`[${this.name}] tracker.track() called`);
+    }
+    /**
+     * DEPRECATED: Legacy method - not used by v2 plugins
+     * V2 plugins call PayloadBuilder.handleTrigger() directly
+     *
      * Phương thức xây dựng và theo dõi payload
      * New Flow: Plugin detects trigger → calls payloadBuilder with callback →
      * payloadBuilder processes and calls back → buildAndTrack constructs and tracks →
@@ -115,42 +151,35 @@ export class BasePlugin {
      * @param additionalFields - Optional additional fields (ratingValue, reviewValue, metadata, etc.)
      */
     buildAndTrack(context, rule, eventId) {
+        console.warn(`[${this.name}] buildAndTrack is deprecated - use PayloadBuilder.handleTrigger() instead`);
+        // For legacy plugins that still use this method, provide minimal support
         if (!this.tracker) {
             console.warn(`[${this.name}] Cannot track: tracker not initialized`);
             return;
         }
-        console.log(`[${this.name}] buildAndTrack called for eventId:`, eventId, 'rule:', rule.name);
-        // New Flow: Call PayloadBuilder with callback
-        this.tracker.payloadBuilder.buildWithCallback(context, rule, (extractedData, processedRule, _processedContext) => {
-            console.log(`[${this.name}] Callback received - extractedData from PayloadBuilder:`, extractedData);
-            // Use TrackerInit.handleMapping like old code for proper payload extraction from DOM
-            const element = context instanceof HTMLElement ? context : null;
-            const mappedData = TrackerInit.handleMapping(processedRule, element);
-            console.log(`[${this.name}] Mapped data from TrackerInit:`, mappedData);
-            // Merge: PayloadBuilder data (network, localStorage) + TrackerInit data (DOM, static)
-            const finalData = { ...mappedData, ...extractedData };
-            console.log(`[${this.name}] Final merged data:`, finalData);
-            // Get values from finalData
-            const userField = finalData.UserId ? 'UserId' : (finalData.Username ? 'Username' : (finalData.AnonymousId ? 'AnonymousId' : 'UserId'));
-            const userValue = finalData.UserId || finalData.Username || finalData.AnonymousId || TrackerInit.getUsername() || 'guest';
-            const itemField = finalData.ItemId ? 'ItemId' : (finalData.ItemTitle ? 'ItemTitle' : 'ItemId');
-            const itemValue = finalData.ItemId || finalData.ItemTitle || '';
-            const value = finalData.Value || '';
-            // Construct payload
-            const payload = {
-                eventTypeId: Number(eventId),
-                trackingRuleId: Number(processedRule.id),
+        // Fallback: use TrackerInit for simple payload extraction
+        const element = context instanceof HTMLElement ? context : null;
+        const mappedData = TrackerInit.handleMapping(rule, element);
+        const userField = mappedData.UserId ? 'UserId' : 'userId';
+        const userValue = mappedData.UserId || TrackerInit.getUsername() || 'guest';
+        const itemField = mappedData.ItemId ? 'ItemId' : 'itemId';
+        const itemValue = mappedData.ItemId || '';
+        this.tracker.track({
+            eventType: Number(eventId),
+            eventData: {
+                ruleId: rule.id,
                 userField,
                 userValue,
                 itemField,
                 itemValue,
-                ratingValue: eventId === 2 ? Number(value) : undefined,
-                ratingReview: eventId === 3 ? value : undefined,
-            };
-            console.log(`[${this.name}] Final payload to track:`, payload);
-            // Track the event (this adds to buffer and dispatches)
-            this.tracker.track(payload);
-            console.log(`[${this.name}] tracker.track() called`);
+                ...mappedData
+            },
+            timestamp: Date.now(),
+            url: window.location.href,
+            metadata: {
+                plugin: this.name,
+                deprecatedMethod: true
+            }
         });
     }
 }

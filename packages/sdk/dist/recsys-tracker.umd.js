@@ -1962,6 +1962,42 @@
             return { userField, userValue, itemField, itemValue, value };
         }
         /**
+         * NEW: Track directly with pre-collected payload from startCollection
+         * Used after async data collection is complete
+         */
+        trackWithPayload(collectedData, rule, eventId) {
+            if (!this.tracker) {
+                console.warn(`[${this.name}] Cannot track: tracker not initialized`);
+                return;
+            }
+            console.log(`[${this.name}] trackWithPayload called for eventId:`, eventId, 'rule:', rule.name);
+            console.log(`[${this.name}] Collected data:`, collectedData);
+            // Get values from collectedData
+            const userField = collectedData.UserId ? 'UserId' : (collectedData.Username ? 'Username' : (collectedData.AnonymousId ? 'AnonymousId' : 'UserId'));
+            const userValue = collectedData.UserId || collectedData.Username || collectedData.AnonymousId || TrackerInit.getUsername() || 'guest';
+            const itemField = collectedData.ItemId ? 'ItemId' : (collectedData.ItemTitle ? 'ItemTitle' : 'ItemId');
+            const itemValue = collectedData.ItemId || collectedData.ItemTitle || '';
+            const value = collectedData.Value || '';
+            // Construct payload
+            const payload = {
+                eventTypeId: Number(eventId),
+                trackingRuleId: Number(rule.id),
+                userField,
+                userValue,
+                itemField,
+                itemValue,
+                ratingValue: eventId === 2 ? Number(value) : undefined,
+                ratingReview: eventId === 3 ? value : undefined,
+            };
+            console.log(`[${this.name}] Final payload to track:`, payload);
+            // Track the event
+            this.tracker.track(payload);
+            console.log(`[${this.name}] tracker.track() called`);
+        }
+        /**
+         * DEPRECATED: Legacy method - not used by v2 plugins
+         * V2 plugins call PayloadBuilder.handleTrigger() directly
+         *
          * Phương thức xây dựng và theo dõi payload
          * New Flow: Plugin detects trigger → calls payloadBuilder with callback →
          * payloadBuilder processes and calls back → buildAndTrack constructs and tracks →
@@ -1973,42 +2009,35 @@
          * @param additionalFields - Optional additional fields (ratingValue, reviewValue, metadata, etc.)
          */
         buildAndTrack(context, rule, eventId) {
+            console.warn(`[${this.name}] buildAndTrack is deprecated - use PayloadBuilder.handleTrigger() instead`);
+            // For legacy plugins that still use this method, provide minimal support
             if (!this.tracker) {
                 console.warn(`[${this.name}] Cannot track: tracker not initialized`);
                 return;
             }
-            console.log(`[${this.name}] buildAndTrack called for eventId:`, eventId, 'rule:', rule.name);
-            // New Flow: Call PayloadBuilder with callback
-            this.tracker.payloadBuilder.buildWithCallback(context, rule, (extractedData, processedRule, _processedContext) => {
-                console.log(`[${this.name}] Callback received - extractedData from PayloadBuilder:`, extractedData);
-                // Use TrackerInit.handleMapping like old code for proper payload extraction from DOM
-                const element = context instanceof HTMLElement ? context : null;
-                const mappedData = TrackerInit.handleMapping(processedRule, element);
-                console.log(`[${this.name}] Mapped data from TrackerInit:`, mappedData);
-                // Merge: PayloadBuilder data (network, localStorage) + TrackerInit data (DOM, static)
-                const finalData = { ...mappedData, ...extractedData };
-                console.log(`[${this.name}] Final merged data:`, finalData);
-                // Get values from finalData
-                const userField = finalData.UserId ? 'UserId' : (finalData.Username ? 'Username' : (finalData.AnonymousId ? 'AnonymousId' : 'UserId'));
-                const userValue = finalData.UserId || finalData.Username || finalData.AnonymousId || TrackerInit.getUsername() || 'guest';
-                const itemField = finalData.ItemId ? 'ItemId' : (finalData.ItemTitle ? 'ItemTitle' : 'ItemId');
-                const itemValue = finalData.ItemId || finalData.ItemTitle || '';
-                const value = finalData.Value || '';
-                // Construct payload
-                const payload = {
-                    eventTypeId: Number(eventId),
-                    trackingRuleId: Number(processedRule.id),
+            // Fallback: use TrackerInit for simple payload extraction
+            const element = context instanceof HTMLElement ? context : null;
+            const mappedData = TrackerInit.handleMapping(rule, element);
+            const userField = mappedData.UserId ? 'UserId' : 'userId';
+            const userValue = mappedData.UserId || TrackerInit.getUsername() || 'guest';
+            const itemField = mappedData.ItemId ? 'ItemId' : 'itemId';
+            const itemValue = mappedData.ItemId || '';
+            this.tracker.track({
+                eventType: Number(eventId),
+                eventData: {
+                    ruleId: rule.id,
                     userField,
                     userValue,
                     itemField,
                     itemValue,
-                    ratingValue: eventId === 2 ? Number(value) : undefined,
-                    ratingReview: eventId === 3 ? value : undefined,
-                };
-                console.log(`[${this.name}] Final payload to track:`, payload);
-                // Track the event (this adds to buffer and dispatches)
-                this.tracker.track(payload);
-                console.log(`[${this.name}] tracker.track() called`);
+                    ...mappedData
+                },
+                timestamp: Date.now(),
+                url: window.location.href,
+                metadata: {
+                    plugin: this.name,
+                    deprecatedMethod: true
+                }
             });
         }
     }
@@ -2121,227 +2150,216 @@
     }
 
     /**
-     * Selector Matcher Utility
-     * Provides strict and loose matching modes for tracking targets
+     * ClickPlugin - UI Trigger Layer
+     *
+     * TRÁCH NHIỆM:
+     * 1. Phát hiện hành vi click
+     * 2. Match với tracking rules
+     * 3. Gọi PayloadBuilder.handleTrigger()
+     * 4. KHÔNG lấy payload, KHÔNG bắt network
+     *
+     * FLOW:
+     * click event → check rules → handleTrigger → DONE
      */
-    var MatchMode;
-    (function (MatchMode) {
-        MatchMode["STRICT"] = "strict";
-        MatchMode["CLOSEST"] = "closest";
-        MatchMode["CONTAINS"] = "contains"; // Element must contain matching child
-    })(MatchMode || (MatchMode = {}));
-    class SelectorMatcher {
-        /**
-         * Match element against selector with specified mode
-         */
-        static match(element, selector, mode = MatchMode.CLOSEST) {
-            if (!element || !selector)
-                return null;
-            switch (mode) {
-                case MatchMode.STRICT:
-                    return this.strictMatch(element, selector);
-                case MatchMode.CLOSEST:
-                    return this.closestMatch(element, selector);
-                case MatchMode.CONTAINS:
-                    return this.containsMatch(element, selector);
-                default:
-                    return this.closestMatch(element, selector);
-            }
-        }
-        /**
-         * STRICT: Element itself must match selector
-         */
-        static strictMatch(element, selector) {
-            try {
-                return element.matches(selector) ? element : null;
-            }
-            catch (e) {
-                console.error('[SelectorMatcher] Invalid selector:', selector);
-                return null;
-            }
-        }
-        /**
-         * CLOSEST: Element or closest parent must match selector
-         */
-        static closestMatch(element, selector) {
-            try {
-                return element.closest(selector);
-            }
-            catch (e) {
-                console.error('[SelectorMatcher] Invalid selector:', selector);
-                return null;
-            }
-        }
-        /**
-         * CONTAINS: Element must contain a child matching selector
-         */
-        static containsMatch(element, selector) {
-            try {
-                const child = element.querySelector(selector);
-                return child ? element : null;
-            }
-            catch (e) {
-                console.error('[SelectorMatcher] Invalid selector:', selector);
-                return null;
-            }
-        }
-        /**
-         * Check if element exactly matches selector (no parent traversal)
-         */
-        static isExactMatch(element, selector) {
-            return this.strictMatch(element, selector) !== null;
-        }
-    }
-
     class ClickPlugin extends BasePlugin {
-        constructor(config) {
-            super();
-            this.name = "click-plugin";
-            this.config = config;
+        constructor() {
+            super(...arguments);
+            this.name = 'ClickPlugin';
+            this.handleClickBound = this.handleClick.bind(this);
+        }
+        init(tracker) {
+            this.errorBoundary.execute(() => {
+                super.init(tracker);
+                console.log('[ClickPlugin] Initialized');
+            }, 'ClickPlugin.init');
         }
         start() {
-            const configToUse = this.config || (this.tracker ? this.tracker.getConfig() : null);
-            if (!configToUse || !configToUse.trackingRules) {
-                console.warn("[ClickPlugin] No tracking rules found. Plugin stopped.");
-                return;
-            }
-            console.log("[ClickPlugin] Started with config:", configToUse.domainUrl);
-            document.addEventListener("click", (event) => {
-                this.handleDocumentClick(event, configToUse);
-            }, true);
+            this.errorBoundary.execute(() => {
+                if (!this.ensureInitialized())
+                    return;
+                document.addEventListener('click', this.handleClickBound, true);
+                this.active = true;
+                console.log('[ClickPlugin] ✅ Started');
+            }, 'ClickPlugin.start');
         }
-        handleDocumentClick(event, config) {
-            var _a, _b, _c;
-            console.log('[ClickPlugin] Click detected on:', event.target);
-            if (!this.tracker) {
-                console.warn('[ClickPlugin] Tracker not initialized');
+        stop() {
+            this.errorBoundary.execute(() => {
+                if (this.tracker) {
+                    document.removeEventListener('click', this.handleClickBound, true);
+                }
+                super.stop();
+                console.log('[ClickPlugin] Stopped');
+            }, 'ClickPlugin.stop');
+        }
+        /**
+         * Handle click event - TRIGGER PHASE
+         */
+        handleClick(event) {
+            var _a;
+            if (!this.tracker)
                 return;
-            }
-            const rules = config.trackingRules;
-            if (!rules || rules.length === 0) {
-                console.warn('[ClickPlugin] No tracking rules found');
+            const clickedElement = event.target;
+            if (!clickedElement)
                 return;
-            }
-            const clickRules = rules.filter((r) => r.eventTypeId === 1);
-            console.log('[ClickPlugin] Found', clickRules.length, 'click rules');
+            // Get click rules
+            const eventId = this.tracker.getEventTypeId('Click') || 1;
+            const config = this.tracker.getConfig();
+            const clickRules = ((_a = config === null || config === void 0 ? void 0 : config.trackingRules) === null || _a === void 0 ? void 0 : _a.filter(r => r.eventTypeId === eventId)) || [];
             if (clickRules.length === 0)
                 return;
+            console.log(`[ClickPlugin] 🖱️ Click detected, checking ${clickRules.length} rules`);
+            // Check each rule
             for (const rule of clickRules) {
-                const selector = (_a = rule.trackingTarget) === null || _a === void 0 ? void 0 : _a.value;
-                console.log('[ClickPlugin] Checking rule:', rule.name, 'with selector:', selector);
-                if (!selector)
-                    continue;
-                const clickedElement = event.target;
-                console.log('[ClickPlugin] Clicked element:', clickedElement.tagName, clickedElement.className);
-                // Debug: Log parent chain
-                let parent = clickedElement.parentElement;
-                let depth = 0;
-                while (parent && depth < 5) {
-                    console.log(`[ClickPlugin] Parent ${depth}:`, parent.tagName, parent.className, (_b = parent.classList) === null || _b === void 0 ? void 0 : _b.toString());
-                    parent = parent.parentElement;
-                    depth++;
-                }
-                // Strategy: 
-                // 1. Try STRICT match first (element itself must match selector)
-                // 2. If no match, try CLOSEST (parent traversal) but ONLY if clicked element is not a button/link
-                //    This prevents other interactive elements from accidentally triggering
-                let target = SelectorMatcher.match(clickedElement, selector, MatchMode.STRICT);
-                console.log('[ClickPlugin] STRICT match result:', target);
-                // TEMPORARY: If selector is .play-button, also try to match elements with "play-button" in their class
-                if (!target && selector === '.play-button') {
-                    const className = clickedElement.className;
-                    if (typeof className === 'string' && className.includes('play-button')) {
-                        target = clickedElement;
-                        console.log('[ClickPlugin] Matched via flexible class check on clicked element');
-                    }
-                }
-                if (!target) {
-                    // Only use CLOSEST matching if clicked element is NOT an interactive element
-                    const isInteractiveElement = ['BUTTON', 'A', 'INPUT', 'SELECT', 'TEXTAREA'].includes(clickedElement.tagName) || clickedElement.hasAttribute('role') && ['button', 'link'].includes(clickedElement.getAttribute('role') || '');
-                    console.log('[ClickPlugin] Is interactive element:', isInteractiveElement);
-                    if (!isInteractiveElement) {
-                        // Safe to traverse up - probably clicked on icon/text inside button
-                        target = SelectorMatcher.match(clickedElement, selector, MatchMode.CLOSEST);
-                        console.log('[ClickPlugin] CLOSEST match result:', target);
-                        // TEMPORARY: If selector is .play-button and CLOSEST didn't find it, try manual parent search
-                        if (!target && selector === '.play-button') {
-                            let parent = clickedElement.parentElement;
-                            let depth = 0;
-                            while (parent && depth < 10) {
-                                const parentClassName = parent.className;
-                                if (typeof parentClassName === 'string' && parentClassName.includes('play-button')) {
-                                    target = parent;
-                                    console.log('[ClickPlugin] Matched via flexible class check on parent at depth', depth);
-                                    break;
-                                }
-                                parent = parent.parentElement;
-                                depth++;
-                            }
-                        }
-                    }
-                }
-                if (!target) {
-                    console.log('[ClickPlugin] No target matched for selector:', selector);
+                const matchedElement = this.findMatchingElement(clickedElement, rule);
+                if (!matchedElement) {
                     continue;
                 }
-                // Log for debugging
-                console.log('[ClickPlugin] ✓ Click matched tracking target:', {
-                    element: target.className || target.tagName,
-                    selector: selector,
-                    rule: rule.name,
-                    matchedDirectly: clickedElement === target
+                console.log(`[ClickPlugin] ✅ Matched rule: "${rule.name}"`);
+                // Check conditions
+                if (!this.checkConditions(matchedElement, rule)) {
+                    console.log('[ClickPlugin] Conditions not met');
+                    continue;
+                }
+                // Create trigger context
+                const triggerContext = {
+                    element: matchedElement,
+                    target: matchedElement,
+                    clickedElement: clickedElement,
+                    eventType: 'click',
+                    event: event
+                };
+                // Delegate to PayloadBuilder
+                this.tracker.payloadBuilder.handleTrigger(rule, triggerContext, (payload) => {
+                    // Callback khi payload ready
+                    this.dispatchEvent(payload, rule, eventId);
                 });
-                if ((_c = rule.conditions) === null || _c === void 0 ? void 0 : _c.length) {
-                    const conditionsMet = rule.conditions.every((cond) => {
-                        if (cond.patternId === 2 && cond.operatorId === 1) {
-                            return window.location.href.includes(cond.value);
-                        }
-                        return true;
-                    });
-                    if (!conditionsMet)
-                        continue;
-                }
-                console.log("🎯 [ClickPlugin] Rule matched:", rule.name, "| ID:", rule.id);
-                // NEW FLOW: Check if rule requires network data
-                let requiresNetworkData = false;
-                if (rule.payloadMappings) {
-                    requiresNetworkData = rule.payloadMappings.some((m) => {
-                        const s = (m.source || '').toLowerCase();
-                        return [
-                            'requestbody',
-                            'responsebody',
-                            'request_body',
-                            'response_body',
-                            'requesturl',
-                            'request_url'
-                        ].includes(s);
-                    });
-                }
-                if (requiresNetworkData) {
-                    console.log('[ClickPlugin] ⏳ Rule requires network data. Starting collection for rule:', rule.id);
-                    // NEW FLOW: Gọi startCollection với đầy đủ context
-                    if (this.tracker && this.tracker.payloadBuilder) {
-                        const context = {
-                            element: target,
-                            eventType: 'click',
-                            triggerTimestamp: Date.now()
-                        };
-                        this.tracker.payloadBuilder.startCollection(context, rule, (finalPayload) => {
-                            console.log('[ClickPlugin] ✅ Collection complete, tracking event with payload:', finalPayload);
-                            // Sau khi có đủ dữ liệu → Track event
-                            this.buildAndTrack(target, rule, rule.eventTypeId);
-                        });
-                    }
-                    else {
-                        console.warn('[ClickPlugin] Tracker or PayloadBuilder not available');
-                    }
-                    break;
-                }
-                // Không cần network data → Track ngay
-                console.log('[ClickPlugin] No network data required, tracking immediately');
-                this.buildAndTrack(target, rule, rule.eventTypeId);
-                break;
+                // Chỉ track rule đầu tiên match
+                return;
             }
+        }
+        /**
+         * Find element matching rule selector
+         */
+        findMatchingElement(clickedElement, rule) {
+            var _a;
+            const selector = (_a = rule.trackingTarget) === null || _a === void 0 ? void 0 : _a.value;
+            if (!selector)
+                return null;
+            try {
+                // Strategy 1: Strict match (element itself)
+                if (clickedElement.matches(selector)) {
+                    return clickedElement;
+                }
+                // Strategy 2: Flexible class match (for CSS modules)
+                if (selector.startsWith('.')) {
+                    const className = selector.substring(1);
+                    if (this.hasFlexibleClassMatch(clickedElement, className)) {
+                        return clickedElement;
+                    }
+                }
+                // Strategy 3: Closest match (parent traversal)
+                // Only if clicked element is NOT interactive (avoid false positives)
+                const isInteractive = this.isInteractiveElement(clickedElement);
+                if (!isInteractive) {
+                    const closestMatch = clickedElement.closest(selector);
+                    if (closestMatch) {
+                        return closestMatch;
+                    }
+                    // Flexible class match on parents
+                    if (selector.startsWith('.')) {
+                        const className = selector.substring(1);
+                        const flexibleParent = this.findParentWithFlexibleClass(clickedElement, className);
+                        if (flexibleParent) {
+                            return flexibleParent;
+                        }
+                    }
+                }
+                return null;
+            }
+            catch (e) {
+                console.error('[ClickPlugin] Selector error:', e);
+                return null;
+            }
+        }
+        /**
+         * Check if element has flexible class match (for CSS modules)
+         */
+        hasFlexibleClassMatch(element, baseClassName) {
+            const actualClassName = element.className;
+            if (typeof actualClassName !== 'string')
+                return false;
+            // Extract base name (remove hash for CSS modules)
+            const baseName = baseClassName.split('_')[0];
+            return actualClassName.includes(baseName);
+        }
+        /**
+         * Find parent with flexible class match
+         */
+        findParentWithFlexibleClass(element, baseClassName) {
+            const baseName = baseClassName.split('_')[0];
+            let parent = element.parentElement;
+            let depth = 0;
+            while (parent && depth < 10) {
+                const className = parent.className;
+                if (typeof className === 'string' && className.includes(baseName)) {
+                    return parent;
+                }
+                parent = parent.parentElement;
+                depth++;
+            }
+            return null;
+        }
+        /**
+         * Check if element is interactive (button, link, etc.)
+         */
+        isInteractiveElement(element) {
+            const tagName = element.tagName;
+            if (['BUTTON', 'A', 'INPUT', 'SELECT', 'TEXTAREA'].includes(tagName)) {
+                return true;
+            }
+            const role = element.getAttribute('role');
+            if (role && ['button', 'link', 'menuitem'].includes(role)) {
+                return true;
+            }
+            return false;
+        }
+        /**
+         * Check conditions
+         */
+        checkConditions(_element, rule) {
+            const conditions = rule.conditions;
+            if (!conditions || conditions.length === 0) {
+                return true;
+            }
+            for (const cond of conditions) {
+                // Pattern ID 2 = URL, Operator ID 1 = CONTAINS
+                if (cond.patternId === 2 && cond.operatorId === 1) {
+                    if (!window.location.href.includes(cond.value)) {
+                        return false;
+                    }
+                }
+                // Add more condition types as needed
+            }
+            return true;
+        }
+        /**
+         * Dispatch tracking event
+         */
+        dispatchEvent(payload, rule, eventId) {
+            if (!this.tracker)
+                return;
+            console.log('[ClickPlugin] 📤 Dispatching event with payload:', payload);
+            this.tracker.track({
+                eventType: eventId,
+                eventData: payload,
+                timestamp: Date.now(),
+                url: window.location.href,
+                metadata: {
+                    ruleId: rule.id,
+                    ruleName: rule.name,
+                    plugin: this.name
+                }
+            });
         }
     }
 
@@ -2350,32 +2368,6 @@
         ClickPlugin: ClickPlugin
     });
 
-    function throttle(fn, delay) {
-        let lastCall = 0;
-        let timeoutId = null;
-        let lastArgs = null;
-        return function (...args) {
-            const now = Date.now();
-            lastArgs = args;
-            const remaining = delay - (now - lastCall);
-            const context = this;
-            if (remaining <= 0) {
-                if (timeoutId) {
-                    clearTimeout(timeoutId);
-                    timeoutId = null;
-                }
-                lastCall = now;
-                fn.apply(context, args);
-            }
-            else if (!timeoutId) {
-                timeoutId = window.setTimeout(() => {
-                    lastCall = Date.now();
-                    timeoutId = null;
-                    fn.apply(context, lastArgs);
-                }, remaining);
-            }
-        };
-    }
     const CUSTOM_ROUTE_EVENT = "recsys_route_change";
 
     class PageViewPlugin extends BasePlugin {
@@ -2477,6 +2469,18 @@
         PageViewPlugin: PageViewPlugin
     });
 
+    /**
+     * ReviewPlugin - UI Trigger Layer
+     *
+     * TRÁCH NHIỆM:
+     * 1. Phát hiện hành vi review (form submit)
+     * 2. Match với tracking rules
+     * 3. Gọi PayloadBuilder.handleTrigger()
+     * 4. KHÔNG lấy payload, KHÔNG bắt network
+     *
+     * FLOW:
+     * submit event → check rules → handleTrigger → DONE
+     */
     const TARGET_PATTERN_ID = { CSS_SELECTOR: 1 };
     const CONDITION_PATTERN_ID = { CSS_SELECTOR: 1, URL: 2, DATA_ATTRIBUTE: 3 };
     const OPERATOR_ID = { CONTAINS: 1, EQUALS: 2, STARTS_WITH: 3, ENDS_WITH: 4 };
@@ -2489,7 +2493,7 @@
         init(tracker) {
             this.errorBoundary.execute(() => {
                 super.init(tracker);
-                console.log(`[ReviewPlugin] initialized.`);
+                console.log('[ReviewPlugin] Initialized');
             }, 'ReviewPlugin.init');
         }
         start() {
@@ -2498,7 +2502,7 @@
                     return;
                 document.addEventListener('submit', this.handleSubmitBound, { capture: true });
                 this.active = true;
-                console.log('[ReviewPlugin] Started successfully');
+                console.log('[ReviewPlugin] ✅ Started');
             }, 'ReviewPlugin.start');
         }
         stop() {
@@ -2507,160 +2511,231 @@
                     document.removeEventListener('submit', this.handleSubmitBound, { capture: true });
                 }
                 super.stop();
-            }, 'ReviewPlugin.stop'); // Using stop/destroy consistency?
+                console.log('[ReviewPlugin] Stopped');
+            }, 'ReviewPlugin.stop');
         }
+        /**
+         * Handle submit event - TRIGGER PHASE
+         */
         handleSubmit(event) {
             var _a;
-            console.log('[ReviewPlugin] handleSubmit called');
             if (!this.tracker)
                 return;
             const form = event.target;
-            // Trigger ID for Review is typically 3 (or configured)
+            if (!form)
+                return;
+            // Get review rules
             const eventId = this.tracker.getEventTypeId('Review') || 3;
             const config = this.tracker.getConfig();
             const reviewRules = ((_a = config === null || config === void 0 ? void 0 : config.trackingRules) === null || _a === void 0 ? void 0 : _a.filter(r => r.eventTypeId === eventId)) || [];
-            console.log('[ReviewPlugin] Event ID:', eventId);
-            console.log('[ReviewPlugin] Rules found:', reviewRules.length);
             if (reviewRules.length === 0)
                 return;
+            console.log(`[ReviewPlugin] 📝 Submit detected, checking ${reviewRules.length} rules`);
+            // Check each rule
             for (const rule of reviewRules) {
-                // 1. Check Target
-                if (!this.checkTargetMatch(form, rule))
+                if (!this.matchesRule(form, rule)) {
                     continue;
-                // 2. Check Condition
-                if (!this.checkConditions(form, rule))
-                    continue;
-                console.log(`✅ [ReviewPlugin] Match Rule: "${rule.name}"`);
-                // 3. Auto-detect review content if needed
+                }
+                console.log(`[ReviewPlugin] ✅ Matched rule: "${rule.name}"`);
+                // Auto-detect review content
                 const reviewContent = this.autoDetectReviewContent(form);
-                console.log(`[ReviewPlugin] Detected review content: "${reviewContent}"`);
-                // 4. Check if rule requires network data
-                let requiresNetworkData = false;
-                if (rule.payloadMappings) {
-                    requiresNetworkData = rule.payloadMappings.some((m) => {
-                        const s = (m.source || '').toLowerCase();
-                        return [
-                            'requestbody',
-                            'responsebody',
-                            'request_body',
-                            'response_body',
-                            'requesturl',
-                            'request_url'
-                        ].includes(s);
-                    });
-                }
-                // 4. NEW FLOW: Check if rule requires network data
-                if (requiresNetworkData) {
-                    console.log('[ReviewPlugin] ⏳ Rule requires network data. Starting collection for rule:', rule.id);
-                    // NEW FLOW: Gọi startCollection với đầy đủ context
-                    if (this.tracker && this.tracker.payloadBuilder) {
-                        const context = {
-                            element: form,
-                            eventType: 'review',
-                            triggerTimestamp: Date.now(),
-                            reviewContent: reviewContent
-                        };
-                        this.tracker.payloadBuilder.startCollection(context, rule, (finalPayload) => {
-                            console.log('[ReviewPlugin] ✅ Collection complete, tracking event with payload:', finalPayload);
-                            // Sau khi có đủ dữ liệu → Track event
-                            this.buildAndTrack(form, rule, eventId);
-                        });
-                    }
-                    else {
-                        console.warn('[ReviewPlugin] Tracker or PayloadBuilder not available');
-                    }
-                    return;
-                }
-                // 5. Không cần network data → Track ngay
-                console.log('[ReviewPlugin] No network data required, tracking immediately');
-                this.buildAndTrack(form, rule, eventId);
-                console.log(`[ReviewPlugin] 📤 Event tracked successfully`);
+                // Create trigger context
+                const triggerContext = {
+                    element: form,
+                    target: form,
+                    eventType: 'review',
+                    reviewContent: reviewContent,
+                    form: form
+                };
+                // Delegate to PayloadBuilder
+                this.tracker.payloadBuilder.handleTrigger(rule, triggerContext, (payload) => {
+                    // Callback khi payload ready
+                    this.dispatchEvent(payload, rule, eventId);
+                });
+                // Chỉ track rule đầu tiên match
                 return;
             }
         }
-        checkTargetMatch(form, rule) {
-            const target = rule.targetElement;
-            if (!target)
-                return false;
-            const patternId = Number(target.targetEventPatternId);
-            if (patternId !== TARGET_PATTERN_ID.CSS_SELECTOR)
-                return false;
-            try {
-                console.log('[ReviewPlugin] Checking target match against:', target.targetElementValue);
-                console.log('[ReviewPlugin] Form classes:', form.className);
-                if (form.matches(target.targetElementValue)) {
-                    console.log('[ReviewPlugin] Strict match success');
-                    return true;
-                }
-                // Flexible match: Check if form is inside the target element
-                const closest = form.closest(target.targetElementValue);
-                console.log('[ReviewPlugin] Flexible match result:', closest);
-                return !!closest;
-            }
-            catch (e) {
-                console.error('[ReviewPlugin] Match error:', e);
+        /**
+         * Check if form matches rule
+         */
+        matchesRule(form, rule) {
+            // Check target
+            if (!this.checkTargetMatch(form, rule)) {
                 return false;
             }
-        }
-        checkConditions(form, rule) {
-            const conditions = rule.conditions;
-            if (!conditions || conditions.length === 0)
-                return true;
-            for (const cond of conditions) {
-                const pattern = Number(cond.eventPatternId);
-                const operator = Number(cond.operatorId);
-                const val = cond.value;
-                let actual = null;
-                let isMet = false;
-                switch (pattern) {
-                    case CONDITION_PATTERN_ID.URL:
-                        actual = location.href;
-                        break;
-                    case CONDITION_PATTERN_ID.CSS_SELECTOR:
-                        try {
-                            isMet = form.matches(val);
-                            actual = isMet ? 'true' : 'false';
-                        }
-                        catch {
-                            return false;
-                        }
-                        break;
-                    case CONDITION_PATTERN_ID.DATA_ATTRIBUTE:
-                        actual = form.getAttribute(val);
-                        break;
-                }
-                if (pattern === CONDITION_PATTERN_ID.CSS_SELECTOR)
-                    continue;
-                if (!this.compareValues(actual, val, operator))
-                    return false;
+            // Check conditions
+            if (!this.checkConditions(form, rule)) {
+                return false;
             }
             return true;
         }
-        autoDetectReviewContent(form) {
-            const formData = new FormData(form);
-            let content = '';
-            for (const [key, val] of formData) {
-                const k = key.toLowerCase();
-                const vStr = String(val);
-                if (k.includes('review') || k.includes('comment') || k.includes('body') || k.includes('content')) {
-                    if (vStr.length > content.length)
-                        content = vStr;
+        /**
+         * Check target match
+         */
+        checkTargetMatch(form, rule) {
+            const target = rule.trackingTarget;
+            if (!target)
+                return false;
+            const patternId = Number(target.patternId);
+            if (patternId !== TARGET_PATTERN_ID.CSS_SELECTOR) {
+                return false;
+            }
+            const selector = target.value;
+            if (!selector)
+                return false;
+            try {
+                // Strict match
+                if (form.matches(selector)) {
+                    return true;
+                }
+                // Flexible match - form inside target
+                const closest = form.closest(selector);
+                return !!closest;
+            }
+            catch (e) {
+                console.error('[ReviewPlugin] Selector error:', e);
+                return false;
+            }
+        }
+        /**
+         * Check conditions
+         */
+        checkConditions(form, rule) {
+            const conditions = rule.conditions;
+            if (!conditions || conditions.length === 0) {
+                return true;
+            }
+            for (const cond of conditions) {
+                if (!this.checkCondition(form, cond)) {
+                    return false;
                 }
             }
-            return content;
+            return true;
         }
-        compareValues(actual, expected, op) {
-            if (!actual)
-                actual = '';
-            if (op === OPERATOR_ID.EQUALS)
-                return actual == expected;
-            if (op === OPERATOR_ID.CONTAINS)
-                return actual.includes(expected);
-            if (op === OPERATOR_ID.STARTS_WITH)
-                return actual.startsWith(expected);
-            if (op === OPERATOR_ID.ENDS_WITH)
-                return actual.endsWith(expected);
-            return false;
+        /**
+         * Check single condition
+         */
+        checkCondition(form, condition) {
+            const patternId = Number(condition.patternId);
+            const operatorId = Number(condition.operatorId);
+            const value = condition.value;
+            switch (patternId) {
+                case CONDITION_PATTERN_ID.URL:
+                    return this.checkUrlCondition(operatorId, value);
+                case CONDITION_PATTERN_ID.CSS_SELECTOR:
+                    return this.checkSelectorCondition(form, operatorId, value);
+                case CONDITION_PATTERN_ID.DATA_ATTRIBUTE:
+                    return this.checkDataAttributeCondition(form, operatorId, value);
+                default:
+                    return true;
+            }
+        }
+        /**
+         * Check URL condition
+         */
+        checkUrlCondition(operatorId, value) {
+            const url = window.location.href;
+            switch (operatorId) {
+                case OPERATOR_ID.CONTAINS:
+                    return url.includes(value);
+                case OPERATOR_ID.EQUALS:
+                    return url === value;
+                case OPERATOR_ID.STARTS_WITH:
+                    return url.startsWith(value);
+                case OPERATOR_ID.ENDS_WITH:
+                    return url.endsWith(value);
+                default:
+                    return false;
+            }
+        }
+        /**
+         * Check selector condition
+         */
+        checkSelectorCondition(form, _operatorId, value) {
+            try {
+                const element = form.querySelector(value);
+                return !!element; // Exists or not
+            }
+            catch {
+                return false;
+            }
+        }
+        /**
+         * Check data attribute condition
+         */
+        checkDataAttributeCondition(form, operatorId, value) {
+            const [attrName, expectedValue] = value.split('=');
+            const actualValue = form.getAttribute(attrName);
+            if (!actualValue)
+                return false;
+            switch (operatorId) {
+                case OPERATOR_ID.CONTAINS:
+                    return actualValue.includes(expectedValue);
+                case OPERATOR_ID.EQUALS:
+                    return actualValue === expectedValue;
+                default:
+                    return false;
+            }
+        }
+        /**
+         * Auto-detect review content from form
+         */
+        autoDetectReviewContent(form) {
+            var _a, _b;
+            // Strategy 1: textarea với name/id có 'review', 'comment', 'content'
+            const textareas = Array.from(form.querySelectorAll('textarea'));
+            for (const textarea of textareas) {
+                const name = ((_a = textarea.name) === null || _a === void 0 ? void 0 : _a.toLowerCase()) || '';
+                const id = ((_b = textarea.id) === null || _b === void 0 ? void 0 : _b.toLowerCase()) || '';
+                if (name.includes('review') || name.includes('comment') || name.includes('content') ||
+                    id.includes('review') || id.includes('comment') || id.includes('content')) {
+                    const value = textarea.value.trim();
+                    if (value)
+                        return value;
+                }
+            }
+            // Strategy 2: textarea lớn nhất
+            let largestTextarea = null;
+            let maxLength = 0;
+            for (const textarea of textareas) {
+                const value = textarea.value.trim();
+                if (value.length > maxLength) {
+                    maxLength = value.length;
+                    largestTextarea = textarea;
+                }
+            }
+            if (largestTextarea) {
+                return largestTextarea.value.trim();
+            }
+            // Strategy 3: input[type="text"] lớn
+            const textInputs = Array.from(form.querySelectorAll('input[type="text"]'));
+            for (const input of textInputs) {
+                const value = input.value.trim();
+                if (value.length > 20) { // Assume review > 20 chars
+                    return value;
+                }
+            }
+            return '';
+        }
+        /**
+         * Dispatch tracking event
+         */
+        dispatchEvent(payload, rule, eventId) {
+            if (!this.tracker)
+                return;
+            console.log('[ReviewPlugin] 📤 Dispatching event with payload:', payload);
+            this.tracker.track({
+                eventType: eventId,
+                eventData: payload,
+                timestamp: Date.now(),
+                url: window.location.href,
+                metadata: {
+                    ruleId: rule.id,
+                    ruleName: rule.name,
+                    plugin: this.name
+                }
+            });
         }
     }
 
@@ -2907,33 +2982,22 @@
             });
         }
         sendScrollEvent(depth) {
-            var _a;
             if (!this.tracker)
                 return;
             const rule = this.activeRule || this.createDefaultRule('default-scroll', 'Default Scroll');
             const currentActiveSeconds = this.calculateActiveTime();
-            // Extract via PayloadBuilder
-            const extracted = this.tracker.payloadBuilder.build(this.currentItemContext, rule);
-            // Build Payload
-            const payload = {
-                eventTypeId: rule.eventTypeId || 4, // Default Scroll ID
-                trackingRuleId: rule.id,
-                userField: 'userId',
-                userValue: extracted['userId'] || extracted['User'] || '',
-                itemField: 'itemId',
-                itemValue: extracted['itemId'] || extracted['Item'] || ((_a = this.currentItemContext) === null || _a === void 0 ? void 0 : _a.id) || 'N/A',
-                // Metadata
+            // Use buildAndTrack (legacy fallback)
+            const context = {
+                ...this.currentItemContext,
                 metadata: {
                     depth_percentage: depth,
                     time_on_page: currentActiveSeconds,
-                    url: window.location.href,
-                    ...extracted // Merge extracted
+                    url: window.location.href
                 }
             };
-            this.tracker.track(payload);
+            this.buildAndTrack(context, rule, rule.eventTypeId || 4);
         }
         handleUnload() {
-            var _a;
             if (!this.tracker)
                 return;
             if (this.isTabVisible)
@@ -2944,23 +3008,18 @@
             const rule = this.activeRule || this.createDefaultRule('summary', 'Page Summary');
             if (!this.currentItemContext)
                 this.currentItemContext = this.createSyntheticItem();
-            // Extract
-            const extracted = this.tracker.payloadBuilder.build(this.currentItemContext, rule);
-            const payload = {
-                eventTypeId: rule.eventTypeId || 4,
-                trackingRuleId: rule.id,
-                userField: 'userId',
-                userValue: extracted['userId'] || '',
-                itemField: 'itemId',
-                itemValue: extracted['itemId'] || ((_a = this.currentItemContext) === null || _a === void 0 ? void 0 : _a.id) || 'N/A',
+            // Use buildAndTrack (legacy fallback)
+            const context = {
+                ...this.currentItemContext,
                 metadata: {
+                    total_active_time: finalTime,
+                    url: window.location.href,
                     max_scroll_depth: this.maxScrollDepth,
-                    total_time_on_page: finalTime,
                     is_bounce: this.maxScrollDepth < 25 && finalTime < 5,
                     event: 'page_summary'
                 }
             };
-            this.tracker.track(payload);
+            this.buildAndTrack(context, rule, rule.eventTypeId || 4);
         }
         handleVisibilityChange() {
             if (document.visibilityState === 'hidden') {
@@ -3002,55 +3061,196 @@
         ScrollPlugin: ScrollPlugin
     });
 
-    class ElementExtractor {
-        extract(mapping, context) {
-            const startElement = (context instanceof HTMLElement) ? context : document.body;
-            const selector = mapping.value; // The selector e.g. ".title"
-            if (!selector)
-                return null;
-            try {
-                // 1. Tìm element trong phạm vi context
-                let target = startElement.querySelector(selector);
-                // 2. Nếu không tìm thấy và context không phải là body, tìm trong toàn bộ document
-                if (!target && startElement !== document.body) {
-                    target = document.querySelector(selector);
+    /**
+     * RuleExecutionContext (REC)
+     *
+     * Đại diện cho MỘT LẦN TRIGGER CỤ THỂ của một rule.
+     * Không phải là rule config, mà là instance của một lần thực thi.
+     *
+     * Nguyên tắc:
+     * - Mỗi trigger (click, rating, review, etc.) tạo 1 REC riêng
+     * - REC theo dõi trạng thái thu thập dữ liệu
+     * - REC có TIME_WINDOW để match với network requests
+     * - REC có MAX_WAIT_TIME để tự cleanup nếu không hoàn thành
+     */
+    /**
+     * RuleExecutionContextManager
+     * Quản lý tất cả các REC đang active
+     */
+    class RuleExecutionContextManager {
+        constructor() {
+            this.contexts = new Map();
+            this.TIME_WINDOW = 3000; // 3s - Request phải xảy ra trong window này
+            this.MAX_WAIT_TIME = 5000; // 5s - Tự động expire nếu quá thời gian
+        }
+        /**
+         * Tạo REC mới cho một trigger
+         */
+        createContext(ruleId, requiredFields, triggerContext, onComplete) {
+            const executionId = this.generateExecutionId();
+            const context = {
+                executionId,
+                ruleId,
+                triggeredAt: Date.now(),
+                status: 'pending',
+                requiredFields: new Set(requiredFields),
+                collectedFields: new Map(),
+                triggerContext,
+                onComplete
+            };
+            // Setup auto-cleanup
+            context.timeoutHandle = setTimeout(() => {
+                this.expireContext(executionId);
+            }, this.MAX_WAIT_TIME);
+            this.contexts.set(executionId, context);
+            console.log(`[REC] Created context ${executionId} for rule ${ruleId}`, {
+                requiredFields,
+                timeWindow: this.TIME_WINDOW,
+                maxWaitTime: this.MAX_WAIT_TIME
+            });
+            return context;
+        }
+        /**
+         * Lấy context theo executionId
+         */
+        getContext(executionId) {
+            return this.contexts.get(executionId);
+        }
+        /**
+         * Lấy tất cả pending contexts cho một rule cụ thể
+         */
+        getPendingContextsForRule(ruleId) {
+            const results = [];
+            for (const context of this.contexts.values()) {
+                if (context.ruleId === ruleId && context.status === 'pending') {
+                    results.push(context);
                 }
-                // 3. Radar / Proximity Scan
-                // Nếu exact selector fails, dùng "Radar" logic. 
-                // Dùng Value để biết css selector... bắt ngay selector đó
-                // Hoặc bắt xung quanh gần nhất nếu fail
-                if (!target) {
-                    target = this.findClosestBySelector(startElement, selector);
-                }
-                if (target) {
-                    return this.getValueFromElement(target);
-                }
-                return null;
             }
-            catch {
-                return null;
+            return results;
+        }
+        /**
+         * Tìm context phù hợp cho một network request
+         * Điều kiện:
+         * - Status = pending
+         * - RuleId match
+         * - Request timestamp trong TIME_WINDOW
+         */
+        findMatchingContext(ruleId, requestTimestamp) {
+            for (const context of this.contexts.values()) {
+                if (context.ruleId === ruleId &&
+                    context.status === 'pending' &&
+                    requestTimestamp >= context.triggeredAt &&
+                    requestTimestamp <= context.triggeredAt + this.TIME_WINDOW) {
+                    return context;
+                }
+            }
+            return undefined;
+        }
+        /**
+         * Thu thập một field vào context
+         */
+        collectField(executionId, field, value) {
+            const context = this.contexts.get(executionId);
+            if (!context || context.status !== 'pending') {
+                return;
+            }
+            context.collectedFields.set(field, value);
+            console.log(`[REC] Collected field "${field}" for ${executionId}:`, value);
+            // Check nếu đã đủ dữ liệu
+            this.checkCompletion(executionId);
+        }
+        /**
+         * Kiểm tra nếu context đã thu thập đủ dữ liệu
+         */
+        checkCompletion(executionId) {
+            const context = this.contexts.get(executionId);
+            if (!context || context.status !== 'pending') {
+                return;
+            }
+            // Check nếu tất cả required fields đã có
+            const allFieldsCollected = Array.from(context.requiredFields).every(field => context.collectedFields.has(field));
+            if (allFieldsCollected) {
+                this.completeContext(executionId);
             }
         }
-        getValueFromElement(element) {
-            if (element instanceof HTMLInputElement ||
-                element instanceof HTMLTextAreaElement ||
-                element instanceof HTMLSelectElement) {
-                return element.value;
+        /**
+         * Đánh dấu context là completed và trigger callback
+         */
+        completeContext(executionId) {
+            const context = this.contexts.get(executionId);
+            if (!context || context.status !== 'pending') {
+                return;
             }
-            return element.innerText || element.textContent || null;
+            context.status = 'completed';
+            // Clear timeout
+            if (context.timeoutHandle) {
+                clearTimeout(context.timeoutHandle);
+            }
+            // Build payload từ collected fields
+            const payload = {};
+            context.collectedFields.forEach((value, key) => {
+                payload[key] = value;
+            });
+            console.log(`[REC] ✅ Context ${executionId} completed with payload:`, payload);
+            // Trigger callback
+            if (context.onComplete) {
+                context.onComplete(payload);
+            }
+            // Cleanup sau 1s (giữ một chút để debug)
+            setTimeout(() => {
+                this.contexts.delete(executionId);
+            }, 1000);
         }
-        findClosestBySelector(startElement, selector) {
-            // Try going up parents and searching down
-            let parent = startElement.parentElement;
-            let levels = 0;
-            while (parent && levels < 3) {
-                const found = parent.querySelector(selector);
-                if (found)
-                    return found;
-                parent = parent.parentElement;
-                levels++;
+        /**
+         * Đánh dấu context là expired (timeout)
+         */
+        expireContext(executionId) {
+            const context = this.contexts.get(executionId);
+            if (!context || context.status !== 'pending') {
+                return;
             }
-            return null;
+            context.status = 'expired';
+            console.warn(`[REC] ⏱️ Context ${executionId} expired (rule ${context.ruleId})`, {
+                collectedFields: Array.from(context.collectedFields.keys()),
+                missingFields: Array.from(context.requiredFields).filter(f => !context.collectedFields.has(f))
+            });
+            // Cleanup
+            setTimeout(() => {
+                this.contexts.delete(executionId);
+            }, 1000);
+        }
+        /**
+         * Cleanup một context (manual)
+         */
+        cleanupContext(executionId) {
+            const context = this.contexts.get(executionId);
+            if (context && context.timeoutHandle) {
+                clearTimeout(context.timeoutHandle);
+            }
+            this.contexts.delete(executionId);
+        }
+        /**
+         * Get số lượng active contexts (for debugging)
+         */
+        getActiveCount() {
+            return Array.from(this.contexts.values()).filter(c => c.status === 'pending').length;
+        }
+        /**
+         * Generate unique execution ID
+         */
+        generateExecutionId() {
+            return `exec_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`;
+        }
+        /**
+         * Clear all contexts (for testing/cleanup)
+         */
+        clearAll() {
+            for (const context of this.contexts.values()) {
+                if (context.timeoutHandle) {
+                    clearTimeout(context.timeoutHandle);
+                }
+            }
+            this.contexts.clear();
         }
     }
 
@@ -3115,1194 +3315,685 @@
     }
 
     /**
-     * NetworkExtractor handles:
-     * 1. Extracting data from network request/response (extract method)
-     * 2. Network tracking via XHR/Fetch hooking (enableTracking/disableTracking)
-     * 3. Matching network requests against rules and dispatching events
+     * NetworkObserver - Passive Network Listener
+     *
+     * NGUYÊN TẮC:
+     * 1. Init KHI SDK LOAD (không phải trong plugin)
+     * 2. Luôn active và lắng nghe TẤT CẢ requests
+     * 3. Chỉ xử lý request khi có REC phù hợp
+     * 4. KHÔNG dispatch event (chỉ collect data vào REC)
+     * 5. Passive - không can thiệp vào logic nghiệp vụ
      */
-    class NetworkExtractor {
+    /**
+     * NetworkObserver - Singleton passive listener
+     */
+    class NetworkObserver {
         constructor() {
-            this.isTrackingActive = false;
-            this.payloadBuilder = null; // Reference to PayloadBuilder
-        }
-        /**
-         * NEW: Set reference to PayloadBuilder
-         */
-        setPayloadBuilder(builder) {
-            this.payloadBuilder = builder;
-        }
-        /**
-         * Extract data from network request/response based on mapping
-         * This is called by PayloadBuilder when processing network_request mappings
-         */
-        extract(mapping, context) {
-            var _a;
-            if (!context)
-                return null;
-            // Validate Context Type mapping if needed, or assume caller provides correct context
-            // Check if mapping matches context URL (basic validation)
-            if (mapping.requestUrlPattern && context.url) {
-                if (!this.matchesUrl(context.url, mapping.requestUrlPattern)) {
-                    return null;
-                }
-            }
-            const source = (mapping.source || '').toLowerCase();
-            const path = mapping.value || mapping.requestBodyPath; // Backward compat or direct value
-            if (!path)
-                return null;
-            if (source === 'requestbody' || source === 'request_body') {
-                return this.traverseObject(context.reqBody, path);
-            }
-            if (source === 'responsebody' || source === 'response_body') {
-                return this.traverseObject(context.resBody, path);
-            }
-            if (source === 'network_request') {
-                // Smart inference based on HTTP method
-                const method = (_a = context.method) === null || _a === void 0 ? void 0 : _a.toUpperCase();
-                if (method === 'GET') {
-                    // For GET requests, data typically comes from response
-                    return this.traverseObject(context.resBody, path);
-                }
-                else {
-                    // For POST/PUT/PATCH, try request first, then fallback to response
-                    let val = this.traverseObject(context.reqBody, path);
-                    if (this.isValid(val))
-                        return val;
-                    val = this.traverseObject(context.resBody, path);
-                    if (this.isValid(val))
-                        return val;
-                }
-            }
-            return null;
-        }
-        /**
-         * Enable network tracking by hooking into XHR and Fetch APIs
-         */
-        enableTracking(_config, onMatch) {
-            if (this.isTrackingActive) {
-                console.warn('[NetworkExtractor] Network tracking is already active');
-                return;
-            }
-            this.onNetworkMatchCallback = onMatch;
-            this.hookXhr();
-            this.hookFetch();
-            this.isTrackingActive = true;
-            console.log('[NetworkExtractor] Network tracking enabled');
-        }
-        /**
-         * Disable network tracking and restore original XHR/Fetch
-         */
-        disableTracking() {
-            if (!this.isTrackingActive)
-                return;
-            this.restoreXhr();
-            this.restoreFetch();
-            this.isTrackingActive = false;
-            this.onNetworkMatchCallback = undefined;
-            console.log('[NetworkExtractor] Network tracking disabled');
-        }
-        /**
-         * Check if network tracking is currently active
-         */
-        isTracking() {
-            return this.isTrackingActive;
-        }
-        // --- XHR HOOKING ---
-        hookXhr() {
-            this.originalXmlOpen = XMLHttpRequest.prototype.open;
-            this.originalXmlSend = XMLHttpRequest.prototype.send;
-            const extractor = this;
-            // Hook open() to capture method and URL
-            XMLHttpRequest.prototype.open = function (method, url) {
-                this._networkTrackInfo = {
-                    method,
-                    url,
-                    startTime: Date.now()
-                };
-                return extractor.originalXmlOpen.apply(this, arguments);
-            };
-            // Hook send() to capture request body and response
-            XMLHttpRequest.prototype.send = function (body) {
-                const info = this._networkTrackInfo;
-                if (info) {
-                    this.addEventListener('load', () => {
-                        extractor.handleNetworkRequest(info.url, info.method, body, this.response);
-                    });
-                }
-                return extractor.originalXmlSend.apply(this, arguments);
-            };
-        }
-        restoreXhr() {
-            if (this.originalXmlOpen) {
-                XMLHttpRequest.prototype.open = this.originalXmlOpen;
-            }
-            if (this.originalXmlSend) {
-                XMLHttpRequest.prototype.send = this.originalXmlSend;
-            }
-        }
-        // --- FETCH HOOKING ---
-        hookFetch() {
+            this.isActive = false;
+            // Reference to REC manager
+            this.recManager = null;
+            // Registered rules that need network data
+            this.registeredRules = new Map();
             this.originalFetch = window.fetch;
-            const extractor = this;
-            window.fetch = async function (...args) {
+            this.originalXhrOpen = XMLHttpRequest.prototype.open;
+            this.originalXhrSend = XMLHttpRequest.prototype.send;
+        }
+        /**
+         * Get singleton instance
+         */
+        static getInstance() {
+            if (!NetworkObserver.instance) {
+                NetworkObserver.instance = new NetworkObserver();
+            }
+            return NetworkObserver.instance;
+        }
+        /**
+         * Initialize observer với REC manager
+         * PHẢI GỌI KHI SDK INIT
+         */
+        initialize(recManager) {
+            if (this.isActive) {
+                console.warn('[NetworkObserver] Already initialized');
+                return;
+            }
+            this.recManager = recManager;
+            this.hookFetch();
+            this.hookXHR();
+            this.isActive = true;
+            console.log('[NetworkObserver] ✅ Initialized and active');
+        }
+        /**
+         * Register một rule cần network data
+         * Được gọi bởi PayloadBuilder khi phát hiện rule cần async data
+         */
+        registerRule(rule) {
+            if (!this.registeredRules.has(rule.id)) {
+                this.registeredRules.set(rule.id, rule);
+                console.log('[NetworkObserver] Registered rule:', rule.id, rule.name);
+            }
+        }
+        /**
+         * Unregister rule (cleanup)
+         */
+        unregisterRule(ruleId) {
+            this.registeredRules.delete(ruleId);
+        }
+        /**
+         * Hook Fetch API
+         */
+        hookFetch() {
+            const observer = this;
+            window.fetch = async function (input, init) {
                 var _a;
-                // Parse arguments
-                const [resource, config] = args;
-                const url = typeof resource === 'string' ? resource : resource.url;
-                const method = ((_a = config === null || config === void 0 ? void 0 : config.method) === null || _a === void 0 ? void 0 : _a.toUpperCase()) || 'GET';
-                const body = config === null || config === void 0 ? void 0 : config.body;
+                const url = typeof input === 'string' ? input : input.url;
+                const method = ((_a = init === null || init === void 0 ? void 0 : init.method) === null || _a === void 0 ? void 0 : _a.toUpperCase()) || 'GET';
+                const requestBody = init === null || init === void 0 ? void 0 : init.body;
+                const timestamp = Date.now();
                 // Call original fetch
-                const response = await extractor.originalFetch.apply(this, args);
-                // Clone response to read data without disturbing the stream
+                const response = await observer.originalFetch.call(window, input, init);
+                // Clone để đọc response mà không ảnh hưởng stream
                 const clone = response.clone();
-                clone.text().then((text) => {
-                    extractor.handleNetworkRequest(url, method, body, text);
-                }).catch(() => {
-                    // Silently ignore errors in reading response
+                // Process async
+                clone.text().then(responseText => {
+                    observer.handleRequest({
+                        url,
+                        method,
+                        timestamp,
+                        requestBody,
+                        responseBody: responseText
+                    });
+                }).catch(err => {
+                    console.warn('[NetworkObserver] Failed to read response:', err);
                 });
                 return response;
             };
         }
-        restoreFetch() {
-            if (this.originalFetch) {
-                window.fetch = this.originalFetch;
-            }
-        }
-        // --- REQUEST HANDLING ---
         /**
-         * NEW FLOW: Handle intercepted network request
-         * Chỉ bắt request khi có pending collection + anti-duplicate
+         * Hook XMLHttpRequest
          */
-        handleNetworkRequest(url, method, reqBody, resBody) {
-            var _a;
-            if (!this.payloadBuilder || !this.payloadBuilder.pendingCollections) {
-                // Không có pending collections → Ignore
-                return;
-            }
-            const timestamp = Date.now();
-            const reqData = this.safeParse(reqBody);
-            const resData = this.safeParse(resBody);
-            const networkContext = {
-                reqBody: reqData,
-                resBody: resData,
-                method: method,
-                url: url
+        hookXHR() {
+            const observer = this;
+            XMLHttpRequest.prototype.open = function (method, url, ...rest) {
+                this._networkObserverInfo = {
+                    method: method.toUpperCase(),
+                    url,
+                    timestamp: Date.now()
+                };
+                return observer.originalXhrOpen.call(this, method, url, ...rest);
             };
-            console.log('[NetworkExtractor] Intercepted request:', method, url);
-            console.log('[NetworkExtractor] Pending collections:', this.payloadBuilder.pendingCollections.size);
-            // Lặp qua các pending collections
-            for (const [ruleId, pending] of this.payloadBuilder.pendingCollections) {
-                console.log('[NetworkExtractor] Checking pending rule:', ruleId, pending.rule.name);
-                // 1. Check xem request có xảy ra SAU trigger không (trong 5s)
-                const timeSinceTrigger = timestamp - pending.timestamp;
-                if (timeSinceTrigger > 5000) {
-                    console.log('[NetworkExtractor] Request too late (>5s) for rule:', ruleId);
-                    continue;
-                }
-                if (timeSinceTrigger < 0) {
-                    console.log('[NetworkExtractor] Request before trigger for rule:', ruleId);
-                    continue;
-                }
-                // 2. Check xem đã bắt request cho rule này chưa (anti-duplicate)
-                if (pending.networkCaptured) {
-                    console.log('[NetworkExtractor] Already captured network data for rule:', ruleId, '- IGNORING duplicate');
-                    continue;
-                }
-                // 3. Check xem request có khớp với rule không
-                const matchedMappings = (_a = pending.rule.payloadMappings) === null || _a === void 0 ? void 0 : _a.filter((mapping) => {
-                    const source = (mapping.source || '').toLowerCase();
-                    if (!['requestbody', 'request_body', 'responsebody', 'response_body'].includes(source)) {
-                        return false;
-                    }
-                    if (!mapping.requestUrlPattern)
-                        return false;
-                    // Check method match
-                    if (mapping.requestMethod &&
-                        mapping.requestMethod.toUpperCase() !== method.toUpperCase()) {
-                        return false;
-                    }
-                    // Check URL pattern match
-                    if (!PathMatcher.matchStaticSegments(url, mapping.requestUrlPattern)) {
-                        return false;
-                    }
-                    if (!PathMatcher.match(url, mapping.requestUrlPattern)) {
-                        return false;
-                    }
-                    return true;
-                });
-                if (!matchedMappings || matchedMappings.length === 0) {
-                    console.log('[NetworkExtractor] Request URL does not match rule patterns');
-                    continue;
-                }
-                console.log('[NetworkExtractor] ✅ Request matched!', matchedMappings.length, 'mappings');
-                // 4. Validate xem request có chứa dữ liệu cần thiết không
-                let hasRequiredData = false;
-                const extractedData = {};
-                for (const mapping of matchedMappings) {
-                    const normalizedMapping = {
-                        ...mapping,
-                        source: 'network_request',
-                        value: mapping.value || mapping.requestBodyPath
-                    };
-                    const value = this.extract(normalizedMapping, networkContext);
-                    if (this.isValid(value)) {
-                        extractedData[mapping.field] = value;
-                        hasRequiredData = true;
-                    }
-                }
-                if (!hasRequiredData) {
-                    console.log('[NetworkExtractor] Request missing required data, continuing to wait...');
-                    continue;
-                }
-                // ✅ Đã bắt được request đúng!
-                console.log('[NetworkExtractor] 🎯 Captured matching request for rule:', ruleId);
-                console.log('[NetworkExtractor] Extracted data:', extractedData);
-                // Notify PayloadBuilder về dữ liệu mới
-                for (const [field, value] of Object.entries(extractedData)) {
-                    this.payloadBuilder.notifyNetworkData(ruleId, field, value);
-                }
-                // Invoke callback if exists
-                if (this.onNetworkMatchCallback) {
-                    this.onNetworkMatchCallback(pending.rule, extractedData, networkContext);
-                }
-                // Log for debugging
-                console.groupCollapsed(`%c[NetworkExtractor] ✅ Captured: ${method} ${url}`, 'color: green; font-weight: bold');
-                console.log('Rule:', pending.rule.name);
-                console.log('Time since trigger:', timeSinceTrigger, 'ms');
-                console.log('Extracted:', extractedData);
-                console.groupEnd();
-                // IMPORTANT: Sau khi bắt được → Đánh dấu đã capture
-                // Các requests tiếp theo sẽ bị ignore
-                break;
-            }
-        }
-        // --- HELPER METHODS ---
-        matchesUrl(url, pattern) {
-            return PathMatcher.match(url, pattern);
-        }
-        traverseObject(obj, path) {
-            if (!obj)
-                return null;
-            try {
-                const keys = path.split('.');
-                let current = obj;
-                for (const key of keys) {
-                    if (current && typeof current === 'object' && key in current) {
-                        current = current[key];
-                    }
-                    else {
-                        return null;
-                    }
-                }
-                return (typeof current === 'object') ? JSON.stringify(current) : current;
-            }
-            catch {
-                return null;
-            }
-        }
-        safeParse(data) {
-            try {
-                if (typeof data === 'string') {
-                    return JSON.parse(data);
-                }
-                return data;
-            }
-            catch {
-                return data;
-            }
-        }
-        isValid(val) {
-            return val !== null && val !== undefined && val !== '';
-        }
-    }
-
-    class StorageExtractor {
-        extract(mapping, _context) {
-            try {
-                const source = (mapping.source || '').toLowerCase();
-                const keyPath = mapping.value;
-                if (!keyPath)
-                    return null;
-                if (source === 'localstorage') {
-                    return this.extractFromStorage(window.localStorage, keyPath);
-                }
-                if (source === 'sessionstorage') {
-                    return this.extractFromStorage(window.sessionStorage, keyPath);
-                }
-                if (source === 'cookie') {
-                    return this.extractFromCookie(keyPath);
-                }
-                return null;
-            }
-            catch {
-                return null;
-            }
-        }
-        extractFromStorage(storage, keyPath) {
-            if (!storage || !keyPath)
-                return null;
-            const cleanKey = keyPath.trim();
-            // Split key.path
-            const parts = cleanKey.split('.');
-            const rootKey = parts[0];
-            const rawVal = storage.getItem(rootKey);
-            if (!rawVal)
-                return null;
-            if (parts.length === 1)
-                return rawVal;
-            return this.getNestedValue(rawVal, parts.slice(1).join('.'));
-        }
-        extractFromCookie(keyPath) {
-            if (typeof document === 'undefined' || !document.cookie)
-                return null;
-            const parts = keyPath.trim().split('.');
-            const cookieName = parts[0];
-            const match = document.cookie.match(new RegExp('(^| )' + cookieName + '=([^;]+)'));
-            if (!match)
-                return null;
-            const cookieVal = decodeURIComponent(match[2]);
-            if (parts.length === 1)
-                return cookieVal;
-            return this.getNestedValue(cookieVal, parts.slice(1).join('.'));
-        }
-        getNestedValue(jsonString, path) {
-            try {
-                let obj = JSON.parse(jsonString);
-                const keys = path.split('.');
-                for (const key of keys) {
-                    if (obj && typeof obj === 'object' && key in obj) {
-                        obj = obj[key];
-                    }
-                    else {
-                        return null;
-                    }
-                }
-                return (typeof obj === 'object') ? JSON.stringify(obj) : String(obj);
-            }
-            catch {
-                return null;
-            }
-        }
-    }
-
-    class UrlExtractor {
-        extract(mapping, _context) {
-            try {
-                const urlPart = mapping.urlPart || '';
-                const urlPartValue = mapping.urlPartValue;
-                if (!urlPart)
-                    return null;
-                const currentUrl = new URL(typeof window !== 'undefined' ? window.location.href : 'http://localhost');
-                // 1. Query Param
-                if (urlPart === 'query_param') {
-                    if (!urlPartValue)
-                        return null;
-                    return currentUrl.searchParams.get(urlPartValue);
-                }
-                // 2. Pathname Segment
-                if (urlPart === 'pathname') {
-                    if (!urlPartValue)
-                        return null;
-                    const index = parseInt(urlPartValue, 10);
-                    if (isNaN(index))
-                        return null;
-                    const segments = currentUrl.pathname.split('/').filter(s => s.length > 0);
-                    // Adjust for 0-index or 1-index based on convention. 
-                    // Assuming 0-index for internal array, but user might pass 1-based index? 
-                    // Let's assume 0-indexed based on typical dev usage, or handle bounds.
-                    if (index >= 0 && index < segments.length) {
-                        return segments[index];
-                    }
-                }
-                return null;
-            }
-            catch (error) {
-                return null;
-            }
-        }
-    }
-
-    class RequestUrlExtractor {
-        constructor() {
-            this.history = [];
-            this.MAX_HISTORY = 50;
-            this.isTrackingActive = false;
-            this.payloadBuilder = null; // Reference to PayloadBuilder
-        }
-        /**
-         * NEW: Set reference to PayloadBuilder
-         */
-        setPayloadBuilder(builder) {
-            this.payloadBuilder = builder;
-        }
-        /**
-         * NEW FLOW: Extract data from the most recent matching network request
-         * Chỉ tìm requests xảy ra SAU trigger trong window 5s
-         */
-        extract(mapping, _context) {
-            var _a, _b, _c;
-            console.log('[RequestUrlExtractor] Extracting with mapping:', {
-                field: mapping.field,
-                pattern: mapping.requestUrlPattern,
-                method: mapping.requestMethod,
-                value: mapping.value
-            });
-            console.log('[RequestUrlExtractor] History size:', this.history.length);
-            console.log('[RequestUrlExtractor] Context:', _context);
-            if (!mapping.requestUrlPattern) {
-                console.warn('[RequestUrlExtractor] No requestUrlPattern');
-                return null;
-            }
-            const targetMethod = (_a = mapping.requestMethod) === null || _a === void 0 ? void 0 : _a.toUpperCase();
-            // NEW: Lấy trigger timestamp từ context
-            const triggerTime = (_context === null || _context === void 0 ? void 0 : _context.triggerTimestamp) || 0;
-            console.log('[RequestUrlExtractor] Trigger timestamp:', triggerTime);
-            // 1. Check strict context first (e.g. from NetworkPlugin)
-            if (_context && _context.url) {
-                console.log('[RequestUrlExtractor] Checking context URL:', _context.url);
-                const ctxUrl = _context.url;
-                const ctxMethod = (_b = _context.method) === null || _b === void 0 ? void 0 : _b.toUpperCase();
-                let methodMatch = true;
-                if (targetMethod && ctxMethod && ctxMethod !== targetMethod) {
-                    console.log('[RequestUrlExtractor] Method mismatch:', ctxMethod, 'vs', targetMethod);
-                    methodMatch = false;
-                }
-                if (methodMatch) {
-                    const patternMatch = PathMatcher.match(ctxUrl, mapping.requestUrlPattern);
-                    console.log('[RequestUrlExtractor] Pattern match result:', patternMatch);
-                    if (patternMatch) {
-                        const extracted = this.extractValueFromUrl(ctxUrl, mapping.value);
-                        console.log('[RequestUrlExtractor] Extracted from context:', extracted);
-                        return extracted;
-                    }
-                }
-            }
-            // 2. Fallback to history - CHỈ LẤY REQUESTS SAU TRIGGER
-            console.log('[RequestUrlExtractor] Checking history...');
-            // Iterate backwards (newest first)
-            for (let i = this.history.length - 1; i >= 0; i--) {
-                const req = this.history[i];
-                console.log('[RequestUrlExtractor] Checking history entry:', req);
-                // NEW: Check timestamp - Request phải xảy ra SAU trigger
-                if (triggerTime > 0) {
-                    if (req.timestamp < triggerTime) {
-                        console.log('[RequestUrlExtractor] Request before trigger, skipping');
-                        continue;
-                    }
-                    // Check timeout - Không quá 5s sau trigger
-                    if (req.timestamp - triggerTime > 5000) {
-                        console.log('[RequestUrlExtractor] Request too late (>5s after trigger), skipping');
-                        continue;
-                    }
-                    console.log('[RequestUrlExtractor] Request within window:', req.timestamp - triggerTime, 'ms after trigger');
-                }
-                // Check Method
-                if (targetMethod && req.method !== targetMethod) {
-                    console.log('[RequestUrlExtractor] Method mismatch in history');
-                    continue;
-                }
-                // Check Pattern
-                // 1. Static segments must match (optimization & requirement)
-                if (!PathMatcher.matchStaticSegments(req.url, mapping.requestUrlPattern)) {
-                    console.log('[RequestUrlExtractor] Static segments mismatch');
-                    continue;
-                }
-                // 2. Full match
-                if (!PathMatcher.match(req.url, mapping.requestUrlPattern)) {
-                    console.log('[RequestUrlExtractor] Full pattern mismatch');
-                    continue;
-                }
-                // ✅ Match found! Extract value.
-                const extracted = this.extractValueFromUrl(req.url, mapping.value);
-                console.log('[RequestUrlExtractor] ✅ Extracted from history:', extracted, 'from URL:', req.url);
-                // NEW: Notify PayloadBuilder về data mới (nếu được set)
-                if (this.payloadBuilder && this.payloadBuilder.pendingCollections) {
-                    // Tìm pending collection phù hợp
-                    for (const [ruleId, pending] of this.payloadBuilder.pendingCollections) {
-                        // Check xem mapping này có thuộc rule này không
-                        const belongsToRule = (_c = pending.rule.payloadMappings) === null || _c === void 0 ? void 0 : _c.some((m) => m.field === mapping.field &&
-                            m.requestUrlPattern === mapping.requestUrlPattern);
-                        if (belongsToRule) {
-                            console.log('[RequestUrlExtractor] Notifying PayloadBuilder for rule:', ruleId);
-                            this.payloadBuilder.notifyNetworkData(ruleId, mapping.field, extracted);
-                            break;
-                        }
-                    }
-                }
-                return extracted;
-            }
-            console.warn('[RequestUrlExtractor] No match found');
-            return null;
-        }
-        extractValueFromUrl(url, valueConfig) {
-            // User convention: value is the path index.
-            // Example: /api/rating/{itemId}/add-review
-            // Split: ['api', 'rating', '123', 'add-review']
-            // value=2 -> '123'
-            console.log('[RequestUrlExtractor.extractValueFromUrl] URL:', url, 'valueConfig:', valueConfig);
-            const index = typeof valueConfig === 'string' ? parseInt(valueConfig, 10) : valueConfig;
-            if (typeof index !== 'number' || isNaN(index)) {
-                console.warn('[RequestUrlExtractor] Invalid index:', index);
-                return null;
-            }
-            const path = url.split('?')[0];
-            const segments = path.split('/').filter(Boolean); // Remote empty strings
-            console.log('[RequestUrlExtractor.extractValueFromUrl] Segments:', segments, 'index:', index);
-            if (index < 0 || index >= segments.length) {
-                console.warn('[RequestUrlExtractor] Index out of range:', index, 'segments length:', segments.length);
-                return null;
-            }
-            const result = segments[index];
-            console.log('[RequestUrlExtractor.extractValueFromUrl] Result:', result);
-            return result;
-        }
-        /**
-         * Enable network tracking
-         */
-        enableTracking() {
-            if (this.isTrackingActive)
-                return;
-            this.hookXhr();
-            this.hookFetch();
-            this.isTrackingActive = true;
-        }
-        /**
-         * Disable network tracking
-         */
-        disableTracking() {
-            if (!this.isTrackingActive)
-                return;
-            this.restoreXhr();
-            this.restoreFetch();
-            this.isTrackingActive = false;
-            this.history = [];
-        }
-        hookXhr() {
-            this.originalXmlOpen = XMLHttpRequest.prototype.open;
-            this.originalXmlSend = XMLHttpRequest.prototype.send;
-            const self = this;
-            XMLHttpRequest.prototype.open = function (method, url) {
-                // Capture init info
-                this._reqUrlArgs = { method, url };
-                return self.originalXmlOpen.apply(this, arguments);
-            };
-            XMLHttpRequest.prototype.send = function (_body) {
-                const info = this._reqUrlArgs;
+            XMLHttpRequest.prototype.send = function (body) {
+                const info = this._networkObserverInfo;
                 if (info) {
-                    // We log the request when it is SENT (closest to trigger time usually)
-                    // or when it completes?
-                    // NetworkExtractor handles on 'load'.
-                    // But we want to capture the URL.
-                    // If we log on 'send', we capture it immediately.
-                    // This matches "closest after trigger" if the request starts after trigger?
-                    // Actually, if we log on 'send', we have it in history.
-                    self.addToHistory(info.url, info.method);
+                    info.requestBody = body;
+                    this.addEventListener('load', function () {
+                        observer.handleRequest({
+                            url: info.url,
+                            method: info.method,
+                            timestamp: Date.now(), // Response timestamp
+                            requestBody: info.requestBody,
+                            responseBody: this.responseText
+                        });
+                    });
                 }
-                return self.originalXmlSend.apply(this, arguments);
+                return observer.originalXhrSend.call(this, body);
             };
         }
-        restoreXhr() {
-            if (this.originalXmlOpen)
-                XMLHttpRequest.prototype.open = this.originalXmlOpen;
-            if (this.originalXmlSend)
-                XMLHttpRequest.prototype.send = this.originalXmlSend;
-        }
-        hookFetch() {
-            this.originalFetch = window.fetch;
-            const self = this;
-            window.fetch = async function (...args) {
-                var _a;
-                const [resource, config] = args;
-                let url = '';
-                if (typeof resource === 'string') {
-                    url = resource;
+        /**
+         * Xử lý request đã intercept
+         * CORE LOGIC - chỉ xử lý nếu có REC phù hợp
+         */
+        handleRequest(requestInfo) {
+            if (!this.recManager) {
+                return;
+            }
+            // Check tất cả registered rules
+            for (const rule of this.registeredRules.values()) {
+                // Tìm REC phù hợp cho rule này
+                const context = this.recManager.findMatchingContext(rule.id, requestInfo.timestamp);
+                if (!context) {
+                    continue; // Không có context đang chờ cho rule này
                 }
-                else if (resource instanceof Request) {
-                    url = resource.url;
-                }
-                const method = ((_a = config === null || config === void 0 ? void 0 : config.method) === null || _a === void 0 ? void 0 : _a.toUpperCase()) || 'GET';
-                // Log immediately
-                self.addToHistory(url, method);
-                return self.originalFetch.apply(this, args);
-            };
-        }
-        restoreFetch() {
-            if (this.originalFetch)
-                window.fetch = this.originalFetch;
-        }
-        addToHistory(url, method) {
-            // Normalize method
-            const normalizedMethod = (method || 'GET').toUpperCase();
-            this.history.push({
-                url,
-                method: normalizedMethod,
-                timestamp: Date.now()
-            });
-            if (this.history.length > this.MAX_HISTORY) {
-                this.history.shift();
+                // Process mappings cho rule này
+                this.processRuleMappings(rule, context, requestInfo);
             }
         }
-    }
-
-    class PayloadBuilder {
-        constructor() {
-            this.extractors = new Map();
-            this.trackerConfig = null;
-            // NEW: Quản lý các pending collections (đang chờ thu thập dữ liệu)
-            this.pendingCollections = new Map();
-            this.elementExtractor = new ElementExtractor();
-            this.networkExtractor = new NetworkExtractor();
-            this.storageExtractor = new StorageExtractor();
-            this.urlExtractor = new UrlExtractor();
-            this.requestUrlExtractor = new RequestUrlExtractor();
-            this.registerExtractors();
-            // Pass reference to self so extractors can notify when data is ready
-            this.networkExtractor.setPayloadBuilder(this);
-            this.requestUrlExtractor.setPayloadBuilder(this);
-        }
-        registerExtractors() {
-            // Element
-            this.extractors.set('element', this.elementExtractor);
-            // Network
-            this.extractors.set('requestbody', this.networkExtractor);
-            // Request Url
-            this.extractors.set('requesturl', this.requestUrlExtractor);
-            // Url
-            this.extractors.set('url', this.urlExtractor);
-            // Storage
-            this.extractors.set('cookie', this.storageExtractor);
-            this.extractors.set('localstorage', this.storageExtractor);
-            this.extractors.set('sessionstorage', this.storageExtractor);
-        }
-        // Tạo payload dựa trên rule và context
-        build(context, rule) {
-            console.log('[PayloadBuilder.build] Rule:', rule.name, 'Mappings:', rule.payloadMappings);
-            const payload = {};
-            if (!rule || !rule.payloadMappings || rule.payloadMappings.length === 0) {
-                console.warn('[PayloadBuilder.build] No payload mappings');
-                return payload;
+        /**
+         * Process payload mappings của rule và extract data vào REC
+         */
+        processRuleMappings(rule, context, requestInfo) {
+            if (!rule.payloadMappings) {
+                return;
             }
             for (const mapping of rule.payloadMappings) {
                 const source = (mapping.source || '').toLowerCase();
-                console.log('[PayloadBuilder.build] Processing mapping:', {
-                    field: mapping.field,
-                    source: source,
-                    value: mapping.value
-                });
-                let val = null;
-                // Chọn Extractor dựa trên source
-                const extractor = this.extractors.get(source);
-                if (extractor) {
-                    val = extractor.extract(mapping, context);
-                    console.log('[PayloadBuilder.build] Extracted value:', val, 'for field:', mapping.field);
+                // Chỉ xử lý network sources
+                if (!this.isNetworkSource(source)) {
+                    continue;
                 }
-                else {
-                    console.warn('[PayloadBuilder.build] No extractor found for source:', source);
+                // Check pattern match
+                if (!this.matchesPattern(mapping, requestInfo)) {
+                    continue;
                 }
-                if (this.isValid(val)) {
-                    payload[mapping.field] = val;
-                }
-                else {
-                    console.warn('[PayloadBuilder.build] Invalid value, not adding to payload');
+                // Extract value
+                const value = this.extractValue(mapping, requestInfo);
+                if (value !== null && value !== undefined) {
+                    // Collect vào REC
+                    this.recManager.collectField(context.executionId, mapping.field, value);
+                    console.log(`[NetworkObserver] ✅ Collected "${mapping.field}" for rule ${rule.id}:`, value);
                 }
             }
-            console.log('[PayloadBuilder.build] Final payload:', payload);
+        }
+        /**
+         * Check nếu source là network source
+         */
+        isNetworkSource(source) {
+            return [
+                'requestbody',
+                'request_body',
+                'responsebody',
+                'response_body',
+                'requesturl',
+                'request_url'
+            ].includes(source);
+        }
+        /**
+         * Check nếu request match với pattern trong mapping
+         */
+        matchesPattern(mapping, requestInfo) {
+            // Check method
+            if (mapping.requestMethod) {
+                const expectedMethod = mapping.requestMethod.toUpperCase();
+                if (requestInfo.method !== expectedMethod) {
+                    return false;
+                }
+            }
+            // Check URL pattern
+            if (mapping.requestUrlPattern) {
+                if (!PathMatcher.match(requestInfo.url, mapping.requestUrlPattern)) {
+                    return false;
+                }
+            }
+            return true;
+        }
+        /**
+         * Extract value từ request theo mapping config
+         */
+        extractValue(mapping, requestInfo) {
+            const source = (mapping.source || '').toLowerCase();
+            switch (source) {
+                case 'requestbody':
+                case 'request_body':
+                    return this.extractFromRequestBody(mapping, requestInfo);
+                case 'responsebody':
+                case 'response_body':
+                    return this.extractFromResponseBody(mapping, requestInfo);
+                case 'requesturl':
+                case 'request_url':
+                    return this.extractFromRequestUrl(mapping, requestInfo);
+                default:
+                    return null;
+            }
+        }
+        /**
+         * Extract từ request body
+         */
+        extractFromRequestBody(mapping, requestInfo) {
+            const body = this.parseBody(requestInfo.requestBody);
+            if (!body)
+                return null;
+            return this.extractByPath(body, mapping.value || mapping.requestBodyPath);
+        }
+        /**
+         * Extract từ response body
+         */
+        extractFromResponseBody(mapping, requestInfo) {
+            const body = this.parseBody(requestInfo.responseBody);
+            if (!body)
+                return null;
+            return this.extractByPath(body, mapping.value || mapping.requestBodyPath);
+        }
+        /**
+         * Extract từ request URL
+         */
+        extractFromRequestUrl(mapping, requestInfo) {
+            var _a;
+            const url = new URL(requestInfo.url, window.location.origin);
+            const urlPart = (_a = mapping.urlPart) === null || _a === void 0 ? void 0 : _a.toLowerCase();
+            console.log('[NetworkObserver] Extracting from URL:', {
+                url: requestInfo.url,
+                urlPart: urlPart,
+                urlPartValue: mapping.urlPartValue,
+                value: mapping.value
+            });
+            switch (urlPart) {
+                case 'query':
+                case 'queryparam':
+                    const paramName = mapping.urlPartValue || mapping.value;
+                    return url.searchParams.get(paramName);
+                case 'path':
+                case 'pathsegment':
+                    // Extract path segment by index or pattern
+                    const pathValue = mapping.urlPartValue || mapping.value;
+                    console.log('[NetworkObserver] Path extraction:', { pathValue, pathname: url.pathname });
+                    if (pathValue && !isNaN(Number(pathValue))) {
+                        const segments = url.pathname.split('/').filter(s => s);
+                        const index = Number(pathValue);
+                        const result = segments[index] || null;
+                        console.log('[NetworkObserver] Extracted segment:', { segments, index, result });
+                        return result;
+                    }
+                    return url.pathname;
+                case 'hash':
+                    return url.hash.substring(1); // Remove #
+                default:
+                    // If no urlPart specified, try to extract from value
+                    // Check if value is a number (path segment index)
+                    if (mapping.value && !isNaN(Number(mapping.value))) {
+                        const segments = url.pathname.split('/').filter(s => s);
+                        const index = Number(mapping.value);
+                        const result = segments[index] || null;
+                        console.log('[NetworkObserver] Default path extraction:', { segments, index, result });
+                        return result;
+                    }
+                    return url.href;
+            }
+        }
+        /**
+         * Parse body (JSON or text)
+         */
+        parseBody(body) {
+            if (!body)
+                return null;
+            if (typeof body === 'string') {
+                try {
+                    return JSON.parse(body);
+                }
+                catch {
+                    return body;
+                }
+            }
+            return body;
+        }
+        /**
+         * Extract value by path (e.g., "data.user.id")
+         */
+        extractByPath(obj, path) {
+            if (!path || !obj)
+                return null;
+            const parts = path.split('.');
+            let current = obj;
+            for (const part of parts) {
+                if (current === null || current === undefined) {
+                    return null;
+                }
+                current = current[part];
+            }
+            return current;
+        }
+        /**
+         * Restore original functions (for cleanup/testing)
+         */
+        restore() {
+            if (!this.isActive)
+                return;
+            window.fetch = this.originalFetch;
+            XMLHttpRequest.prototype.open = this.originalXhrOpen;
+            XMLHttpRequest.prototype.send = this.originalXhrSend;
+            this.isActive = false;
+            this.registeredRules.clear();
+            console.log('[NetworkObserver] Restored original functions');
+        }
+        /**
+         * Check if observer is active
+         */
+        isObserverActive() {
+            return this.isActive;
+        }
+        /**
+         * Get registered rules count (for debugging)
+         */
+        getRegisteredRulesCount() {
+            return this.registeredRules.size;
+        }
+    }
+    NetworkObserver.instance = null;
+    /**
+     * Helper function to get singleton instance
+     */
+    function getNetworkObserver() {
+        return NetworkObserver.getInstance();
+    }
+
+    /**
+     * PayloadBuilder - The Orchestrator
+     *
+     * TRÁCH NHIỆM:
+     * 1. Điều phối toàn bộ quá trình build payload
+     * 2. Biết rule cần field nào
+     * 3. Biết field đó lấy từ đâu (sync hay async)
+     * 4. Là NƠI DUY NHẤT chốt payload
+     * 5. Quản lý RuleExecutionContext
+     *
+     * FLOW:
+     * 1. Plugin trigger → gọi handleTrigger()
+     * 2. Phân loại sync/async sources
+     * 3. Resolve sync sources ngay
+     * 4. Đăng ký async sources với NetworkObserver
+     * 5. Khi đủ dữ liệu → dispatch event
+     */
+    /**
+     * Các source types
+     */
+    var SourceType;
+    (function (SourceType) {
+        SourceType[SourceType["SYNC"] = 0] = "SYNC";
+        SourceType[SourceType["ASYNC"] = 1] = "ASYNC"; // Network data - cần chờ request
+    })(SourceType || (SourceType = {}));
+    /**
+     * PayloadBuilder v2 - Full Orchestrator
+     */
+    class PayloadBuilder {
+        constructor() {
+            this.recManager = new RuleExecutionContextManager();
+            this.networkObserver = getNetworkObserver();
+        }
+        /**
+         * Main entry point - được gọi bởi tracking plugins
+         *
+         * @param rule - Tracking rule được trigger
+         * @param triggerContext - Context của trigger (element, eventType, etc.)
+         * @param onComplete - Callback khi payload sẵn sàng để dispatch
+         */
+        handleTrigger(rule, triggerContext, onComplete) {
+            console.log(`[PayloadBuilder] Handle trigger for rule: ${rule.name} (${rule.id})`);
+            // 1. Phân tích mappings
+            const { syncMappings, asyncMappings } = this.classifyMappings(rule);
+            console.log(`[PayloadBuilder] Sync mappings: ${syncMappings.length}, Async: ${asyncMappings.length}`);
+            // 2. Nếu không có async → resolve ngay
+            if (asyncMappings.length === 0) {
+                const payload = this.resolveSyncMappings(syncMappings, triggerContext, rule);
+                console.log('[PayloadBuilder] ✅ No async data needed, payload ready:', payload);
+                onComplete(payload);
+                return;
+            }
+            // 3. Có async data → tạo REC
+            const requiredFields = asyncMappings.map(m => m.field);
+            const context = this.recManager.createContext(rule.id, requiredFields, triggerContext, (collectedData) => {
+                // Khi async data đã thu thập xong
+                const syncPayload = this.resolveSyncMappings(syncMappings, triggerContext, rule);
+                const finalPayload = { ...syncPayload, ...collectedData };
+                console.log('[PayloadBuilder] ✅ All data collected, final payload:', finalPayload);
+                onComplete(finalPayload);
+            });
+            // 4. Resolve sync data ngay và collect vào REC
+            const syncPayload = this.resolveSyncMappings(syncMappings, triggerContext, rule);
+            for (const [field, value] of Object.entries(syncPayload)) {
+                this.recManager.collectField(context.executionId, field, value);
+            }
+            // 5. Register rule với NetworkObserver để bắt async data
+            this.networkObserver.registerRule(rule);
+            console.log(`[PayloadBuilder] ⏳ Waiting for network data...`);
+        }
+        /**
+         * Phân loại mappings thành sync và async
+         */
+        classifyMappings(rule) {
+            const syncMappings = [];
+            const asyncMappings = [];
+            if (!rule.payloadMappings) {
+                return { syncMappings, asyncMappings };
+            }
+            for (const mapping of rule.payloadMappings) {
+                const sourceType = this.getSourceType(mapping.source);
+                if (sourceType === SourceType.SYNC) {
+                    syncMappings.push(mapping);
+                }
+                else {
+                    asyncMappings.push(mapping);
+                }
+            }
+            return { syncMappings, asyncMappings };
+        }
+        /**
+         * Xác định source type
+         */
+        getSourceType(source) {
+            const s = (source || '').toLowerCase();
+            const asyncSources = [
+                'requestbody',
+                'request_body',
+                'responsebody',
+                'response_body',
+                'requesturl',
+                'request_url'
+            ];
+            return asyncSources.includes(s) ? SourceType.ASYNC : SourceType.SYNC;
+        }
+        /**
+         * Resolve tất cả sync mappings
+         */
+        resolveSyncMappings(mappings, context, rule) {
+            const payload = {
+                ruleId: rule.id,
+                eventTypeId: rule.eventTypeId
+            };
+            for (const mapping of mappings) {
+                const value = this.resolveSyncMapping(mapping, context);
+                if (this.isValidValue(value)) {
+                    payload[mapping.field] = value;
+                }
+            }
             return payload;
         }
         /**
-         * NEW FLOW: Bắt đầu thu thập dữ liệu cho một rule
-         * Được gọi bởi tracking plugins khi phát hiện trigger event
-         *
-         * @param context - Context của trigger event (element, timestamp, etc.)
-         * @param rule - Tracking rule cần thu thập dữ liệu
-         * @param callback - Callback được gọi khi đã thu thập đủ dữ liệu
+         * Resolve một sync mapping
          */
-        startCollection(context, rule, callback) {
-            console.log('[PayloadBuilder] startCollection for rule:', rule.name);
-            // Phân tích xem cần thu thập những field nào
-            const requiredFields = this.analyzeRequiredFields(rule);
-            const hasNetworkFields = this.hasNetworkFields(rule);
-            console.log('[PayloadBuilder] Required fields:', Array.from(requiredFields));
-            console.log('[PayloadBuilder] Has network fields:', hasNetworkFields);
-            // Tạo pending collection
-            const pending = {
-                rule,
-                context: {
-                    ...context,
-                    triggerTimestamp: Date.now() // Lưu timestamp của trigger để so sánh với requests
-                },
-                timestamp: Date.now(),
-                callback,
-                collectedData: new Map(),
-                requiredFields,
-                networkCaptured: false
-            };
-            this.pendingCollections.set(rule.id, pending);
-            console.log('[PayloadBuilder] Created pending collection for rule:', rule.id);
-            // Nếu cần network data → Enable interceptor NGAY LÚC NÀY
-            if (hasNetworkFields) {
-                console.log('[PayloadBuilder] Enabling network interceptor for rule:', rule.id);
-                this.enableNetworkInterceptorForRule(rule);
+        resolveSyncMapping(mapping, context) {
+            const source = (mapping.source || '').toLowerCase();
+            switch (source) {
+                case 'element':
+                    return this.extractFromElement(mapping, context);
+                case 'cookie':
+                    return this.extractFromCookie(mapping);
+                case 'localstorage':
+                    return this.extractFromLocalStorage(mapping);
+                case 'sessionstorage':
+                    return this.extractFromSessionStorage(mapping);
+                case 'url':
+                case 'pageurl':
+                case 'page_url':
+                    return this.extractFromPageUrl(mapping);
+                case 'static':
+                    return mapping.value;
+                case 'login_detector':
+                    return this.extractFromLoginDetector(mapping);
+                default:
+                    console.warn(`[PayloadBuilder] Unknown sync source: ${source}`);
+                    return null;
             }
-            // Thu thập non-network data ngay (localStorage, cookie, element, url, etc.)
-            this.collectNonNetworkData(pending);
-            // Check xem đã đủ chưa (trường hợp không cần network data)
-            this.checkAndComplete(rule.id);
         }
         /**
-         * LEGACY: Build payload and call back with the result (OLD FLOW - Deprecated)
-         * Used by tracking plugins (click, rating, review, scroll, pageview)
-         * NOT used by network plugin
-         *
-         * @deprecated Use startCollection() instead for better async handling
+         * Extract từ element
          */
-        buildWithCallback(context, rule, callback) {
-            console.log('[PayloadBuilder] buildWithCallback (LEGACY) called for rule:', rule.name);
-            const payload = this.build(context, rule);
-            console.log('[PayloadBuilder] Payload built:', payload);
-            callback(payload, rule, context);
-            console.log('[PayloadBuilder] Callback executed');
+        extractFromElement(mapping, context) {
+            const element = context.element || context.target;
+            if (!element) {
+                console.warn('[PayloadBuilder] No element in context');
+                return null;
+            }
+            const selector = mapping.value;
+            if (!selector) {
+                return null;
+            }
+            try {
+                // Strategy 1: Find trong scope của element
+                let targetElement = element.querySelector(selector);
+                // Strategy 2: Closest match
+                if (!targetElement) {
+                    targetElement = element.closest(selector);
+                }
+                // Strategy 3: Search trong form parent
+                if (!targetElement && element.form) {
+                    targetElement = element.form.querySelector(selector);
+                }
+                if (!targetElement) {
+                    console.warn(`[PayloadBuilder] Element not found: ${selector}`);
+                    return null;
+                }
+                // Extract value từ element
+                return this.getElementValue(targetElement);
+            }
+            catch (error) {
+                console.error('[PayloadBuilder] Error extracting from element:', error);
+                return null;
+            }
         }
         /**
-         * Set tracker configuration and check if network tracking should be enabled
+         * Get value từ element (text, value, attribute)
          */
-        setConfig(config) {
-            this.trackerConfig = config;
-            // REMOVED: Không enable network tracking lúc init nữa
-            // Network tracking sẽ được enable on-demand khi có trigger event
-            // this.checkAndEnableNetworkTracking();
-            // this.checkAndEnableRequestUrlTracking();
-            console.log('[PayloadBuilder] Config set, network tracking will be enabled on-demand');
+        getElementValue(element) {
+            var _a;
+            // Input elements
+            if (element instanceof HTMLInputElement) {
+                if (element.type === 'checkbox' || element.type === 'radio') {
+                    return element.checked;
+                }
+                return element.value;
+            }
+            // Textarea
+            if (element instanceof HTMLTextAreaElement) {
+                return element.value;
+            }
+            // Select
+            if (element instanceof HTMLSelectElement) {
+                return element.value;
+            }
+            // Data attributes
+            if (element.hasAttribute('data-value')) {
+                return element.getAttribute('data-value');
+            }
+            if (element.hasAttribute('data-id')) {
+                return element.getAttribute('data-id');
+            }
+            // Text content
+            return ((_a = element.textContent) === null || _a === void 0 ? void 0 : _a.trim()) || null;
         }
         /**
-         * NEW: Phân tích xem rule cần thu thập những field nào
+         * Extract từ cookie
          */
-        analyzeRequiredFields(rule) {
-            const fields = new Set();
-            if (rule.payloadMappings) {
-                for (const mapping of rule.payloadMappings) {
-                    fields.add(mapping.field);
+        extractFromCookie(mapping) {
+            const cookieName = mapping.value;
+            if (!cookieName)
+                return null;
+            const cookies = document.cookie.split(';');
+            for (const cookie of cookies) {
+                const [name, value] = cookie.split('=').map(s => s.trim());
+                if (name === cookieName) {
+                    return decodeURIComponent(value);
                 }
             }
-            return fields;
+            return null;
         }
         /**
-         * NEW: Check xem rule có field nào cần network data không
+         * Extract từ localStorage
          */
-        hasNetworkFields(rule) {
-            if (!rule.payloadMappings)
-                return false;
-            return rule.payloadMappings.some((m) => {
-                const source = (m.source || '').toLowerCase();
-                return [
-                    'requestbody',
-                    'responsebody',
-                    'request_body',
-                    'response_body',
-                    'requesturl',
-                    'request_url'
-                ].includes(source);
-            });
-        }
-        /**
-         * NEW: Enable network interceptor cho một rule cụ thể
-         */
-        enableNetworkInterceptorForRule(rule) {
-            var _a, _b;
-            console.log('[PayloadBuilder] Enabling network interceptor for rule:', rule.name);
-            // Enable RequestUrl tracking
-            const hasRequestUrlMappings = (_a = rule.payloadMappings) === null || _a === void 0 ? void 0 : _a.some((m) => {
-                const source = (m.source || '').toLowerCase();
-                return source === 'requesturl' || source === 'request_url';
-            });
-            if (hasRequestUrlMappings) {
-                this.requestUrlExtractor.enableTracking();
-            }
-            // Enable NetworkExtractor tracking
-            const hasRequestBodyMappings = (_b = rule.payloadMappings) === null || _b === void 0 ? void 0 : _b.some((m) => {
-                const source = (m.source || '').toLowerCase();
-                return source === 'requestbody' || source === 'request_body';
-            });
-            if (hasRequestBodyMappings) {
-                if (!this.trackerConfig) {
-                    console.warn('[PayloadBuilder] Cannot enable network tracking: config not set');
-                    return;
+        extractFromLocalStorage(mapping) {
+            const key = mapping.value;
+            if (!key)
+                return null;
+            try {
+                const value = localStorage.getItem(key);
+                if (value === null)
+                    return null;
+                // Try parse JSON
+                try {
+                    return JSON.parse(value);
                 }
-                // Only enable if not already enabled
-                if (!this.networkExtractor.isTracking()) {
-                    this.networkExtractor.enableTracking(this.trackerConfig, (matchedRule, extractedData, _context) => {
-                        console.log('[PayloadBuilder] Network match callback:', {
-                            rule: matchedRule.name,
-                            data: extractedData
-                        });
-                        // This callback can be used for additional logic if needed
-                    });
+                catch {
+                    return value;
                 }
             }
+            catch (error) {
+                console.warn('[PayloadBuilder] Error reading localStorage:', error);
+                return null;
+            }
         }
         /**
-         * NEW: Thu thập non-network data ngay lập tức
+         * Extract từ sessionStorage
          */
-        collectNonNetworkData(pending) {
-            console.log('[PayloadBuilder] Collecting non-network data for rule:', pending.rule.name);
-            for (const mapping of pending.rule.payloadMappings) {
-                const source = (mapping.source || '').toLowerCase();
-                // Skip network sources (sẽ được xử lý bởi interceptor)
-                if ([
-                    'requestbody',
-                    'responsebody',
-                    'request_body',
-                    'response_body',
-                    'requesturl',
-                    'request_url'
-                ].includes(source)) {
-                    console.log('[PayloadBuilder] Skipping network source:', source, 'for field:', mapping.field);
-                    continue;
+        extractFromSessionStorage(mapping) {
+            const key = mapping.value;
+            if (!key)
+                return null;
+            try {
+                const value = sessionStorage.getItem(key);
+                if (value === null)
+                    return null;
+                // Try parse JSON
+                try {
+                    return JSON.parse(value);
                 }
-                // Thu thập data từ non-network sources
-                const extractor = this.extractors.get(source);
-                if (extractor) {
-                    const val = extractor.extract(mapping, pending.context);
-                    if (this.isValid(val)) {
-                        pending.collectedData.set(mapping.field, val);
-                        console.log('[PayloadBuilder] Collected:', mapping.field, '=', val);
-                    }
+                catch {
+                    return value;
                 }
             }
-        }
-        /**
-         * NEW: Được gọi bởi NetworkExtractor/RequestUrlExtractor khi có network data
-         */
-        notifyNetworkData(ruleId, field, value) {
-            const pending = this.pendingCollections.get(ruleId);
-            if (!pending) {
-                console.warn('[PayloadBuilder] No pending collection for rule:', ruleId);
-                return;
-            }
-            console.log('[PayloadBuilder] Network data received for rule:', ruleId, 'field:', field, 'value:', value);
-            pending.collectedData.set(field, value);
-            pending.networkCaptured = true;
-            // Check xem đã đủ dữ liệu chưa
-            this.checkAndComplete(ruleId);
-        }
-        /**
-         * NEW: Check xem đã thu thập đủ dữ liệu chưa và complete nếu đủ
-         */
-        checkAndComplete(ruleId) {
-            const pending = this.pendingCollections.get(ruleId);
-            if (!pending)
-                return;
-            // Check timeout (5 giây)
-            if (Date.now() - pending.timestamp > 5000) {
-                console.warn('[PayloadBuilder] Timeout waiting for data for rule:', ruleId);
-                this.completePendingCollection(ruleId, true); // Complete with timeout flag
-                return;
-            }
-            // Check xem đã có tất cả required fields chưa
-            const collectedFields = Array.from(pending.collectedData.keys());
-            const missingFields = Array.from(pending.requiredFields).filter(field => !pending.collectedData.has(field));
-            console.log('[PayloadBuilder] Check complete for rule:', ruleId);
-            console.log('[PayloadBuilder] Collected fields:', collectedFields);
-            console.log('[PayloadBuilder] Missing fields:', missingFields);
-            // Nếu còn thiếu network fields nhưng đã bắt được network request → wait
-            const hasNetworkFields = this.hasNetworkFields(pending.rule);
-            if (hasNetworkFields && !pending.networkCaptured) {
-                console.log('[PayloadBuilder] Waiting for network data...');
-                // Set timeout để tự động complete sau 5s
-                setTimeout(() => {
-                    if (this.pendingCollections.has(ruleId)) {
-                        console.warn('[PayloadBuilder] Network timeout for rule:', ruleId);
-                        this.completePendingCollection(ruleId, true);
-                    }
-                }, 5000);
-                return;
-            }
-            // Nếu đã đủ dữ liệu hoặc đã timeout → Complete
-            if (missingFields.length === 0 || pending.networkCaptured) {
-                this.completePendingCollection(ruleId, false);
+            catch (error) {
+                console.warn('[PayloadBuilder] Error reading sessionStorage:', error);
+                return null;
             }
         }
         /**
-         * NEW: Hoàn thành việc thu thập và gọi callback
+         * Extract từ page URL
          */
-        completePendingCollection(ruleId, isTimeout) {
-            const pending = this.pendingCollections.get(ruleId);
-            if (!pending)
-                return;
-            console.log('[PayloadBuilder] Completing collection for rule:', ruleId, 'timeout:', isTimeout);
-            // Build final payload
-            const finalPayload = {};
-            pending.collectedData.forEach((value, key) => {
-                finalPayload[key] = value;
-            });
-            console.log('[PayloadBuilder] Final payload:', finalPayload);
-            // Cleanup
-            this.pendingCollections.delete(ruleId);
-            // Disable network interceptor nếu không còn pending nào
-            if (this.pendingCollections.size === 0) {
-                console.log('[PayloadBuilder] No more pending collections, disabling network tracking');
-                this.disableNetworkTracking();
+        extractFromPageUrl(mapping) {
+            const url = new URL(window.location.href);
+            const urlPart = (mapping.urlPart || '').toLowerCase();
+            switch (urlPart) {
+                case 'query':
+                case 'queryparam':
+                    const paramName = mapping.urlPartValue || mapping.value;
+                    return url.searchParams.get(paramName);
+                case 'path':
+                    return url.pathname;
+                case 'hash':
+                    return url.hash.substring(1);
+                case 'hostname':
+                    return url.hostname;
+                default:
+                    return url.href;
             }
-            // Call callback
-            pending.callback(finalPayload);
         }
         /**
-         * LEGACY: Enable network tracking (kept for backward compatibility)
+         * Extract từ LoginDetector (custom integration)
          */
-        enableNetworkTracking() {
-            console.warn('[PayloadBuilder] enableNetworkTracking() is deprecated. Network tracking is now on-demand.');
+        extractFromLoginDetector(_mapping) {
+            var _a;
+            try {
+                // @ts-ignore
+                const user = (_a = window.LoginDetector) === null || _a === void 0 ? void 0 : _a.getCurrentUser();
+                return user || 'guest';
+            }
+            catch {
+                return 'guest';
+            }
         }
         /**
-         * Disable network tracking
+         * Check if value is valid (not null, undefined, empty string)
          */
-        disableNetworkTracking() {
-            this.networkExtractor.disableTracking();
-            this.requestUrlExtractor.disableTracking();
+        isValidValue(value) {
+            return value !== null && value !== undefined && value !== '';
         }
         /**
-         * Check if network tracking is currently active
+         * Get REC manager (for external access if needed)
          */
-        isNetworkTrackingActive() {
-            return this.networkExtractor.isTracking();
+        getRECManager() {
+            return this.recManager;
         }
         /**
-         * Get the network extractor instance for advanced usage
+         * Get active contexts count (for debugging)
          */
-        getNetworkExtractor() {
-            return this.networkExtractor;
-        }
-        isValid(val) {
-            return val !== null && val !== undefined && val !== '';
-        }
-    }
-
-    // Hàm tiện ích: Parse JSON an toàn
-    function safeParse(data) {
-        try {
-            if (typeof data === 'string')
-                return JSON.parse(data);
-            return data;
-        }
-        catch (e) {
-            return data;
-        }
-    }
-    /**
-     * NetworkPlugin: Plugin chịu trách nhiệm intercept network requests (XHR & Fetch).
-     * - Nó parse request/response body.
-     * - Nó so khớp với Tracking Rules.
-     * - NÓ CÓ BỘ LỌC THÔNG MINH (SMART FILTER) để tránh trùng lặp sự kiện với các plugin UI.
-     */
-    class NetworkPlugin extends BasePlugin {
-        constructor() {
-            super();
-            this.name = 'NetworkPlugin';
-        }
-        /**
-         * Khởi động plugin.
-         */
-        start() {
-            if (this.active)
-                return;
-            this.hookXhr();
-            this.hookFetch();
-            this.active = true;
-            console.log(`[NetworkPlugin] initialized with Smart Filter.`);
-        }
-        /**
-         * Dừng plugin.
-         */
-        stop() {
-            if (!this.active)
-                return;
-            this.restoreXhr();
-            this.restoreFetch();
-            this.active = false;
-        }
-        /**
-         * Ghi đè XMLHTTPRequest
-         */
-        hookXhr() {
-            this.originalXmlOpen = XMLHttpRequest.prototype.open;
-            this.originalXmlSend = XMLHttpRequest.prototype.send;
-            const plugin = this;
-            XMLHttpRequest.prototype.open = function (method, url) {
-                this._networkTrackInfo = { method, url, startTime: Date.now() };
-                return plugin.originalXmlOpen.apply(this, arguments);
-            };
-            XMLHttpRequest.prototype.send = function (body) {
-                const info = this._networkTrackInfo;
-                if (info) {
-                    this.addEventListener('load', () => {
-                        plugin.handleRequest(info.url, info.method, body, this.response);
-                    });
-                }
-                return plugin.originalXmlSend.apply(this, arguments);
-            };
-        }
-        restoreXhr() {
-            if (this.originalXmlOpen)
-                XMLHttpRequest.prototype.open = this.originalXmlOpen;
-            if (this.originalXmlSend)
-                XMLHttpRequest.prototype.send = this.originalXmlSend;
-        }
-        /**
-         * Ghi đè Fetch
-         */
-        hookFetch() {
-            this.originalFetch = window.fetch;
-            const plugin = this;
-            window.fetch = async function (...args) {
-                var _a;
-                const [resource, config] = args;
-                const url = typeof resource === 'string' ? resource : resource.url;
-                const method = ((_a = config === null || config === void 0 ? void 0 : config.method) === null || _a === void 0 ? void 0 : _a.toUpperCase()) || 'GET';
-                const body = config === null || config === void 0 ? void 0 : config.body;
-                const response = await plugin.originalFetch.apply(this, args);
-                const clone = response.clone();
-                clone.text().then((text) => {
-                    plugin.handleRequest(url, method, body, text);
-                }).catch(() => { });
-                return response;
-            };
-        }
-        restoreFetch() {
-            if (this.originalFetch)
-                window.fetch = this.originalFetch;
-        }
-        /**
-         * Xử lý request đã chặn được
-         */
-        handleRequest(url, method, reqBody, resBody) {
-            this.errorBoundary.execute(() => {
-                var _a;
-                if (!this.tracker)
-                    return;
-                const config = this.tracker.getConfig();
-                if (!config || !config.trackingRules)
-                    return;
-                const reqData = safeParse(reqBody);
-                const resData = safeParse(resBody);
-                const networkContext = {
-                    reqBody: reqData,
-                    resBody: resData,
-                    method: method,
-                    url: url
-                };
-                for (const rule of config.trackingRules) {
-                    if (!rule.payloadMappings || rule.payloadMappings.length === 0)
-                        continue;
-                    /*
-                     * SMART FILTER: DUPLICATE PREVENTION
-                     * Kiểm tra xem rule này có phải là rule UI không.
-                     * Nếu EventTypeId thuộc nhóm UI (Click, Rating, etc.), ta BỎ QUA.
-                     * Tránh trường hợp: Click Button -> Trigger API -> NetworkPlugin thấy API khớp -> Gửi event thứ 2.
-                     *
-                     * Danh sách UI Event IDs (giả định theo hệ thống RecSys):
-                     * 1: Click
-                     * 2: Rating
-                     * 3: Review
-                     * 5: Input
-                     * 6: Scroll
-                     * (Bạn có thể điều chỉnh list này tùy theo config thực tế của DB)
-                     */
-                    /*
-                     * SMART FILTER: DUPLICATE PREVENTION & CORRELATION
-                     * Check 1: Is this a UI-related rule? (Click, Rate, etc.)
-                     * Check 2: Does it require network data?
-                     * Check 3: Did the UI Plugin signal that it's waiting for this event?
-                     */
-                    const uiEventIds = [1, 2, 3, 5, 6];
-                    const isUiEvent = uiEventIds.includes(rule.eventTypeId);
-                    let requiresNetworkData = false;
-                    if (rule.payloadMappings) {
-                        requiresNetworkData = rule.payloadMappings.some((m) => {
-                            const s = (m.source || '').toLowerCase();
-                            return [
-                                'requestbody',
-                                'responsebody',
-                                'request_body',
-                                'response_body',
-                                'requesturl',
-                                'request_url'
-                            ].includes(s);
-                        });
-                    }
-                    // If it's a UI event that DOES NOT require network data -> SKIP (ClickPlugin handled it)
-                    if (isUiEvent && !requiresNetworkData) {
-                        continue;
-                    }
-                    // If it's a UI event that DOES require network data -> CHECK SIGNAL
-                    // We only proceed if ClickPlugin signaled strict correlation
-                    if (isUiEvent && requiresNetworkData) {
-                        if (this.tracker && typeof this.tracker.checkPendingNetworkRule === 'function') {
-                            // FIX: Use checkPendingNetworkRule (PEEK) first
-                            // Do NOT consume it yet. Wait until we confirm the URL matches.
-                            const hasPendingSignal = this.tracker.checkPendingNetworkRule(rule.id);
-                            if (!hasPendingSignal) {
-                                // console.log('[NetworkPlugin] Ignoring unrelated network request for rule:', rule.name);
-                                continue;
-                            }
-                        }
-                        else if (this.tracker && typeof this.tracker.checkAndConsumePendingNetworkRule === 'function') {
-                            console.warn('[NetworkPlugin] Tracker does not support checkPendingNetworkRule (peek), falling back to consume pattern which may cause race conditions');
-                            const hasPendingSignal = this.tracker.checkAndConsumePendingNetworkRule(rule.id);
-                            if (!hasPendingSignal)
-                                continue;
-                        }
-                        else {
-                            console.warn('[NetworkPlugin] Tracker does not support pending network rules');
-                        }
-                    }
-                    // Check Matching
-                    let isNetworkMatch = false;
-                    let hasRequestSourceMapping = false;
-                    for (const m of rule.payloadMappings) {
-                        if (m.source === 'RequestBody' || m.source === 'RequestUrl') {
-                            hasRequestSourceMapping = true;
-                        }
-                        if (m.requestUrlPattern) {
-                            const targetMethod = (_a = m.requestMethod) === null || _a === void 0 ? void 0 : _a.toUpperCase();
-                            if (targetMethod && targetMethod !== method)
-                                continue;
-                            if (PathMatcher.match(url, m.requestUrlPattern)) {
-                                isNetworkMatch = true;
-                                break;
-                            }
-                        }
-                    }
-                    if (isNetworkMatch) {
-                        // FIX: Consume the signal HERE, only if we have a match
-                        if (isUiEvent && requiresNetworkData && this.tracker && typeof this.tracker.checkAndConsumePendingNetworkRule === 'function') {
-                            const consumed = this.tracker.checkAndConsumePendingNetworkRule(rule.id);
-                            if (!consumed) {
-                                // This might happen if another request just consumed it (rare race)
-                                // or if we only peeked and it expired (also rare)
-                                console.log('[NetworkPlugin] Signal lost or consumed by another request for rule:', rule.name);
-                                // Decide strictness: continue or break? 
-                                // If strict, we might want to skip. But let's assume if it was pending a moment ago, it's ours.
-                                // ideally checkAndConsume returns true if it successfully consumed.
-                            }
-                            else {
-                                console.log('[NetworkPlugin] Correlation matched and consumed! Tracking pending event for rule:', rule.name);
-                            }
-                        }
-                        // Loop guard
-                        if (hasRequestSourceMapping) {
-                            const shouldBlock = this.tracker.loopGuard.checkAndRecord(url, method, rule.id);
-                            if (shouldBlock)
-                                continue;
-                        }
-                        // Extract Data
-                        const extractedData = this.tracker.payloadBuilder.build(networkContext, rule);
-                        // Track if valid
-                        if (Object.keys(extractedData).length > 0) {
-                            // console.log('[NetworkPlugin] Sending filtered event:', rule.name);
-                            this.buildAndTrack(networkContext, rule, rule.eventTypeId);
-                        }
-                    }
-                }
-            }, 'NetworkPlugin.handleRequest');
+        getActiveContextsCount() {
+            return this.recManager.getActiveCount();
         }
     }
 
@@ -4498,154 +4189,206 @@
         }
     }
 
+    /**
+     * RatingPlugin - UI Trigger Layer
+     *
+     * TRÁCH NHIỆM:
+     * 1. Phát hiện hành vi rating (click, submit)
+     * 2. Match với tracking rules
+     * 3. Extract rating value/metadata
+     * 4. Gọi PayloadBuilder.handleTrigger()
+     * 5. KHÔNG bắt network (chỉ thu thập UI data)
+     *
+     * FLOW:
+     * click/submit → detect rating → check rules → handleTrigger → DONE
+     */
     class RatingPlugin extends BasePlugin {
         constructor() {
-            super();
+            super(...arguments);
             this.name = 'RatingPlugin';
-            this.throttledClickHandler = throttle(this.wrapHandler(this.handleInteraction.bind(this, 'click'), 'handleClick'), 500);
-            this.submitHandler = this.wrapHandler(this.handleInteraction.bind(this, 'submit'), 'handleSubmit');
+            this.handleClickBound = this.handleClick.bind(this);
+            this.handleSubmitBound = this.handleSubmit.bind(this);
+            // Throttle to prevent spam
+            this.lastTriggerTime = 0;
+            this.THROTTLE_MS = 500;
         }
         init(tracker) {
             this.errorBoundary.execute(() => {
                 super.init(tracker);
-                console.log(`[RatingPlugin] initialized.`);
+                console.log('[RatingPlugin] Initialized');
             }, 'RatingPlugin.init');
         }
         start() {
             this.errorBoundary.execute(() => {
                 if (!this.ensureInitialized())
                     return;
-                // 1. Listen for Click (Interactive Rating: Stars, Likes)
-                document.addEventListener("click", this.throttledClickHandler, true);
-                // 2. Listen for Submit (Traditional Forms)
-                document.addEventListener("submit", this.submitHandler, true);
+                // Listen for both click and submit events
+                document.addEventListener('click', this.handleClickBound, true);
+                document.addEventListener('submit', this.handleSubmitBound, true);
                 this.active = true;
-                console.log('[RatingPlugin] Started successfully');
+                console.log('[RatingPlugin] ✅ Started');
             }, 'RatingPlugin.start');
         }
         stop() {
             this.errorBoundary.execute(() => {
-                document.removeEventListener("click", this.throttledClickHandler, true);
-                document.removeEventListener("submit", this.submitHandler, true);
+                if (this.tracker) {
+                    document.removeEventListener('click', this.handleClickBound, true);
+                    document.removeEventListener('submit', this.handleSubmitBound, true);
+                }
                 super.stop();
+                console.log('[RatingPlugin] Stopped');
             }, 'RatingPlugin.stop');
         }
-        handleInteraction(eventType, event) {
+        /**
+         * Handle click event (interactive rating: stars, likes)
+         */
+        handleClick(event) {
+            // Throttle
+            const now = Date.now();
+            if (now - this.lastTriggerTime < this.THROTTLE_MS) {
+                return;
+            }
+            this.handleInteraction(event, 'click');
+        }
+        /**
+         * Handle submit event (traditional forms)
+         */
+        handleSubmit(event) {
+            this.handleInteraction(event, 'submit');
+        }
+        /**
+         * Main interaction handler
+         */
+        handleInteraction(event, eventType) {
             var _a;
-            console.log('[RatingPlugin] handleInteraction called, eventType:', eventType);
-            if (!this.tracker) {
-                console.warn('[RatingPlugin] No tracker');
+            if (!this.tracker)
                 return;
-            }
-            // Trigger ID = 2 for Rating (Standard)
-            const eventId = this.tracker.getEventTypeId('Rating') || 2;
-            const config = this.tracker.getConfig();
-            const rules = (_a = config === null || config === void 0 ? void 0 : config.trackingRules) === null || _a === void 0 ? void 0 : _a.filter(r => r.eventTypeId === eventId);
-            console.log('[RatingPlugin] Found', (rules === null || rules === void 0 ? void 0 : rules.length) || 0, 'rating rules');
-            if (!rules || rules.length === 0) {
-                console.warn('[RatingPlugin] No rating rules found');
-                return;
-            }
             const target = event.target;
-            if (!target) {
-                console.warn('[RatingPlugin] No target');
+            if (!target)
+                return;
+            // Get rating rules
+            const ratingEventId = this.tracker.getEventTypeId('Rating') || 2;
+            const config = this.tracker.getConfig();
+            const ratingRules = ((_a = config === null || config === void 0 ? void 0 : config.trackingRules) === null || _a === void 0 ? void 0 : _a.filter(r => r.eventTypeId === ratingEventId)) || [];
+            if (ratingRules.length === 0)
+                return;
+            console.log(`[RatingPlugin] ⭐ ${eventType} detected, checking ${ratingRules.length} rules`);
+            // Check each rule
+            for (const rule of ratingRules) {
+                const matchedElement = this.findMatchingElement(target, rule);
+                if (!matchedElement) {
+                    continue;
+                }
+                console.log(`[RatingPlugin] ✅ Matched rule: "${rule.name}"`);
+                // Extract rating data
+                const container = this.findContainer(matchedElement);
+                const ratingData = RatingUtils.processRating(container, matchedElement, eventType);
+                console.log('[RatingPlugin] Rating data:', ratingData);
+                // Filter garbage (0 rating without review)
+                if (ratingData.originalValue === 0 && !ratingData.reviewText) {
+                    console.warn('[RatingPlugin] Filtered: zero rating without review');
+                    continue;
+                }
+                // Update throttle time
+                this.lastTriggerTime = Date.now();
+                // Create trigger context (include rating data)
+                const triggerContext = {
+                    element: matchedElement,
+                    target: matchedElement,
+                    container: container,
+                    eventType: 'rating',
+                    ratingValue: ratingData.normalizedValue,
+                    ratingRaw: ratingData.originalValue,
+                    ratingMax: ratingData.maxValue,
+                    reviewText: ratingData.reviewText,
+                    ratingType: ratingData.type
+                };
+                // Delegate to PayloadBuilder
+                this.tracker.payloadBuilder.handleTrigger(rule, triggerContext, (payload) => {
+                    // Enrich payload with rating data
+                    const enrichedPayload = {
+                        ...payload,
+                        ratingValue: ratingData.normalizedValue,
+                        ratingRaw: ratingData.originalValue,
+                        ratingMax: ratingData.maxValue,
+                        reviewText: ratingData.reviewText || undefined
+                    };
+                    // Dispatch event
+                    this.dispatchEvent(enrichedPayload, rule, ratingEventId);
+                });
+                // Only track first matching rule
                 return;
             }
-            console.log('[RatingPlugin] Target:', target);
+        }
+        /**
+         * Find element matching rule selector
+         */
+        findMatchingElement(target, rule) {
+            var _a;
+            const selector = (_a = rule.trackingTarget) === null || _a === void 0 ? void 0 : _a.value;
+            if (!selector)
+                return null;
             try {
-                for (const rule of rules) {
-                    const selector = rule.trackingTarget.value;
-                    console.log('[RatingPlugin] Checking rule:', rule.name, 'selector:', selector);
-                    if (!selector) {
-                        console.warn('[RatingPlugin] No selector for rule:', rule.name);
-                        continue;
-                    }
-                    const matchedElement = target.closest(selector);
-                    console.log('[RatingPlugin] Matched element:', matchedElement);
-                    // TEMPORARY: Flexible matching for CSS modules
-                    let finalMatch = matchedElement;
-                    if (!finalMatch && selector.startsWith('.')) {
-                        // Extract base class name (remove leading dot and everything after underscore)
-                        const baseClassName = selector.substring(1).split('_')[0];
-                        console.log('[RatingPlugin] Trying flexible match with base class:', baseClassName);
-                        // Try to find parent with matching base class
-                        let parent = target;
-                        let depth = 0;
-                        while (parent && depth < 10) {
-                            const parentClassName = parent.className;
-                            if (typeof parentClassName === 'string' && parentClassName.includes(baseClassName)) {
-                                finalMatch = parent;
-                                console.log('[RatingPlugin] Flexible match found at depth', depth);
-                                break;
-                            }
-                            parent = parent.parentElement;
-                            depth++;
-                        }
-                    }
-                    if (finalMatch) {
-                        // Determine Container
-                        const container = finalMatch.closest('form') ||
-                            finalMatch.closest('.rating-container') ||
-                            finalMatch.closest('.review-box') ||
-                            finalMatch.parentElement ||
-                            document.body;
-                        // Process Rating
-                        const result = RatingUtils.processRating(container, finalMatch, eventType);
-                        console.log('[RatingPlugin] Rating result:', result);
-                        // Filter garbage
-                        if (result.originalValue === 0 && !result.reviewText) {
-                            console.warn('[RatingPlugin] Filtered as garbage (value=0, no review)');
-                            continue;
-                        }
-                        console.log(`[RatingPlugin] 🎯 Captured [${eventType}]: Raw=${result.originalValue}/${result.maxValue} -> Norm=${result.normalizedValue}`);
-                        // DUPLICATE PREVENTION & NETWORK DATA STRATEGY
-                        // Check if this rule requires network data
-                        let requiresNetworkData = false;
-                        if (rule.payloadMappings) {
-                            requiresNetworkData = rule.payloadMappings.some((m) => {
-                                const s = (m.source || '').toLowerCase();
-                                return [
-                                    'requestbody',
-                                    'responsebody',
-                                    'request_body',
-                                    'response_body',
-                                    'requesturl',
-                                    'request_url'
-                                ].includes(s);
-                            });
-                        }
-                        // NEW FLOW: Check if rule requires network data
-                        if (requiresNetworkData) {
-                            console.log('[RatingPlugin] ⏳ Rule requires network data. Starting collection for rule:', rule.id);
-                            // NEW FLOW: Gọi startCollection với đầy đủ context
-                            if (this.tracker && this.tracker.payloadBuilder) {
-                                const context = {
-                                    element: finalMatch,
-                                    eventType: 'rating',
-                                    triggerTimestamp: Date.now(),
-                                    ratingValue: result.normalizedValue
-                                };
-                                this.tracker.payloadBuilder.startCollection(context, rule, (finalPayload) => {
-                                    console.log('[RatingPlugin] ✅ Collection complete, tracking event with payload:', finalPayload);
-                                    // Sau khi có đủ dữ liệu → Track event
-                                    this.buildAndTrack(finalMatch, rule, eventId);
-                                });
-                            }
-                            else {
-                                console.warn('[RatingPlugin] Tracker or PayloadBuilder not available');
-                            }
+                // Try closest match
+                let match = target.closest(selector);
+                // Flexible matching for CSS modules
+                if (!match && selector.startsWith('.')) {
+                    const baseClassName = selector.substring(1).split('_')[0];
+                    let parent = target;
+                    let depth = 0;
+                    while (parent && depth < 10) {
+                        const className = parent.className;
+                        if (typeof className === 'string' && className.includes(baseClassName)) {
+                            match = parent;
                             break;
                         }
-                        // Không cần network data → Track ngay
-                        console.log('[RatingPlugin] No network data required, tracking immediately');
-                        this.buildAndTrack(finalMatch, rule, eventId);
-                        break;
+                        parent = parent.parentElement;
+                        depth++;
                     }
                 }
+                return match;
             }
-            catch (error) {
-                console.warn('[RatingPlugin] Error processing interaction:', error);
+            catch (e) {
+                console.error('[RatingPlugin] Selector error:', e);
+                return null;
             }
+        }
+        /**
+         * Find rating container (form, rating-box, etc.)
+         */
+        findContainer(element) {
+            // Try to find form
+            const form = element.closest('form');
+            if (form)
+                return form;
+            // Try to find rating container
+            const ratingContainer = element.closest('.rating-container') ||
+                element.closest('.rating-box') ||
+                element.closest('.review-box') ||
+                element.closest('[data-rating]');
+            if (ratingContainer)
+                return ratingContainer;
+            // Fallback to parent or body
+            return element.parentElement || document.body;
+        }
+        /**
+         * Dispatch tracking event
+         */
+        dispatchEvent(payload, rule, eventId) {
+            if (!this.tracker)
+                return;
+            console.log('[RatingPlugin] 📤 Dispatching event with payload:', payload);
+            this.tracker.track({
+                eventType: eventId,
+                eventData: payload,
+                timestamp: Date.now(),
+                url: window.location.href,
+                metadata: {
+                    ruleId: rule.id,
+                    ruleName: rule.name,
+                    plugin: this.name
+                }
+            });
         }
     }
 
@@ -4663,7 +4406,6 @@
             this.userId = null;
             this.isInitialized = false;
             this.sendInterval = null;
-            this.pendingNetworkRules = new Map(); // ruleId -> timestamp
             this.configLoader = new ConfigLoader();
             this.errorBoundary = new ErrorBoundary();
             this.eventBuffer = new EventBuffer();
@@ -4673,34 +4415,16 @@
             this.eventDeduplicator = new EventDeduplicator(3000); // 3 second window
             this.loopGuard = new LoopGuard({ maxRequestsPerSecond: 5 });
         }
-        // Signal that a UI event (like Click) expects a network request for a specific rule
-        addPendingNetworkRule(ruleId) {
-            this.pendingNetworkRules.set(ruleId, Date.now());
-            // Auto-cleanup after 5 seconds to prevent stale flags
-            setTimeout(() => {
-                if (this.pendingNetworkRules.has(ruleId)) {
-                    this.pendingNetworkRules.delete(ruleId);
-                }
-            }, 5000);
-        }
-        // Check if a rule is pending (without consuming it)
-        checkPendingNetworkRule(ruleId) {
-            return this.pendingNetworkRules.has(ruleId);
-        }
-        // Check if a rule is pending (signaled by UI) and consume it
-        checkAndConsumePendingNetworkRule(ruleId) {
-            if (this.pendingNetworkRules.has(ruleId)) {
-                this.pendingNetworkRules.delete(ruleId);
-                return true;
-            }
-            return false;
-        }
         // Khởi tạo SDK - tự động gọi khi tải script
         async init() {
             return this.errorBoundary.executeAsync(async () => {
                 if (this.isInitialized) {
                     return;
                 }
+                // 🔥 CRITICAL: Initialize Network Observer FIRST (before anything else)
+                const networkObserver = getNetworkObserver();
+                networkObserver.initialize(this.payloadBuilder.getRECManager());
+                console.log('[RecSysTracker] ✅ Network Observer initialized');
                 // Load config từ window
                 this.config = this.configLoader.loadFromWindow();
                 if (!this.config) {
@@ -4766,24 +4490,25 @@
             if (this.pluginManager.getPluginNames().length === 0) {
                 const pluginPromises = [];
                 if (hasClickRules && this.config) {
-                    const currentConfig = this.config; // TypeScript sẽ hiểu currentConfig chắc chắn là TrackerConfig
                     const clickPromise = Promise.resolve().then(function () { return clickPlugin; }).then(({ ClickPlugin }) => {
-                        this.use(new ClickPlugin(currentConfig));
-                        console.log('[RecSysTracker] Auto-registered ClickPlugin');
+                        this.use(new ClickPlugin());
+                        console.log('[RecSysTracker] Auto-registered ClickPlugin v2');
                     });
                     pluginPromises.push(clickPromise);
                 }
                 if (hasRateRules) {
                     const ratingPromise = Promise.resolve().then(function () { return ratingPlugin; }).then(({ RatingPlugin }) => {
                         this.use(new RatingPlugin());
+                        console.log('[RecSysTracker] Auto-registered RatingPlugin v2');
                     });
                     pluginPromises.push(ratingPromise);
                 }
                 if (hasReviewRules) {
-                    const scrollPromise = Promise.resolve().then(function () { return reviewPlugin; }).then(({ ReviewPlugin }) => {
+                    const reviewPromise = Promise.resolve().then(function () { return reviewPlugin; }).then(({ ReviewPlugin }) => {
                         this.use(new ReviewPlugin());
+                        console.log('[RecSysTracker] Auto-registered ReviewPlugin v2');
                     });
-                    pluginPromises.push(scrollPromise);
+                    pluginPromises.push(reviewPromise);
                 }
                 if (hasPageViewRules) {
                     const pageViewPromise = Promise.resolve().then(function () { return pageViewPlugin; }).then(({ PageViewPlugin }) => {
@@ -4797,22 +4522,10 @@
                     });
                     pluginPromises.push(scrollPromise);
                 }
-                // Check for Network/RequestUrl mappings and initialize NetworkPlugin if needed
-                const hasNetworkMappings = this.config.trackingRules.some(rule => {
-                    var _a;
-                    return (_a = rule.payloadMappings) === null || _a === void 0 ? void 0 : _a.some(mapping => {
-                        var _a;
-                        const source = (_a = mapping.source) === null || _a === void 0 ? void 0 : _a.toLowerCase();
-                        return source === 'requestbody' ||
-                            source === 'requesturl' ||
-                            source === 'request_body' ||
-                            source === 'request_url';
-                    });
-                });
-                if (hasNetworkMappings) {
-                    console.log('[RecSysTracker] Detected network mappings, initializing NetworkPlugin for data caching');
-                    this.use(new NetworkPlugin());
-                }
+                // ❌ REMOVE NetworkPlugin auto-registration
+                // Network Observer is now initialized globally, not as a plugin
+                // ❌ REMOVE NetworkPlugin auto-registration
+                // Network Observer is now initialized globally, not as a plugin
                 // Chờ tất cả plugin được đăng ký trước khi khởi động
                 if (pluginPromises.length > 0) {
                     await Promise.all(pluginPromises);
@@ -4822,37 +4535,73 @@
                 }
             }
         }
-        // Track custom event
+        // Track custom event - NEW SIGNATURE (supports flexible payload)
         track(eventData) {
             this.errorBoundary.execute(() => {
                 if (!this.isInitialized || !this.config) {
+                    console.warn('[RecSysTracker] Cannot track: SDK not initialized');
                     return;
                 }
+                // Extract required fields for deduplication
+                // Support both camelCase and PascalCase field names
+                const payload = eventData.eventData || {};
+                const ruleId = payload.ruleId || payload.RuleId;
+                // User field - try multiple variants
+                const userValue = payload.userId || payload.UserId ||
+                    payload.anonymousId || payload.AnonymousId ||
+                    payload.username || payload.Username ||
+                    payload.userValue || payload.UserValue ||
+                    'guest';
+                // Item field - try multiple variants
+                const itemValue = payload.itemId || payload.ItemId ||
+                    payload.itemTitle || payload.ItemTitle ||
+                    payload.itemValue || payload.ItemValue ||
+                    '';
+                // Determine field names for tracking
+                let userField = 'userId';
+                if (payload.AnonymousId || payload.anonymousId)
+                    userField = 'AnonymousId';
+                else if (payload.UserId || payload.userId)
+                    userField = 'UserId';
+                else if (payload.Username || payload.username)
+                    userField = 'Username';
+                let itemField = 'itemId';
+                if (payload.ItemId || payload.itemId)
+                    itemField = 'ItemId';
+                else if (payload.ItemTitle || payload.itemTitle)
+                    itemField = 'ItemTitle';
                 // Check for duplicate event (fingerprint-based deduplication)
-                const isDuplicate = this.eventDeduplicator.isDuplicate(eventData.eventTypeId, eventData.trackingRuleId, eventData.userValue, eventData.itemValue);
-                if (isDuplicate) {
-                    console.log('[RecSysTracker] Duplicate event dropped:', {
-                        eventTypeId: eventData.eventTypeId,
-                        trackingRuleId: eventData.trackingRuleId,
-                        userValue: eventData.userValue,
-                        itemValue: eventData.itemValue
-                    });
-                    return; // Drop duplicate
+                if (ruleId && userValue && itemValue) {
+                    const isDuplicate = this.eventDeduplicator.isDuplicate(eventData.eventType, ruleId, userValue, itemValue);
+                    if (isDuplicate) {
+                        console.log('[RecSysTracker] 🚫 Duplicate event dropped:', {
+                            eventType: eventData.eventType,
+                            ruleId: ruleId,
+                            userValue: userValue,
+                            itemValue: itemValue
+                        });
+                        return;
+                    }
                 }
                 const trackedEvent = {
                     id: this.metadataNormalizer.generateEventId(),
-                    timestamp: new Date(),
-                    eventTypeId: eventData.eventTypeId,
-                    trackingRuleId: eventData.trackingRuleId,
+                    timestamp: new Date(eventData.timestamp),
+                    eventTypeId: eventData.eventType,
+                    trackingRuleId: ruleId || 0,
                     domainKey: this.config.domainKey,
-                    userField: eventData.userField,
-                    userValue: eventData.userValue,
-                    itemField: eventData.itemField,
-                    itemValue: eventData.itemValue,
-                    ...(eventData.ratingValue !== undefined && { ratingValue: eventData.ratingValue }),
-                    ...(eventData.ratingReview !== undefined && { ratingReview: eventData.ratingReview }),
+                    userField: userField,
+                    userValue: userValue,
+                    itemField: itemField,
+                    itemValue: itemValue,
+                    ...(payload.ratingValue !== undefined && {
+                        ratingValue: payload.ratingValue
+                    }),
+                    ...(payload.reviewText !== undefined && {
+                        ratingReview: payload.reviewText
+                    }),
                 };
                 this.eventBuffer.add(trackedEvent);
+                console.log('[RecSysTracker] ✅ Event tracked:', trackedEvent);
             }, 'track');
         }
         // Setup batch sending of events

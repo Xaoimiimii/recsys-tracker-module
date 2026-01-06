@@ -1,92 +1,92 @@
-import { NetworkExtractor } from "./extractors/network-extractor";
-import { TrackingRule } from "../../types";
-interface PendingCollection {
-    rule: TrackingRule;
-    context: any;
-    timestamp: number;
-    callback: (payload: Record<string, any>) => void;
-    collectedData: Map<string, any>;
-    requiredFields: Set<string>;
-    networkCaptured: boolean;
-}
+/**
+ * PayloadBuilder - The Orchestrator
+ *
+ * TRÁCH NHIỆM:
+ * 1. Điều phối toàn bộ quá trình build payload
+ * 2. Biết rule cần field nào
+ * 3. Biết field đó lấy từ đâu (sync hay async)
+ * 4. Là NƠI DUY NHẤT chốt payload
+ * 5. Quản lý RuleExecutionContext
+ *
+ * FLOW:
+ * 1. Plugin trigger → gọi handleTrigger()
+ * 2. Phân loại sync/async sources
+ * 3. Resolve sync sources ngay
+ * 4. Đăng ký async sources với NetworkObserver
+ * 5. Khi đủ dữ liệu → dispatch event
+ */
+import { TrackingRule } from '../../types';
+import { RuleExecutionContextManager } from '../execution/rule-execution-context';
+/**
+ * PayloadBuilder v2 - Full Orchestrator
+ */
 export declare class PayloadBuilder {
-    private extractors;
-    private elementExtractor;
-    private networkExtractor;
-    private storageExtractor;
-    private urlExtractor;
-    private requestUrlExtractor;
-    private trackerConfig;
-    pendingCollections: Map<number, PendingCollection>;
+    private recManager;
+    private networkObserver;
     constructor();
-    private registerExtractors;
-    build(context: any, rule: TrackingRule): Record<string, any>;
     /**
-     * NEW FLOW: Bắt đầu thu thập dữ liệu cho một rule
-     * Được gọi bởi tracking plugins khi phát hiện trigger event
+     * Main entry point - được gọi bởi tracking plugins
      *
-     * @param context - Context của trigger event (element, timestamp, etc.)
-     * @param rule - Tracking rule cần thu thập dữ liệu
-     * @param callback - Callback được gọi khi đã thu thập đủ dữ liệu
+     * @param rule - Tracking rule được trigger
+     * @param triggerContext - Context của trigger (element, eventType, etc.)
+     * @param onComplete - Callback khi payload sẵn sàng để dispatch
      */
-    startCollection(context: any, rule: TrackingRule, callback: (payload: Record<string, any>) => void): void;
+    handleTrigger(rule: TrackingRule, triggerContext: any, onComplete: (payload: Record<string, any>) => void): void;
     /**
-     * LEGACY: Build payload and call back with the result (OLD FLOW - Deprecated)
-     * Used by tracking plugins (click, rating, review, scroll, pageview)
-     * NOT used by network plugin
-     *
-     * @deprecated Use startCollection() instead for better async handling
+     * Phân loại mappings thành sync và async
      */
-    buildWithCallback(context: any, rule: TrackingRule, callback: (payload: Record<string, any>, rule: TrackingRule, context: any) => void): void;
+    private classifyMappings;
     /**
-     * Set tracker configuration and check if network tracking should be enabled
+     * Xác định source type
      */
-    setConfig(config: any): void;
+    private getSourceType;
     /**
-     * NEW: Phân tích xem rule cần thu thập những field nào
+     * Resolve tất cả sync mappings
      */
-    private analyzeRequiredFields;
+    private resolveSyncMappings;
     /**
-     * NEW: Check xem rule có field nào cần network data không
+     * Resolve một sync mapping
      */
-    private hasNetworkFields;
+    private resolveSyncMapping;
     /**
-     * NEW: Enable network interceptor cho một rule cụ thể
+     * Extract từ element
      */
-    private enableNetworkInterceptorForRule;
+    private extractFromElement;
     /**
-     * NEW: Thu thập non-network data ngay lập tức
+     * Get value từ element (text, value, attribute)
      */
-    private collectNonNetworkData;
+    private getElementValue;
     /**
-     * NEW: Được gọi bởi NetworkExtractor/RequestUrlExtractor khi có network data
+     * Extract từ cookie
      */
-    notifyNetworkData(ruleId: number, field: string, value: any): void;
+    private extractFromCookie;
     /**
-     * NEW: Check xem đã thu thập đủ dữ liệu chưa và complete nếu đủ
+     * Extract từ localStorage
      */
-    checkAndComplete(ruleId: number): void;
+    private extractFromLocalStorage;
     /**
-     * NEW: Hoàn thành việc thu thập và gọi callback
+     * Extract từ sessionStorage
      */
-    private completePendingCollection;
+    private extractFromSessionStorage;
     /**
-     * LEGACY: Enable network tracking (kept for backward compatibility)
+     * Extract từ page URL
      */
-    enableNetworkTracking(): void;
+    private extractFromPageUrl;
     /**
-     * Disable network tracking
+     * Extract từ LoginDetector (custom integration)
      */
-    disableNetworkTracking(): void;
+    private extractFromLoginDetector;
     /**
-     * Check if network tracking is currently active
+     * Check if value is valid (not null, undefined, empty string)
      */
-    isNetworkTrackingActive(): boolean;
+    private isValidValue;
     /**
-     * Get the network extractor instance for advanced usage
+     * Get REC manager (for external access if needed)
      */
-    getNetworkExtractor(): NetworkExtractor;
-    private isValid;
+    getRECManager(): RuleExecutionContextManager;
+    /**
+     * Get active contexts count (for debugging)
+     */
+    getActiveContextsCount(): number;
 }
-export {};
 //# sourceMappingURL=payload-builder.d.ts.map

@@ -245,10 +245,11 @@ export class NetworkExtractor implements IPayloadExtractor {
                 continue;
             }
             
-            // 3. Check xem request có khớp với rule không
+            // 3. Check xem request có khớp với rule không (bao gồm cả requesturl, requestbody, responsebody)
             const matchedMappings = pending.rule.payloadMappings?.filter((mapping: any) => {
                 const source = (mapping.source || '').toLowerCase();
-                if (!['requestbody', 'request_body', 'responsebody', 'response_body'].includes(source)) {
+                // Chấp nhận cả requesturl, requestbody, responsebody
+                if (!['requesturl', 'request_url', 'requestbody', 'request_body', 'responsebody', 'response_body'].includes(source)) {
                     return false;
                 }
                 
@@ -278,18 +279,39 @@ export class NetworkExtractor implements IPayloadExtractor {
             
             console.log('[NetworkExtractor] ✅ Request matched!', matchedMappings.length, 'mappings');
             
-            // 4. Validate xem request có chứa dữ liệu cần thiết không
+            // 4. Extract dữ liệu từ các mappings (bao gồm cả requesturl)
             let hasRequiredData = false;
             const extractedData: Record<string, any> = {};
             
             for (const mapping of matchedMappings) {
-                const normalizedMapping = {
-                    ...mapping,
-                    source: 'network_request',
-                    value: mapping.value || mapping.requestBodyPath
-                };
+                const source = (mapping.source || '').toLowerCase();
+                let value: any = null;
+                
+                // Handle requesturl source - extract from URL pattern
+                if (source === 'requesturl' || source === 'request_url') {
+                    console.log('[NetworkExtractor] Extracting from requesturl:', mapping.field);
+                    const urlExtractor = this.payloadBuilder?.requestUrlExtractor;
+                    if (urlExtractor) {
+                        // Pass the current URL and method as context
+                        value = urlExtractor.extract(mapping, {
+                            url: url,
+                            method: method,
+                            currentUrl: url,
+                            currentMethod: method,
+                            triggerTimestamp: pending.timestamp
+                        });
+                    }
+                } else {
+                    // Handle requestbody/responsebody
+                    const normalizedMapping = {
+                        ...mapping,
+                        source: 'network_request',
+                        value: mapping.value || mapping.requestBodyPath
+                    };
 
-                const value = this.extract(normalizedMapping, networkContext);
+                    value = this.extract(normalizedMapping, networkContext);
+                }
+                
                 if (this.isValid(value)) {
                     extractedData[mapping.field] = value;
                     hasRequiredData = true;

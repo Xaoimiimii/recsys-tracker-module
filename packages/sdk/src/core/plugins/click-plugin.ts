@@ -1,201 +1,249 @@
-import { BasePlugin } from "./base-plugin";
-import { TrackerConfig } from "../../types";
-import { SelectorMatcher, MatchMode } from "./utils/selector-matcher";
+/**
+ * ClickPlugin - UI Trigger Layer
+ * 
+ * TRÁCH NHIỆM:
+ * 1. Phát hiện hành vi click
+ * 2. Match với tracking rules
+ * 3. Gọi PayloadBuilder.handleTrigger()
+ * 4. KHÔNG lấy payload, KHÔNG bắt network
+ * 
+ * FLOW:
+ * click event → check rules → handleTrigger → DONE
+ */
+
+import { BasePlugin } from './base-plugin';
+import { RecSysTracker } from '../..';
+import { TrackingRule } from '../../types';
 
 export class ClickPlugin extends BasePlugin {
-  public readonly name = "click-plugin";
-  private config: TrackerConfig | any;
+  public readonly name = 'ClickPlugin';
 
-  constructor(config?: TrackerConfig) {
-    super();
-    this.config = config;
+  private handleClickBound = this.handleClick.bind(this);
+
+  public init(tracker: RecSysTracker): void {
+    this.errorBoundary.execute(() => {
+      super.init(tracker);
+      console.log('[ClickPlugin] Initialized');
+    }, 'ClickPlugin.init');
   }
 
   public start(): void {
-    const configToUse =
-      this.config || (this.tracker ? this.tracker.getConfig() : null);
+    this.errorBoundary.execute(() => {
+      if (!this.ensureInitialized()) return;
 
-    if (!configToUse || !configToUse.trackingRules) {
-      console.warn("[ClickPlugin] No tracking rules found. Plugin stopped.");
-      return;
-    }
+      document.addEventListener('click', this.handleClickBound, true);
+      this.active = true;
 
-    console.log("[ClickPlugin] Started with config:", configToUse.domainUrl);
-
-    document.addEventListener(
-      "click",
-      (event: MouseEvent) => {
-        this.handleDocumentClick(event, configToUse);
-      },
-      true
-    );
+      console.log('[ClickPlugin] ✅ Started');
+    }, 'ClickPlugin.start');
   }
 
-  private handleDocumentClick(event: MouseEvent, config: any): void {
-    console.log('[ClickPlugin] Click detected on:', event.target);
+  public stop(): void {
+    this.errorBoundary.execute(() => {
+      if (this.tracker) {
+        document.removeEventListener('click', this.handleClickBound, true);
+      }
+      super.stop();
+      console.log('[ClickPlugin] Stopped');
+    }, 'ClickPlugin.stop');
+  }
 
-    if (!this.tracker) {
-      console.warn('[ClickPlugin] Tracker not initialized');
-      return;
-    }
+  /**
+   * Handle click event - TRIGGER PHASE
+   */
+  private handleClick(event: MouseEvent): void {
+    if (!this.tracker) return;
 
-    const rules = config.trackingRules;
-    if (!rules || rules.length === 0) {
-      console.warn('[ClickPlugin] No tracking rules found');
-      return;
-    }
+    const clickedElement = event.target as HTMLElement;
+    if (!clickedElement) return;
 
-    const clickRules = rules.filter((r: any) => r.eventTypeId === 1);
-    console.log('[ClickPlugin] Found', clickRules.length, 'click rules');
+    // Get click rules
+    const eventId = this.tracker.getEventTypeId('Click') || 1;
+    const config = this.tracker.getConfig();
+    const clickRules = config?.trackingRules?.filter(r => r.eventTypeId === eventId) || [];
 
     if (clickRules.length === 0) return;
 
+    console.log(`[ClickPlugin] 🖱️ Click detected, checking ${clickRules.length} rules`);
+
+    // Check each rule
     for (const rule of clickRules) {
-      const selector = rule.trackingTarget?.value;
-      console.log('[ClickPlugin] Checking rule:', rule.name, 'with selector:', selector);
-
-      if (!selector) continue;
-
-      const clickedElement = event.target as HTMLElement;
-      console.log('[ClickPlugin] Clicked element:', clickedElement.tagName, clickedElement.className);
-
-      // Debug: Log parent chain
-      let parent = clickedElement.parentElement;
-      let depth = 0;
-      while (parent && depth < 5) {
-        console.log(`[ClickPlugin] Parent ${depth}:`, parent.tagName, parent.className, parent.classList?.toString());
-        parent = parent.parentElement;
-        depth++;
-      }
-
-      // Strategy: 
-      // 1. Try STRICT match first (element itself must match selector)
-      // 2. If no match, try CLOSEST (parent traversal) but ONLY if clicked element is not a button/link
-      //    This prevents other interactive elements from accidentally triggering
-
-      let target = SelectorMatcher.match(clickedElement, selector, MatchMode.STRICT);
-      console.log('[ClickPlugin] STRICT match result:', target);
-
-      // TEMPORARY: If selector is .play-button, also try to match elements with "play-button" in their class
-      if (!target && selector === '.play-button') {
-        const className = clickedElement.className;
-        if (typeof className === 'string' && className.includes('play-button')) {
-          target = clickedElement;
-          console.log('[ClickPlugin] Matched via flexible class check on clicked element');
-        }
-      }
-
-      if (!target) {
-        // Only use CLOSEST matching if clicked element is NOT an interactive element
-        const isInteractiveElement = ['BUTTON', 'A', 'INPUT', 'SELECT', 'TEXTAREA'].includes(
-          clickedElement.tagName
-        ) || clickedElement.hasAttribute('role') && ['button', 'link'].includes(
-          clickedElement.getAttribute('role') || ''
-        );
-
-        console.log('[ClickPlugin] Is interactive element:', isInteractiveElement);
-
-        if (!isInteractiveElement) {
-          // Safe to traverse up - probably clicked on icon/text inside button
-          target = SelectorMatcher.match(clickedElement, selector, MatchMode.CLOSEST);
-          console.log('[ClickPlugin] CLOSEST match result:', target);
-
-          // TEMPORARY: If selector is .play-button and CLOSEST didn't find it, try manual parent search
-          if (!target && selector === '.play-button') {
-            let parent = clickedElement.parentElement;
-            let depth = 0;
-            while (parent && depth < 10) {
-              const parentClassName = parent.className;
-              if (typeof parentClassName === 'string' && parentClassName.includes('play-button')) {
-                target = parent;
-                console.log('[ClickPlugin] Matched via flexible class check on parent at depth', depth);
-                break;
-              }
-              parent = parent.parentElement;
-              depth++;
-            }
-          }
-        }
-      }
-
-      if (!target) {
-        console.log('[ClickPlugin] No target matched for selector:', selector);
+      const matchedElement = this.findMatchingElement(clickedElement, rule);
+      
+      if (!matchedElement) {
         continue;
       }
 
-      // Log for debugging
-      console.log('[ClickPlugin] ✓ Click matched tracking target:', {
-        element: target.className || target.tagName,
-        selector: selector,
-        rule: rule.name,
-        matchedDirectly: clickedElement === target
-      });
+      console.log(`[ClickPlugin] ✅ Matched rule: "${rule.name}"`);
 
-      if (rule.conditions?.length) {
-        const conditionsMet = rule.conditions.every((cond: any) => {
-          if (cond.patternId === 2 && cond.operatorId === 1) {
-            return window.location.href.includes(cond.value);
-          }
-          return true;
-        });
-
-        if (!conditionsMet) continue;
+      // Check conditions
+      if (!this.checkConditions(matchedElement, rule)) {
+        console.log('[ClickPlugin] Conditions not met');
+        continue;
       }
 
-      console.log(
-        "🎯 [ClickPlugin] Rule matched:",
-        rule.name,
-        "| ID:",
-        rule.id
+      // Create trigger context
+      const triggerContext = {
+        element: matchedElement,
+        target: matchedElement,
+        clickedElement: clickedElement,
+        eventType: 'click',
+        event: event
+      };
+
+      // Delegate to PayloadBuilder
+      this.tracker.payloadBuilder.handleTrigger(
+        rule,
+        triggerContext,
+        (payload) => {
+          // Callback khi payload ready
+          this.dispatchEvent(payload, rule, eventId);
+        }
       );
 
-      // NEW FLOW: Check if rule requires network data
-      let requiresNetworkData = false;
-      if (rule.payloadMappings) {
-        requiresNetworkData = rule.payloadMappings.some((m: any) => {
-          const s = (m.source || '').toLowerCase();
-          return [
-            'requestbody',
-            'responsebody',
-            'request_body',
-            'response_body',
-            'requesturl',
-            'request_url'
-          ].includes(s);
-        });
-      }
-
-      if (requiresNetworkData) {
-        console.log('[ClickPlugin] ⏳ Rule requires network data. Starting collection for rule:', rule.id);
-        
-        // NEW FLOW: Gọi startCollection với đầy đủ context
-        if (this.tracker && this.tracker.payloadBuilder) {
-          const context = {
-            element: target,
-            eventType: 'click',
-            triggerTimestamp: Date.now()
-          };
-          
-          this.tracker.payloadBuilder.startCollection(
-            context,
-            rule,
-            (finalPayload: Record<string, any>) => {
-              console.log('[ClickPlugin] ✅ Collection complete, tracking event with payload:', finalPayload);
-              // Sau khi có đủ dữ liệu → Track event
-              this.buildAndTrack(target, rule, rule.eventTypeId);
-            }
-          );
-        } else {
-          console.warn('[ClickPlugin] Tracker or PayloadBuilder not available');
-        }
-        break;
-      }
-
-      // Không cần network data → Track ngay
-      console.log('[ClickPlugin] No network data required, tracking immediately');
-      this.buildAndTrack(target, rule, rule.eventTypeId);
-
-      break;
+      // Chỉ track rule đầu tiên match
+      return;
     }
+  }
+
+  /**
+   * Find element matching rule selector
+   */
+  private findMatchingElement(clickedElement: HTMLElement, rule: TrackingRule): HTMLElement | null {
+    const selector = rule.trackingTarget?.value;
+    if (!selector) return null;
+
+    try {
+      // Strategy 1: Strict match (element itself)
+      if (clickedElement.matches(selector)) {
+        return clickedElement;
+      }
+
+      // Strategy 2: Flexible class match (for CSS modules)
+      if (selector.startsWith('.')) {
+        const className = selector.substring(1);
+        if (this.hasFlexibleClassMatch(clickedElement, className)) {
+          return clickedElement;
+        }
+      }
+
+      // Strategy 3: Closest match (parent traversal)
+      // Only if clicked element is NOT interactive (avoid false positives)
+      const isInteractive = this.isInteractiveElement(clickedElement);
+      
+      if (!isInteractive) {
+        const closestMatch = clickedElement.closest(selector);
+        if (closestMatch) {
+          return closestMatch as HTMLElement;
+        }
+
+        // Flexible class match on parents
+        if (selector.startsWith('.')) {
+          const className = selector.substring(1);
+          const flexibleParent = this.findParentWithFlexibleClass(clickedElement, className);
+          if (flexibleParent) {
+            return flexibleParent;
+          }
+        }
+      }
+
+      return null;
+    } catch (e) {
+      console.error('[ClickPlugin] Selector error:', e);
+      return null;
+    }
+  }
+
+  /**
+   * Check if element has flexible class match (for CSS modules)
+   */
+  private hasFlexibleClassMatch(element: HTMLElement, baseClassName: string): boolean {
+    const actualClassName = element.className;
+    if (typeof actualClassName !== 'string') return false;
+
+    // Extract base name (remove hash for CSS modules)
+    const baseName = baseClassName.split('_')[0];
+    return actualClassName.includes(baseName);
+  }
+
+  /**
+   * Find parent with flexible class match
+   */
+  private findParentWithFlexibleClass(element: HTMLElement, baseClassName: string): HTMLElement | null {
+    const baseName = baseClassName.split('_')[0];
+    let parent = element.parentElement;
+    let depth = 0;
+
+    while (parent && depth < 10) {
+      const className = parent.className;
+      if (typeof className === 'string' && className.includes(baseName)) {
+        return parent;
+      }
+      parent = parent.parentElement;
+      depth++;
+    }
+
+    return null;
+  }
+
+  /**
+   * Check if element is interactive (button, link, etc.)
+   */
+  private isInteractiveElement(element: HTMLElement): boolean {
+    const tagName = element.tagName;
+    
+    if (['BUTTON', 'A', 'INPUT', 'SELECT', 'TEXTAREA'].includes(tagName)) {
+      return true;
+    }
+
+    const role = element.getAttribute('role');
+    if (role && ['button', 'link', 'menuitem'].includes(role)) {
+      return true;
+    }
+
+    return false;
+  }
+
+  /**
+   * Check conditions
+   */
+  private checkConditions(_element: HTMLElement, rule: TrackingRule): boolean {
+    const conditions = rule.conditions;
+    if (!conditions || conditions.length === 0) {
+      return true;
+    }
+
+    for (const cond of conditions) {
+      // Pattern ID 2 = URL, Operator ID 1 = CONTAINS
+      if (cond.patternId === 2 && cond.operatorId === 1) {
+        if (!window.location.href.includes(cond.value)) {
+          return false;
+        }
+      }
+      // Add more condition types as needed
+    }
+
+    return true;
+  }
+
+  /**
+   * Dispatch tracking event
+   */
+  private dispatchEvent(payload: Record<string, any>, rule: TrackingRule, eventId: number): void {
+    if (!this.tracker) return;
+
+    console.log('[ClickPlugin] 📤 Dispatching event with payload:', payload);
+
+    this.tracker.track({
+      eventType: eventId,
+      eventData: payload,
+      timestamp: Date.now(),
+      url: window.location.href,
+      metadata: {
+        ruleId: rule.id,
+        ruleName: rule.name,
+        plugin: this.name
+      }
+    });
   }
 }

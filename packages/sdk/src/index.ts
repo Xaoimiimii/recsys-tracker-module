@@ -13,7 +13,7 @@ import { DEFAULT_API_URL, DEFAULT_TRACK_ENDPOINT_PATH } from './core/constants';
 import { PayloadBuilder } from './core/payload/payload-builder';
 import { EventDeduplicator } from './core/utils/event-deduplicator';
 import { LoopGuard } from './core/utils/loop-guard';
-import { NetworkPlugin } from './core/plugins/network-plugin';
+import { getNetworkObserver } from './core/network/network-observer';
 
 // RecSysTracker - Main SDK class
 export class RecSysTracker {
@@ -31,7 +31,6 @@ export class RecSysTracker {
   public payloadBuilder: PayloadBuilder;
   public eventDeduplicator: EventDeduplicator;
   public loopGuard: LoopGuard;
-  private pendingNetworkRules: Map<number, number> = new Map(); // ruleId -> timestamp
 
   constructor() {
     this.configLoader = new ConfigLoader();
@@ -44,37 +43,17 @@ export class RecSysTracker {
     this.loopGuard = new LoopGuard({ maxRequestsPerSecond: 5 });
   }
 
-  // Signal that a UI event (like Click) expects a network request for a specific rule
-  public addPendingNetworkRule(ruleId: number): void {
-    this.pendingNetworkRules.set(ruleId, Date.now());
-    // Auto-cleanup after 5 seconds to prevent stale flags
-    setTimeout(() => {
-      if (this.pendingNetworkRules.has(ruleId)) {
-        this.pendingNetworkRules.delete(ruleId);
-      }
-    }, 5000);
-  }
-
-  // Check if a rule is pending (without consuming it)
-  public checkPendingNetworkRule(ruleId: number): boolean {
-    return this.pendingNetworkRules.has(ruleId);
-  }
-
-  // Check if a rule is pending (signaled by UI) and consume it
-  public checkAndConsumePendingNetworkRule(ruleId: number): boolean {
-    if (this.pendingNetworkRules.has(ruleId)) {
-      this.pendingNetworkRules.delete(ruleId);
-      return true;
-    }
-    return false;
-  }
-
   // Khởi tạo SDK - tự động gọi khi tải script
   async init(): Promise<void> {
     return this.errorBoundary.executeAsync(async () => {
       if (this.isInitialized) {
         return;
       }
+
+      // 🔥 CRITICAL: Initialize Network Observer FIRST (before anything else)
+      const networkObserver = getNetworkObserver();
+      networkObserver.initialize(this.payloadBuilder.getRECManager());
+      console.log('[RecSysTracker] ✅ Network Observer initialized');
 
       // Load config từ window
       this.config = this.configLoader.loadFromWindow();
@@ -154,10 +133,9 @@ export class RecSysTracker {
       const pluginPromises: Promise<void>[] = [];
 
       if (hasClickRules && this.config) {
-        const currentConfig = this.config; // TypeScript sẽ hiểu currentConfig chắc chắn là TrackerConfig
         const clickPromise = import('./core/plugins/click-plugin').then(({ ClickPlugin }) => {
-          this.use(new ClickPlugin(currentConfig));
-          console.log('[RecSysTracker] Auto-registered ClickPlugin');
+          this.use(new ClickPlugin());
+          console.log('[RecSysTracker] Auto-registered ClickPlugin v2');
         });
         pluginPromises.push(clickPromise);
       }
@@ -165,15 +143,17 @@ export class RecSysTracker {
       if (hasRateRules) {
         const ratingPromise = import('./core/plugins/rating-plugin').then(({ RatingPlugin }) => {
           this.use(new RatingPlugin());
+          console.log('[RecSysTracker] Auto-registered RatingPlugin v2');
         });
         pluginPromises.push(ratingPromise);
       }
 
       if (hasReviewRules) {
-        const scrollPromise = import('./core/plugins/review-plugin').then(({ ReviewPlugin }) => {
+        const reviewPromise = import('./core/plugins/review-plugin').then(({ ReviewPlugin }) => {
           this.use(new ReviewPlugin());
+          console.log('[RecSysTracker] Auto-registered ReviewPlugin v2');
         });
-        pluginPromises.push(scrollPromise);
+        pluginPromises.push(reviewPromise);
       }
 
       if (hasPageViewRules) {
@@ -190,21 +170,10 @@ export class RecSysTracker {
         pluginPromises.push(scrollPromise);
       }
 
-      // Check for Network/RequestUrl mappings and initialize NetworkPlugin if needed
-      const hasNetworkMappings = this.config.trackingRules.some(rule =>
-        rule.payloadMappings?.some(mapping => {
-          const source = mapping.source?.toLowerCase();
-          return source === 'requestbody' ||
-            source === 'requesturl' ||
-            source === 'request_body' ||
-            source === 'request_url';
-        })
-      );
-
-      if (hasNetworkMappings) {
-        console.log('[RecSysTracker] Detected network mappings, initializing NetworkPlugin for data caching');
-        this.use(new NetworkPlugin());
-      }
+      // ❌ REMOVE NetworkPlugin auto-registration
+      // Network Observer is now initialized globally, not as a plugin
+      // ❌ REMOVE NetworkPlugin auto-registration
+      // Network Observer is now initialized globally, not as a plugin
 
       // Chờ tất cả plugin được đăng ký trước khi khởi động
       if (pluginPromises.length > 0) {
@@ -217,55 +186,88 @@ export class RecSysTracker {
     }
   }
 
-  // Track custom event
+  // Track custom event - NEW SIGNATURE (supports flexible payload)
   track(eventData: {
-    eventTypeId: number;
-    trackingRuleId: number;
-    userField: string;
-    userValue: string;
-    itemField: string;
-    itemValue: string;
-    ratingValue?: number;
-    ratingReview?: string;
+    eventType: number;
+    eventData: Record<string, any>;
+    timestamp: number;
+    url: string;
+    metadata?: Record<string, any>;
   }): void {
     this.errorBoundary.execute(() => {
       if (!this.isInitialized || !this.config) {
+        console.warn('[RecSysTracker] Cannot track: SDK not initialized');
         return;
       }
 
-      // Check for duplicate event (fingerprint-based deduplication)
-      const isDuplicate = this.eventDeduplicator.isDuplicate(
-        eventData.eventTypeId,
-        eventData.trackingRuleId,
-        eventData.userValue,
-        eventData.itemValue
-      );
+      // Extract required fields for deduplication
+      // Support both camelCase and PascalCase field names
+      const payload = eventData.eventData || {};
+      const ruleId = payload.ruleId || payload.RuleId;
+      
+      // User field - try multiple variants
+      const userValue = payload.userId || payload.UserId || 
+                       payload.anonymousId || payload.AnonymousId ||
+                       payload.username || payload.Username ||
+                       payload.userValue || payload.UserValue ||
+                       'guest';
+      
+      // Item field - try multiple variants
+      const itemValue = payload.itemId || payload.ItemId ||
+                       payload.itemTitle || payload.ItemTitle ||
+                       payload.itemValue || payload.ItemValue ||
+                       '';
+      
+      // Determine field names for tracking
+      let userField = 'userId';
+      if (payload.AnonymousId || payload.anonymousId) userField = 'AnonymousId';
+      else if (payload.UserId || payload.userId) userField = 'UserId';
+      else if (payload.Username || payload.username) userField = 'Username';
+      
+      let itemField = 'itemId';
+      if (payload.ItemId || payload.itemId) itemField = 'ItemId';
+      else if (payload.ItemTitle || payload.itemTitle) itemField = 'ItemTitle';
 
-      if (isDuplicate) {
-        console.log('[RecSysTracker] Duplicate event dropped:', {
-          eventTypeId: eventData.eventTypeId,
-          trackingRuleId: eventData.trackingRuleId,
-          userValue: eventData.userValue,
-          itemValue: eventData.itemValue
-        });
-        return; // Drop duplicate
+      // Check for duplicate event (fingerprint-based deduplication)
+      if (ruleId && userValue && itemValue) {
+        const isDuplicate = this.eventDeduplicator.isDuplicate(
+          eventData.eventType,
+          ruleId,
+          userValue,
+          itemValue
+        );
+
+        if (isDuplicate) {
+          console.log('[RecSysTracker] 🚫 Duplicate event dropped:', {
+            eventType: eventData.eventType,
+            ruleId: ruleId,
+            userValue: userValue,
+            itemValue: itemValue
+          });
+          return;
+        }
       }
 
       const trackedEvent: TrackedEvent = {
         id: this.metadataNormalizer.generateEventId(),
-        timestamp: new Date(),
-        eventTypeId: eventData.eventTypeId,
-        trackingRuleId: eventData.trackingRuleId,
+        timestamp: new Date(eventData.timestamp),
+        eventTypeId: eventData.eventType,
+        trackingRuleId: ruleId || 0,
         domainKey: this.config.domainKey,
-        userField: eventData.userField,
-        userValue: eventData.userValue,
-        itemField: eventData.itemField,
-        itemValue: eventData.itemValue,
-        ...(eventData.ratingValue !== undefined && { ratingValue: eventData.ratingValue }),
-        ...(eventData.ratingReview !== undefined && { ratingReview: eventData.ratingReview }),
+        userField: userField,
+        userValue: userValue,
+        itemField: itemField,
+        itemValue: itemValue,
+        ...(payload.ratingValue !== undefined && { 
+          ratingValue: payload.ratingValue 
+        }),
+        ...(payload.reviewText !== undefined && { 
+          ratingReview: payload.reviewText 
+        }),
       };
 
       this.eventBuffer.add(trackedEvent);
+      console.log('[RecSysTracker] ✅ Event tracked:', trackedEvent);
     }, 'track');
   }
 

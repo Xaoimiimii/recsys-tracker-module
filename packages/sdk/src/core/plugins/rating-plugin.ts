@@ -1,190 +1,236 @@
+/**
+ * RatingPlugin - UI Trigger Layer
+ * 
+ * TRÁCH NHIỆM:
+ * 1. Phát hiện hành vi rating (click, submit)
+ * 2. Match với tracking rules
+ * 3. Extract rating value/metadata
+ * 4. Gọi PayloadBuilder.handleTrigger()
+ * 5. KHÔNG bắt network (chỉ thu thập UI data)
+ * 
+ * FLOW:
+ * click/submit → detect rating → check rules → handleTrigger → DONE
+ */
+
 import { BasePlugin } from './base-plugin';
 import { RecSysTracker } from '../..';
-import { throttle } from './utils/plugin-utils';
+import { TrackingRule } from '../../types';
 import { RatingUtils } from './utils/rating-utils';
 
 export class RatingPlugin extends BasePlugin {
-    public readonly name = 'RatingPlugin';
+  public readonly name = 'RatingPlugin';
 
-    // Throttle for click (prevent spam)
-    private throttledClickHandler: (event: Event) => void;
-    // No throttle for submit
-    private submitHandler: (event: Event) => void;
+  private handleClickBound = this.handleClick.bind(this);
+  private handleSubmitBound = this.handleSubmit.bind(this);
+  
+  // Throttle to prevent spam
+  private lastTriggerTime = 0;
+  private readonly THROTTLE_MS = 500;
 
-    constructor() {
-        super();
-        this.throttledClickHandler = throttle(
-            this.wrapHandler(this.handleInteraction.bind(this, 'click'), 'handleClick'),
-            500
-        );
-        this.submitHandler = this.wrapHandler(this.handleInteraction.bind(this, 'submit'), 'handleSubmit');
+  public init(tracker: RecSysTracker): void {
+    this.errorBoundary.execute(() => {
+      super.init(tracker);
+      console.log('[RatingPlugin] Initialized');
+    }, 'RatingPlugin.init');
+  }
+
+  public start(): void {
+    this.errorBoundary.execute(() => {
+      if (!this.ensureInitialized()) return;
+
+      // Listen for both click and submit events
+      document.addEventListener('click', this.handleClickBound, true);
+      document.addEventListener('submit', this.handleSubmitBound, true);
+      
+      this.active = true;
+      console.log('[RatingPlugin] ✅ Started');
+    }, 'RatingPlugin.start');
+  }
+
+  public stop(): void {
+    this.errorBoundary.execute(() => {
+      if (this.tracker) {
+        document.removeEventListener('click', this.handleClickBound, true);
+        document.removeEventListener('submit', this.handleSubmitBound, true);
+      }
+      super.stop();
+      console.log('[RatingPlugin] Stopped');
+    }, 'RatingPlugin.stop');
+  }
+
+  /**
+   * Handle click event (interactive rating: stars, likes)
+   */
+  private handleClick(event: MouseEvent): void {
+    // Throttle
+    const now = Date.now();
+    if (now - this.lastTriggerTime < this.THROTTLE_MS) {
+      return;
     }
 
-    public init(tracker: RecSysTracker): void {
-        this.errorBoundary.execute(() => {
-            super.init(tracker);
-            console.log(`[RatingPlugin] initialized.`);
-        }, 'RatingPlugin.init');
-    }
+    this.handleInteraction(event, 'click');
+  }
 
-    public start(): void {
-        this.errorBoundary.execute(() => {
-            if (!this.ensureInitialized()) return;
+  /**
+   * Handle submit event (traditional forms)
+   */
+  private handleSubmit(event: Event): void {
+    this.handleInteraction(event, 'submit');
+  }
 
-            // 1. Listen for Click (Interactive Rating: Stars, Likes)
-            document.addEventListener("click", this.throttledClickHandler, true);
+  /**
+   * Main interaction handler
+   */
+  private handleInteraction(event: Event, eventType: 'click' | 'submit'): void {
+    if (!this.tracker) return;
 
-            // 2. Listen for Submit (Traditional Forms)
-            document.addEventListener("submit", this.submitHandler, true);
+    const target = event.target as Element;
+    if (!target) return;
 
-            this.active = true;
-            console.log('[RatingPlugin] Started successfully');
-        }, 'RatingPlugin.start');
-    }
+    // Get rating rules
+    const ratingEventId = this.tracker.getEventTypeId('Rating') || 2;
+    const config = this.tracker.getConfig();
+    const ratingRules = config?.trackingRules?.filter(r => r.eventTypeId === ratingEventId) || [];
 
-    public stop(): void {
-        this.errorBoundary.execute(() => {
-            document.removeEventListener("click", this.throttledClickHandler, true);
-            document.removeEventListener("submit", this.submitHandler, true);
-            super.stop();
-        }, 'RatingPlugin.stop');
-    }
+    if (ratingRules.length === 0) return;
 
-    private handleInteraction(eventType: 'click' | 'submit', event: Event): void {
-        console.log('[RatingPlugin] handleInteraction called, eventType:', eventType);
-        if (!this.tracker) {
-            console.warn('[RatingPlugin] No tracker');
-            return;
+    console.log(`[RatingPlugin] ⭐ ${eventType} detected, checking ${ratingRules.length} rules`);
+
+    // Check each rule
+    for (const rule of ratingRules) {
+      const matchedElement = this.findMatchingElement(target, rule);
+      
+      if (!matchedElement) {
+        continue;
+      }
+
+      console.log(`[RatingPlugin] ✅ Matched rule: "${rule.name}"`);
+
+      // Extract rating data
+      const container = this.findContainer(matchedElement);
+      const ratingData = RatingUtils.processRating(container, matchedElement, eventType);
+
+      console.log('[RatingPlugin] Rating data:', ratingData);
+
+      // Filter garbage (0 rating without review)
+      if (ratingData.originalValue === 0 && !ratingData.reviewText) {
+        console.warn('[RatingPlugin] Filtered: zero rating without review');
+        continue;
+      }
+
+      // Update throttle time
+      this.lastTriggerTime = Date.now();
+
+      // Create trigger context (include rating data)
+      const triggerContext = {
+        element: matchedElement,
+        target: matchedElement,
+        container: container,
+        eventType: 'rating',
+        ratingValue: ratingData.normalizedValue,
+        ratingRaw: ratingData.originalValue,
+        ratingMax: ratingData.maxValue,
+        reviewText: ratingData.reviewText,
+        ratingType: ratingData.type
+      };
+
+      // Delegate to PayloadBuilder
+      this.tracker.payloadBuilder.handleTrigger(
+        rule,
+        triggerContext,
+        (payload) => {
+          // Enrich payload with rating data
+          const enrichedPayload = {
+            ...payload,
+            ratingValue: ratingData.normalizedValue,
+            ratingRaw: ratingData.originalValue,
+            ratingMax: ratingData.maxValue,
+            reviewText: ratingData.reviewText || undefined
+          };
+          
+          // Dispatch event
+          this.dispatchEvent(enrichedPayload, rule, ratingEventId);
         }
+      );
 
-        // Trigger ID = 2 for Rating (Standard)
-        const eventId = this.tracker.getEventTypeId('Rating') || 2;
-        const config = this.tracker.getConfig();
-        const rules = config?.trackingRules?.filter(r => r.eventTypeId === eventId);
-
-        console.log('[RatingPlugin] Found', rules?.length || 0, 'rating rules');
-
-        if (!rules || rules.length === 0) {
-            console.warn('[RatingPlugin] No rating rules found');
-            return;
-        }
-
-        const target = event.target as Element;
-        if (!target) {
-            console.warn('[RatingPlugin] No target');
-            return;
-        }
-
-        console.log('[RatingPlugin] Target:', target);
-
-        try {
-            for (const rule of rules) {
-                const selector = rule.trackingTarget.value;
-                console.log('[RatingPlugin] Checking rule:', rule.name, 'selector:', selector);
-
-                if (!selector) {
-                    console.warn('[RatingPlugin] No selector for rule:', rule.name);
-                    continue;
-                }
-
-                const matchedElement = target.closest(selector);
-                console.log('[RatingPlugin] Matched element:', matchedElement);
-
-                // TEMPORARY: Flexible matching for CSS modules
-                let finalMatch = matchedElement;
-                if (!finalMatch && selector.startsWith('.')) {
-                    // Extract base class name (remove leading dot and everything after underscore)
-                    const baseClassName = selector.substring(1).split('_')[0];
-                    console.log('[RatingPlugin] Trying flexible match with base class:', baseClassName);
-
-                    // Try to find parent with matching base class
-                    let parent: Element | null = target;
-                    let depth = 0;
-                    while (parent && depth < 10) {
-                        const parentClassName = parent.className;
-                        if (typeof parentClassName === 'string' && parentClassName.includes(baseClassName)) {
-                            finalMatch = parent;
-                            console.log('[RatingPlugin] Flexible match found at depth', depth);
-                            break;
-                        }
-                        parent = parent.parentElement;
-                        depth++;
-                    }
-                }
-
-                if (finalMatch) {
-                    // Determine Container
-                    const container = finalMatch.closest('form') ||
-                        finalMatch.closest('.rating-container') ||
-                        finalMatch.closest('.review-box') ||
-                        finalMatch.parentElement ||
-                        document.body;
-
-                    // Process Rating
-                    const result = RatingUtils.processRating(container, finalMatch, eventType);
-                    console.log('[RatingPlugin] Rating result:', result);
-
-                    // Filter garbage
-                    if (result.originalValue === 0 && !result.reviewText) {
-                        console.warn('[RatingPlugin] Filtered as garbage (value=0, no review)');
-                        continue;
-                    }
-
-                    console.log(`[RatingPlugin] 🎯 Captured [${eventType}]: Raw=${result.originalValue}/${result.maxValue} -> Norm=${result.normalizedValue}`);
-
-                    // DUPLICATE PREVENTION & NETWORK DATA STRATEGY
-                    // Check if this rule requires network data
-                    let requiresNetworkData = false;
-                    if (rule.payloadMappings) {
-                        requiresNetworkData = rule.payloadMappings.some((m: any) => {
-                            const s = (m.source || '').toLowerCase();
-                            return [
-                                'requestbody',
-                                'responsebody',
-                                'request_body',
-                                'response_body',
-                                'requesturl',
-                                'request_url'
-                            ].includes(s);
-                        });
-                    }
-
-                    // NEW FLOW: Check if rule requires network data
-                    if (requiresNetworkData) {
-                        console.log('[RatingPlugin] ⏳ Rule requires network data. Starting collection for rule:', rule.id);
-                        
-                        // NEW FLOW: Gọi startCollection với đầy đủ context
-                        if (this.tracker && this.tracker.payloadBuilder) {
-                            const context = {
-                                element: finalMatch,
-                                eventType: 'rating',
-                                triggerTimestamp: Date.now(),
-                                ratingValue: result.normalizedValue
-                            };
-                            
-                            this.tracker.payloadBuilder.startCollection(
-                                context,
-                                rule,
-                                (finalPayload: Record<string, any>) => {
-                                    console.log('[RatingPlugin] ✅ Collection complete, tracking event with payload:', finalPayload);
-                                    // Sau khi có đủ dữ liệu → Track event
-                                    this.buildAndTrack(finalMatch, rule, eventId);
-                                }
-                            );
-                        } else {
-                            console.warn('[RatingPlugin] Tracker or PayloadBuilder not available');
-                        }
-                        break;
-                    }
-
-                    // Không cần network data → Track ngay
-                    console.log('[RatingPlugin] No network data required, tracking immediately');
-                    this.buildAndTrack(finalMatch, rule, eventId);
-                    break;
-                }
-            }
-        } catch (error) {
-            console.warn('[RatingPlugin] Error processing interaction:', error);
-        }
+      // Only track first matching rule
+      return;
     }
+  }
+
+  /**
+   * Find element matching rule selector
+   */
+  private findMatchingElement(target: Element, rule: TrackingRule): Element | null {
+    const selector = rule.trackingTarget?.value;
+    if (!selector) return null;
+
+    try {
+      // Try closest match
+      let match = target.closest(selector);
+      
+      // Flexible matching for CSS modules
+      if (!match && selector.startsWith('.')) {
+        const baseClassName = selector.substring(1).split('_')[0];
+        let parent: Element | null = target;
+        let depth = 0;
+
+        while (parent && depth < 10) {
+          const className = parent.className;
+          if (typeof className === 'string' && className.includes(baseClassName)) {
+            match = parent;
+            break;
+          }
+          parent = parent.parentElement;
+          depth++;
+        }
+      }
+
+      return match;
+    } catch (e) {
+      console.error('[RatingPlugin] Selector error:', e);
+      return null;
+    }
+  }
+
+  /**
+   * Find rating container (form, rating-box, etc.)
+   */
+  private findContainer(element: Element): Element {
+    // Try to find form
+    const form = element.closest('form');
+    if (form) return form;
+
+    // Try to find rating container
+    const ratingContainer = element.closest('.rating-container') ||
+                           element.closest('.rating-box') ||
+                           element.closest('.review-box') ||
+                           element.closest('[data-rating]');
+    
+    if (ratingContainer) return ratingContainer;
+
+    // Fallback to parent or body
+    return element.parentElement || document.body;
+  }
+
+  /**
+   * Dispatch tracking event
+   */
+  private dispatchEvent(payload: Record<string, any>, rule: TrackingRule, eventId: number): void {
+    if (!this.tracker) return;
+
+    console.log('[RatingPlugin] 📤 Dispatching event with payload:', payload);
+
+    this.tracker.track({
+      eventType: eventId,
+      eventData: payload,
+      timestamp: Date.now(),
+      url: window.location.href,
+      metadata: {
+        ruleId: rule.id,
+        ruleName: rule.name,
+        plugin: this.name
+      }
+    });
+  }
 }

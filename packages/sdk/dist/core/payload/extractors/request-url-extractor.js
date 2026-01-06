@@ -137,11 +137,14 @@ export class RequestUrlExtractor {
      * Enable network tracking
      */
     enableTracking() {
-        if (this.isTrackingActive)
+        if (this.isTrackingActive) {
+            console.log('[RequestUrlExtractor] Already tracking');
             return;
+        }
         this.hookXhr();
         this.hookFetch();
         this.isTrackingActive = true;
+        console.log('[RequestUrlExtractor] ✅ Tracking enabled - will capture network requests');
     }
     /**
      * Disable network tracking
@@ -215,6 +218,7 @@ export class RequestUrlExtractor {
             method: normalizedMethod,
             timestamp: Date.now()
         });
+        console.log('[RequestUrlExtractor] 📝 Captured request:', normalizedMethod, url, '| History size:', this.history.length);
         if (this.history.length > this.MAX_HISTORY) {
             this.history.shift();
         }
