@@ -1,6 +1,6 @@
-import { 
-  RecommendationRequest, 
-  RecommendationResponse, 
+import {
+  RecommendationRequest,
+  RecommendationResponse,
   RecommendationItem,
   RecommendationOptions,
   UserField
@@ -125,7 +125,7 @@ export class RecommendationFetcher {
       domainItemId: item.DomainItemId,
       title: item.Title,
       description: item.Description,
-      img: PlaceholderImage.getDefaultRecommendation(), // Use placeholder
+      img: item.ImageUrl || PlaceholderImage.getDefaultRecommendation(),
     }));
   }
 
@@ -135,17 +135,17 @@ export class RecommendationFetcher {
    */
   private getOrCreateAnonymousId(): string {
     const storageKey = 'recsys_anonymous_id';
-    
+
     try {
       // Try to get existing ID from localStorage
       let anonymousId = localStorage.getItem(storageKey);
-      
+
       if (!anonymousId) {
         // Generate new anonymous ID
         anonymousId = `anon_${Date.now()}_${this.generateRandomString(8)}`;
         localStorage.setItem(storageKey, anonymousId);
       }
-      
+
       return anonymousId;
     } catch (error) {
       // Fallback if localStorage not available
@@ -184,7 +184,7 @@ export class RecommendationFetcher {
    */
   private getFromCache(key: string): RecommendationItem[] | null {
     const cached = this.cache.get(key);
-    
+
     if (!cached) {
       return null;
     }

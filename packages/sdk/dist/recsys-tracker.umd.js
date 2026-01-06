@@ -1863,7 +1863,7 @@
                 domainItemId: item.DomainItemId,
                 title: item.Title,
                 description: item.Description,
-                img: PlaceholderImage.getDefaultRecommendation(), // Use placeholder
+                img: item.ImageUrl || PlaceholderImage.getDefaultRecommendation(), // Use ImageUrl or fallback to placeholder
             }));
         }
         /**

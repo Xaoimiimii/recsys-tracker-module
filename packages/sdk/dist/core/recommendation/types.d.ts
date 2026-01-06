@@ -10,6 +10,7 @@ export interface RecommendationResponse {
     DomainItemId: string;
     Title: string;
     Description: string;
+    ImageUrl: string | null;
 }
 export interface RecommendationItem {
     id: number;
