@@ -1,44 +1,92 @@
-import { NetworkExtractor } from "./extractors/network-extractor";
-import { TrackingRule } from "../../types";
+/**
+ * PayloadBuilder - The Orchestrator
+ *
+ * TRÁCH NHIỆM:
+ * 1. Điều phối toàn bộ quá trình build payload
+ * 2. Biết rule cần field nào
+ * 3. Biết field đó lấy từ đâu (sync hay async)
+ * 4. Là NƠI DUY NHẤT chốt payload
+ * 5. Quản lý RuleExecutionContext
+ *
+ * FLOW:
+ * 1. Plugin trigger → gọi handleTrigger()
+ * 2. Phân loại sync/async sources
+ * 3. Resolve sync sources ngay
+ * 4. Đăng ký async sources với NetworkObserver
+ * 5. Khi đủ dữ liệu → dispatch event
+ */
+import { TrackingRule } from '../../types';
+import { RuleExecutionContextManager } from '../execution/rule-execution-context';
+/**
+ * PayloadBuilder v2 - Full Orchestrator
+ */
 export declare class PayloadBuilder {
-    private extractors;
-    private elementExtractor;
-    private networkExtractor;
-    private storageExtractor;
-    private urlExtractor;
-    private requestUrlExtractor;
-    private trackerConfig;
+    private recManager;
+    private networkObserver;
     constructor();
-    private registerExtractors;
-    build(context: any, rule: TrackingRule): Record<string, any>;
     /**
-     * Set tracker configuration and check if network tracking should be enabled
+     * Main entry point - được gọi bởi tracking plugins
+     *
+     * @param rule - Tracking rule được trigger
+     * @param triggerContext - Context của trigger (element, eventType, etc.)
+     * @param onComplete - Callback khi payload sẵn sàng để dispatch
      */
-    setConfig(config: any): void;
+    handleTrigger(rule: TrackingRule, triggerContext: any, onComplete: (payload: Record<string, any>) => void): void;
     /**
-     * Check if config has network rules and enable tracking if needed
+     * Phân loại mappings thành sync và async
      */
-    private checkAndEnableNetworkTracking;
+    private classifyMappings;
     /**
-     * Check if config has request url rules and enable tracking if needed
+     * Xác định source type
      */
-    private checkAndEnableRequestUrlTracking;
+    private getSourceType;
     /**
-     * Enable network tracking
+     * Resolve tất cả sync mappings
      */
-    enableNetworkTracking(): void;
+    private resolveSyncMappings;
     /**
-     * Disable network tracking
+     * Resolve một sync mapping
      */
-    disableNetworkTracking(): void;
+    private resolveSyncMapping;
     /**
-     * Check if network tracking is currently active
+     * Extract từ element
      */
-    isNetworkTrackingActive(): boolean;
+    private extractFromElement;
     /**
-     * Get the network extractor instance for advanced usage
+     * Get value từ element (text, value, attribute)
      */
-    getNetworkExtractor(): NetworkExtractor;
-    private isValid;
+    private getElementValue;
+    /**
+     * Extract từ cookie
+     */
+    private extractFromCookie;
+    /**
+     * Extract từ localStorage
+     */
+    private extractFromLocalStorage;
+    /**
+     * Extract từ sessionStorage
+     */
+    private extractFromSessionStorage;
+    /**
+     * Extract từ page URL
+     */
+    private extractFromPageUrl;
+    /**
+     * Extract từ LoginDetector (custom integration)
+     */
+    private extractFromLoginDetector;
+    /**
+     * Check if value is valid (not null, undefined, empty string)
+     */
+    private isValidValue;
+    /**
+     * Get REC manager (for external access if needed)
+     */
+    getRECManager(): RuleExecutionContextManager;
+    /**
+     * Get active contexts count (for debugging)
+     */
+    getActiveContextsCount(): number;
 }
 //# sourceMappingURL=payload-builder.d.ts.map

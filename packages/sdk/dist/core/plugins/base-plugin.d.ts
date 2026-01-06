@@ -31,8 +31,18 @@ export declare abstract class BasePlugin implements IPlugin {
         value: string;
     };
     /**
+     * NEW: Track directly with pre-collected payload from startCollection
+     * Used after async data collection is complete
+     */
+    protected trackWithPayload(collectedData: Record<string, any>, rule: any, eventId: number): void;
+    /**
+     * DEPRECATED: Legacy method - not used by v2 plugins
+     * V2 plugins call PayloadBuilder.handleTrigger() directly
+     *
      * Phương thức xây dựng và theo dõi payload
-     * Extraction → identity resolution → payload construction → tracking
+     * New Flow: Plugin detects trigger → calls payloadBuilder with callback →
+     * payloadBuilder processes and calls back → buildAndTrack constructs and tracks →
+     * add to buffer → event dispatch
      *
      * @param context - Context for extraction (HTMLElement, NetworkContext, etc.)
      * @param rule - Tracking rule with payload mappings

@@ -237,33 +237,22 @@ export class ScrollPlugin extends BasePlugin {
         });
     }
     sendScrollEvent(depth) {
-        var _a;
         if (!this.tracker)
             return;
         const rule = this.activeRule || this.createDefaultRule('default-scroll', 'Default Scroll');
         const currentActiveSeconds = this.calculateActiveTime();
-        // Extract via PayloadBuilder
-        const extracted = this.tracker.payloadBuilder.build(this.currentItemContext, rule);
-        // Build Payload
-        const payload = {
-            eventTypeId: rule.eventTypeId || 4, // Default Scroll ID
-            trackingRuleId: rule.id,
-            userField: 'userId',
-            userValue: extracted['userId'] || extracted['User'] || '',
-            itemField: 'itemId',
-            itemValue: extracted['itemId'] || extracted['Item'] || ((_a = this.currentItemContext) === null || _a === void 0 ? void 0 : _a.id) || 'N/A',
-            // Metadata
+        // Use buildAndTrack (legacy fallback)
+        const context = {
+            ...this.currentItemContext,
             metadata: {
                 depth_percentage: depth,
                 time_on_page: currentActiveSeconds,
-                url: window.location.href,
-                ...extracted // Merge extracted
+                url: window.location.href
             }
         };
-        this.tracker.track(payload);
+        this.buildAndTrack(context, rule, rule.eventTypeId || 4);
     }
     handleUnload() {
-        var _a;
         if (!this.tracker)
             return;
         if (this.isTabVisible)
@@ -274,23 +263,18 @@ export class ScrollPlugin extends BasePlugin {
         const rule = this.activeRule || this.createDefaultRule('summary', 'Page Summary');
         if (!this.currentItemContext)
             this.currentItemContext = this.createSyntheticItem();
-        // Extract
-        const extracted = this.tracker.payloadBuilder.build(this.currentItemContext, rule);
-        const payload = {
-            eventTypeId: rule.eventTypeId || 4,
-            trackingRuleId: rule.id,
-            userField: 'userId',
-            userValue: extracted['userId'] || '',
-            itemField: 'itemId',
-            itemValue: extracted['itemId'] || ((_a = this.currentItemContext) === null || _a === void 0 ? void 0 : _a.id) || 'N/A',
+        // Use buildAndTrack (legacy fallback)
+        const context = {
+            ...this.currentItemContext,
             metadata: {
+                total_active_time: finalTime,
+                url: window.location.href,
                 max_scroll_depth: this.maxScrollDepth,
-                total_time_on_page: finalTime,
                 is_bounce: this.maxScrollDepth < 25 && finalTime < 5,
                 event: 'page_summary'
             }
         };
-        this.tracker.track(payload);
+        this.buildAndTrack(context, rule, rule.eventTypeId || 4);
     }
     handleVisibilityChange() {
         if (document.visibilityState === 'hidden') {

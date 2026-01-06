@@ -96,7 +96,7 @@ export class RecommendationFetcher {
             domainItemId: item.DomainItemId,
             title: item.Title,
             description: item.Description,
-            img: item.ImageUrl || PlaceholderImage.getDefaultRecommendation(), // Use ImageUrl or fallback to placeholder
+            img: item.ImageUrl || PlaceholderImage.getDefaultRecommendation(),
         }));
     }
     /**

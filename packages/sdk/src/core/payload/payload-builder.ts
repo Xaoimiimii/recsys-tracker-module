@@ -1,173 +1,404 @@
-import { IPayloadExtractor } from "./extractors/payload-extractor.interface";
-import { ElementExtractor } from "./extractors/element-extractor";
-import { NetworkExtractor } from "./extractors/network-extractor";
-import { StorageExtractor } from "./extractors/storage-extractor";
-import { UrlExtractor } from "./extractors/url-extractor";
-import { RequestUrlExtractor } from "./extractors/request-url-extractor";
-import { TrackingRule, PayloadMapping } from "../../types";
+/**
+ * PayloadBuilder - The Orchestrator
+ * 
+ * TRÁCH NHIỆM:
+ * 1. Điều phối toàn bộ quá trình build payload
+ * 2. Biết rule cần field nào
+ * 3. Biết field đó lấy từ đâu (sync hay async)
+ * 4. Là NƠI DUY NHẤT chốt payload
+ * 5. Quản lý RuleExecutionContext
+ * 
+ * FLOW:
+ * 1. Plugin trigger → gọi handleTrigger()
+ * 2. Phân loại sync/async sources
+ * 3. Resolve sync sources ngay
+ * 4. Đăng ký async sources với NetworkObserver
+ * 5. Khi đủ dữ liệu → dispatch event
+ */
 
+import { TrackingRule, PayloadMapping } from '../../types';
+import { RuleExecutionContextManager } from '../execution/rule-execution-context';
+import { NetworkObserver, getNetworkObserver } from '../network/network-observer';
+
+/**
+ * Các source types
+ */
+enum SourceType {
+  SYNC,   // Cookie, localStorage, element, page url - resolve ngay
+  ASYNC   // Network data - cần chờ request
+}
+
+/**
+ * PayloadBuilder v2 - Full Orchestrator
+ */
 export class PayloadBuilder {
-    private extractors: Map<string, IPayloadExtractor> = new Map();
-    private elementExtractor: ElementExtractor;
-    private networkExtractor: NetworkExtractor;
-    private storageExtractor: StorageExtractor;
-    private urlExtractor: UrlExtractor;
-    private requestUrlExtractor: RequestUrlExtractor;
-    private trackerConfig: any = null;
+  private recManager: RuleExecutionContextManager;
+  private networkObserver: NetworkObserver;
 
-    constructor() {
-        this.elementExtractor = new ElementExtractor();
-        this.networkExtractor = new NetworkExtractor();
-        this.storageExtractor = new StorageExtractor();
-        this.urlExtractor = new UrlExtractor();
-        this.requestUrlExtractor = new RequestUrlExtractor();
+  constructor() {
+    this.recManager = new RuleExecutionContextManager();
+    this.networkObserver = getNetworkObserver();
+  }
 
-        this.registerExtractors();
+  /**
+   * Main entry point - được gọi bởi tracking plugins
+   * 
+   * @param rule - Tracking rule được trigger
+   * @param triggerContext - Context của trigger (element, eventType, etc.)
+   * @param onComplete - Callback khi payload sẵn sàng để dispatch
+   */
+  handleTrigger(
+    rule: TrackingRule,
+    triggerContext: any,
+    onComplete: (payload: Record<string, any>) => void
+  ): void {
+    console.log(`[PayloadBuilder] Handle trigger for rule: ${rule.name} (${rule.id})`);
+
+    // 1. Phân tích mappings
+    const { syncMappings, asyncMappings } = this.classifyMappings(rule);
+    
+    console.log(`[PayloadBuilder] Sync mappings: ${syncMappings.length}, Async: ${asyncMappings.length}`);
+
+    // 2. Nếu không có async → resolve ngay
+    if (asyncMappings.length === 0) {
+      const payload = this.resolveSyncMappings(syncMappings, triggerContext, rule);
+      console.log('[PayloadBuilder] ✅ No async data needed, payload ready:', payload);
+      onComplete(payload);
+      return;
     }
 
-    private registerExtractors(): void {
-        // Element
-        this.extractors.set('element', this.elementExtractor);
+    // 3. Có async data → tạo REC
+    const requiredFields = asyncMappings.map(m => m.field);
+    
+    const context = this.recManager.createContext(
+      rule.id,
+      requiredFields,
+      triggerContext,
+      (collectedData) => {
+        // Khi async data đã thu thập xong
+        const syncPayload = this.resolveSyncMappings(syncMappings, triggerContext, rule);
+        const finalPayload = { ...syncPayload, ...collectedData };
+        
+        console.log('[PayloadBuilder] ✅ All data collected, final payload:', finalPayload);
+        onComplete(finalPayload);
+      }
+    );
 
-        // Network
-        this.extractors.set('requestbody', this.networkExtractor);
-
-        // Request Url
-        this.extractors.set('requesturl', this.requestUrlExtractor);
-
-        // Url
-        this.extractors.set('url', this.urlExtractor);
-
-        // Storage
-        this.extractors.set('cookie', this.storageExtractor);
-        this.extractors.set('localstorage', this.storageExtractor);
-        this.extractors.set('sessionstorage', this.storageExtractor);
+    // 4. Resolve sync data ngay và collect vào REC
+    const syncPayload = this.resolveSyncMappings(syncMappings, triggerContext, rule);
+    for (const [field, value] of Object.entries(syncPayload)) {
+      this.recManager.collectField(context.executionId, field, value);
     }
 
-    // Tạo payload dựa trên rule và context
-    public build(context: any, rule: TrackingRule): Record<string, any> {
-        const payload: Record<string, any> = {};
+    // 5. Register rule với NetworkObserver để bắt async data
+    this.networkObserver.registerRule(rule);
+    
+    console.log(`[PayloadBuilder] ⏳ Waiting for network data...`);
+  }
 
-        if (!rule || !rule.payloadMappings || rule.payloadMappings.length === 0) {
-            return payload;
-        }
+  /**
+   * Phân loại mappings thành sync và async
+   */
+  private classifyMappings(rule: TrackingRule): {
+    syncMappings: PayloadMapping[];
+    asyncMappings: PayloadMapping[];
+  } {
+    const syncMappings: PayloadMapping[] = [];
+    const asyncMappings: PayloadMapping[] = [];
 
-        for (const mapping of rule.payloadMappings as PayloadMapping[]) {
-            const source = (mapping.source || '').toLowerCase();
-            let val = null;
-
-            // Chọn Extractor dựa trên source
-            const extractor = this.extractors.get(source);
-            if (extractor) {
-                val = extractor.extract(mapping, context);
-            }
-
-            if (this.isValid(val)) {
-                payload[mapping.field] = val;
-            }
-        }
-
-        return payload;
+    if (!rule.payloadMappings) {
+      return { syncMappings, asyncMappings };
     }
 
-    /**
-     * Set tracker configuration and check if network tracking should be enabled
-     */
-    public setConfig(config: any): void {
-        this.trackerConfig = config;
-        this.checkAndEnableNetworkTracking();
-        this.checkAndEnableRequestUrlTracking();
+    for (const mapping of rule.payloadMappings) {
+      const sourceType = this.getSourceType(mapping.source);
+      
+      if (sourceType === SourceType.SYNC) {
+        syncMappings.push(mapping);
+      } else {
+        asyncMappings.push(mapping);
+      }
     }
 
-    /**
-     * Check if config has network rules and enable tracking if needed
-     */
-    private checkAndEnableNetworkTracking(): void {
-        if (!this.trackerConfig || !this.trackerConfig.trackingRules) return;
+    return { syncMappings, asyncMappings };
+  }
 
-        const hasNetworkRules = this.trackerConfig.trackingRules.some((rule: any) =>
-            rule.payloadMappings && rule.payloadMappings.some((m: any) => {
-                const source = (m.source || '').toLowerCase();
-                // Hỗ trợ cả RequestBody và request_body format
-                return source === 'request_body' || source === 'requestbody' || 
-                       source === 'response_body' || source === 'responsebody';
-            })
-        );
+  /**
+   * Xác định source type
+   */
+  private getSourceType(source: string): SourceType {
+    const s = (source || '').toLowerCase();
+    
+    const asyncSources = [
+      'requestbody',
+      'request_body',
+      'responsebody',
+      'response_body',
+      'requesturl',
+      'request_url'
+    ];
 
-        if (hasNetworkRules && !this.networkExtractor.isTracking()) {
-            this.enableNetworkTracking();
-        } else if (!hasNetworkRules && this.networkExtractor.isTracking()) {
-            this.disableNetworkTracking();
-        }
+    return asyncSources.includes(s) ? SourceType.ASYNC : SourceType.SYNC;
+  }
+
+  /**
+   * Resolve tất cả sync mappings
+   */
+  private resolveSyncMappings(
+    mappings: PayloadMapping[],
+    context: any,
+    rule: TrackingRule
+  ): Record<string, any> {
+    const payload: Record<string, any> = {
+      ruleId: rule.id,
+      eventTypeId: rule.eventTypeId
+    };
+
+    for (const mapping of mappings) {
+      const value = this.resolveSyncMapping(mapping, context);
+      
+      if (this.isValidValue(value)) {
+        payload[mapping.field] = value;
+      }
     }
 
-    /**
-     * Check if config has request url rules and enable tracking if needed
-     */
-    private checkAndEnableRequestUrlTracking(): void {
-        if (!this.trackerConfig || !this.trackerConfig.trackingRules) return;
+    return payload;
+  }
 
-        const hasRequestUrlRules = this.trackerConfig.trackingRules.some((rule: any) =>
-            rule.payloadMappings && rule.payloadMappings.some((m: any) => {
-                const source = (m.source || '').toLowerCase();
-                // Hỗ trợ cả RequestUrl và request_url format
-                return source === 'request_url' || source === 'requesturl';
-            })
-        );
+  /**
+   * Resolve một sync mapping
+   */
+  private resolveSyncMapping(mapping: PayloadMapping, context: any): any {
+    const source = (mapping.source || '').toLowerCase();
 
-        if (hasRequestUrlRules) {
-            this.requestUrlExtractor.enableTracking();
-        } else {
-            this.requestUrlExtractor.disableTracking();
-        }
+    switch (source) {
+      case 'element':
+        return this.extractFromElement(mapping, context);
+      
+      case 'cookie':
+        return this.extractFromCookie(mapping);
+      
+      case 'localstorage':
+        return this.extractFromLocalStorage(mapping);
+      
+      case 'sessionstorage':
+        return this.extractFromSessionStorage(mapping);
+      
+      case 'url':
+      case 'pageurl':
+      case 'page_url':
+        return this.extractFromPageUrl(mapping);
+      
+      case 'static':
+        return mapping.value;
+      
+      case 'login_detector':
+        return this.extractFromLoginDetector(mapping);
+      
+      default:
+        console.warn(`[PayloadBuilder] Unknown sync source: ${source}`);
+        return null;
+    }
+  }
+
+  /**
+   * Extract từ element
+   */
+  private extractFromElement(mapping: PayloadMapping, context: any): any {
+    const element = context.element || context.target;
+    if (!element) {
+      console.warn('[PayloadBuilder] No element in context');
+      return null;
     }
 
-    /**
-     * Enable network tracking
-     */
-    public enableNetworkTracking(): void {
-        if (!this.trackerConfig) {
-            console.warn('[PayloadBuilder] Cannot enable network tracking: config not set');
-            return;
-        }
-
-        this.networkExtractor.enableTracking(
-            this.trackerConfig,
-            (rule, extractedData, context) => {
-                // Callback when network request matches a rule
-                // This can be extended to dispatch events or perform other actions
-                console.log('[PayloadBuilder] Network match:', {
-                    rule: rule.name,
-                    data: extractedData,
-                    url: context.url,
-                    method: context.method
-                });
-            }
-        );
+    const selector = mapping.value;
+    if (!selector) {
+      return null;
     }
 
-    /**
-     * Disable network tracking
-     */
-    public disableNetworkTracking(): void {
-        this.networkExtractor.disableTracking();
+    try {
+      // Strategy 1: Find trong scope của element
+      let targetElement = element.querySelector(selector);
+      
+      // Strategy 2: Closest match
+      if (!targetElement) {
+        targetElement = element.closest(selector);
+      }
+      
+      // Strategy 3: Search trong form parent
+      if (!targetElement && element.form) {
+        targetElement = element.form.querySelector(selector);
+      }
+
+      if (!targetElement) {
+        console.warn(`[PayloadBuilder] Element not found: ${selector}`);
+        return null;
+      }
+
+      // Extract value từ element
+      return this.getElementValue(targetElement);
+    } catch (error) {
+      console.error('[PayloadBuilder] Error extracting from element:', error);
+      return null;
+    }
+  }
+
+  /**
+   * Get value từ element (text, value, attribute)
+   */
+  private getElementValue(element: Element): any {
+    // Input elements
+    if (element instanceof HTMLInputElement) {
+      if (element.type === 'checkbox' || element.type === 'radio') {
+        return element.checked;
+      }
+      return element.value;
     }
 
-    /**
-     * Check if network tracking is currently active
-     */
-    public isNetworkTrackingActive(): boolean {
-        return this.networkExtractor.isTracking();
+    // Textarea
+    if (element instanceof HTMLTextAreaElement) {
+      return element.value;
     }
 
-    /**
-     * Get the network extractor instance for advanced usage
-     */
-    public getNetworkExtractor(): NetworkExtractor {
-        return this.networkExtractor;
+    // Select
+    if (element instanceof HTMLSelectElement) {
+      return element.value;
     }
 
-    private isValid(val: any): boolean {
-        return val !== null && val !== undefined && val !== '';
+    // Data attributes
+    if (element.hasAttribute('data-value')) {
+      return element.getAttribute('data-value');
     }
+    if (element.hasAttribute('data-id')) {
+      return element.getAttribute('data-id');
+    }
+
+    // Text content
+    return element.textContent?.trim() || null;
+  }
+
+  /**
+   * Extract từ cookie
+   */
+  private extractFromCookie(mapping: PayloadMapping): any {
+    const cookieName = mapping.value;
+    if (!cookieName) return null;
+
+    const cookies = document.cookie.split(';');
+    for (const cookie of cookies) {
+      const [name, value] = cookie.split('=').map(s => s.trim());
+      if (name === cookieName) {
+        return decodeURIComponent(value);
+      }
+    }
+    
+    return null;
+  }
+
+  /**
+   * Extract từ localStorage
+   */
+  private extractFromLocalStorage(mapping: PayloadMapping): any {
+    const key = mapping.value;
+    if (!key) return null;
+
+    try {
+      const value = localStorage.getItem(key);
+      if (value === null) return null;
+      
+      // Try parse JSON
+      try {
+        return JSON.parse(value);
+      } catch {
+        return value;
+      }
+    } catch (error) {
+      console.warn('[PayloadBuilder] Error reading localStorage:', error);
+      return null;
+    }
+  }
+
+  /**
+   * Extract từ sessionStorage
+   */
+  private extractFromSessionStorage(mapping: PayloadMapping): any {
+    const key = mapping.value;
+    if (!key) return null;
+
+    try {
+      const value = sessionStorage.getItem(key);
+      if (value === null) return null;
+      
+      // Try parse JSON
+      try {
+        return JSON.parse(value);
+      } catch {
+        return value;
+      }
+    } catch (error) {
+      console.warn('[PayloadBuilder] Error reading sessionStorage:', error);
+      return null;
+    }
+  }
+
+  /**
+   * Extract từ page URL
+   */
+  private extractFromPageUrl(mapping: PayloadMapping): any {
+    const url = new URL(window.location.href);
+    const urlPart = (mapping.urlPart || '').toLowerCase();
+
+    switch (urlPart) {
+      case 'query':
+      case 'queryparam':
+        const paramName = mapping.urlPartValue || mapping.value;
+        return url.searchParams.get(paramName);
+      
+      case 'path':
+        return url.pathname;
+      
+      case 'hash':
+        return url.hash.substring(1);
+      
+      case 'hostname':
+        return url.hostname;
+      
+      default:
+        return url.href;
+    }
+  }
+
+  /**
+   * Extract từ LoginDetector (custom integration)
+   */
+  private extractFromLoginDetector(_mapping: PayloadMapping): any {
+    try {
+      // @ts-ignore
+      const user = window.LoginDetector?.getCurrentUser();
+      return user || 'guest';
+    } catch {
+      return 'guest';
+    }
+  }
+
+  /**
+   * Check if value is valid (not null, undefined, empty string)
+   */
+  private isValidValue(value: any): boolean {
+    return value !== null && value !== undefined && value !== '';
+  }
+
+  /**
+   * Get REC manager (for external access if needed)
+   */
+  getRECManager(): RuleExecutionContextManager {
+    return this.recManager;
+  }
+
+  /**
+   * Get active contexts count (for debugging)
+   */
+  getActiveContextsCount(): number {
+    return this.recManager.getActiveCount();
+  }
 }

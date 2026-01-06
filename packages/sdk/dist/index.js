@@ -1,10 +1,10 @@
 import { ConfigLoader, ErrorBoundary, EventBuffer, EventDispatcher, MetadataNormalizer, DisplayManager, PluginManager } from './core';
 import { DEFAULT_API_URL, DEFAULT_TRACK_ENDPOINT_PATH } from './core/constants';
 import { PayloadBuilder } from './core/payload/payload-builder';
-import { NetworkPlugin } from './core/plugins/network-plugin';
 import { EventDeduplicator } from './core/utils/event-deduplicator';
 import { LoopGuard } from './core/utils/loop-guard';
-import { getOrCreateAnonymousId, saveCachedUserInfo, getCachedUserInfo, log } from './core/plugins/utils/plugin-utils';
+import { getNetworkObserver } from './core/network/network-observer';
+import { getOrCreateAnonymousId } from './core/plugins/utils/plugin-utils';
 // RecSysTracker - Main SDK class
 export class RecSysTracker {
     constructor() {
@@ -29,6 +29,10 @@ export class RecSysTracker {
             if (this.isInitialized) {
                 return;
             }
+            // 🔥 CRITICAL: Initialize Network Observer FIRST (before anything else)
+            const networkObserver = getNetworkObserver();
+            networkObserver.initialize(this.payloadBuilder.getRECManager());
+            console.log('[RecSysTracker] ✅ Network Observer initialized');
             // Load config từ window
             this.config = this.configLoader.loadFromWindow();
             if (!this.config) {
@@ -78,12 +82,12 @@ export class RecSysTracker {
         if (!((_a = this.config) === null || _a === void 0 ? void 0 : _a.trackingRules) || this.config.trackingRules.length === 0) {
             return;
         }
-        // Get dynamic IDs
-        const clickId = this.getEventTypeId('Click');
-        const rateId = this.getEventTypeId('Rating');
-        const reviewId = this.getEventTypeId('Review');
-        const pageViewId = this.getEventTypeId('Page View');
-        const scrollId = this.getEventTypeId('Scroll');
+        // Get dynamic IDs with fallbacks
+        const clickId = this.getEventTypeId('Click') || 1;
+        const rateId = this.getEventTypeId('Rating') || 2;
+        const reviewId = this.getEventTypeId('Review') || 3;
+        const pageViewId = this.getEventTypeId('Page View') || 4;
+        const scrollId = this.getEventTypeId('Scroll') || 6;
         // Check specific rules (chỉ check nếu tìm thấy ID)
         const hasClickRules = clickId ? this.config.trackingRules.some(rule => rule.eventTypeId === clickId) : false;
         const hasRateRules = rateId ? this.config.trackingRules.some(rule => rule.eventTypeId === rateId) : false;
@@ -94,23 +98,25 @@ export class RecSysTracker {
         if (this.pluginManager.getPluginNames().length === 0) {
             const pluginPromises = [];
             if (hasClickRules && this.config) {
-                const currentConfig = this.config; // TypeScript sẽ hiểu currentConfig chắc chắn là TrackerConfig
                 const clickPromise = import('./core/plugins/click-plugin').then(({ ClickPlugin }) => {
-                    this.use(new ClickPlugin(currentConfig));
+                    this.use(new ClickPlugin());
+                    console.log('[RecSysTracker] Auto-registered ClickPlugin v2');
                 });
                 pluginPromises.push(clickPromise);
             }
             if (hasRateRules) {
                 const ratingPromise = import('./core/plugins/rating-plugin').then(({ RatingPlugin }) => {
                     this.use(new RatingPlugin());
+                    console.log('[RecSysTracker] Auto-registered RatingPlugin v2');
                 });
                 pluginPromises.push(ratingPromise);
             }
             if (hasReviewRules) {
-                const scrollPromise = import('./core/plugins/review-plugin').then(({ ReviewPlugin }) => {
+                const reviewPromise = import('./core/plugins/review-plugin').then(({ ReviewPlugin }) => {
                     this.use(new ReviewPlugin());
+                    console.log('[RecSysTracker] Auto-registered ReviewPlugin v2');
                 });
-                pluginPromises.push(scrollPromise);
+                pluginPromises.push(reviewPromise);
             }
             if (hasPageViewRules) {
                 const pageViewPromise = import('./core/plugins/page-view-plugin').then(({ PageViewPlugin }) => {
@@ -124,22 +130,10 @@ export class RecSysTracker {
                 });
                 pluginPromises.push(scrollPromise);
             }
-            // Check for Network Rules
-            const hasNetworkRules = this.config.trackingRules.some(rule => {
-                var _a;
-                return (_a = rule.payloadMappings) === null || _a === void 0 ? void 0 : _a.some(mapping => {
-                    var _a;
-                    const source = (_a = mapping.source) === null || _a === void 0 ? void 0 : _a.toLowerCase();
-                    return source === 'requestbody' ||
-                        source === 'responsebody' ||
-                        source === 'request_body' ||
-                        source === 'response_body' ||
-                        source === 'network_request';
-                });
-            });
-            if (hasNetworkRules) {
-                this.use(new NetworkPlugin());
-            }
+            // ❌ REMOVE NetworkPlugin auto-registration
+            // Network Observer is now initialized globally, not as a plugin
+            // ❌ REMOVE NetworkPlugin auto-registration
+            // Network Observer is now initialized globally, not as a plugin
             // Chờ tất cả plugin được đăng ký trước khi khởi động
             if (pluginPromises.length > 0) {
                 await Promise.all(pluginPromises);
@@ -149,61 +143,82 @@ export class RecSysTracker {
             }
         }
     }
-    // Track custom event
+    // Track custom event - NEW SIGNATURE (supports flexible payload)
     track(eventData) {
         this.errorBoundary.execute(() => {
             if (!this.isInitialized || !this.config) {
+                console.warn('[RecSysTracker] Cannot track: SDK not initialized');
                 return;
             }
-            // 3-tier fallback strategy:
-            // 1. Dùng userValue từ event hiện tại nếu valid
-            // 2. Dùng cached user info nếu có
-            // 3. Dùng AnonymousId (fallback cuối cùng)
-            let finalUserField = eventData.userField;
-            let finalUserValue = eventData.userValue;
-            // Nếu userValue hiện tại valid và không phải AnonymousId → lưu vào cache
-            if (finalUserValue &&
-                finalUserValue.trim() !== '' &&
-                finalUserValue !== 'guest' &&
-                !finalUserValue.startsWith('anon_') &&
-                eventData.userField !== 'AnonymousId') {
-                saveCachedUserInfo(eventData.userField, finalUserValue);
-            }
-            // Nếu userValue không valid → thử lấy từ cache
-            else if (!finalUserValue || finalUserValue.trim() === '' || finalUserValue === 'guest') {
-                const cachedUserInfo = getCachedUserInfo();
-                if (cachedUserInfo) {
-                    // Dùng cached user info
-                    finalUserField = cachedUserInfo.userField;
-                    finalUserValue = cachedUserInfo.userValue;
-                    log('Using cached user info:', cachedUserInfo);
-                }
-                else {
-                    // Fallback cuối cùng: AnonymousId
-                    finalUserField = 'AnonymousId';
-                    finalUserValue = getOrCreateAnonymousId();
-                    log('No cached user info, using AnonymousId');
-                }
-            }
+            // Extract required fields for deduplication
+            // Support both camelCase and PascalCase field names
+            const payload = eventData.eventData || {};
+            const ruleId = payload.ruleId || payload.RuleId;
+            // User field - try multiple variants
+            const userValue = payload.userId || payload.UserId ||
+                payload.anonymousId || payload.AnonymousId ||
+                payload.username || payload.Username ||
+                payload.userValue || payload.UserValue ||
+                'guest';
+            // Item field - try multiple variants
+            const itemValue = payload.itemId || payload.ItemId ||
+                payload.itemTitle || payload.ItemTitle ||
+                payload.itemValue || payload.ItemValue ||
+                '';
+            // Determine field names for tracking
+            let userField = 'userId';
+            if (payload.AnonymousId || payload.anonymousId)
+                userField = 'AnonymousId';
+            else if (payload.UserId || payload.userId)
+                userField = 'UserId';
+            else if (payload.Username || payload.username)
+                userField = 'Username';
+            let itemField = 'itemId';
+            if (payload.ItemId || payload.itemId)
+                itemField = 'ItemId';
+            else if (payload.ItemTitle || payload.itemTitle)
+                itemField = 'ItemTitle';
             // Check for duplicate event (fingerprint-based deduplication)
-            const isDuplicate = this.eventDeduplicator.isDuplicate(eventData.eventTypeId, eventData.trackingRuleId, finalUserValue, eventData.itemValue);
-            if (isDuplicate) {
-                return; // Drop duplicate
+            if (ruleId && userValue && itemValue) {
+                const isDuplicate = this.eventDeduplicator.isDuplicate(eventData.eventType, ruleId, userValue, itemValue);
+                if (isDuplicate) {
+                    console.log('[RecSysTracker] 🚫 Duplicate event dropped:', {
+                        eventType: eventData.eventType,
+                        ruleId: ruleId,
+                        userValue: userValue,
+                        itemValue: itemValue
+                    });
+                    return;
+                }
             }
+            // Extract rating value (try multiple field names)
+            const ratingValue = payload.ratingValue !== undefined ? payload.ratingValue :
+                (eventData.eventType === this.getEventTypeId('Rating') && payload.Value !== undefined) ? payload.Value :
+                    undefined;
+            // Extract review text (try multiple field names)
+            const reviewText = payload.reviewText !== undefined ? payload.reviewText :
+                payload.reviewValue !== undefined ? payload.reviewValue :
+                    (eventData.eventType === this.getEventTypeId('Review') && payload.Value !== undefined) ? payload.Value :
+                        undefined;
             const trackedEvent = {
                 id: this.metadataNormalizer.generateEventId(),
-                timestamp: new Date(),
-                eventTypeId: eventData.eventTypeId,
-                trackingRuleId: eventData.trackingRuleId,
+                timestamp: new Date(eventData.timestamp),
+                eventTypeId: eventData.eventType,
+                trackingRuleId: Number(ruleId) || 0,
                 domainKey: this.config.domainKey,
-                userField: finalUserField,
-                userValue: finalUserValue,
-                itemField: eventData.itemField,
-                itemValue: eventData.itemValue,
-                ...(eventData.ratingValue !== undefined && { ratingValue: eventData.ratingValue }),
-                ...(eventData.ratingReview !== undefined && { ratingReview: eventData.ratingReview }),
+                userField: userField,
+                userValue: userValue,
+                itemField: itemField,
+                itemValue: itemValue,
+                ...(ratingValue !== undefined && {
+                    ratingValue: ratingValue
+                }),
+                ...(reviewText !== undefined && {
+                    ratingReview: reviewText
+                }),
             };
             this.eventBuffer.add(trackedEvent);
+            console.log('[RecSysTracker] ✅ Event tracked:', trackedEvent);
         }, 'track');
     }
     // Setup batch sending of events

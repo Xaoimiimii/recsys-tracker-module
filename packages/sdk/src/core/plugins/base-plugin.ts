@@ -1,5 +1,6 @@
 import { RecSysTracker } from '../..';
 import { ErrorBoundary } from '../error-handling/error-boundary';
+import { TrackerInit } from '../tracker-init';
 
 export interface IPlugin {
   readonly name: string;
@@ -157,8 +158,55 @@ export abstract class BasePlugin implements IPlugin {
   }
 
   /**
+   * NEW: Track directly with pre-collected payload from startCollection
+   * Used after async data collection is complete
+   */
+  protected trackWithPayload(
+    collectedData: Record<string, any>,
+    rule: any,
+    eventId: number
+  ): void {
+    if (!this.tracker) {
+      console.warn(`[${this.name}] Cannot track: tracker not initialized`);
+      return;
+    }
+
+    console.log(`[${this.name}] trackWithPayload called for eventId:`, eventId, 'rule:', rule.name);
+    console.log(`[${this.name}] Collected data:`, collectedData);
+    
+    // Get values from collectedData
+    const userField = collectedData.UserId ? 'UserId' : (collectedData.Username ? 'Username' : (collectedData.AnonymousId ? 'AnonymousId' : 'UserId'));
+    const userValue = collectedData.UserId || collectedData.Username || collectedData.AnonymousId || TrackerInit.getUsername() || 'guest';
+    const itemField = collectedData.ItemId ? 'ItemId' : (collectedData.ItemTitle ? 'ItemTitle' : 'ItemId');
+    const itemValue = collectedData.ItemId || collectedData.ItemTitle || '';
+    const value = collectedData.Value || '';
+
+    // Construct payload
+    const payload: any = {
+      eventTypeId: Number(eventId),
+      trackingRuleId: Number(rule.id),
+      userField,
+      userValue,
+      itemField,
+      itemValue,
+      ratingValue: eventId === 2 ? Number(value) : undefined,
+      ratingReview: eventId === 3 ? value : undefined,
+    };
+    console.log(`[${this.name}] Final payload to track:`, payload);
+
+    // Track the event
+    this.tracker.track(payload);
+    console.log(`[${this.name}] tracker.track() called`);
+  }
+
+  /**
+   * DEPRECATED: Legacy method - not used by v2 plugins
+   * V2 plugins call PayloadBuilder.handleTrigger() directly
+   * 
    * Phương thức xây dựng và theo dõi payload
-   * Extraction → identity resolution → payload construction → tracking
+   * New Flow: Plugin detects trigger → calls payloadBuilder with callback → 
+   * payloadBuilder processes and calls back → buildAndTrack constructs and tracks → 
+   * add to buffer → event dispatch
    * 
    * @param context - Context for extraction (HTMLElement, NetworkContext, etc.)
    * @param rule - Tracking rule with payload mappings
@@ -170,30 +218,39 @@ export abstract class BasePlugin implements IPlugin {
     rule: any,
     eventId: number
   ): void {
+    console.warn(`[${this.name}] buildAndTrack is deprecated - use PayloadBuilder.handleTrigger() instead`);
+    
+    // For legacy plugins that still use this method, provide minimal support
     if (!this.tracker) {
       console.warn(`[${this.name}] Cannot track: tracker not initialized`);
       return;
     }
 
-    // 1. Extract data using PayloadBuilder
-    const extractedData = this.tracker.payloadBuilder.build(context, rule);
+    // Fallback: use TrackerInit for simple payload extraction
+    const element = context instanceof HTMLElement ? context : null;
+    const mappedData = TrackerInit.handleMapping(rule, element);
+    
+    const userField = mappedData.UserId ? 'UserId' : 'userId';
+    const userValue = mappedData.UserId || TrackerInit.getUsername() || 'guest';
+    const itemField = mappedData.ItemId ? 'ItemId' : 'itemId';
+    const itemValue = mappedData.ItemId || '';
 
-    // 2. Resolve identity fields dynamically
-    const { userField, userValue, itemField, itemValue, value } = this.resolvePayloadIdentity(extractedData, rule);
-
-    // 3. Construct payload
-    const payload: any = {
-      eventTypeId: Number(eventId),
-      trackingRuleId: Number(rule.id),
-      userField,
-      userValue,
-      itemField,
-      itemValue,
-      ratingValue: eventId === 2 ? Number(value) : undefined,
-      ratingReview: eventId === 3 ? value : undefined,
-    };
-
-    // 4. Track the event
-    this.tracker.track(payload);
+    this.tracker.track({
+      eventType: Number(eventId),
+      eventData: {
+        ruleId: rule.id,
+        userField,
+        userValue,
+        itemField,
+        itemValue,
+        ...mappedData
+      },
+      timestamp: Date.now(),
+      url: window.location.href,
+      metadata: {
+        plugin: this.name,
+        deprecatedMethod: true
+      }
+    });
   }
 }

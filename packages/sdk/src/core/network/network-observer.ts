@@ -1,0 +1,442 @@
+/**
+ * NetworkObserver - Passive Network Listener
+ * 
+ * NGUYÊN TẮC:
+ * 1. Init KHI SDK LOAD (không phải trong plugin)
+ * 2. Luôn active và lắng nghe TẤT CẢ requests
+ * 3. Chỉ xử lý request khi có REC phù hợp
+ * 4. KHÔNG dispatch event (chỉ collect data vào REC)
+ * 5. Passive - không can thiệp vào logic nghiệp vụ
+ */
+
+import { RuleExecutionContextManager, RuleExecutionContext } from '../execution/rule-execution-context';
+import { PathMatcher } from '../utils/path-matcher';
+import { TrackingRule } from '../../types';
+
+interface NetworkRequestInfo {
+  url: string;
+  method: string;
+  timestamp: number;
+  requestBody?: any;
+  responseBody?: any;
+}
+
+/**
+ * NetworkObserver - Singleton passive listener
+ */
+export class NetworkObserver {
+  private static instance: NetworkObserver | null = null;
+  
+  private originalFetch: typeof fetch;
+  private originalXhrOpen: any;
+  private originalXhrSend: any;
+  private isActive = false;
+  
+  // Reference to REC manager
+  private recManager: RuleExecutionContextManager | null = null;
+  
+  // Registered rules that need network data
+  private registeredRules: Map<number, TrackingRule> = new Map();
+
+  private constructor() {
+    this.originalFetch = window.fetch;
+    this.originalXhrOpen = XMLHttpRequest.prototype.open;
+    this.originalXhrSend = XMLHttpRequest.prototype.send;
+  }
+
+  /**
+   * Get singleton instance
+   */
+  static getInstance(): NetworkObserver {
+    if (!NetworkObserver.instance) {
+      NetworkObserver.instance = new NetworkObserver();
+    }
+    return NetworkObserver.instance;
+  }
+
+  /**
+   * Initialize observer với REC manager
+   * PHẢI GỌI KHI SDK INIT
+   */
+  initialize(recManager: RuleExecutionContextManager): void {
+    if (this.isActive) {
+      console.warn('[NetworkObserver] Already initialized');
+      return;
+    }
+
+    this.recManager = recManager;
+    this.hookFetch();
+    this.hookXHR();
+    this.isActive = true;
+    
+    console.log('[NetworkObserver] ✅ Initialized and active');
+  }
+
+  /**
+   * Register một rule cần network data
+   * Được gọi bởi PayloadBuilder khi phát hiện rule cần async data
+   */
+  registerRule(rule: TrackingRule): void {
+    if (!this.registeredRules.has(rule.id)) {
+      this.registeredRules.set(rule.id, rule);
+      console.log('[NetworkObserver] Registered rule:', rule.id, rule.name);
+    }
+  }
+
+  /**
+   * Unregister rule (cleanup)
+   */
+  unregisterRule(ruleId: number): void {
+    this.registeredRules.delete(ruleId);
+  }
+
+  /**
+   * Hook Fetch API
+   */
+  private hookFetch(): void {
+    const observer = this;
+
+    window.fetch = async function(input: RequestInfo | URL, init?: RequestInit) {
+      const url = typeof input === 'string' ? input : (input as Request).url;
+      const method = init?.method?.toUpperCase() || 'GET';
+      const requestBody = init?.body;
+      const timestamp = Date.now();
+
+      // Call original fetch
+      const response = await observer.originalFetch.call(window, input, init);
+      
+      // Clone để đọc response mà không ảnh hưởng stream
+      const clone = response.clone();
+      
+      // Process async
+      clone.text().then(responseText => {
+        observer.handleRequest({
+          url,
+          method,
+          timestamp,
+          requestBody,
+          responseBody: responseText
+        });
+      }).catch(err => {
+        console.warn('[NetworkObserver] Failed to read response:', err);
+      });
+
+      return response;
+    };
+  }
+
+  /**
+   * Hook XMLHttpRequest
+   */
+  private hookXHR(): void {
+    const observer = this;
+
+    XMLHttpRequest.prototype.open = function(method: string, url: string, ...rest: any[]) {
+      (this as any)._networkObserverInfo = {
+        method: method.toUpperCase(),
+        url,
+        timestamp: Date.now()
+      };
+      return observer.originalXhrOpen.call(this, method, url, ...rest);
+    };
+
+    XMLHttpRequest.prototype.send = function(body?: any) {
+      const info = (this as any)._networkObserverInfo;
+      
+      if (info) {
+        info.requestBody = body;
+        
+        this.addEventListener('load', function() {
+          observer.handleRequest({
+            url: info.url,
+            method: info.method,
+            timestamp: Date.now(), // Response timestamp
+            requestBody: info.requestBody,
+            responseBody: this.responseText
+          });
+        });
+      }
+      
+      return observer.originalXhrSend.call(this, body);
+    };
+  }
+
+  /**
+   * Xử lý request đã intercept
+   * CORE LOGIC - chỉ xử lý nếu có REC phù hợp
+   */
+  private handleRequest(requestInfo: NetworkRequestInfo): void {
+    if (!this.recManager) {
+      return;
+    }
+
+    // Check tất cả registered rules
+    for (const rule of this.registeredRules.values()) {
+      // Tìm REC phù hợp cho rule này
+      const context = this.recManager.findMatchingContext(
+        rule.id,
+        requestInfo.timestamp
+      );
+
+      if (!context) {
+        continue; // Không có context đang chờ cho rule này
+      }
+
+      // Process mappings cho rule này
+      this.processRuleMappings(rule, context, requestInfo);
+    }
+  }
+
+  /**
+   * Process payload mappings của rule và extract data vào REC
+   */
+  private processRuleMappings(
+    rule: TrackingRule,
+    context: RuleExecutionContext,
+    requestInfo: NetworkRequestInfo
+  ): void {
+    if (!rule.payloadMappings) {
+      return;
+    }
+
+    for (const mapping of rule.payloadMappings) {
+      const source = (mapping.source || '').toLowerCase();
+      
+      // Chỉ xử lý network sources
+      if (!this.isNetworkSource(source)) {
+        continue;
+      }
+
+      // Check pattern match
+      if (!this.matchesPattern(mapping, requestInfo)) {
+        continue;
+      }
+
+      // Extract value
+      const value = this.extractValue(mapping, requestInfo);
+      
+      if (value !== null && value !== undefined) {
+        // Collect vào REC
+        this.recManager!.collectField(
+          context.executionId,
+          mapping.field,
+          value
+        );
+        
+        console.log(`[NetworkObserver] ✅ Collected "${mapping.field}" for rule ${rule.id}:`, value);
+      }
+    }
+  }
+
+  /**
+   * Check nếu source là network source
+   */
+  private isNetworkSource(source: string): boolean {
+    return [
+      'requestbody',
+      'request_body',
+      'responsebody', 
+      'response_body',
+      'requesturl',
+      'request_url'
+    ].includes(source);
+  }
+
+  /**
+   * Check nếu request match với pattern trong mapping
+   */
+  private matchesPattern(mapping: any, requestInfo: NetworkRequestInfo): boolean {
+    // Check method
+    if (mapping.requestMethod) {
+      const expectedMethod = mapping.requestMethod.toUpperCase();
+      if (requestInfo.method !== expectedMethod) {
+        return false;
+      }
+    }
+
+    // Check URL pattern
+    if (mapping.requestUrlPattern) {
+      if (!PathMatcher.match(requestInfo.url, mapping.requestUrlPattern)) {
+        return false;
+      }
+    }
+
+    return true;
+  }
+
+  /**
+   * Extract value từ request theo mapping config
+   */
+  private extractValue(mapping: any, requestInfo: NetworkRequestInfo): any {
+    const source = (mapping.source || '').toLowerCase();
+
+    switch (source) {
+      case 'requestbody':
+      case 'request_body':
+        return this.extractFromRequestBody(mapping, requestInfo);
+      
+      case 'responsebody':
+      case 'response_body':
+        return this.extractFromResponseBody(mapping, requestInfo);
+      
+      case 'requesturl':
+      case 'request_url':
+        return this.extractFromRequestUrl(mapping, requestInfo);
+      
+      default:
+        return null;
+    }
+  }
+
+  /**
+   * Extract từ request body
+   */
+  private extractFromRequestBody(mapping: any, requestInfo: NetworkRequestInfo): any {
+    const body = this.parseBody(requestInfo.requestBody);
+    if (!body) return null;
+
+    return this.extractByPath(body, mapping.value || mapping.requestBodyPath);
+  }
+
+  /**
+   * Extract từ response body
+   */
+  private extractFromResponseBody(mapping: any, requestInfo: NetworkRequestInfo): any {
+    const body = this.parseBody(requestInfo.responseBody);
+    if (!body) return null;
+
+    return this.extractByPath(body, mapping.value || mapping.requestBodyPath);
+  }
+
+  /**
+   * Extract từ request URL
+   */
+  private extractFromRequestUrl(mapping: any, requestInfo: NetworkRequestInfo): any {
+    const url = new URL(requestInfo.url, window.location.origin);
+    
+    const urlPart = mapping.urlPart?.toLowerCase();
+    
+    console.log('[NetworkObserver] Extracting from URL:', {
+      url: requestInfo.url,
+      urlPart: urlPart,
+      urlPartValue: mapping.urlPartValue,
+      value: mapping.value
+    });
+    
+    switch (urlPart) {
+      case 'query':
+      case 'queryparam':
+        const paramName = mapping.urlPartValue || mapping.value;
+        return url.searchParams.get(paramName);
+      
+      case 'path':
+      case 'pathsegment':
+        // Extract path segment by index or pattern
+        const pathValue = mapping.urlPartValue || mapping.value;
+        console.log('[NetworkObserver] Path extraction:', { pathValue, pathname: url.pathname });
+        
+        if (pathValue && !isNaN(Number(pathValue))) {
+          const segments = url.pathname.split('/').filter(s => s);
+          const index = Number(pathValue);
+          const result = segments[index] || null;
+          console.log('[NetworkObserver] Extracted segment:', { segments, index, result });
+          return result;
+        }
+        return url.pathname;
+      
+      case 'hash':
+        return url.hash.substring(1); // Remove #
+      
+      default:
+        // If no urlPart specified, try to extract from value
+        // Check if value is a number (path segment index)
+        const segments = url.pathname.split('/').filter(s => s);
+        console.log('[NetworkObserver] URL pathname:', url.pathname);
+        console.log('[NetworkObserver] Segments:', segments);
+        console.log('[NetworkObserver] Mapping value:', mapping.value, 'Type:', typeof mapping.value);
+        
+        if (mapping.value && !isNaN(Number(mapping.value))) {
+          const index = Number(mapping.value);
+          const result = segments[index] || null;
+          console.log('[NetworkObserver] Default path extraction:', { segments, index, result });
+          return result;
+        }
+        
+        console.warn('[NetworkObserver] Could not extract segment, returning full URL');
+        return url.href;
+    }
+  }
+
+  /**
+   * Parse body (JSON or text)
+   */
+  private parseBody(body: any): any {
+    if (!body) return null;
+    
+    if (typeof body === 'string') {
+      try {
+        return JSON.parse(body);
+      } catch {
+        return body;
+      }
+    }
+    
+    return body;
+  }
+
+  /**
+   * Extract value by path (e.g., "data.user.id")
+   */
+  private extractByPath(obj: any, path: string): any {
+    if (!path || !obj) return null;
+
+    const parts = path.split('.');
+    let current = obj;
+
+    for (const part of parts) {
+      if (current === null || current === undefined) {
+        return null;
+      }
+      current = current[part];
+    }
+
+    return current;
+  }
+
+  /**
+   * Restore original functions (for cleanup/testing)
+   */
+  restore(): void {
+    if (!this.isActive) return;
+
+    window.fetch = this.originalFetch;
+    XMLHttpRequest.prototype.open = this.originalXhrOpen;
+    XMLHttpRequest.prototype.send = this.originalXhrSend;
+    
+    this.isActive = false;
+    this.registeredRules.clear();
+    
+    console.log('[NetworkObserver] Restored original functions');
+  }
+
+  /**
+   * Check if observer is active
+   */
+  isObserverActive(): boolean {
+    return this.isActive;
+  }
+
+  /**
+   * Get registered rules count (for debugging)
+   */
+  getRegisteredRulesCount(): number {
+    return this.registeredRules.size;
+  }
+}
+
+/**
+ * Helper function to get singleton instance
+ */
+export function getNetworkObserver(): NetworkObserver {
+  return NetworkObserver.getInstance();
+}
