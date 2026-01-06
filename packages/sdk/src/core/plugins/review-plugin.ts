@@ -15,10 +15,6 @@ import { BasePlugin } from './base-plugin';
 import { RecSysTracker } from '../..';
 import { TrackingRule } from '../../types';
 
-const TARGET_PATTERN_ID = { CSS_SELECTOR: 1 };
-const CONDITION_PATTERN_ID = { CSS_SELECTOR: 1, URL: 2, DATA_ATTRIBUTE: 3 };
-const OPERATOR_ID = { CONTAINS: 1, EQUALS: 2, STARTS_WITH: 3, ENDS_WITH: 4 };
-
 export class ReviewPlugin extends BasePlugin {
   public readonly name = 'ReviewPlugin';
   
@@ -54,12 +50,13 @@ export class ReviewPlugin extends BasePlugin {
 
   /**
    * Handle submit event - TRIGGER PHASE
+   * NOTE: This is now mainly a fallback. Rating Plugin handles most review detection.
    */
   private handleSubmit(event: Event): void {
     if (!this.tracker) return;
 
-    const form = event.target as HTMLFormElement;
-    if (!form) return;
+    const target = event.target as Element;
+    if (!target) return;
 
     // Get review rules
     const eventId = this.tracker.getEventTypeId('Review') || 3;
@@ -72,22 +69,34 @@ export class ReviewPlugin extends BasePlugin {
 
     // Check each rule
     for (const rule of reviewRules) {
-      if (!this.matchesRule(form, rule)) {
+      // Try to find matching element (form or button)
+      const matchedElement = this.findMatchingElement(target, rule);
+      if (!matchedElement) {
         continue;
       }
 
       console.log(`[ReviewPlugin] ✅ Matched rule: "${rule.name}"`);
 
-      // Auto-detect review content
-      const reviewContent = this.autoDetectReviewContent(form);
+      // Find container (form or parent)
+      const container = this.findContainer(matchedElement);
+      
+      // Auto-detect review content from container
+      const reviewContent = this.autoDetectReviewContent(container);
+      
+      // Filter if no review content
+      if (!reviewContent) {
+        console.warn('[ReviewPlugin] No review content found');
+        continue;
+      }
       
       // Create trigger context
       const triggerContext = {
-        element: form,
-        target: form,
+        element: matchedElement,
+        target: matchedElement,
+        container: container,
         eventType: 'review',
         reviewContent: reviewContent,
-        form: form
+        Value: reviewContent
       };
 
       // Delegate to PayloadBuilder
@@ -95,167 +104,81 @@ export class ReviewPlugin extends BasePlugin {
         rule,
         triggerContext,
         (payload) => {
+          // Enrich with review content
+          const enrichedPayload = {
+            ...payload,
+            Value: reviewContent
+          };
+          
           // Callback khi payload ready
-          this.dispatchEvent(payload, rule, eventId);
+          this.dispatchEvent(enrichedPayload, rule, eventId);
         }
       );
 
-      // Chỉ track rule đầu tiên match
-      return;
+      // Track all matching rules (không return)
     }
   }
 
   /**
-   * Check if form matches rule
+   * Find element matching rule selector
    */
-  private matchesRule(form: HTMLFormElement, rule: TrackingRule): boolean {
-    // Check target
-    if (!this.checkTargetMatch(form, rule)) {
-      return false;
-    }
-
-    // Check conditions
-    if (!this.checkConditions(form, rule)) {
-      return false;
-    }
-
-    return true;
-  }
-
-  /**
-   * Check target match
-   */
-  private checkTargetMatch(form: HTMLFormElement, rule: TrackingRule): boolean {
-    const target = rule.trackingTarget;
-    if (!target) return false;
-
-    const patternId = Number(target.patternId);
-    if (patternId !== TARGET_PATTERN_ID.CSS_SELECTOR) {
-      return false;
-    }
-
-    const selector = target.value;
-    if (!selector) return false;
+  private findMatchingElement(target: Element, rule: TrackingRule): Element | null {
+    const selector = rule.trackingTarget?.value;
+    if (!selector) return null;
 
     try {
-      // Strict match
-      if (form.matches(selector)) {
-        return true;
+      // Try closest match
+      let match = target.closest(selector);
+      
+      // Flexible matching for CSS modules
+      if (!match && selector.startsWith('.')) {
+        const baseClassName = selector.substring(1).split('_')[0];
+        let parent: Element | null = target;
+        let depth = 0;
+
+        while (parent && depth < 10) {
+          const className = parent.className;
+          if (typeof className === 'string' && className.includes(baseClassName)) {
+            match = parent;
+            break;
+          }
+          parent = parent.parentElement;
+          depth++;
+        }
       }
 
-      // Flexible match - form inside target
-      const closest = form.closest(selector);
-      return !!closest;
+      return match;
     } catch (e) {
       console.error('[ReviewPlugin] Selector error:', e);
-      return false;
+      return null;
     }
   }
 
   /**
-   * Check conditions
+   * Find container (form or parent element)
    */
-  private checkConditions(form: HTMLFormElement, rule: TrackingRule): boolean {
-    const conditions = rule.conditions;
-    if (!conditions || conditions.length === 0) {
-      return true;
-    }
+  private findContainer(element: Element): Element {
+    // Try to find form
+    const form = element.closest('form');
+    if (form) return form;
 
-    for (const cond of conditions) {
-      if (!this.checkCondition(form, cond)) {
-        return false;
-      }
-    }
+    // Try to find review container
+    const container = element.closest('.review-container') ||
+                     element.closest('.review-box') ||
+                     element.closest('[data-review]');
+    
+    if (container) return container;
 
-    return true;
+    // Fallback to parent or body
+    return element.parentElement || document.body;
   }
 
   /**
-   * Check single condition
+   * Auto-detect review content from container
    */
-  private checkCondition(form: HTMLFormElement, condition: any): boolean {
-    const patternId = Number(condition.patternId);
-    const operatorId = Number(condition.operatorId);
-    const value = condition.value;
-
-    switch (patternId) {
-      case CONDITION_PATTERN_ID.URL:
-        return this.checkUrlCondition(operatorId, value);
-      
-      case CONDITION_PATTERN_ID.CSS_SELECTOR:
-        return this.checkSelectorCondition(form, operatorId, value);
-      
-      case CONDITION_PATTERN_ID.DATA_ATTRIBUTE:
-        return this.checkDataAttributeCondition(form, operatorId, value);
-      
-      default:
-        return true;
-    }
-  }
-
-  /**
-   * Check URL condition
-   */
-  private checkUrlCondition(operatorId: number, value: string): boolean {
-    const url = window.location.href;
-
-    switch (operatorId) {
-      case OPERATOR_ID.CONTAINS:
-        return url.includes(value);
-      
-      case OPERATOR_ID.EQUALS:
-        return url === value;
-      
-      case OPERATOR_ID.STARTS_WITH:
-        return url.startsWith(value);
-      
-      case OPERATOR_ID.ENDS_WITH:
-        return url.endsWith(value);
-      
-      default:
-        return false;
-    }
-  }
-
-  /**
-   * Check selector condition
-   */
-  private checkSelectorCondition(form: HTMLFormElement, _operatorId: number, value: string): boolean {
-    try {
-      const element = form.querySelector(value);
-      return !!element; // Exists or not
-    } catch {
-      return false;
-    }
-  }
-
-  /**
-   * Check data attribute condition
-   */
-  private checkDataAttributeCondition(form: HTMLFormElement, operatorId: number, value: string): boolean {
-    const [attrName, expectedValue] = value.split('=');
-    const actualValue = form.getAttribute(attrName);
-
-    if (!actualValue) return false;
-
-    switch (operatorId) {
-      case OPERATOR_ID.CONTAINS:
-        return actualValue.includes(expectedValue);
-      
-      case OPERATOR_ID.EQUALS:
-        return actualValue === expectedValue;
-      
-      default:
-        return false;
-    }
-  }
-
-  /**
-   * Auto-detect review content from form
-   */
-  private autoDetectReviewContent(form: HTMLFormElement): string {
+  private autoDetectReviewContent(container: Element): string {
     // Strategy 1: textarea với name/id có 'review', 'comment', 'content'
-    const textareas = Array.from(form.querySelectorAll('textarea'));
+    const textareas = Array.from(container.querySelectorAll('textarea'));
     for (const textarea of textareas) {
       const name = textarea.name?.toLowerCase() || '';
       const id = textarea.id?.toLowerCase() || '';
@@ -284,7 +207,7 @@ export class ReviewPlugin extends BasePlugin {
     }
 
     // Strategy 3: input[type="text"] lớn
-    const textInputs = Array.from(form.querySelectorAll('input[type="text"]'));
+    const textInputs = Array.from(container.querySelectorAll('input[type="text"]'));
     for (const input of textInputs) {
       const value = (input as HTMLInputElement).value.trim();
       if (value.length > 20) { // Assume review > 20 chars

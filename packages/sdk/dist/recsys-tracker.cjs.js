@@ -2479,9 +2479,6 @@ var pageViewPlugin = /*#__PURE__*/Object.freeze({
  * FLOW:
  * submit event → check rules → handleTrigger → DONE
  */
-const TARGET_PATTERN_ID = { CSS_SELECTOR: 1 };
-const CONDITION_PATTERN_ID = { CSS_SELECTOR: 1, URL: 2, DATA_ATTRIBUTE: 3 };
-const OPERATOR_ID = { CONTAINS: 1, EQUALS: 2, STARTS_WITH: 3, ENDS_WITH: 4 };
 class ReviewPlugin extends BasePlugin {
     constructor() {
         super(...arguments);
@@ -2514,13 +2511,14 @@ class ReviewPlugin extends BasePlugin {
     }
     /**
      * Handle submit event - TRIGGER PHASE
+     * NOTE: This is now mainly a fallback. Rating Plugin handles most review detection.
      */
     handleSubmit(event) {
         var _a;
         if (!this.tracker)
             return;
-        const form = event.target;
-        if (!form)
+        const target = event.target;
+        if (!target)
             return;
         // Get review rules
         const eventId = this.tracker.getEventTypeId('Review') || 3;
@@ -2531,158 +2529,100 @@ class ReviewPlugin extends BasePlugin {
         console.log(`[ReviewPlugin] 📝 Submit detected, checking ${reviewRules.length} rules`);
         // Check each rule
         for (const rule of reviewRules) {
-            if (!this.matchesRule(form, rule)) {
+            // Try to find matching element (form or button)
+            const matchedElement = this.findMatchingElement(target, rule);
+            if (!matchedElement) {
                 continue;
             }
             console.log(`[ReviewPlugin] ✅ Matched rule: "${rule.name}"`);
-            // Auto-detect review content
-            const reviewContent = this.autoDetectReviewContent(form);
+            // Find container (form or parent)
+            const container = this.findContainer(matchedElement);
+            // Auto-detect review content from container
+            const reviewContent = this.autoDetectReviewContent(container);
+            // Filter if no review content
+            if (!reviewContent) {
+                console.warn('[ReviewPlugin] No review content found');
+                continue;
+            }
             // Create trigger context
             const triggerContext = {
-                element: form,
-                target: form,
+                element: matchedElement,
+                target: matchedElement,
+                container: container,
                 eventType: 'review',
                 reviewContent: reviewContent,
-                form: form
+                Value: reviewContent
             };
             // Delegate to PayloadBuilder
             this.tracker.payloadBuilder.handleTrigger(rule, triggerContext, (payload) => {
+                // Enrich with review content
+                const enrichedPayload = {
+                    ...payload,
+                    Value: reviewContent
+                };
                 // Callback khi payload ready
-                this.dispatchEvent(payload, rule, eventId);
+                this.dispatchEvent(enrichedPayload, rule, eventId);
             });
-            // Chỉ track rule đầu tiên match
-            return;
+            // Track all matching rules (không return)
         }
     }
     /**
-     * Check if form matches rule
+     * Find element matching rule selector
      */
-    matchesRule(form, rule) {
-        // Check target
-        if (!this.checkTargetMatch(form, rule)) {
-            return false;
-        }
-        // Check conditions
-        if (!this.checkConditions(form, rule)) {
-            return false;
-        }
-        return true;
-    }
-    /**
-     * Check target match
-     */
-    checkTargetMatch(form, rule) {
-        const target = rule.trackingTarget;
-        if (!target)
-            return false;
-        const patternId = Number(target.patternId);
-        if (patternId !== TARGET_PATTERN_ID.CSS_SELECTOR) {
-            return false;
-        }
-        const selector = target.value;
+    findMatchingElement(target, rule) {
+        var _a;
+        const selector = (_a = rule.trackingTarget) === null || _a === void 0 ? void 0 : _a.value;
         if (!selector)
-            return false;
+            return null;
         try {
-            // Strict match
-            if (form.matches(selector)) {
-                return true;
+            // Try closest match
+            let match = target.closest(selector);
+            // Flexible matching for CSS modules
+            if (!match && selector.startsWith('.')) {
+                const baseClassName = selector.substring(1).split('_')[0];
+                let parent = target;
+                let depth = 0;
+                while (parent && depth < 10) {
+                    const className = parent.className;
+                    if (typeof className === 'string' && className.includes(baseClassName)) {
+                        match = parent;
+                        break;
+                    }
+                    parent = parent.parentElement;
+                    depth++;
+                }
             }
-            // Flexible match - form inside target
-            const closest = form.closest(selector);
-            return !!closest;
+            return match;
         }
         catch (e) {
             console.error('[ReviewPlugin] Selector error:', e);
-            return false;
+            return null;
         }
     }
     /**
-     * Check conditions
+     * Find container (form or parent element)
      */
-    checkConditions(form, rule) {
-        const conditions = rule.conditions;
-        if (!conditions || conditions.length === 0) {
-            return true;
-        }
-        for (const cond of conditions) {
-            if (!this.checkCondition(form, cond)) {
-                return false;
-            }
-        }
-        return true;
+    findContainer(element) {
+        // Try to find form
+        const form = element.closest('form');
+        if (form)
+            return form;
+        // Try to find review container
+        const container = element.closest('.review-container') ||
+            element.closest('.review-box') ||
+            element.closest('[data-review]');
+        if (container)
+            return container;
+        // Fallback to parent or body
+        return element.parentElement || document.body;
     }
     /**
-     * Check single condition
+     * Auto-detect review content from container
      */
-    checkCondition(form, condition) {
-        const patternId = Number(condition.patternId);
-        const operatorId = Number(condition.operatorId);
-        const value = condition.value;
-        switch (patternId) {
-            case CONDITION_PATTERN_ID.URL:
-                return this.checkUrlCondition(operatorId, value);
-            case CONDITION_PATTERN_ID.CSS_SELECTOR:
-                return this.checkSelectorCondition(form, operatorId, value);
-            case CONDITION_PATTERN_ID.DATA_ATTRIBUTE:
-                return this.checkDataAttributeCondition(form, operatorId, value);
-            default:
-                return true;
-        }
-    }
-    /**
-     * Check URL condition
-     */
-    checkUrlCondition(operatorId, value) {
-        const url = window.location.href;
-        switch (operatorId) {
-            case OPERATOR_ID.CONTAINS:
-                return url.includes(value);
-            case OPERATOR_ID.EQUALS:
-                return url === value;
-            case OPERATOR_ID.STARTS_WITH:
-                return url.startsWith(value);
-            case OPERATOR_ID.ENDS_WITH:
-                return url.endsWith(value);
-            default:
-                return false;
-        }
-    }
-    /**
-     * Check selector condition
-     */
-    checkSelectorCondition(form, _operatorId, value) {
-        try {
-            const element = form.querySelector(value);
-            return !!element; // Exists or not
-        }
-        catch {
-            return false;
-        }
-    }
-    /**
-     * Check data attribute condition
-     */
-    checkDataAttributeCondition(form, operatorId, value) {
-        const [attrName, expectedValue] = value.split('=');
-        const actualValue = form.getAttribute(attrName);
-        if (!actualValue)
-            return false;
-        switch (operatorId) {
-            case OPERATOR_ID.CONTAINS:
-                return actualValue.includes(expectedValue);
-            case OPERATOR_ID.EQUALS:
-                return actualValue === expectedValue;
-            default:
-                return false;
-        }
-    }
-    /**
-     * Auto-detect review content from form
-     */
-    autoDetectReviewContent(form) {
+    autoDetectReviewContent(container) {
         var _a, _b;
         // Strategy 1: textarea với name/id có 'review', 'comment', 'content'
-        const textareas = Array.from(form.querySelectorAll('textarea'));
+        const textareas = Array.from(container.querySelectorAll('textarea'));
         for (const textarea of textareas) {
             const name = ((_a = textarea.name) === null || _a === void 0 ? void 0 : _a.toLowerCase()) || '';
             const id = ((_b = textarea.id) === null || _b === void 0 ? void 0 : _b.toLowerCase()) || '';
@@ -2707,7 +2647,7 @@ class ReviewPlugin extends BasePlugin {
             return largestTextarea.value.trim();
         }
         // Strategy 3: input[type="text"] lớn
-        const textInputs = Array.from(form.querySelectorAll('input[type="text"]'));
+        const textInputs = Array.from(container.querySelectorAll('input[type="text"]'));
         for (const input of textInputs) {
             const value = input.value.trim();
             if (value.length > 20) { // Assume review > 20 chars
@@ -4262,47 +4202,57 @@ class RatingPlugin extends BasePlugin {
      * Main interaction handler
      */
     handleInteraction(event, eventType) {
-        var _a;
         if (!this.tracker)
             return;
         const target = event.target;
         if (!target)
             return;
-        // Get rating rules
-        const ratingEventId = this.tracker.getEventTypeId('Rating') || 2;
         const config = this.tracker.getConfig();
-        const ratingRules = ((_a = config === null || config === void 0 ? void 0 : config.trackingRules) === null || _a === void 0 ? void 0 : _a.filter(r => r.eventTypeId === ratingEventId)) || [];
-        if (ratingRules.length === 0)
+        if (!config || !config.trackingRules)
             return;
-        console.log(`[RatingPlugin] ⭐ ${eventType} detected, checking ${ratingRules.length} rules`);
+        // Get rating and review event IDs
+        const ratingEventId = this.tracker.getEventTypeId('Rating') || 2;
+        // ONLY handle rating rules (eventTypeId === 2)
+        // Review rules should be handled by ReviewPlugin
+        const rulesToCheck = config.trackingRules.filter(r => r.eventTypeId === ratingEventId);
+        if (rulesToCheck.length === 0)
+            return;
+        console.log(`[RatingPlugin] ⭐ ${eventType} detected, checking ${rulesToCheck.length} rules`);
+        // Track which rules matched
+        const matchedRules = [];
         // Check each rule
-        for (const rule of ratingRules) {
+        for (const rule of rulesToCheck) {
             const matchedElement = this.findMatchingElement(target, rule);
             if (!matchedElement) {
                 continue;
             }
-            console.log(`[RatingPlugin] ✅ Matched rule: "${rule.name}"`);
             // Extract rating data
             const container = this.findContainer(matchedElement);
             const ratingData = RatingUtils.processRating(container, matchedElement, eventType);
+            console.log(`[RatingPlugin] ✅ Matched rule: "${rule.name}" (EventTypeId: ${rule.eventTypeId})`);
             console.log('[RatingPlugin] Rating data:', ratingData);
-            // Filter garbage (0 rating without review)
-            if (ratingData.originalValue === 0 && !ratingData.reviewText) {
-                console.warn('[RatingPlugin] Filtered: zero rating without review');
+            // Filter garbage: 0 rating
+            if (ratingData.originalValue === 0) {
+                console.warn('[RatingPlugin] Filtered: zero rating');
                 continue;
             }
-            // Update throttle time
-            this.lastTriggerTime = Date.now();
-            // Create trigger context (include rating data)
+            matchedRules.push({ rule, element: matchedElement, container, ratingData });
+        }
+        if (matchedRules.length === 0)
+            return;
+        // Update throttle time
+        this.lastTriggerTime = Date.now();
+        // Process each matched rule separately (send separate events)
+        for (const { rule, element, container, ratingData } of matchedRules) {
+            // Create trigger context for rating
             const triggerContext = {
-                element: matchedElement,
-                target: matchedElement,
+                element: element,
+                target: element,
                 container: container,
                 eventType: 'rating',
                 ratingValue: ratingData.normalizedValue,
                 ratingRaw: ratingData.originalValue,
                 ratingMax: ratingData.maxValue,
-                reviewText: ratingData.reviewText,
                 ratingType: ratingData.type
             };
             // Delegate to PayloadBuilder
@@ -4310,16 +4260,13 @@ class RatingPlugin extends BasePlugin {
                 // Enrich payload with rating data
                 const enrichedPayload = {
                     ...payload,
-                    ratingValue: ratingData.normalizedValue,
+                    Value: ratingData.normalizedValue,
                     ratingRaw: ratingData.originalValue,
-                    ratingMax: ratingData.maxValue,
-                    reviewText: ratingData.reviewText || undefined
+                    ratingMax: ratingData.maxValue
                 };
-                // Dispatch event
+                // Dispatch rating event
                 this.dispatchEvent(enrichedPayload, rule, ratingEventId);
             });
-            // Only track first matching rule
-            return;
         }
     }
     /**
@@ -4585,6 +4532,15 @@ class RecSysTracker {
                     return;
                 }
             }
+            // Extract rating value (try multiple field names)
+            const ratingValue = payload.ratingValue !== undefined ? payload.ratingValue :
+                (eventData.eventType === this.getEventTypeId('Rating') && payload.Value !== undefined) ? payload.Value :
+                    undefined;
+            // Extract review text (try multiple field names)
+            const reviewText = payload.reviewText !== undefined ? payload.reviewText :
+                payload.reviewValue !== undefined ? payload.reviewValue :
+                    (eventData.eventType === this.getEventTypeId('Review') && payload.Value !== undefined) ? payload.Value :
+                        undefined;
             const trackedEvent = {
                 id: this.metadataNormalizer.generateEventId(),
                 timestamp: new Date(eventData.timestamp),
@@ -4595,11 +4551,11 @@ class RecSysTracker {
                 userValue: userValue,
                 itemField: itemField,
                 itemValue: itemValue,
-                ...(payload.ratingValue !== undefined && {
-                    ratingValue: payload.ratingValue
+                ...(ratingValue !== undefined && {
+                    ratingValue: ratingValue
                 }),
-                ...(payload.reviewText !== undefined && {
-                    ratingReview: payload.reviewText
+                ...(reviewText !== undefined && {
+                    ratingReview: reviewText
                 }),
             };
             this.eventBuffer.add(trackedEvent);

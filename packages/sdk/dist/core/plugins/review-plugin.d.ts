@@ -20,38 +20,19 @@ export declare class ReviewPlugin extends BasePlugin {
     stop(): void;
     /**
      * Handle submit event - TRIGGER PHASE
+     * NOTE: This is now mainly a fallback. Rating Plugin handles most review detection.
      */
     private handleSubmit;
     /**
-     * Check if form matches rule
+     * Find element matching rule selector
      */
-    private matchesRule;
+    private findMatchingElement;
     /**
-     * Check target match
+     * Find container (form or parent element)
      */
-    private checkTargetMatch;
+    private findContainer;
     /**
-     * Check conditions
-     */
-    private checkConditions;
-    /**
-     * Check single condition
-     */
-    private checkCondition;
-    /**
-     * Check URL condition
-     */
-    private checkUrlCondition;
-    /**
-     * Check selector condition
-     */
-    private checkSelectorCondition;
-    /**
-     * Check data attribute condition
-     */
-    private checkDataAttributeCondition;
-    /**
-     * Auto-detect review content from form
+     * Auto-detect review content from container
      */
     private autoDetectReviewContent;
     /**

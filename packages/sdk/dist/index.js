@@ -190,6 +190,15 @@ export class RecSysTracker {
                     return;
                 }
             }
+            // Extract rating value (try multiple field names)
+            const ratingValue = payload.ratingValue !== undefined ? payload.ratingValue :
+                (eventData.eventType === this.getEventTypeId('Rating') && payload.Value !== undefined) ? payload.Value :
+                    undefined;
+            // Extract review text (try multiple field names)
+            const reviewText = payload.reviewText !== undefined ? payload.reviewText :
+                payload.reviewValue !== undefined ? payload.reviewValue :
+                    (eventData.eventType === this.getEventTypeId('Review') && payload.Value !== undefined) ? payload.Value :
+                        undefined;
             const trackedEvent = {
                 id: this.metadataNormalizer.generateEventId(),
                 timestamp: new Date(eventData.timestamp),
@@ -200,11 +209,11 @@ export class RecSysTracker {
                 userValue: userValue,
                 itemField: itemField,
                 itemValue: itemValue,
-                ...(payload.ratingValue !== undefined && {
-                    ratingValue: payload.ratingValue
+                ...(ratingValue !== undefined && {
+                    ratingValue: ratingValue
                 }),
-                ...(payload.reviewText !== undefined && {
-                    ratingReview: payload.reviewText
+                ...(reviewText !== undefined && {
+                    ratingReview: reviewText
                 }),
             };
             this.eventBuffer.add(trackedEvent);

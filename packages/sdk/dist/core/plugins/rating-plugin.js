@@ -71,47 +71,57 @@ export class RatingPlugin extends BasePlugin {
      * Main interaction handler
      */
     handleInteraction(event, eventType) {
-        var _a;
         if (!this.tracker)
             return;
         const target = event.target;
         if (!target)
             return;
-        // Get rating rules
-        const ratingEventId = this.tracker.getEventTypeId('Rating') || 2;
         const config = this.tracker.getConfig();
-        const ratingRules = ((_a = config === null || config === void 0 ? void 0 : config.trackingRules) === null || _a === void 0 ? void 0 : _a.filter(r => r.eventTypeId === ratingEventId)) || [];
-        if (ratingRules.length === 0)
+        if (!config || !config.trackingRules)
             return;
-        console.log(`[RatingPlugin] ⭐ ${eventType} detected, checking ${ratingRules.length} rules`);
+        // Get rating and review event IDs
+        const ratingEventId = this.tracker.getEventTypeId('Rating') || 2;
+        // ONLY handle rating rules (eventTypeId === 2)
+        // Review rules should be handled by ReviewPlugin
+        const rulesToCheck = config.trackingRules.filter(r => r.eventTypeId === ratingEventId);
+        if (rulesToCheck.length === 0)
+            return;
+        console.log(`[RatingPlugin] ⭐ ${eventType} detected, checking ${rulesToCheck.length} rules`);
+        // Track which rules matched
+        const matchedRules = [];
         // Check each rule
-        for (const rule of ratingRules) {
+        for (const rule of rulesToCheck) {
             const matchedElement = this.findMatchingElement(target, rule);
             if (!matchedElement) {
                 continue;
             }
-            console.log(`[RatingPlugin] ✅ Matched rule: "${rule.name}"`);
             // Extract rating data
             const container = this.findContainer(matchedElement);
             const ratingData = RatingUtils.processRating(container, matchedElement, eventType);
+            console.log(`[RatingPlugin] ✅ Matched rule: "${rule.name}" (EventTypeId: ${rule.eventTypeId})`);
             console.log('[RatingPlugin] Rating data:', ratingData);
-            // Filter garbage (0 rating without review)
-            if (ratingData.originalValue === 0 && !ratingData.reviewText) {
-                console.warn('[RatingPlugin] Filtered: zero rating without review');
+            // Filter garbage: 0 rating
+            if (ratingData.originalValue === 0) {
+                console.warn('[RatingPlugin] Filtered: zero rating');
                 continue;
             }
-            // Update throttle time
-            this.lastTriggerTime = Date.now();
-            // Create trigger context (include rating data)
+            matchedRules.push({ rule, element: matchedElement, container, ratingData });
+        }
+        if (matchedRules.length === 0)
+            return;
+        // Update throttle time
+        this.lastTriggerTime = Date.now();
+        // Process each matched rule separately (send separate events)
+        for (const { rule, element, container, ratingData } of matchedRules) {
+            // Create trigger context for rating
             const triggerContext = {
-                element: matchedElement,
-                target: matchedElement,
+                element: element,
+                target: element,
                 container: container,
                 eventType: 'rating',
                 ratingValue: ratingData.normalizedValue,
                 ratingRaw: ratingData.originalValue,
                 ratingMax: ratingData.maxValue,
-                reviewText: ratingData.reviewText,
                 ratingType: ratingData.type
             };
             // Delegate to PayloadBuilder
@@ -119,16 +129,13 @@ export class RatingPlugin extends BasePlugin {
                 // Enrich payload with rating data
                 const enrichedPayload = {
                     ...payload,
-                    ratingValue: ratingData.normalizedValue,
+                    Value: ratingData.normalizedValue,
                     ratingRaw: ratingData.originalValue,
-                    ratingMax: ratingData.maxValue,
-                    reviewText: ratingData.reviewText || undefined
+                    ratingMax: ratingData.maxValue
                 };
-                // Dispatch event
+                // Dispatch rating event
                 this.dispatchEvent(enrichedPayload, rule, ratingEventId);
             });
-            // Only track first matching rule
-            return;
         }
     }
     /**
