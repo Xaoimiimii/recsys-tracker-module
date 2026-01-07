@@ -4,24 +4,20 @@
  * TRÁCH NHIỆM:
  * 1. Phát hiện hành vi rating (click, submit)
  * 2. Match với tracking rules
- * 3. Extract rating value/metadata
- * 4. Gọi PayloadBuilder.handleTrigger()
- * 5. KHÔNG bắt network (chỉ thu thập UI data)
+ * 3. Gọi PayloadBuilder.handleTrigger()
+ * 4. KHÔNG extract data (PayloadBuilder + NetworkObserver sẽ làm)
  *
  * FLOW:
- * click/submit → detect rating → check rules → handleTrigger → DONE
+ * click/submit → match rule → handleTrigger → DONE
+ * Rating value sẽ được lấy từ request body qua NetworkObserver
  */
 import { BasePlugin } from './base-plugin';
-import { RatingUtils } from './utils/rating-utils';
 export class RatingPlugin extends BasePlugin {
     constructor() {
         super(...arguments);
         this.name = 'RatingPlugin';
         this.handleClickBound = this.handleClick.bind(this);
         this.handleSubmitBound = this.handleSubmit.bind(this);
-        // Throttle to prevent spam
-        this.lastTriggerTime = 0;
-        this.THROTTLE_MS = 500;
     }
     init(tracker) {
         this.errorBoundary.execute(() => {
@@ -54,17 +50,13 @@ export class RatingPlugin extends BasePlugin {
      * Handle click event (interactive rating: stars, likes)
      */
     handleClick(event) {
-        // Throttle
-        const now = Date.now();
-        if (now - this.lastTriggerTime < this.THROTTLE_MS) {
-            return;
-        }
         this.handleInteraction(event, 'click');
     }
     /**
      * Handle submit event (traditional forms)
      */
     handleSubmit(event) {
+        console.log('[RatingPlugin] 🔔 Submit event detected');
         this.handleInteraction(event, 'submit');
     }
     /**
@@ -76,65 +68,37 @@ export class RatingPlugin extends BasePlugin {
         const target = event.target;
         if (!target)
             return;
+        console.log(`[RatingPlugin] 🎯 handleInteraction called: eventType=${eventType}, target=`, target);
         const config = this.tracker.getConfig();
         if (!config || !config.trackingRules)
             return;
-        // Get rating and review event IDs
+        // Get rating event ID
         const ratingEventId = this.tracker.getEventTypeId('Rating') || 2;
-        // ONLY handle rating rules (eventTypeId === 2)
-        // Review rules should be handled by ReviewPlugin
         const rulesToCheck = config.trackingRules.filter(r => r.eventTypeId === ratingEventId);
         if (rulesToCheck.length === 0)
             return;
         console.log(`[RatingPlugin] ⭐ ${eventType} detected, checking ${rulesToCheck.length} rules`);
-        // Track which rules matched
-        const matchedRules = [];
         // Check each rule
         for (const rule of rulesToCheck) {
             const matchedElement = this.findMatchingElement(target, rule);
             if (!matchedElement) {
                 continue;
             }
-            // Extract rating data
-            const container = this.findContainer(matchedElement);
-            const ratingData = RatingUtils.processRating(container, matchedElement, eventType);
             console.log(`[RatingPlugin] ✅ Matched rule: "${rule.name}" (EventTypeId: ${rule.eventTypeId})`);
-            console.log('[RatingPlugin] Rating data:', ratingData);
-            // Filter garbage: 0 rating
-            if (ratingData.originalValue === 0) {
-                console.warn('[RatingPlugin] Filtered: zero rating');
-                continue;
-            }
-            matchedRules.push({ rule, element: matchedElement, container, ratingData });
-        }
-        if (matchedRules.length === 0)
-            return;
-        // Update throttle time
-        this.lastTriggerTime = Date.now();
-        // Process each matched rule separately (send separate events)
-        for (const { rule, element, container, ratingData } of matchedRules) {
-            // Create trigger context for rating
+            // Find container (form or parent)
+            const container = this.findContainer(matchedElement);
+            // Create trigger context - NO rating value extraction
             const triggerContext = {
-                element: element,
-                target: element,
+                element: matchedElement,
+                target: matchedElement,
                 container: container,
-                eventType: 'rating',
-                ratingValue: ratingData.normalizedValue,
-                ratingRaw: ratingData.originalValue,
-                ratingMax: ratingData.maxValue,
-                ratingType: ratingData.type
+                eventType: 'rating'
             };
             // Delegate to PayloadBuilder
+            // PayloadBuilder will extract rating value from network request body
             this.tracker.payloadBuilder.handleTrigger(rule, triggerContext, (payload) => {
-                // Enrich payload with rating data
-                const enrichedPayload = {
-                    ...payload,
-                    Value: ratingData.normalizedValue,
-                    ratingRaw: ratingData.originalValue,
-                    ratingMax: ratingData.maxValue
-                };
                 // Dispatch rating event
-                this.dispatchEvent(enrichedPayload, rule, ratingEventId);
+                this.dispatchEvent(payload, rule, ratingEventId);
             });
         }
     }

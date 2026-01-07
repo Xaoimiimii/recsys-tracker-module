@@ -50,10 +50,7 @@ export class ScrollPlugin extends BasePlugin {
 
                 document.addEventListener('visibilitychange', this.handleVisibilityChangeBound);
                 window.addEventListener('beforeunload', this.handleUnloadBound);
-                console.log(`[ScrollPlugin] Started. Target:`, this.targetScrollElement ? 'Specific Element' : 'Window');
                 this.active = true;
-            } else {
-                console.log(`[ScrollPlugin] No matching rule found for this page. Idle.`);
             }
         }, 'ScrollPlugin.start');
     }
@@ -88,8 +85,6 @@ export class ScrollPlugin extends BasePlugin {
 
         if (scrollRules.length === 0) return false;
 
-        console.log(`📜 [ScrollPlugin] Checking ${scrollRules.length} rules...`);
-
         for (const rule of scrollRules) {
             const element = this.findTargetElement(rule);
 
@@ -99,8 +94,6 @@ export class ScrollPlugin extends BasePlugin {
                 if (this.checkConditions(representativeEl, rule)) {
                     this.activeRule = rule;
                     this.targetScrollElement = (element instanceof Window) ? null : element as HTMLElement;
-
-                    console.log(`✅ [ScrollPlugin] Rule Matched: "${rule.name}"`);
                     this.detectContextForItem(representativeEl);
                     return true;
                 }
@@ -126,7 +119,6 @@ export class ScrollPlugin extends BasePlugin {
     }
 
     private detectContextForItem(element: HTMLElement) {
-        console.log("🔍 [ScrollPlugin] Scanning for context...");
         const contextInfo = this.scanSurroundingContext(element);
 
         if (contextInfo.id) {
@@ -141,7 +133,6 @@ export class ScrollPlugin extends BasePlugin {
         } else {
             this.currentItemContext = this.createSyntheticItem();
         }
-        console.log("🎯 [ScrollPlugin] Resolved Context:", this.currentItemContext);
     }
 
     private checkConditions(element: HTMLElement, rule: any): boolean {

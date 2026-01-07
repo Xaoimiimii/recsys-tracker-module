@@ -8,7 +8,6 @@ export class OriginVerifier {
   static verify(domainUrl: string): boolean {
     try {
       if (!domainUrl) {
-        console.warn('[RecSysTracker] Cannot verify: domainUrl is missing');
         return false;
       }
 
@@ -24,12 +23,10 @@ export class OriginVerifier {
         
         // Cho phép localhost để test
         if (origin?.startsWith('https://localhost') || origin?.startsWith('http://localhost')) {
-          console.warn('[RecSysTracker] Skipping origin verification for localhost (testing mode)');
           return true;
         }
         
         if (protocol === 'file:' || origin === 'null' || origin === 'file://') {
-          console.warn('[RecSysTracker] Skipping origin verification for file:// protocol (testing mode)');
           return true;
         }
       }
@@ -104,14 +101,8 @@ export class OriginVerifier {
         return true;
       }
 
-      console.warn('[RecSysTracker] Referrer mismatch:', {
-        referrer: normalizedReferrer,
-        expected: normalizedDomain
-      });
-
       return false;
     } catch (error) {
-      console.warn('[RecSysTracker] Failed to parse referrer:', error);
       return false;
     }
   }

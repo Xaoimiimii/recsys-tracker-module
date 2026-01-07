@@ -23,7 +23,6 @@ export class PageViewPlugin extends BasePlugin {
             }
 
             this.trackCurrentPage(window.location.href);
-            console.log("[PageViewPlugin] started listening and tracked initial load.");
             this.active = true;
         }, 'PageViewPlugin.start');
     }
@@ -53,7 +52,6 @@ export class PageViewPlugin extends BasePlugin {
 
         const eventId = this.tracker.getEventTypeId('Page View');
         if (!eventId) {
-            console.log('[PageViewPlugin] Page View event type not found in config.');
             return;
         }
 
@@ -61,7 +59,6 @@ export class PageViewPlugin extends BasePlugin {
         const pageViewRules = config?.trackingRules?.filter(r => r.eventTypeId === eventId);
 
         if (!pageViewRules || pageViewRules.length === 0) {
-            console.log('[PageViewPlugin] No page view rules configured.');
             return;
         }
 
@@ -81,20 +78,17 @@ export class PageViewPlugin extends BasePlugin {
 
                 if (match) {
                     matchFound = true;
-                    console.log(`[PageViewPlugin] ✅ Matched regex rule: ${rule.name}`);
                 }
             }
             // DOM selector matching (Checking presence of element on page)
             else if (selector && selector !== 'body') {
                 if (document.querySelector(selector)) {
                     matchFound = true;
-                    console.log(`[PageViewPlugin] ✅ Matched DOM selector rule: ${rule.name}`);
                 }
             }
             // Default body matching
             else if (selector === 'body') {
                 matchFound = true;
-                console.log(`[PageViewPlugin] ✅ Matched default rule: ${rule.name}`);
             }
 
             if (matchFound) {
@@ -104,7 +98,5 @@ export class PageViewPlugin extends BasePlugin {
                 return;
             }
         }
-
-        console.log('[PageViewPlugin] ⏸️ No matching rule found for current URL/DOM.');
     }
 }

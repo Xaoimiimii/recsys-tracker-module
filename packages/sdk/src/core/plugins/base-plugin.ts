@@ -50,7 +50,6 @@ export abstract class BasePlugin implements IPlugin {
   public stop(): void {
     this.errorBoundary.execute(() => {
       this.active = false;
-      console.log(`[${this.name}] Plugin stopped`);
     }, `${this.name}.stop`);
   }
 
@@ -58,7 +57,6 @@ export abstract class BasePlugin implements IPlugin {
     this.errorBoundary.execute(() => {
       this.stop();
       this.tracker = null;
-      console.log(`[${this.name}] Plugin destroyed`);
     }, `${this.name}.destroy`);
   }
 
@@ -68,7 +66,6 @@ export abstract class BasePlugin implements IPlugin {
 
   protected ensureInitialized(): boolean {
     if (!this.tracker) {
-      console.error(`[${this.name}] Plugin not initialized. Call init() first.`);
       return false;
     }
     return true;
@@ -167,12 +164,8 @@ export abstract class BasePlugin implements IPlugin {
     eventId: number
   ): void {
     if (!this.tracker) {
-      console.warn(`[${this.name}] Cannot track: tracker not initialized`);
       return;
     }
-
-    console.log(`[${this.name}] trackWithPayload called for eventId:`, eventId, 'rule:', rule.name);
-    console.log(`[${this.name}] Collected data:`, collectedData);
     
     // Get values from collectedData
     const userField = collectedData.UserId ? 'UserId' : (collectedData.Username ? 'Username' : (collectedData.AnonymousId ? 'AnonymousId' : 'UserId'));
@@ -192,11 +185,9 @@ export abstract class BasePlugin implements IPlugin {
       ratingValue: eventId === 2 ? Number(value) : undefined,
       ratingReview: eventId === 3 ? value : undefined,
     };
-    console.log(`[${this.name}] Final payload to track:`, payload);
 
     // Track the event
     this.tracker.track(payload);
-    console.log(`[${this.name}] tracker.track() called`);
   }
 
   /**
@@ -218,11 +209,8 @@ export abstract class BasePlugin implements IPlugin {
     rule: any,
     eventId: number
   ): void {
-    console.warn(`[${this.name}] buildAndTrack is deprecated - use PayloadBuilder.handleTrigger() instead`);
-    
     // For legacy plugins that still use this method, provide minimal support
     if (!this.tracker) {
-      console.warn(`[${this.name}] Cannot track: tracker not initialized`);
       return;
     }
 

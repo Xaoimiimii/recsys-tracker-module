@@ -42,7 +42,6 @@ export class SelectorMatcher {
     try {
       return element.matches(selector) ? element : null;
     } catch (e) {
-      console.error('[SelectorMatcher] Invalid selector:', selector);
       return null;
     }
   }
@@ -54,7 +53,6 @@ export class SelectorMatcher {
     try {
       return element.closest(selector) as HTMLElement | null;
     } catch (e) {
-      console.error('[SelectorMatcher] Invalid selector:', selector);
       return null;
     }
   }
@@ -67,7 +65,6 @@ export class SelectorMatcher {
       const child = element.querySelector(selector);
       return child ? element : null;
     } catch (e) {
-      console.error('[SelectorMatcher] Invalid selector:', selector);
       return null;
     }
   }

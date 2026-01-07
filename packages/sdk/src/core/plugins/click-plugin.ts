@@ -33,8 +33,6 @@ export class ClickPlugin extends BasePlugin {
 
       document.addEventListener('click', this.handleClickBound, true);
       this.active = true;
-
-      console.log('[ClickPlugin] ✅ Started');
     }, 'ClickPlugin.start');
   }
 
@@ -44,7 +42,6 @@ export class ClickPlugin extends BasePlugin {
         document.removeEventListener('click', this.handleClickBound, true);
       }
       super.stop();
-      console.log('[ClickPlugin] Stopped');
     }, 'ClickPlugin.stop');
   }
 
@@ -64,8 +61,6 @@ export class ClickPlugin extends BasePlugin {
 
     if (clickRules.length === 0) return;
 
-    console.log(`[ClickPlugin] 🖱️ Click detected, checking ${clickRules.length} rules`);
-
     // Check each rule
     for (const rule of clickRules) {
       const matchedElement = this.findMatchingElement(clickedElement, rule);
@@ -74,11 +69,8 @@ export class ClickPlugin extends BasePlugin {
         continue;
       }
 
-      console.log(`[ClickPlugin] ✅ Matched rule: "${rule.name}"`);
-
       // Check conditions
       if (!this.checkConditions(matchedElement, rule)) {
-        console.log('[ClickPlugin] Conditions not met');
         continue;
       }
 
@@ -149,7 +141,6 @@ export class ClickPlugin extends BasePlugin {
 
       return null;
     } catch (e) {
-      console.error('[ClickPlugin] Selector error:', e);
       return null;
     }
   }
@@ -231,8 +222,6 @@ export class ClickPlugin extends BasePlugin {
    */
   private dispatchEvent(payload: Record<string, any>, rule: TrackingRule, eventId: number): void {
     if (!this.tracker) return;
-
-    console.log('[ClickPlugin] 📤 Dispatching event with payload:', payload);
 
     this.tracker.track({
       eventType: eventId,

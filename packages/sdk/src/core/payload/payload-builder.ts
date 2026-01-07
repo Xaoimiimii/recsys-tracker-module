@@ -19,6 +19,7 @@
 import { TrackingRule, PayloadMapping } from '../../types';
 import { RuleExecutionContextManager } from '../execution/rule-execution-context';
 import { NetworkObserver, getNetworkObserver } from '../network/network-observer';
+import { getCachedUserInfo, getOrCreateAnonymousId } from '../plugins/utils/plugin-utils';
 
 /**
  * Các source types
@@ -90,10 +91,49 @@ export class PayloadBuilder {
       this.recManager.collectField(context.executionId, field, value);
     }
 
+    // 4.5 Thu thập User Info (UserValue/AnonymousId) từ async mappings
+    this.collectUserInfoFromAsyncMappings(context.executionId, asyncMappings);
+
     // 5. Register rule với NetworkObserver để bắt async data
     this.networkObserver.registerRule(rule);
     
     console.log(`[PayloadBuilder] ⏳ Waiting for network data...`);
+  }
+
+  /**
+   * Thu thập User Info từ async mappings
+   * Nếu có UserId/Username trong async mappings, tự động lấy từ:
+   * 1. Cached user info (đã lưu từ lần trước)
+   * 2. AnonymousId (fallback)
+   */
+  private collectUserInfoFromAsyncMappings(
+    executionId: string,
+    asyncMappings: PayloadMapping[]
+  ): void {
+    // Tìm xem có mapping nào cho UserValue/AnonymousId không
+    const userMapping = asyncMappings.find(m => 
+      m.field === 'UserId' ||  
+      m.field === 'AnonymousId'
+    );
+
+    if (!userMapping) {
+      return; // Không cần user info
+    }
+
+    // Lấy cached user info
+    const cachedInfo = getCachedUserInfo();
+    
+    if (cachedInfo && cachedInfo.userValue) {
+      // Có cached user info → dùng nó
+      this.recManager.collectField(executionId, cachedInfo.userField, cachedInfo.userValue);
+      console.log(`[PayloadBuilder] Using cached user: ${cachedInfo.userField}=${cachedInfo.userValue}`);
+      return;
+    }
+
+    // Không có cached user info → dùng AnonymousId
+    const anonId = getOrCreateAnonymousId();
+    this.recManager.collectField(executionId, 'AnonymousId', anonId);
+    console.log(`[PayloadBuilder] Using AnonymousId: ${anonId}`);
   }
 
   /**

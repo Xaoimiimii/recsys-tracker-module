@@ -34,7 +34,6 @@ export class ReviewPlugin extends BasePlugin {
       document.addEventListener('submit', this.handleSubmitBound, { capture: true });
       this.active = true;
       
-      console.log('[ReviewPlugin] ✅ Started');
     }, 'ReviewPlugin.start');
   }
 
@@ -44,7 +43,6 @@ export class ReviewPlugin extends BasePlugin {
         document.removeEventListener('submit', this.handleSubmitBound, { capture: true });
       }
       super.stop();
-      console.log('[ReviewPlugin] Stopped');
     }, 'ReviewPlugin.stop');
   }
 
@@ -65,8 +63,6 @@ export class ReviewPlugin extends BasePlugin {
 
     if (reviewRules.length === 0) return;
 
-    console.log(`[ReviewPlugin] 📝 Submit detected, checking ${reviewRules.length} rules`);
-
     // Check each rule
     for (const rule of reviewRules) {
       // Try to find matching element (form or button)
@@ -74,8 +70,6 @@ export class ReviewPlugin extends BasePlugin {
       if (!matchedElement) {
         continue;
       }
-
-      console.log(`[ReviewPlugin] ✅ Matched rule: "${rule.name}"`);
 
       // Find container (form or parent)
       const container = this.findContainer(matchedElement);
@@ -85,7 +79,6 @@ export class ReviewPlugin extends BasePlugin {
       
       // Filter if no review content
       if (!reviewContent) {
-        console.warn('[ReviewPlugin] No review content found');
         continue;
       }
       
@@ -149,7 +142,6 @@ export class ReviewPlugin extends BasePlugin {
 
       return match;
     } catch (e) {
-      console.error('[ReviewPlugin] Selector error:', e);
       return null;
     }
   }
@@ -223,8 +215,6 @@ export class ReviewPlugin extends BasePlugin {
    */
   private dispatchEvent(payload: Record<string, any>, rule: TrackingRule, eventId: number): void {
     if (!this.tracker) return;
-
-    console.log('[ReviewPlugin] 📤 Dispatching event with payload:', payload);
 
     this.tracker.track({
       eventType: eventId,

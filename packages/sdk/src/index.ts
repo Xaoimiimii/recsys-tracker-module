@@ -51,10 +51,9 @@ export class RecSysTracker {
         return;
       }
 
-      // 🔥 CRITICAL: Initialize Network Observer FIRST (before anything else)
+      // Initialize Network Observer FIRST (before anything else)
       const networkObserver = getNetworkObserver();
       networkObserver.initialize(this.payloadBuilder.getRECManager());
-      console.log('[RecSysTracker] ✅ Network Observer initialized');
 
       // Load config từ window
       this.config = this.configLoader.loadFromWindow();
@@ -137,7 +136,6 @@ export class RecSysTracker {
       if (hasClickRules && this.config) {
         const clickPromise = import('./core/plugins/click-plugin').then(({ ClickPlugin }) => {
           this.use(new ClickPlugin());
-          console.log('[RecSysTracker] Auto-registered ClickPlugin v2');
         });
         pluginPromises.push(clickPromise);
       }
@@ -145,7 +143,6 @@ export class RecSysTracker {
       if (hasRateRules) {
         const ratingPromise = import('./core/plugins/rating-plugin').then(({ RatingPlugin }) => {
           this.use(new RatingPlugin());
-          console.log('[RecSysTracker] Auto-registered RatingPlugin v2');
         });
         pluginPromises.push(ratingPromise);
       }
@@ -153,7 +150,6 @@ export class RecSysTracker {
       if (hasReviewRules) {
         const reviewPromise = import('./core/plugins/review-plugin').then(({ ReviewPlugin }) => {
           this.use(new ReviewPlugin());
-          console.log('[RecSysTracker] Auto-registered ReviewPlugin v2');
         });
         pluginPromises.push(reviewPromise);
       }
@@ -198,7 +194,6 @@ export class RecSysTracker {
   }): void {
     this.errorBoundary.execute(() => {
       if (!this.isInitialized || !this.config) {
-        console.warn('[RecSysTracker] Cannot track: SDK not initialized');
         return;
       }
 
@@ -240,12 +235,6 @@ export class RecSysTracker {
         );
 
         if (isDuplicate) {
-          console.log('[RecSysTracker] 🚫 Duplicate event dropped:', {
-            eventType: eventData.eventType,
-            ruleId: ruleId,
-            userValue: userValue,
-            itemValue: itemValue
-          });
           return;
         }
       }
@@ -280,7 +269,6 @@ export class RecSysTracker {
       };
 
       this.eventBuffer.add(trackedEvent);
-      console.log('[RecSysTracker] ✅ Event tracked:', trackedEvent);
     }, 'track');
   }
 

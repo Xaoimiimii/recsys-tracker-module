@@ -69,15 +69,33 @@ export class RatingUtils {
 
             // Check 2: Index (Sao thứ mấy trong danh sách?)
             // Áp dụng nếu element hiện tại là item trong list (li, span, button)
-            if (['LI', 'SPAN', 'DIV', 'BUTTON', 'I', 'SVG'].includes(current.tagName)) {
-                const siblings = Array.from(current.parentElement?.children || []).filter(el =>
-                    el.tagName === current!.tagName || el.className.includes('star') || el.className.includes('rate')
-                );
+            if (['LI', 'SPAN', 'DIV', 'BUTTON', 'I', 'SVG', 'polygon', 'path'].includes(current.tagName.toUpperCase())) {
+                // Tìm parent chứa tất cả các stars
+                let starContainer: Element | null = current.parentElement;
+                let depth2 = 0;
+                
+                while (starContainer && depth2 < 3) {
+                    const siblings = Array.from(starContainer.children).filter(el => {
+                        const tag = el.tagName.toUpperCase();
+                        const className = (el.className || '').toString().toLowerCase();
+                        return (
+                            ['LI', 'SPAN', 'DIV', 'BUTTON', 'I', 'SVG'].includes(tag) &&
+                            (className.includes('star') || className.includes('rate') || tag === 'SVG')
+                        );
+                    });
 
-                // Nếu có ít nhất 2 anh em giống nhau, khả năng cao là list sao
-                if (siblings.length >= 2 && siblings.length <= 12) {
-                    const index = siblings.indexOf(current);
-                    if (index !== -1) return index + 1;
+                    // Nếu tìm thấy list stars (3-10 items)
+                    if (siblings.length >= 3 && siblings.length <= 10) {
+                        // Tìm element nào chứa current (có thể là parent của current)
+                        for (let i = 0; i < siblings.length; i++) {
+                            if (siblings[i].contains(current) || siblings[i] === current) {
+                                return i + 1;
+                            }
+                        }
+                    }
+                    
+                    starContainer = starContainer.parentElement;
+                    depth2++;
                 }
             }
 
@@ -185,11 +203,23 @@ export class RatingUtils {
         // Keywords đặc trưng của Binary Rating
         const keywords = ['like', 'dislike', 'thumb', 'vote', 'useful', 'hữu ích', 'thích'];
 
-        // Check nếu container chỉ có đúng 2 nút bấm -> Khả năng cao là binary
+        // Check keywords trước
+        if (keywords.some(k => contextStr.includes(k))) {
+            return true;
+        }
+
+        // Check nếu container có stars -> KHÔNG PHẢI binary
+        const hasStars = contextStr.includes('star') || 
+                        container.querySelector('.star, .fa-star, [class*="star"], svg[class*="star"]');
+        if (hasStars) {
+            return false;
+        }
+
+        // Check nếu container chỉ có đúng 2 nút bấm và có từ 'rate' -> binary
         const buttons = container.querySelectorAll('button, a[role="button"], input[type="button"]');
         const isTwoButtons = buttons.length === 2;
 
-        return keywords.some(k => contextStr.includes(k)) || (isTwoButtons && contextStr.includes('rate'));
+        return isTwoButtons && contextStr.includes('rate');
     }
 
     private static isPositiveAction(target: Element): boolean {

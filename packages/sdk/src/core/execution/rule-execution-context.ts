@@ -79,12 +79,6 @@ export class RuleExecutionContextManager {
     }, this.MAX_WAIT_TIME);
 
     this.contexts.set(executionId, context);
-    
-    console.log(`[REC] Created context ${executionId} for rule ${ruleId}`, {
-      requiredFields,
-      timeWindow: this.TIME_WINDOW,
-      maxWaitTime: this.MAX_WAIT_TIME
-    });
 
     return context;
   }
@@ -146,8 +140,6 @@ export class RuleExecutionContextManager {
 
     context.collectedFields.set(field, value);
     
-    console.log(`[REC] Collected field "${field}" for ${executionId}:`, value);
-    
     // Check nếu đã đủ dữ liệu
     this.checkCompletion(executionId);
   }
@@ -193,8 +185,6 @@ export class RuleExecutionContextManager {
       payload[key] = value;
     });
 
-    console.log(`[REC] ✅ Context ${executionId} completed with payload:`, payload);
-
     // Trigger callback
     if (context.onComplete) {
       context.onComplete(payload);
@@ -216,13 +206,6 @@ export class RuleExecutionContextManager {
     }
 
     context.status = 'expired';
-    
-    console.warn(`[REC] ⏱️ Context ${executionId} expired (rule ${context.ruleId})`, {
-      collectedFields: Array.from(context.collectedFields.keys()),
-      missingFields: Array.from(context.requiredFields).filter(
-        f => !context.collectedFields.has(f)
-      )
-    });
 
     // Cleanup
     setTimeout(() => {

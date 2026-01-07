@@ -33,6 +33,13 @@ export declare class PayloadBuilder {
      */
     handleTrigger(rule: TrackingRule, triggerContext: any, onComplete: (payload: Record<string, any>) => void): void;
     /**
+     * Thu thập User Info từ async mappings
+     * Nếu có UserId/Username trong async mappings, tự động lấy từ:
+     * 1. Cached user info (đã lưu từ lần trước)
+     * 2. AnonymousId (fallback)
+     */
+    private collectUserInfoFromAsyncMappings;
+    /**
      * Phân loại mappings thành sync và async
      */
     private classifyMappings;

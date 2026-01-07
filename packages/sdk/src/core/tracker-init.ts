@@ -15,9 +15,9 @@ export class TrackerInit {
     return this.usernameCache = user ?? "guest";
 }
 
-static init(): void {
-    console.log("✅ [TrackerInit] Static system initialized");
-}
+// static init(): void {
+//     console.log("✅ [TrackerInit] Static system initialized");
+// }
 
   static handleMapping(rule: TrackingRule, target: HTMLElement | null = null): Record<string, any> {
     const payload: Record<string, any> = { 

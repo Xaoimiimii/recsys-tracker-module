@@ -5,18 +5,22 @@ export class RatingUtils {
     static processRating(container, triggerElement, eventType) {
         let rawValue = 0;
         let maxValue = 5;
+        console.log(`[RatingUtils] processRating: eventType=${eventType}, trigger=`, triggerElement);
         // BƯỚC 1: TRÍCH XUẤT GIÁ TRỊ (EXTRACTION)
         // Chiến thuật 1: Nếu click trực tiếp vào item (sao/nút), ưu tiên lấy value từ chính nó
         if (eventType === 'click') {
             rawValue = this.extractValueFromTarget(container, triggerElement);
+            console.log(`[RatingUtils] extractValueFromTarget: ${rawValue}`);
         }
         // Chiến thuật 2: Nếu là submit form hoặc Chiến thuật 1 thất bại (click vào viền chẳng hạn)
         // Quét toàn bộ container xem cái nào đang "checked" hoặc "active"
         if (rawValue === 0) {
             rawValue = this.extractValueFromContainerState(container);
+            console.log(`[RatingUtils] extractValueFromContainerState: ${rawValue}`);
         }
         // BƯỚC 2: PHÁT HIỆN THANG ĐIỂM (SCALE DETECTION)
         const isBinary = this.detectBinaryContext(container, triggerElement);
+        console.log(`[RatingUtils] isBinary: ${isBinary}`);
         if (isBinary) {
             maxValue = 1; // Hệ nhị phân
             // Nếu click nút Like/Upvote thì rawValue = 1
@@ -44,7 +48,6 @@ export class RatingUtils {
     }
     // --- CÁC HÀM "THÁM TỬ" (HEURISTICS) ---
     static extractValueFromTarget(container, target) {
-        var _a;
         let current = target;
         // Leo ngược từ target lên container (tối đa 5 cấp để tránh loop vô hạn)
         let depth = 0;
@@ -58,13 +61,29 @@ export class RatingUtils {
             }
             // Check 2: Index (Sao thứ mấy trong danh sách?)
             // Áp dụng nếu element hiện tại là item trong list (li, span, button)
-            if (['LI', 'SPAN', 'DIV', 'BUTTON', 'I', 'SVG'].includes(current.tagName)) {
-                const siblings = Array.from(((_a = current.parentElement) === null || _a === void 0 ? void 0 : _a.children) || []).filter(el => el.tagName === current.tagName || el.className.includes('star') || el.className.includes('rate'));
-                // Nếu có ít nhất 2 anh em giống nhau, khả năng cao là list sao
-                if (siblings.length >= 2 && siblings.length <= 12) {
-                    const index = siblings.indexOf(current);
-                    if (index !== -1)
-                        return index + 1;
+            if (['LI', 'SPAN', 'DIV', 'BUTTON', 'I', 'SVG', 'polygon', 'path'].includes(current.tagName.toUpperCase())) {
+                // Tìm parent chứa tất cả các stars
+                let starContainer = current.parentElement;
+                let depth2 = 0;
+                while (starContainer && depth2 < 3) {
+                    const siblings = Array.from(starContainer.children).filter(el => {
+                        const tag = el.tagName.toUpperCase();
+                        const className = (el.className || '').toString().toLowerCase();
+                        return (['LI', 'SPAN', 'DIV', 'BUTTON', 'I', 'SVG'].includes(tag) &&
+                            (className.includes('star') || className.includes('rate') || tag === 'SVG'));
+                    });
+                    // Nếu tìm thấy list stars (3-10 items)
+                    if (siblings.length >= 3 && siblings.length <= 10) {
+                        // Tìm element nào chứa current (có thể là parent của current)
+                        for (let i = 0; i < siblings.length; i++) {
+                            if (siblings[i].contains(current) || siblings[i] === current) {
+                                console.log(`[RatingUtils] Found star index: ${i + 1}/${siblings.length}`);
+                                return i + 1;
+                            }
+                        }
+                    }
+                    starContainer = starContainer.parentElement;
+                    depth2++;
                 }
             }
             // Check 3: Accessibility Attribute (aria-posinset="4")
@@ -161,10 +180,20 @@ export class RatingUtils {
         const contextStr = (container.className + ' ' + target.className + ' ' + (target.getAttribute('aria-label') || '') + ' ' + (target.id || '')).toLowerCase();
         // Keywords đặc trưng của Binary Rating
         const keywords = ['like', 'dislike', 'thumb', 'vote', 'useful', 'hữu ích', 'thích'];
-        // Check nếu container chỉ có đúng 2 nút bấm -> Khả năng cao là binary
+        // Check keywords trước
+        if (keywords.some(k => contextStr.includes(k))) {
+            return true;
+        }
+        // Check nếu container có stars -> KHÔNG PHẢI binary
+        const hasStars = contextStr.includes('star') ||
+            container.querySelector('.star, .fa-star, [class*="star"], svg[class*="star"]');
+        if (hasStars) {
+            return false;
+        }
+        // Check nếu container chỉ có đúng 2 nút bấm và có từ 'rate' -> binary
         const buttons = container.querySelectorAll('button, a[role="button"], input[type="button"]');
         const isTwoButtons = buttons.length === 2;
-        return keywords.some(k => contextStr.includes(k)) || (isTwoButtons && contextStr.includes('rate'));
+        return isTwoButtons && contextStr.includes('rate');
     }
     static isPositiveAction(target) {
         const str = (target.className + ' ' + target.textContent + ' ' + target.id + ' ' + (target.getAttribute('aria-label') || '')).toLowerCase();

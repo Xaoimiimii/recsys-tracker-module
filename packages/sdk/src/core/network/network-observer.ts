@@ -60,7 +60,6 @@ export class NetworkObserver {
    */
   initialize(recManager: RuleExecutionContextManager): void {
     if (this.isActive) {
-      console.warn('[NetworkObserver] Already initialized');
       return;
     }
 
@@ -68,8 +67,6 @@ export class NetworkObserver {
     this.hookFetch();
     this.hookXHR();
     this.isActive = true;
-    
-    console.log('[NetworkObserver] ✅ Initialized and active');
   }
 
   /**
@@ -79,7 +76,6 @@ export class NetworkObserver {
   registerRule(rule: TrackingRule): void {
     if (!this.registeredRules.has(rule.id)) {
       this.registeredRules.set(rule.id, rule);
-      console.log('[NetworkObserver] Registered rule:', rule.id, rule.name);
     }
   }
 
@@ -117,8 +113,6 @@ export class NetworkObserver {
           requestBody,
           responseBody: responseText
         });
-      }).catch(err => {
-        console.warn('[NetworkObserver] Failed to read response:', err);
       });
 
       return response;
@@ -222,8 +216,6 @@ export class NetworkObserver {
           mapping.field,
           value
         );
-        
-        console.log(`[NetworkObserver] ✅ Collected "${mapping.field}" for rule ${rule.id}:`, value);
       }
     }
   }
@@ -316,13 +308,6 @@ export class NetworkObserver {
     
     const urlPart = mapping.urlPart?.toLowerCase();
     
-    console.log('[NetworkObserver] Extracting from URL:', {
-      url: requestInfo.url,
-      urlPart: urlPart,
-      urlPartValue: mapping.urlPartValue,
-      value: mapping.value
-    });
-    
     switch (urlPart) {
       case 'query':
       case 'queryparam':
@@ -333,13 +318,11 @@ export class NetworkObserver {
       case 'pathsegment':
         // Extract path segment by index or pattern
         const pathValue = mapping.urlPartValue || mapping.value;
-        console.log('[NetworkObserver] Path extraction:', { pathValue, pathname: url.pathname });
         
         if (pathValue && !isNaN(Number(pathValue))) {
           const segments = url.pathname.split('/').filter(s => s);
           const index = Number(pathValue);
           const result = segments[index] || null;
-          console.log('[NetworkObserver] Extracted segment:', { segments, index, result });
           return result;
         }
         return url.pathname;
@@ -351,18 +334,12 @@ export class NetworkObserver {
         // If no urlPart specified, try to extract from value
         // Check if value is a number (path segment index)
         const segments = url.pathname.split('/').filter(s => s);
-        console.log('[NetworkObserver] URL pathname:', url.pathname);
-        console.log('[NetworkObserver] Segments:', segments);
-        console.log('[NetworkObserver] Mapping value:', mapping.value, 'Type:', typeof mapping.value);
         
         if (mapping.value && !isNaN(Number(mapping.value))) {
           const index = Number(mapping.value);
           const result = segments[index] || null;
-          console.log('[NetworkObserver] Default path extraction:', { segments, index, result });
           return result;
         }
-        
-        console.warn('[NetworkObserver] Could not extract segment, returning full URL');
         return url.href;
     }
   }
@@ -415,8 +392,6 @@ export class NetworkObserver {
     
     this.isActive = false;
     this.registeredRules.clear();
-    
-    console.log('[NetworkObserver] Restored original functions');
   }
 
   /**

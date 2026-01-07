@@ -4,12 +4,12 @@
  * TRÁCH NHIỆM:
  * 1. Phát hiện hành vi rating (click, submit)
  * 2. Match với tracking rules
- * 3. Extract rating value/metadata
- * 4. Gọi PayloadBuilder.handleTrigger()
- * 5. KHÔNG bắt network (chỉ thu thập UI data)
+ * 3. Gọi PayloadBuilder.handleTrigger()
+ * 4. KHÔNG extract data (PayloadBuilder + NetworkObserver sẽ làm)
  *
  * FLOW:
- * click/submit → detect rating → check rules → handleTrigger → DONE
+ * click/submit → match rule → handleTrigger → DONE
+ * Rating value sẽ được lấy từ request body qua NetworkObserver
  */
 import { BasePlugin } from './base-plugin';
 import { RecSysTracker } from '../..';
@@ -17,8 +17,6 @@ export declare class RatingPlugin extends BasePlugin {
     readonly name = "RatingPlugin";
     private handleClickBound;
     private handleSubmitBound;
-    private lastTriggerTime;
-    private readonly THROTTLE_MS;
     init(tracker: RecSysTracker): void;
     start(): void;
     stop(): void;

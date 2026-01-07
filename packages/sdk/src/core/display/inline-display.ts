@@ -116,7 +116,7 @@ export class InlineDisplay {
         this.renderWidget(container, items);
       }
     } catch (error) {
-      console.error('[InlineDisplay] Error processing container:', error);
+      // console.error('[InlineDisplay] Error processing container:', error);
     }
   }
 
@@ -207,7 +207,7 @@ export class InlineDisplay {
         }
       });
     } catch (error) {
-      console.error('[InlineDisplay] Error rendering widget:', error);
+      // console.error('[InlineDisplay] Error rendering widget:', error);
     }
   }
 

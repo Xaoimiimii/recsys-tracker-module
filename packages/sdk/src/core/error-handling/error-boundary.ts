@@ -67,7 +67,7 @@ export class ErrorBoundary {
   // Handle error internally
   private handleError(error: Error, context: string): void {
     if (this.debug) {
-      console.error(`[RecSysTracker Error][${context}]`, error);
+      // console.error(`[RecSysTracker Error][${context}]`, error);
     }
 
     // Gọi error handler tùy chỉnh nếu có
@@ -77,7 +77,7 @@ export class ErrorBoundary {
       } catch (handlerError) {
         // Prevent error handler from breaking
         if (this.debug) {
-          console.error('[RecSysTracker] Error handler failed:', handlerError);
+          // console.error('[RecSysTracker] Error handler failed:', handlerError);
         }
       }
     }

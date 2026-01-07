@@ -23,7 +23,6 @@ export class DisplayManager {
   // Khởi tạo display methods dựa trên config
   async initialize(returnMethods: ReturnMethod[]): Promise<void> {
     if (!returnMethods || returnMethods.length === 0) {
-      console.log('[DisplayManager] No return methods configured');
       return;
     }
 
@@ -65,10 +64,9 @@ export class DisplayManager {
       
       const anonymousId = this.getAnonymousId();
       if (!anonymousId) {
-        console.warn('[DisplayManager] No anonymous ID found');
         return [];
       }
-      console.log(`[DisplayManager] Fetching recommendations for anonymous ID: ${anonymousId}`);
+
       const items = await this.recommendationFetcher.fetchRecommendations(
         anonymousId,
         'AnonymousId',
@@ -88,10 +86,8 @@ export class DisplayManager {
       if (anonId) {
         return anonId;
       }
-      console.warn('[DisplayManager] recsys_anon_id not found in localStorage');
       return null;
     } catch (error) {
-      console.error('[DisplayManager] Error reading localStorage:', error);
       return null;
     }
   }
@@ -144,7 +140,7 @@ export class DisplayManager {
       
       this.popupDisplay.start();
     } catch (error) {
-      console.error('[DisplayManager] Error initializing popup:', error);
+      // console.error('[DisplayManager] Error initializing popup:', error);
     }
   }
 
