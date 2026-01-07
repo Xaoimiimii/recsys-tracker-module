@@ -21,11 +21,17 @@ export declare class NetworkObserver {
     private isActive;
     private recManager;
     private registeredRules;
+    private userInfoMappings;
     private constructor();
     /**
      * Get singleton instance
      */
     static getInstance(): NetworkObserver;
+    /**
+     * Register user info mappings từ config
+     * Được gọi bởi ConfigLoader sau khi parse rules
+     */
+    registerUserInfoMappings(rules: TrackingRule[]): void;
     /**
      * Initialize observer với REC manager
      * PHẢI GỌI KHI SDK INIT
@@ -50,13 +56,28 @@ export declare class NetworkObserver {
     private hookXHR;
     /**
      * Xử lý request đã intercept
-     * CORE LOGIC - chỉ xử lý nếu có REC phù hợp
+     * SECURITY: Chỉ process và log khi request match với rule patterns
+     * SMART: Cache user info dựa trên registered user info mappings từ config
      */
     private handleRequest;
     /**
      * Process payload mappings của rule và extract data vào REC
      */
     private processRuleMappings;
+    /**
+     * SMART USER INFO CACHING
+     *
+     * Cache user info dựa trên registered user info mappings từ config
+     * Chỉ cache khi request match với patterns đã đăng ký
+     *
+     * @returns true nếu đã cache user info
+     */
+    private smartUserInfoCaching;
+    /**
+     * SECURITY: Tìm rules có thể match với request này
+     * Check URL pattern và method TRƯỚC KHI parse body
+     */
+    private findPotentialMatchingRules;
     /**
      * Check nếu source là network source
      */
@@ -67,6 +88,11 @@ export declare class NetworkObserver {
     private matchesPattern;
     /**
      * Extract value từ request theo mapping config
+     *
+     * SMART LOGIC:
+     * - Source = "RequestBody" + Method = GET → Auto extract từ ResponseBody
+     * - Source = "RequestBody" + Method = POST/PUT/PATCH/DELETE → Extract từ RequestBody
+     * - Source = "ResponseBody" → Luôn extract từ ResponseBody
      */
     private extractValue;
     /**

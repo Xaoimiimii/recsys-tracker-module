@@ -34,9 +34,16 @@ export declare class PayloadBuilder {
     handleTrigger(rule: TrackingRule, triggerContext: any, onComplete: (payload: Record<string, any>) => void): void;
     /**
      * Thu thập User Info từ async mappings
-     * Nếu có UserId/Username trong async mappings, tự động lấy từ:
-     * 1. Cached user info (đã lưu từ lần trước)
-     * 2. AnonymousId (fallback)
+     *
+     * LOGIC ĐƠN GIẢN:
+     * 1. NetworkObserver đã cache user info vào localStorage (nếu match request)
+     * 2. Đọc localStorage: recsys_cached_user_info
+     *    - CÓ → Dùng userField và userValue từ cache
+     *    - KHÔNG → Fallback AnonymousId ngay
+     *
+     * Không đợi network data vì:
+     * - Nếu có data thì đã được cache rồi (từ lần đăng nhập/refresh)
+     * - Nếu không có cache nghĩa là không bắt được → fallback ngay
      */
     private collectUserInfoFromAsyncMappings;
     /**

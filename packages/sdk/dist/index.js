@@ -51,6 +51,10 @@ export class RecSysTracker {
                     this.eventDispatcher.setDomainUrl(this.config.domainUrl);
                 }
                 console.log(this.config);
+                // Register user info mappings với NetworkObserver để smart caching
+                if (this.config.trackingRules && this.config.trackingRules.length > 0) {
+                    networkObserver.registerUserInfoMappings(this.config.trackingRules);
+                }
                 // Khởi tạo Display Manager nếu có returnMethods
                 if (this.config.returnMethods && this.config.returnMethods.length > 0) {
                     const apiBaseUrl = process.env.API_URL || 'https://recsys-tracker-module.onrender.com';

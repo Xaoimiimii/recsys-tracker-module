@@ -102,9 +102,16 @@ export class PayloadBuilder {
 
   /**
    * Thu thập User Info từ async mappings
-   * Nếu có UserId/Username trong async mappings, tự động lấy từ:
-   * 1. Cached user info (đã lưu từ lần trước)
-   * 2. AnonymousId (fallback)
+   * 
+   * LOGIC ĐƠN GIẢN:
+   * 1. NetworkObserver đã cache user info vào localStorage (nếu match request)
+   * 2. Đọc localStorage: recsys_cached_user_info
+   *    - CÓ → Dùng userField và userValue từ cache
+   *    - KHÔNG → Fallback AnonymousId ngay
+   * 
+   * Không đợi network data vì:
+   * - Nếu có data thì đã được cache rồi (từ lần đăng nhập/refresh)
+   * - Nếu không có cache nghĩa là không bắt được → fallback ngay
    */
   private collectUserInfoFromAsyncMappings(
     executionId: string,
@@ -113,10 +120,10 @@ export class PayloadBuilder {
     console.log('[PayloadBuilder] collectUserInfoFromAsyncMappings - executionId:', executionId);
     console.log('[PayloadBuilder] Async mappings:', asyncMappings.map(m => ({ field: m.field, source: m.source })));
     
-    // Tìm xem có mapping nào cho UserValue/AnonymousId không
+    // Tìm xem có mapping nào cho UserId/Username không
     const userMapping = asyncMappings.find(m => 
-      m.field === 'UserId' ||  
-      m.field === 'AnonymousId'
+      m.field === 'UserId' || 
+      m.field === 'Username'
     );
 
     if (!userMapping) {
@@ -124,33 +131,40 @@ export class PayloadBuilder {
       return; // Không cần user info
     }
     
-    console.log('[PayloadBuilder] Found user mapping:', userMapping);
+    console.log('[PayloadBuilder] Found user mapping for field:', userMapping.field);
 
-    // Lấy cached user info
+    // Check localStorage: recsys_cached_user_info
     const cachedInfo = getCachedUserInfo();
-    console.log('[PayloadBuilder] Cached user info:', cachedInfo);
+    console.log('[PayloadBuilder] Checking localStorage cache:', cachedInfo);
     
     if (cachedInfo && cachedInfo.userValue) {
-      // Có cached user info → dùng nó
-      console.log('[PayloadBuilder] Using cached user info:', cachedInfo.userField, '=', cachedInfo.userValue);
+      // ✅ CÓ CACHE - Dùng userField và userValue từ cache
+      console.log('[PayloadBuilder] ✅ Using cached user info');
+      console.log('[PayloadBuilder] Field:', cachedInfo.userField, 'Value:', cachedInfo.userValue);
+      
+      // Thay thế required field nếu cần
+      // VD: Mapping yêu cầu UserId nhưng cache có Username
+      if (userMapping.field !== cachedInfo.userField) {
+        console.log('[PayloadBuilder] Replacing required field:', userMapping.field, '→', cachedInfo.userField);
+        this.recManager.replaceRequiredField(executionId, userMapping.field, cachedInfo.userField);
+      }
+      
+      // Collect cached value
       this.recManager.collectField(executionId, cachedInfo.userField, cachedInfo.userValue);
       return;
     }
 
-    // Không có cached user info → fallback về AnonymousId
-    // Thay đổi required field từ UserId/Username -> AnonymousId để tránh hiểu lầm
-    console.log('[PayloadBuilder] No cached user info, falling back to AnonymousId');
+    // ❌ KHÔNG CÓ CACHE - Fallback AnonymousId ngay
+    console.log('[PayloadBuilder] ⚠️ No cached user info found');
+    console.log('[PayloadBuilder] Fallback to AnonymousId immediately');
     
-    // Thay thế required field
-    if (userMapping.field === 'UserId' || userMapping.field === 'Username') {
-      console.log('[PayloadBuilder] Replacing required field:', userMapping.field, '-> AnonymousId');
-      this.recManager.replaceRequiredField(executionId, userMapping.field, 'AnonymousId');
-    }
+    // Thay thế required field: UserId/Username → AnonymousId
+    console.log('[PayloadBuilder] Replacing required field:', userMapping.field, '→ AnonymousId');
+    this.recManager.replaceRequiredField(executionId, userMapping.field, 'AnonymousId');
     
-    // Collect AnonymousId
+    // Collect AnonymousId ngay
     const anonId = getOrCreateAnonymousId();
-    console.log('[PayloadBuilder] Generated/retrieved AnonymousId:', anonId);
-    console.log('[PayloadBuilder] Collecting into field: AnonymousId');
+    console.log('[PayloadBuilder] Collecting AnonymousId:', anonId);
     this.recManager.collectField(executionId, 'AnonymousId', anonId);
   }
 
