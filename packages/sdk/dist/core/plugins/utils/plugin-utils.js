@@ -35,7 +35,7 @@ export function saveCachedUserInfo(userField, userValue) {
         log('Saved cached user info:', cachedInfo);
     }
     catch (error) {
-        console.warn('[RecSysTracker] Failed to save cached user info:', error);
+        log('Failed to save cached user info:', error);
     }
 }
 /**
@@ -57,7 +57,6 @@ export function getCachedUserInfo() {
         return null;
     }
     catch (error) {
-        console.warn('[RecSysTracker] Failed to get cached user info:', error);
         return null;
     }
 }

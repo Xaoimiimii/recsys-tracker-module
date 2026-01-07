@@ -9,9 +9,9 @@ export class TrackerInit {
         const user = (_a = window.LoginDetector) === null || _a === void 0 ? void 0 : _a.getCurrentUser();
         return this.usernameCache = user !== null && user !== void 0 ? user : "guest";
     }
-    static init() {
-        console.log("✅ [TrackerInit] Static system initialized");
-    }
+    // static init(): void {
+    //     console.log("✅ [TrackerInit] Static system initialized");
+    // }
     static handleMapping(rule, target = null) {
         var _a;
         const payload = {

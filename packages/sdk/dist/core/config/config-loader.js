@@ -49,7 +49,6 @@ export class ConfigLoader {
             return this.config;
         }
         catch (error) {
-            console.error('[RecSysTracker] Error loading config:', error);
             return null;
         }
     }

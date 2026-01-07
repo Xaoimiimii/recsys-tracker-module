@@ -21,12 +21,10 @@ export class PluginManager {
         return (_a = this.errorBoundary.execute(() => {
             const plugin = this.plugins.get(pluginName);
             if (!plugin) {
-                console.warn(`[PluginManager] Plugin "${pluginName}" not found`);
                 return false;
             }
             plugin.destroy();
             this.plugins.delete(pluginName);
-            console.log(`[PluginManager] Unregistered plugin: ${pluginName}`);
             return true;
         }, 'PluginManager.unregister')) !== null && _a !== void 0 ? _a : false;
     }
@@ -36,7 +34,6 @@ export class PluginManager {
         return (_a = this.errorBoundary.execute(() => {
             const plugin = this.plugins.get(pluginName);
             if (!plugin) {
-                console.warn(`[PluginManager] Plugin "${pluginName}" not found`);
                 return false;
             }
             plugin.start();
@@ -49,7 +46,6 @@ export class PluginManager {
         return (_a = this.errorBoundary.execute(() => {
             const plugin = this.plugins.get(pluginName);
             if (!plugin) {
-                console.warn(`[PluginManager] Plugin "${pluginName}" not found`);
                 return false;
             }
             plugin.stop();

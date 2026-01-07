@@ -40,11 +40,7 @@ export class ScrollPlugin extends BasePlugin {
                 target.addEventListener('scroll', this.handleScrollBound, { passive: true });
                 document.addEventListener('visibilitychange', this.handleVisibilityChangeBound);
                 window.addEventListener('beforeunload', this.handleUnloadBound);
-                console.log(`[ScrollPlugin] Started. Target:`, this.targetScrollElement ? 'Specific Element' : 'Window');
                 this.active = true;
-            }
-            else {
-                console.log(`[ScrollPlugin] No matching rule found for this page. Idle.`);
             }
         }, 'ScrollPlugin.start');
     }
@@ -76,7 +72,6 @@ export class ScrollPlugin extends BasePlugin {
         const scrollRules = ((_a = config === null || config === void 0 ? void 0 : config.trackingRules) === null || _a === void 0 ? void 0 : _a.filter(r => r.eventTypeId === eventId)) || [];
         if (scrollRules.length === 0)
             return false;
-        console.log(`📜 [ScrollPlugin] Checking ${scrollRules.length} rules...`);
         for (const rule of scrollRules) {
             const element = this.findTargetElement(rule);
             if (element) {
@@ -84,7 +79,6 @@ export class ScrollPlugin extends BasePlugin {
                 if (this.checkConditions(representativeEl, rule)) {
                     this.activeRule = rule;
                     this.targetScrollElement = (element instanceof Window) ? null : element;
-                    console.log(`✅ [ScrollPlugin] Rule Matched: "${rule.name}"`);
                     this.detectContextForItem(representativeEl);
                     return true;
                 }
@@ -107,7 +101,6 @@ export class ScrollPlugin extends BasePlugin {
         }
     }
     detectContextForItem(element) {
-        console.log("🔍 [ScrollPlugin] Scanning for context...");
         const contextInfo = this.scanSurroundingContext(element);
         if (contextInfo.id) {
             this.currentItemContext = {
@@ -122,7 +115,6 @@ export class ScrollPlugin extends BasePlugin {
         else {
             this.currentItemContext = this.createSyntheticItem();
         }
-        console.log("🎯 [ScrollPlugin] Resolved Context:", this.currentItemContext);
     }
     checkConditions(element, rule) {
         const conditions = rule.Conditions || rule.conditions;

@@ -85,7 +85,7 @@ export class InlineDisplay {
             }
         }
         catch (error) {
-            console.error('[InlineDisplay] Error processing container:', error);
+            // console.error('[InlineDisplay] Error processing container:', error);
         }
     }
     // Kiểm tra page có được phép hiển thị không
@@ -163,7 +163,7 @@ export class InlineDisplay {
             });
         }
         catch (error) {
-            console.error('[InlineDisplay] Error rendering widget:', error);
+            // console.error('[InlineDisplay] Error rendering widget:', error);
         }
     }
     // Get widget styles

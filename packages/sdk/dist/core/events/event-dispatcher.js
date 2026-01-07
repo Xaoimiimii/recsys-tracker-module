@@ -19,7 +19,6 @@ export class EventDispatcher {
         if (this.domainUrl) {
             const isOriginValid = OriginVerifier.verify(this.domainUrl);
             if (!isOriginValid) {
-                // console.warn('[RecSysTracker] Origin verification failed. Event not sent.');
                 return false;
             }
         }

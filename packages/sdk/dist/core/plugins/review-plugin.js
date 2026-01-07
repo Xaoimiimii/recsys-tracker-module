@@ -29,7 +29,6 @@ export class ReviewPlugin extends BasePlugin {
                 return;
             document.addEventListener('submit', this.handleSubmitBound, { capture: true });
             this.active = true;
-            console.log('[ReviewPlugin] ✅ Started');
         }, 'ReviewPlugin.start');
     }
     stop() {
@@ -38,7 +37,6 @@ export class ReviewPlugin extends BasePlugin {
                 document.removeEventListener('submit', this.handleSubmitBound, { capture: true });
             }
             super.stop();
-            console.log('[ReviewPlugin] Stopped');
         }, 'ReviewPlugin.stop');
     }
     /**
@@ -58,7 +56,6 @@ export class ReviewPlugin extends BasePlugin {
         const reviewRules = ((_a = config === null || config === void 0 ? void 0 : config.trackingRules) === null || _a === void 0 ? void 0 : _a.filter(r => r.eventTypeId === eventId)) || [];
         if (reviewRules.length === 0)
             return;
-        console.log(`[ReviewPlugin] 📝 Submit detected, checking ${reviewRules.length} rules`);
         // Check each rule
         for (const rule of reviewRules) {
             // Try to find matching element (form or button)
@@ -66,14 +63,12 @@ export class ReviewPlugin extends BasePlugin {
             if (!matchedElement) {
                 continue;
             }
-            console.log(`[ReviewPlugin] ✅ Matched rule: "${rule.name}"`);
             // Find container (form or parent)
             const container = this.findContainer(matchedElement);
             // Auto-detect review content from container
             const reviewContent = this.autoDetectReviewContent(container);
             // Filter if no review content
             if (!reviewContent) {
-                console.warn('[ReviewPlugin] No review content found');
                 continue;
             }
             // Create trigger context
@@ -127,7 +122,6 @@ export class ReviewPlugin extends BasePlugin {
             return match;
         }
         catch (e) {
-            console.error('[ReviewPlugin] Selector error:', e);
             return null;
         }
     }
@@ -194,7 +188,6 @@ export class ReviewPlugin extends BasePlugin {
     dispatchEvent(payload, rule, eventId) {
         if (!this.tracker)
             return;
-        console.log('[ReviewPlugin] 📤 Dispatching event with payload:', payload);
         this.tracker.track({
             eventType: eventId,
             eventData: payload,

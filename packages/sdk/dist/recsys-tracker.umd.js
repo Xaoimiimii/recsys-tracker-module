@@ -14,7 +14,6 @@
         static verify(domainUrl) {
             try {
                 if (!domainUrl) {
-                    console.warn('[RecSysTracker] Cannot verify: domainUrl is missing');
                     return false;
                 }
                 // bỏ qua verification nếu đang ở local
@@ -27,11 +26,9 @@
                     const origin = window.location.origin;
                     // Cho phép localhost để test
                     if ((origin === null || origin === void 0 ? void 0 : origin.startsWith('https://localhost')) || (origin === null || origin === void 0 ? void 0 : origin.startsWith('http://localhost'))) {
-                        console.warn('[RecSysTracker] Skipping origin verification for localhost (testing mode)');
                         return true;
                     }
                     if (protocol === 'file:' || origin === 'null' || origin === 'file://') {
-                        console.warn('[RecSysTracker] Skipping origin verification for file:// protocol (testing mode)');
                         return true;
                     }
                 }
@@ -92,14 +89,9 @@
                 if (normalizedReferrer.startsWith(normalizedDomain)) {
                     return true;
                 }
-                console.warn('[RecSysTracker] Referrer mismatch:', {
-                    referrer: normalizedReferrer,
-                    expected: normalizedDomain
-                });
                 return false;
             }
             catch (error) {
-                console.warn('[RecSysTracker] Failed to parse referrer:', error);
                 return false;
             }
         }
@@ -197,7 +189,6 @@
                 return this.config;
             }
             catch (error) {
-                console.error('[RecSysTracker] Error loading config:', error);
                 return null;
             }
         }
@@ -393,9 +384,7 @@
         }
         // Handle error internally
         handleError(error, context) {
-            if (this.debug) {
-                console.error(`[RecSysTracker Error][${context}]`, error);
-            }
+            if (this.debug) ;
             // Gọi error handler tùy chỉnh nếu có
             if (this.errorHandler) {
                 try {
@@ -403,9 +392,7 @@
                 }
                 catch (handlerError) {
                     // Prevent error handler from breaking
-                    if (this.debug) {
-                        console.error('[RecSysTracker] Error handler failed:', handlerError);
-                    }
+                    if (this.debug) ;
                 }
             }
             // Gửi lỗi đến endpoint từ xa (optional)
@@ -610,7 +597,6 @@
             if (this.domainUrl) {
                 const isOriginValid = OriginVerifier.verify(this.domainUrl);
                 if (!isOriginValid) {
-                    // console.warn('[RecSysTracker] Origin verification failed. Event not sent.');
                     return false;
                 }
             }
@@ -1495,7 +1481,7 @@
                 }
             }
             catch (error) {
-                console.error('[InlineDisplay] Error processing container:', error);
+                // console.error('[InlineDisplay] Error processing container:', error);
             }
         }
         // Kiểm tra page có được phép hiển thị không
@@ -1573,7 +1559,7 @@
                 });
             }
             catch (error) {
-                console.error('[InlineDisplay] Error rendering widget:', error);
+                // console.error('[InlineDisplay] Error rendering widget:', error);
             }
         }
         // Get widget styles
@@ -1968,7 +1954,6 @@
         // Khởi tạo display methods dựa trên config
         async initialize(returnMethods) {
             if (!returnMethods || returnMethods.length === 0) {
-                console.log('[DisplayManager] No return methods configured');
                 return;
             }
             // Fetch recommendations 1 lần duy nhất cho tất cả display methods
@@ -2004,10 +1989,8 @@
                 // TODO: Uncomment below code when enough data is available
                 const anonymousId = this.getAnonymousId();
                 if (!anonymousId) {
-                    console.warn('[DisplayManager] No anonymous ID found');
                     return [];
                 }
-                console.log(`[DisplayManager] Fetching recommendations for anonymous ID: ${anonymousId}`);
                 const items = await this.recommendationFetcher.fetchRecommendations(anonymousId, 'AnonymousId', { numberItems: 6 });
                 return items;
             }
@@ -2022,11 +2005,9 @@
                 if (anonId) {
                     return anonId;
                 }
-                console.warn('[DisplayManager] recsys_anon_id not found in localStorage');
                 return null;
             }
             catch (error) {
-                console.error('[DisplayManager] Error reading localStorage:', error);
                 return null;
             }
         }
@@ -2065,7 +2046,7 @@
                 this.popupDisplay.start();
             }
             catch (error) {
-                console.error('[DisplayManager] Error initializing popup:', error);
+                // console.error('[DisplayManager] Error initializing popup:', error);
             }
         }
         // Khởi tạo Inline Display
@@ -2136,9 +2117,9 @@
             const user = (_a = window.LoginDetector) === null || _a === void 0 ? void 0 : _a.getCurrentUser();
             return this.usernameCache = user !== null && user !== void 0 ? user : "guest";
         }
-        static init() {
-            console.log("✅ [TrackerInit] Static system initialized");
-        }
+        // static init(): void {
+        //     console.log("✅ [TrackerInit] Static system initialized");
+        // }
         static handleMapping(rule, target = null) {
             var _a;
             const payload = {
@@ -2190,14 +2171,12 @@
         stop() {
             this.errorBoundary.execute(() => {
                 this.active = false;
-                console.log(`[${this.name}] Plugin stopped`);
             }, `${this.name}.stop`);
         }
         destroy() {
             this.errorBoundary.execute(() => {
                 this.stop();
                 this.tracker = null;
-                console.log(`[${this.name}] Plugin destroyed`);
             }, `${this.name}.destroy`);
         }
         isActive() {
@@ -2205,7 +2184,6 @@
         }
         ensureInitialized() {
             if (!this.tracker) {
-                console.error(`[${this.name}] Plugin not initialized. Call init() first.`);
                 return false;
             }
             return true;
@@ -2280,11 +2258,8 @@
          */
         trackWithPayload(collectedData, rule, eventId) {
             if (!this.tracker) {
-                console.warn(`[${this.name}] Cannot track: tracker not initialized`);
                 return;
             }
-            console.log(`[${this.name}] trackWithPayload called for eventId:`, eventId, 'rule:', rule.name);
-            console.log(`[${this.name}] Collected data:`, collectedData);
             // Get values from collectedData
             const userField = collectedData.UserId ? 'UserId' : (collectedData.Username ? 'Username' : (collectedData.AnonymousId ? 'AnonymousId' : 'UserId'));
             const userValue = collectedData.UserId || collectedData.Username || collectedData.AnonymousId || TrackerInit.getUsername() || 'guest';
@@ -2302,10 +2277,8 @@
                 ratingValue: eventId === 2 ? Number(value) : undefined,
                 ratingReview: eventId === 3 ? value : undefined,
             };
-            console.log(`[${this.name}] Final payload to track:`, payload);
             // Track the event
             this.tracker.track(payload);
-            console.log(`[${this.name}] tracker.track() called`);
         }
         /**
          * DEPRECATED: Legacy method - not used by v2 plugins
@@ -2322,10 +2295,8 @@
          * @param additionalFields - Optional additional fields (ratingValue, reviewValue, metadata, etc.)
          */
         buildAndTrack(context, rule, eventId) {
-            console.warn(`[${this.name}] buildAndTrack is deprecated - use PayloadBuilder.handleTrigger() instead`);
             // For legacy plugins that still use this method, provide minimal support
             if (!this.tracker) {
-                console.warn(`[${this.name}] Cannot track: tracker not initialized`);
                 return;
             }
             // Fallback: use TrackerInit for simple payload extraction
@@ -2377,12 +2348,10 @@
             return (_a = this.errorBoundary.execute(() => {
                 const plugin = this.plugins.get(pluginName);
                 if (!plugin) {
-                    console.warn(`[PluginManager] Plugin "${pluginName}" not found`);
                     return false;
                 }
                 plugin.destroy();
                 this.plugins.delete(pluginName);
-                console.log(`[PluginManager] Unregistered plugin: ${pluginName}`);
                 return true;
             }, 'PluginManager.unregister')) !== null && _a !== void 0 ? _a : false;
         }
@@ -2392,7 +2361,6 @@
             return (_a = this.errorBoundary.execute(() => {
                 const plugin = this.plugins.get(pluginName);
                 if (!plugin) {
-                    console.warn(`[PluginManager] Plugin "${pluginName}" not found`);
                     return false;
                 }
                 plugin.start();
@@ -2405,7 +2373,6 @@
             return (_a = this.errorBoundary.execute(() => {
                 const plugin = this.plugins.get(pluginName);
                 if (!plugin) {
-                    console.warn(`[PluginManager] Plugin "${pluginName}" not found`);
                     return false;
                 }
                 plugin.stop();
@@ -2492,7 +2459,6 @@
                     return;
                 document.addEventListener('click', this.handleClickBound, true);
                 this.active = true;
-                console.log('[ClickPlugin] ✅ Started');
             }, 'ClickPlugin.start');
         }
         stop() {
@@ -2501,7 +2467,6 @@
                     document.removeEventListener('click', this.handleClickBound, true);
                 }
                 super.stop();
-                console.log('[ClickPlugin] Stopped');
             }, 'ClickPlugin.stop');
         }
         /**
@@ -2520,17 +2485,14 @@
             const clickRules = ((_a = config === null || config === void 0 ? void 0 : config.trackingRules) === null || _a === void 0 ? void 0 : _a.filter(r => r.eventTypeId === eventId)) || [];
             if (clickRules.length === 0)
                 return;
-            console.log(`[ClickPlugin] 🖱️ Click detected, checking ${clickRules.length} rules`);
             // Check each rule
             for (const rule of clickRules) {
                 const matchedElement = this.findMatchingElement(clickedElement, rule);
                 if (!matchedElement) {
                     continue;
                 }
-                console.log(`[ClickPlugin] ✅ Matched rule: "${rule.name}"`);
                 // Check conditions
                 if (!this.checkConditions(matchedElement, rule)) {
-                    console.log('[ClickPlugin] Conditions not met');
                     continue;
                 }
                 // Create trigger context
@@ -2590,7 +2552,6 @@
                 return null;
             }
             catch (e) {
-                console.error('[ClickPlugin] Selector error:', e);
                 return null;
             }
         }
@@ -2661,7 +2622,6 @@
         dispatchEvent(payload, rule, eventId) {
             if (!this.tracker)
                 return;
-            console.log('[ClickPlugin] 📤 Dispatching event with payload:', payload);
             this.tracker.track({
                 eventType: eventId,
                 eventData: payload,
@@ -2710,7 +2670,6 @@
             return null;
         }
         catch (error) {
-            console.warn('[RecSysTracker] Failed to get cached user info:', error);
             return null;
         }
     }
@@ -2759,7 +2718,6 @@
                     window.addEventListener(CUSTOM_ROUTE_EVENT, wrappedHandler);
                 }
                 this.trackCurrentPage(window.location.href);
-                console.log("[PageViewPlugin] started listening and tracked initial load.");
                 this.active = true;
             }, 'PageViewPlugin.start');
         }
@@ -2786,13 +2744,11 @@
             const pathname = urlObject.pathname;
             const eventId = this.tracker.getEventTypeId('Page View');
             if (!eventId) {
-                console.log('[PageViewPlugin] Page View event type not found in config.');
                 return;
             }
             const config = this.tracker.getConfig();
             const pageViewRules = (_a = config === null || config === void 0 ? void 0 : config.trackingRules) === null || _a === void 0 ? void 0 : _a.filter(r => r.eventTypeId === eventId);
             if (!pageViewRules || pageViewRules.length === 0) {
-                console.log('[PageViewPlugin] No page view rules configured.');
                 return;
             }
             // Loop qua tất cả rules và tìm rule phù hợp
@@ -2807,20 +2763,17 @@
                     const match = pathname.match(pattern);
                     if (match) {
                         matchFound = true;
-                        console.log(`[PageViewPlugin] ✅ Matched regex rule: ${rule.name}`);
                     }
                 }
                 // DOM selector matching (Checking presence of element on page)
                 else if (selector && selector !== 'body') {
                     if (document.querySelector(selector)) {
                         matchFound = true;
-                        console.log(`[PageViewPlugin] ✅ Matched DOM selector rule: ${rule.name}`);
                     }
                 }
                 // Default body matching
                 else if (selector === 'body') {
                     matchFound = true;
-                    console.log(`[PageViewPlugin] ✅ Matched default rule: ${rule.name}`);
                 }
                 if (matchFound) {
                     // Use centralized build and track
@@ -2828,7 +2781,6 @@
                     return;
                 }
             }
-            console.log('[PageViewPlugin] ⏸️ No matching rule found for current URL/DOM.');
         }
     }
 
@@ -2867,7 +2819,6 @@
                     return;
                 document.addEventListener('submit', this.handleSubmitBound, { capture: true });
                 this.active = true;
-                console.log('[ReviewPlugin] ✅ Started');
             }, 'ReviewPlugin.start');
         }
         stop() {
@@ -2876,7 +2827,6 @@
                     document.removeEventListener('submit', this.handleSubmitBound, { capture: true });
                 }
                 super.stop();
-                console.log('[ReviewPlugin] Stopped');
             }, 'ReviewPlugin.stop');
         }
         /**
@@ -2896,7 +2846,6 @@
             const reviewRules = ((_a = config === null || config === void 0 ? void 0 : config.trackingRules) === null || _a === void 0 ? void 0 : _a.filter(r => r.eventTypeId === eventId)) || [];
             if (reviewRules.length === 0)
                 return;
-            console.log(`[ReviewPlugin] 📝 Submit detected, checking ${reviewRules.length} rules`);
             // Check each rule
             for (const rule of reviewRules) {
                 // Try to find matching element (form or button)
@@ -2904,14 +2853,12 @@
                 if (!matchedElement) {
                     continue;
                 }
-                console.log(`[ReviewPlugin] ✅ Matched rule: "${rule.name}"`);
                 // Find container (form or parent)
                 const container = this.findContainer(matchedElement);
                 // Auto-detect review content from container
                 const reviewContent = this.autoDetectReviewContent(container);
                 // Filter if no review content
                 if (!reviewContent) {
-                    console.warn('[ReviewPlugin] No review content found');
                     continue;
                 }
                 // Create trigger context
@@ -2965,7 +2912,6 @@
                 return match;
             }
             catch (e) {
-                console.error('[ReviewPlugin] Selector error:', e);
                 return null;
             }
         }
@@ -3032,7 +2978,6 @@
         dispatchEvent(payload, rule, eventId) {
             if (!this.tracker)
                 return;
-            console.log('[ReviewPlugin] 📤 Dispatching event with payload:', payload);
             this.tracker.track({
                 eventType: eventId,
                 eventData: payload,
@@ -3093,11 +3038,7 @@
                     target.addEventListener('scroll', this.handleScrollBound, { passive: true });
                     document.addEventListener('visibilitychange', this.handleVisibilityChangeBound);
                     window.addEventListener('beforeunload', this.handleUnloadBound);
-                    console.log(`[ScrollPlugin] Started. Target:`, this.targetScrollElement ? 'Specific Element' : 'Window');
                     this.active = true;
-                }
-                else {
-                    console.log(`[ScrollPlugin] No matching rule found for this page. Idle.`);
                 }
             }, 'ScrollPlugin.start');
         }
@@ -3129,7 +3070,6 @@
             const scrollRules = ((_a = config === null || config === void 0 ? void 0 : config.trackingRules) === null || _a === void 0 ? void 0 : _a.filter(r => r.eventTypeId === eventId)) || [];
             if (scrollRules.length === 0)
                 return false;
-            console.log(`📜 [ScrollPlugin] Checking ${scrollRules.length} rules...`);
             for (const rule of scrollRules) {
                 const element = this.findTargetElement(rule);
                 if (element) {
@@ -3137,7 +3077,6 @@
                     if (this.checkConditions(representativeEl, rule)) {
                         this.activeRule = rule;
                         this.targetScrollElement = (element instanceof Window) ? null : element;
-                        console.log(`✅ [ScrollPlugin] Rule Matched: "${rule.name}"`);
                         this.detectContextForItem(representativeEl);
                         return true;
                     }
@@ -3160,7 +3099,6 @@
             }
         }
         detectContextForItem(element) {
-            console.log("🔍 [ScrollPlugin] Scanning for context...");
             const contextInfo = this.scanSurroundingContext(element);
             if (contextInfo.id) {
                 this.currentItemContext = {
@@ -3175,7 +3113,6 @@
             else {
                 this.currentItemContext = this.createSyntheticItem();
             }
-            console.log("🎯 [ScrollPlugin] Resolved Context:", this.currentItemContext);
         }
         checkConditions(element, rule) {
             const conditions = rule.Conditions || rule.conditions;
@@ -3411,11 +3348,6 @@
                 this.expireContext(executionId);
             }, this.MAX_WAIT_TIME);
             this.contexts.set(executionId, context);
-            console.log(`[REC] Created context ${executionId} for rule ${ruleId}`, {
-                requiredFields,
-                timeWindow: this.TIME_WINDOW,
-                maxWaitTime: this.MAX_WAIT_TIME
-            });
             return context;
         }
         /**
@@ -3463,7 +3395,6 @@
                 return;
             }
             context.collectedFields.set(field, value);
-            console.log(`[REC] Collected field "${field}" for ${executionId}:`, value);
             // Check nếu đã đủ dữ liệu
             this.checkCompletion(executionId);
         }
@@ -3499,7 +3430,6 @@
             context.collectedFields.forEach((value, key) => {
                 payload[key] = value;
             });
-            console.log(`[REC] ✅ Context ${executionId} completed with payload:`, payload);
             // Trigger callback
             if (context.onComplete) {
                 context.onComplete(payload);
@@ -3518,10 +3448,6 @@
                 return;
             }
             context.status = 'expired';
-            console.warn(`[REC] ⏱️ Context ${executionId} expired (rule ${context.ruleId})`, {
-                collectedFields: Array.from(context.collectedFields.keys()),
-                missingFields: Array.from(context.requiredFields).filter(f => !context.collectedFields.has(f))
-            });
             // Cleanup
             setTimeout(() => {
                 this.contexts.delete(executionId);
@@ -3661,14 +3587,12 @@
          */
         initialize(recManager) {
             if (this.isActive) {
-                console.warn('[NetworkObserver] Already initialized');
                 return;
             }
             this.recManager = recManager;
             this.hookFetch();
             this.hookXHR();
             this.isActive = true;
-            console.log('[NetworkObserver] ✅ Initialized and active');
         }
         /**
          * Register một rule cần network data
@@ -3677,7 +3601,6 @@
         registerRule(rule) {
             if (!this.registeredRules.has(rule.id)) {
                 this.registeredRules.set(rule.id, rule);
-                console.log('[NetworkObserver] Registered rule:', rule.id, rule.name);
             }
         }
         /**
@@ -3710,8 +3633,6 @@
                         requestBody,
                         responseBody: responseText
                     });
-                }).catch(err => {
-                    console.warn('[NetworkObserver] Failed to read response:', err);
                 });
                 return response;
             };
@@ -3787,7 +3708,6 @@
                 if (value !== null && value !== undefined) {
                     // Collect vào REC
                     this.recManager.collectField(context.executionId, mapping.field, value);
-                    console.log(`[NetworkObserver] ✅ Collected "${mapping.field}" for rule ${rule.id}:`, value);
                 }
             }
         }
@@ -3867,12 +3787,6 @@
             var _a;
             const url = new URL(requestInfo.url, window.location.origin);
             const urlPart = (_a = mapping.urlPart) === null || _a === void 0 ? void 0 : _a.toLowerCase();
-            console.log('[NetworkObserver] Extracting from URL:', {
-                url: requestInfo.url,
-                urlPart: urlPart,
-                urlPartValue: mapping.urlPartValue,
-                value: mapping.value
-            });
             switch (urlPart) {
                 case 'query':
                 case 'queryparam':
@@ -3882,12 +3796,10 @@
                 case 'pathsegment':
                     // Extract path segment by index or pattern
                     const pathValue = mapping.urlPartValue || mapping.value;
-                    console.log('[NetworkObserver] Path extraction:', { pathValue, pathname: url.pathname });
                     if (pathValue && !isNaN(Number(pathValue))) {
                         const segments = url.pathname.split('/').filter(s => s);
                         const index = Number(pathValue);
                         const result = segments[index] || null;
-                        console.log('[NetworkObserver] Extracted segment:', { segments, index, result });
                         return result;
                     }
                     return url.pathname;
@@ -3897,16 +3809,11 @@
                     // If no urlPart specified, try to extract from value
                     // Check if value is a number (path segment index)
                     const segments = url.pathname.split('/').filter(s => s);
-                    console.log('[NetworkObserver] URL pathname:', url.pathname);
-                    console.log('[NetworkObserver] Segments:', segments);
-                    console.log('[NetworkObserver] Mapping value:', mapping.value, 'Type:', typeof mapping.value);
                     if (mapping.value && !isNaN(Number(mapping.value))) {
                         const index = Number(mapping.value);
                         const result = segments[index] || null;
-                        console.log('[NetworkObserver] Default path extraction:', { segments, index, result });
                         return result;
                     }
-                    console.warn('[NetworkObserver] Could not extract segment, returning full URL');
                     return url.href;
             }
         }
@@ -3953,7 +3860,6 @@
             XMLHttpRequest.prototype.send = this.originalXhrSend;
             this.isActive = false;
             this.registeredRules.clear();
-            console.log('[NetworkObserver] Restored original functions');
         }
         /**
          * Check if observer is active
@@ -4017,14 +3923,11 @@
          * @param onComplete - Callback khi payload sẵn sàng để dispatch
          */
         handleTrigger(rule, triggerContext, onComplete) {
-            console.log(`[PayloadBuilder] Handle trigger for rule: ${rule.name} (${rule.id})`);
             // 1. Phân tích mappings
             const { syncMappings, asyncMappings } = this.classifyMappings(rule);
-            console.log(`[PayloadBuilder] Sync mappings: ${syncMappings.length}, Async: ${asyncMappings.length}`);
             // 2. Nếu không có async → resolve ngay
             if (asyncMappings.length === 0) {
                 const payload = this.resolveSyncMappings(syncMappings, triggerContext, rule);
-                console.log('[PayloadBuilder] ✅ No async data needed, payload ready:', payload);
                 onComplete(payload);
                 return;
             }
@@ -4034,7 +3937,6 @@
                 // Khi async data đã thu thập xong
                 const syncPayload = this.resolveSyncMappings(syncMappings, triggerContext, rule);
                 const finalPayload = { ...syncPayload, ...collectedData };
-                console.log('[PayloadBuilder] ✅ All data collected, final payload:', finalPayload);
                 onComplete(finalPayload);
             });
             // 4. Resolve sync data ngay và collect vào REC
@@ -4046,7 +3948,6 @@
             this.collectUserInfoFromAsyncMappings(context.executionId, asyncMappings);
             // 5. Register rule với NetworkObserver để bắt async data
             this.networkObserver.registerRule(rule);
-            console.log(`[PayloadBuilder] ⏳ Waiting for network data...`);
         }
         /**
          * Thu thập User Info từ async mappings
@@ -4066,13 +3967,11 @@
             if (cachedInfo && cachedInfo.userValue) {
                 // Có cached user info → dùng nó
                 this.recManager.collectField(executionId, cachedInfo.userField, cachedInfo.userValue);
-                console.log(`[PayloadBuilder] Using cached user: ${cachedInfo.userField}=${cachedInfo.userValue}`);
                 return;
             }
             // Không có cached user info → dùng AnonymousId
             const anonId = getOrCreateAnonymousId();
             this.recManager.collectField(executionId, 'AnonymousId', anonId);
-            console.log(`[PayloadBuilder] Using AnonymousId: ${anonId}`);
         }
         /**
          * Phân loại mappings thành sync và async
@@ -4148,7 +4047,6 @@
                 case 'login_detector':
                     return this.extractFromLoginDetector(mapping);
                 default:
-                    console.warn(`[PayloadBuilder] Unknown sync source: ${source}`);
                     return null;
             }
         }
@@ -4158,7 +4056,6 @@
         extractFromElement(mapping, context) {
             const element = context.element || context.target;
             if (!element) {
-                console.warn('[PayloadBuilder] No element in context');
                 return null;
             }
             const selector = mapping.value;
@@ -4177,14 +4074,12 @@
                     targetElement = element.form.querySelector(selector);
                 }
                 if (!targetElement) {
-                    console.warn(`[PayloadBuilder] Element not found: ${selector}`);
                     return null;
                 }
                 // Extract value từ element
                 return this.getElementValue(targetElement);
             }
             catch (error) {
-                console.error('[PayloadBuilder] Error extracting from element:', error);
                 return null;
             }
         }
@@ -4254,7 +4149,6 @@
                 }
             }
             catch (error) {
-                console.warn('[PayloadBuilder] Error reading localStorage:', error);
                 return null;
             }
         }
@@ -4278,7 +4172,6 @@
                 }
             }
             catch (error) {
-                console.warn('[PayloadBuilder] Error reading sessionStorage:', error);
                 return null;
             }
         }
@@ -4371,7 +4264,6 @@
                 document.addEventListener('click', this.handleClickBound, true);
                 document.addEventListener('submit', this.handleSubmitBound, true);
                 this.active = true;
-                console.log('[RatingPlugin] ✅ Started');
             }, 'RatingPlugin.start');
         }
         stop() {
@@ -4381,7 +4273,6 @@
                     document.removeEventListener('submit', this.handleSubmitBound, true);
                 }
                 super.stop();
-                console.log('[RatingPlugin] Stopped');
             }, 'RatingPlugin.stop');
         }
         /**
@@ -4394,19 +4285,17 @@
          * Handle submit event (traditional forms)
          */
         handleSubmit(event) {
-            console.log('[RatingPlugin] 🔔 Submit event detected');
             this.handleInteraction(event, 'submit');
         }
         /**
          * Main interaction handler
          */
-        handleInteraction(event, eventType) {
+        handleInteraction(event, _eventType) {
             if (!this.tracker)
                 return;
             const target = event.target;
             if (!target)
                 return;
-            console.log(`[RatingPlugin] 🎯 handleInteraction called: eventType=${eventType}, target=`, target);
             const config = this.tracker.getConfig();
             if (!config || !config.trackingRules)
                 return;
@@ -4415,14 +4304,12 @@
             const rulesToCheck = config.trackingRules.filter(r => r.eventTypeId === ratingEventId);
             if (rulesToCheck.length === 0)
                 return;
-            console.log(`[RatingPlugin] ⭐ ${eventType} detected, checking ${rulesToCheck.length} rules`);
             // Check each rule
             for (const rule of rulesToCheck) {
                 const matchedElement = this.findMatchingElement(target, rule);
                 if (!matchedElement) {
                     continue;
                 }
-                console.log(`[RatingPlugin] ✅ Matched rule: "${rule.name}" (EventTypeId: ${rule.eventTypeId})`);
                 // Find container (form or parent)
                 const container = this.findContainer(matchedElement);
                 // Create trigger context - NO rating value extraction
@@ -4469,7 +4356,6 @@
                 return match;
             }
             catch (e) {
-                console.error('[RatingPlugin] Selector error:', e);
                 return null;
             }
         }
@@ -4497,7 +4383,6 @@
         dispatchEvent(payload, rule, eventId) {
             if (!this.tracker)
                 return;
-            console.log('[RatingPlugin] 📤 Dispatching event with payload:', payload);
             this.tracker.track({
                 eventType: eventId,
                 eventData: payload,
@@ -4541,10 +4426,9 @@
                 if (this.isInitialized) {
                     return;
                 }
-                // 🔥 CRITICAL: Initialize Network Observer FIRST (before anything else)
+                // Initialize Network Observer FIRST (before anything else)
                 const networkObserver = getNetworkObserver();
                 networkObserver.initialize(this.payloadBuilder.getRECManager());
-                console.log('[RecSysTracker] ✅ Network Observer initialized');
                 // Load config từ window
                 this.config = this.configLoader.loadFromWindow();
                 if (!this.config) {
@@ -4612,21 +4496,18 @@
                 if (hasClickRules && this.config) {
                     const clickPromise = Promise.resolve().then(function () { return clickPlugin; }).then(({ ClickPlugin }) => {
                         this.use(new ClickPlugin());
-                        console.log('[RecSysTracker] Auto-registered ClickPlugin v2');
                     });
                     pluginPromises.push(clickPromise);
                 }
                 if (hasRateRules) {
                     const ratingPromise = Promise.resolve().then(function () { return ratingPlugin; }).then(({ RatingPlugin }) => {
                         this.use(new RatingPlugin());
-                        console.log('[RecSysTracker] Auto-registered RatingPlugin v2');
                     });
                     pluginPromises.push(ratingPromise);
                 }
                 if (hasReviewRules) {
                     const reviewPromise = Promise.resolve().then(function () { return reviewPlugin; }).then(({ ReviewPlugin }) => {
                         this.use(new ReviewPlugin());
-                        console.log('[RecSysTracker] Auto-registered ReviewPlugin v2');
                     });
                     pluginPromises.push(reviewPromise);
                 }
@@ -4659,7 +4540,6 @@
         track(eventData) {
             this.errorBoundary.execute(() => {
                 if (!this.isInitialized || !this.config) {
-                    console.warn('[RecSysTracker] Cannot track: SDK not initialized');
                     return;
                 }
                 // Extract required fields for deduplication
@@ -4694,12 +4574,6 @@
                 if (ruleId && userValue && itemValue) {
                     const isDuplicate = this.eventDeduplicator.isDuplicate(eventData.eventType, ruleId, userValue, itemValue);
                     if (isDuplicate) {
-                        console.log('[RecSysTracker] 🚫 Duplicate event dropped:', {
-                            eventType: eventData.eventType,
-                            ruleId: ruleId,
-                            userValue: userValue,
-                            itemValue: itemValue
-                        });
                         return;
                     }
                 }
@@ -4730,7 +4604,6 @@
                     }),
                 };
                 this.eventBuffer.add(trackedEvent);
-                console.log('[RecSysTracker] ✅ Event tracked:', trackedEvent);
             }, 'track');
         }
         // Setup batch sending of events

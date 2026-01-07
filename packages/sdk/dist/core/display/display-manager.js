@@ -15,7 +15,6 @@ export class DisplayManager {
     // Khởi tạo display methods dựa trên config
     async initialize(returnMethods) {
         if (!returnMethods || returnMethods.length === 0) {
-            console.log('[DisplayManager] No return methods configured');
             return;
         }
         // Fetch recommendations 1 lần duy nhất cho tất cả display methods
@@ -51,10 +50,8 @@ export class DisplayManager {
             // TODO: Uncomment below code when enough data is available
             const anonymousId = this.getAnonymousId();
             if (!anonymousId) {
-                console.warn('[DisplayManager] No anonymous ID found');
                 return [];
             }
-            console.log(`[DisplayManager] Fetching recommendations for anonymous ID: ${anonymousId}`);
             const items = await this.recommendationFetcher.fetchRecommendations(anonymousId, 'AnonymousId', { numberItems: 6 });
             return items;
         }
@@ -69,11 +66,9 @@ export class DisplayManager {
             if (anonId) {
                 return anonId;
             }
-            console.warn('[DisplayManager] recsys_anon_id not found in localStorage');
             return null;
         }
         catch (error) {
-            console.error('[DisplayManager] Error reading localStorage:', error);
             return null;
         }
     }
@@ -115,7 +110,7 @@ export class DisplayManager {
             this.popupDisplay.start();
         }
         catch (error) {
-            console.error('[DisplayManager] Error initializing popup:', error);
+            // console.error('[DisplayManager] Error initializing popup:', error);
         }
     }
     // Khởi tạo Inline Display

@@ -33,7 +33,6 @@ export class RatingPlugin extends BasePlugin {
             document.addEventListener('click', this.handleClickBound, true);
             document.addEventListener('submit', this.handleSubmitBound, true);
             this.active = true;
-            console.log('[RatingPlugin] ✅ Started');
         }, 'RatingPlugin.start');
     }
     stop() {
@@ -43,7 +42,6 @@ export class RatingPlugin extends BasePlugin {
                 document.removeEventListener('submit', this.handleSubmitBound, true);
             }
             super.stop();
-            console.log('[RatingPlugin] Stopped');
         }, 'RatingPlugin.stop');
     }
     /**
@@ -56,19 +54,17 @@ export class RatingPlugin extends BasePlugin {
      * Handle submit event (traditional forms)
      */
     handleSubmit(event) {
-        console.log('[RatingPlugin] 🔔 Submit event detected');
         this.handleInteraction(event, 'submit');
     }
     /**
      * Main interaction handler
      */
-    handleInteraction(event, eventType) {
+    handleInteraction(event, _eventType) {
         if (!this.tracker)
             return;
         const target = event.target;
         if (!target)
             return;
-        console.log(`[RatingPlugin] 🎯 handleInteraction called: eventType=${eventType}, target=`, target);
         const config = this.tracker.getConfig();
         if (!config || !config.trackingRules)
             return;
@@ -77,14 +73,12 @@ export class RatingPlugin extends BasePlugin {
         const rulesToCheck = config.trackingRules.filter(r => r.eventTypeId === ratingEventId);
         if (rulesToCheck.length === 0)
             return;
-        console.log(`[RatingPlugin] ⭐ ${eventType} detected, checking ${rulesToCheck.length} rules`);
         // Check each rule
         for (const rule of rulesToCheck) {
             const matchedElement = this.findMatchingElement(target, rule);
             if (!matchedElement) {
                 continue;
             }
-            console.log(`[RatingPlugin] ✅ Matched rule: "${rule.name}" (EventTypeId: ${rule.eventTypeId})`);
             // Find container (form or parent)
             const container = this.findContainer(matchedElement);
             // Create trigger context - NO rating value extraction
@@ -131,7 +125,6 @@ export class RatingPlugin extends BasePlugin {
             return match;
         }
         catch (e) {
-            console.error('[RatingPlugin] Selector error:', e);
             return null;
         }
     }
@@ -159,7 +152,6 @@ export class RatingPlugin extends BasePlugin {
     dispatchEvent(payload, rule, eventId) {
         if (!this.tracker)
             return;
-        console.log('[RatingPlugin] 📤 Dispatching event with payload:', payload);
         this.tracker.track({
             eventType: eventId,
             eventData: payload,

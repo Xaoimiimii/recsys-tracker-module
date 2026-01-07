@@ -42,14 +42,11 @@ export class PayloadBuilder {
      * @param onComplete - Callback khi payload sẵn sàng để dispatch
      */
     handleTrigger(rule, triggerContext, onComplete) {
-        console.log(`[PayloadBuilder] Handle trigger for rule: ${rule.name} (${rule.id})`);
         // 1. Phân tích mappings
         const { syncMappings, asyncMappings } = this.classifyMappings(rule);
-        console.log(`[PayloadBuilder] Sync mappings: ${syncMappings.length}, Async: ${asyncMappings.length}`);
         // 2. Nếu không có async → resolve ngay
         if (asyncMappings.length === 0) {
             const payload = this.resolveSyncMappings(syncMappings, triggerContext, rule);
-            console.log('[PayloadBuilder] ✅ No async data needed, payload ready:', payload);
             onComplete(payload);
             return;
         }
@@ -59,7 +56,6 @@ export class PayloadBuilder {
             // Khi async data đã thu thập xong
             const syncPayload = this.resolveSyncMappings(syncMappings, triggerContext, rule);
             const finalPayload = { ...syncPayload, ...collectedData };
-            console.log('[PayloadBuilder] ✅ All data collected, final payload:', finalPayload);
             onComplete(finalPayload);
         });
         // 4. Resolve sync data ngay và collect vào REC
@@ -71,7 +67,6 @@ export class PayloadBuilder {
         this.collectUserInfoFromAsyncMappings(context.executionId, asyncMappings);
         // 5. Register rule với NetworkObserver để bắt async data
         this.networkObserver.registerRule(rule);
-        console.log(`[PayloadBuilder] ⏳ Waiting for network data...`);
     }
     /**
      * Thu thập User Info từ async mappings
@@ -91,13 +86,11 @@ export class PayloadBuilder {
         if (cachedInfo && cachedInfo.userValue) {
             // Có cached user info → dùng nó
             this.recManager.collectField(executionId, cachedInfo.userField, cachedInfo.userValue);
-            console.log(`[PayloadBuilder] Using cached user: ${cachedInfo.userField}=${cachedInfo.userValue}`);
             return;
         }
         // Không có cached user info → dùng AnonymousId
         const anonId = getOrCreateAnonymousId();
         this.recManager.collectField(executionId, 'AnonymousId', anonId);
-        console.log(`[PayloadBuilder] Using AnonymousId: ${anonId}`);
     }
     /**
      * Phân loại mappings thành sync và async
@@ -173,7 +166,6 @@ export class PayloadBuilder {
             case 'login_detector':
                 return this.extractFromLoginDetector(mapping);
             default:
-                console.warn(`[PayloadBuilder] Unknown sync source: ${source}`);
                 return null;
         }
     }
@@ -183,7 +175,6 @@ export class PayloadBuilder {
     extractFromElement(mapping, context) {
         const element = context.element || context.target;
         if (!element) {
-            console.warn('[PayloadBuilder] No element in context');
             return null;
         }
         const selector = mapping.value;
@@ -202,14 +193,12 @@ export class PayloadBuilder {
                 targetElement = element.form.querySelector(selector);
             }
             if (!targetElement) {
-                console.warn(`[PayloadBuilder] Element not found: ${selector}`);
                 return null;
             }
             // Extract value từ element
             return this.getElementValue(targetElement);
         }
         catch (error) {
-            console.error('[PayloadBuilder] Error extracting from element:', error);
             return null;
         }
     }
@@ -279,7 +268,6 @@ export class PayloadBuilder {
             }
         }
         catch (error) {
-            console.warn('[PayloadBuilder] Error reading localStorage:', error);
             return null;
         }
     }
@@ -303,7 +291,6 @@ export class PayloadBuilder {
             }
         }
         catch (error) {
-            console.warn('[PayloadBuilder] Error reading sessionStorage:', error);
             return null;
         }
     }

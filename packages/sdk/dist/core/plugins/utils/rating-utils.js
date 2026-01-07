@@ -5,22 +5,18 @@ export class RatingUtils {
     static processRating(container, triggerElement, eventType) {
         let rawValue = 0;
         let maxValue = 5;
-        console.log(`[RatingUtils] processRating: eventType=${eventType}, trigger=`, triggerElement);
         // BƯỚC 1: TRÍCH XUẤT GIÁ TRỊ (EXTRACTION)
         // Chiến thuật 1: Nếu click trực tiếp vào item (sao/nút), ưu tiên lấy value từ chính nó
         if (eventType === 'click') {
             rawValue = this.extractValueFromTarget(container, triggerElement);
-            console.log(`[RatingUtils] extractValueFromTarget: ${rawValue}`);
         }
         // Chiến thuật 2: Nếu là submit form hoặc Chiến thuật 1 thất bại (click vào viền chẳng hạn)
         // Quét toàn bộ container xem cái nào đang "checked" hoặc "active"
         if (rawValue === 0) {
             rawValue = this.extractValueFromContainerState(container);
-            console.log(`[RatingUtils] extractValueFromContainerState: ${rawValue}`);
         }
         // BƯỚC 2: PHÁT HIỆN THANG ĐIỂM (SCALE DETECTION)
         const isBinary = this.detectBinaryContext(container, triggerElement);
-        console.log(`[RatingUtils] isBinary: ${isBinary}`);
         if (isBinary) {
             maxValue = 1; // Hệ nhị phân
             // Nếu click nút Like/Upvote thì rawValue = 1
@@ -77,7 +73,6 @@ export class RatingUtils {
                         // Tìm element nào chứa current (có thể là parent của current)
                         for (let i = 0; i < siblings.length; i++) {
                             if (siblings[i].contains(current) || siblings[i] === current) {
-                                console.log(`[RatingUtils] Found star index: ${i + 1}/${siblings.length}`);
                                 return i + 1;
                             }
                         }
