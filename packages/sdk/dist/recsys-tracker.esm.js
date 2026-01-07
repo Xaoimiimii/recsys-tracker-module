@@ -2652,18 +2652,24 @@ function log(...args) {
 function getCachedUserInfo() {
     try {
         const cached = localStorage.getItem(STORAGE_KEYS.CACHED_USER_INFO);
+        console.log('[plugin-utils] getCachedUserInfo - raw cached value:', cached);
         if (!cached) {
+            console.log('[plugin-utils] No cached user info found');
             return null;
         }
         const userInfo = JSON.parse(cached);
+        console.log('[plugin-utils] Parsed cached user info:', userInfo);
         // Validate cached data
         if (userInfo.userField && userInfo.userValue && userInfo.timestamp) {
+            console.log('[plugin-utils] Valid cached user info:', userInfo);
             log('Retrieved cached user info:', userInfo);
             return userInfo;
         }
+        console.log('[plugin-utils] Invalid cached user info structure');
         return null;
     }
     catch (error) {
+        console.error('[plugin-utils] Error reading cached user info:', error);
         return null;
     }
 }
@@ -2674,19 +2680,27 @@ function getCachedUserInfo() {
 function getOrCreateAnonymousId() {
     try {
         let anonId = localStorage.getItem(STORAGE_KEYS.ANON_USER_ID);
+        console.log('[plugin-utils] getOrCreateAnonymousId - existing anonId:', anonId);
         if (!anonId) {
             // Generate new anonymous ID: anon_timestamp_randomstring
             const timestamp = Date.now();
             const randomStr = Math.random().toString(36).substring(2, 10);
             anonId = `anon_${timestamp}_${randomStr}`;
             localStorage.setItem(STORAGE_KEYS.ANON_USER_ID, anonId);
+            console.log('[plugin-utils] Created new anonymous ID:', anonId);
             log('Created new anonymous ID:', anonId);
+        }
+        else {
+            console.log('[plugin-utils] Using existing anonymous ID:', anonId);
         }
         return anonId;
     }
     catch (error) {
+        console.error('[plugin-utils] Error accessing localStorage for anonId:', error);
         // Fallback nếu localStorage không available
-        return `anon_${Date.now()}_${Math.random().toString(36).substring(2, 10)}`;
+        const fallbackId = `anon_${Date.now()}_${Math.random().toString(36).substring(2, 10)}`;
+        console.log('[plugin-utils] Using fallback anonymous ID:', fallbackId);
+        return fallbackId;
     }
 }
 const CUSTOM_ROUTE_EVENT = "recsys_route_change";
@@ -3327,6 +3341,7 @@ class RuleExecutionContextManager {
      */
     createContext(ruleId, requiredFields, triggerContext, onComplete) {
         const executionId = this.generateExecutionId();
+        console.log('[REC] Creating new context - executionId:', executionId, 'ruleId:', ruleId, 'requiredFields:', requiredFields);
         const context = {
             executionId,
             ruleId,
@@ -3339,9 +3354,11 @@ class RuleExecutionContextManager {
         };
         // Setup auto-cleanup
         context.timeoutHandle = setTimeout(() => {
+            console.log('[REC] Context timeout reached for executionId:', executionId);
             this.expireContext(executionId);
         }, this.MAX_WAIT_TIME);
         this.contexts.set(executionId, context);
+        console.log('[REC] Context created successfully, total active contexts:', this.contexts.size);
         return context;
     }
     /**
@@ -3384,11 +3401,20 @@ class RuleExecutionContextManager {
      * Thu thập một field vào context
      */
     collectField(executionId, field, value) {
+        console.log('[REC] collectField - executionId:', executionId, 'field:', field, 'value:', value);
         const context = this.contexts.get(executionId);
-        if (!context || context.status !== 'pending') {
+        if (!context) {
+            console.error('[REC] Context not found for executionId:', executionId);
+            return;
+        }
+        if (context.status !== 'pending') {
+            console.warn('[REC] Context status is not pending:', context.status);
             return;
         }
         context.collectedFields.set(field, value);
+        console.log('[REC] Field collected, total collected fields:', context.collectedFields.size, '/', context.requiredFields.size);
+        console.log('[REC] Collected fields:', Array.from(context.collectedFields.keys()));
+        console.log('[REC] Required fields:', Array.from(context.requiredFields));
         // Check nếu đã đủ dữ liệu
         this.checkCompletion(executionId);
     }
@@ -3396,25 +3422,38 @@ class RuleExecutionContextManager {
      * Kiểm tra nếu context đã thu thập đủ dữ liệu
      */
     checkCompletion(executionId) {
+        console.log('[REC] checkCompletion - executionId:', executionId);
         const context = this.contexts.get(executionId);
         if (!context || context.status !== 'pending') {
+            console.log('[REC] Context not found or not pending');
             return;
         }
         // Check nếu tất cả required fields đã có
-        const allFieldsCollected = Array.from(context.requiredFields).every(field => context.collectedFields.has(field));
+        const requiredFieldsArray = Array.from(context.requiredFields);
+        const missingFields = requiredFieldsArray.filter(field => !context.collectedFields.has(field));
+        console.log('[REC] Missing fields:', missingFields);
+        const allFieldsCollected = missingFields.length === 0;
+        console.log('[REC] All fields collected?', allFieldsCollected);
         if (allFieldsCollected) {
+            console.log('[REC] All required fields collected, completing context');
             this.completeContext(executionId);
+        }
+        else {
+            console.log('[REC] Still waiting for fields:', missingFields);
         }
     }
     /**
      * Đánh dấu context là completed và trigger callback
      */
     completeContext(executionId) {
+        console.log('[REC] completeContext - executionId:', executionId);
         const context = this.contexts.get(executionId);
         if (!context || context.status !== 'pending') {
+            console.log('[REC] Context not found or not pending');
             return;
         }
         context.status = 'completed';
+        console.log('[REC] Context marked as completed');
         // Clear timeout
         if (context.timeoutHandle) {
             clearTimeout(context.timeoutHandle);
@@ -3424,27 +3463,38 @@ class RuleExecutionContextManager {
         context.collectedFields.forEach((value, key) => {
             payload[key] = value;
         });
+        console.log('[REC] Built payload from collected fields:', payload);
         // Trigger callback
         if (context.onComplete) {
+            console.log('[REC] Triggering onComplete callback with payload');
             context.onComplete(payload);
+        }
+        else {
+            console.warn('[REC] No onComplete callback defined');
         }
         // Cleanup sau 1s (giữ một chút để debug)
         setTimeout(() => {
             this.contexts.delete(executionId);
+            console.log('[REC] Context cleaned up, remaining contexts:', this.contexts.size);
         }, 1000);
     }
     /**
      * Đánh dấu context là expired (timeout)
      */
     expireContext(executionId) {
+        console.log('[REC] expireContext - executionId:', executionId);
         const context = this.contexts.get(executionId);
         if (!context || context.status !== 'pending') {
+            console.log('[REC] Context not found or not pending');
             return;
         }
         context.status = 'expired';
+        console.warn('[REC] Context expired - collected:', context.collectedFields.size, 'required:', context.requiredFields.size);
+        console.warn('[REC] Missing fields:', Array.from(context.requiredFields).filter(f => !context.collectedFields.has(f)));
         // Cleanup
         setTimeout(() => {
             this.contexts.delete(executionId);
+            console.log('[REC] Expired context cleaned up, remaining contexts:', this.contexts.size);
         }, 1000);
     }
     /**
@@ -3919,22 +3969,30 @@ class PayloadBuilder {
      * @param onComplete - Callback khi payload sẵn sàng để dispatch
      */
     handleTrigger(rule, triggerContext, onComplete) {
+        console.log('[PayloadBuilder] handleTrigger started for rule:', rule.id, 'eventTypeId:', rule.eventTypeId);
         // 1. Phân tích mappings
         const { syncMappings, asyncMappings } = this.classifyMappings(rule);
+        console.log('[PayloadBuilder] Classified mappings - sync:', syncMappings.length, 'async:', asyncMappings.length);
         // 2. Nếu không có async → resolve ngay
         if (asyncMappings.length === 0) {
+            console.log('[PayloadBuilder] No async mappings, resolving sync only');
             const payload = this.resolveSyncMappings(syncMappings, triggerContext, rule);
+            console.log('[PayloadBuilder] Sync payload ready:', payload);
             onComplete(payload);
             return;
         }
         // 3. Có async data → tạo REC
         const requiredFields = asyncMappings.map(m => m.field);
+        console.log('[PayloadBuilder] Has async mappings, required fields:', requiredFields);
         const context = this.recManager.createContext(rule.id, requiredFields, triggerContext, (collectedData) => {
             // Khi async data đã thu thập xong
+            console.log('[PayloadBuilder] Async data collection complete:', collectedData);
             const syncPayload = this.resolveSyncMappings(syncMappings, triggerContext, rule);
             const finalPayload = { ...syncPayload, ...collectedData };
+            console.log('[PayloadBuilder] Final payload ready:', finalPayload);
             onComplete(finalPayload);
         });
+        console.log('[PayloadBuilder] Created REC context with ID:', context.executionId);
         // 4. Resolve sync data ngay và collect vào REC
         const syncPayload = this.resolveSyncMappings(syncMappings, triggerContext, rule);
         for (const [field, value] of Object.entries(syncPayload)) {
@@ -3952,21 +4010,29 @@ class PayloadBuilder {
      * 2. AnonymousId (fallback)
      */
     collectUserInfoFromAsyncMappings(executionId, asyncMappings) {
+        console.log('[PayloadBuilder] collectUserInfoFromAsyncMappings - executionId:', executionId);
+        console.log('[PayloadBuilder] Async mappings:', asyncMappings.map(m => ({ field: m.field, source: m.source })));
         // Tìm xem có mapping nào cho UserValue/AnonymousId không
         const userMapping = asyncMappings.find(m => m.field === 'UserId' ||
             m.field === 'AnonymousId');
         if (!userMapping) {
+            console.log('[PayloadBuilder] No user mapping found in async mappings');
             return; // Không cần user info
         }
+        console.log('[PayloadBuilder] Found user mapping:', userMapping);
         // Lấy cached user info
         const cachedInfo = getCachedUserInfo();
+        console.log('[PayloadBuilder] Cached user info:', cachedInfo);
         if (cachedInfo && cachedInfo.userValue) {
             // Có cached user info → dùng nó
+            console.log('[PayloadBuilder] Using cached user info:', cachedInfo.userField, '=', cachedInfo.userValue);
             this.recManager.collectField(executionId, cachedInfo.userField, cachedInfo.userValue);
             return;
         }
         // Không có cached user info → dùng AnonymousId
+        console.log('[PayloadBuilder] No cached user info, using AnonymousId');
         const anonId = getOrCreateAnonymousId();
+        console.log('[PayloadBuilder] Generated/retrieved AnonymousId:', anonId);
         this.recManager.collectField(executionId, 'AnonymousId', anonId);
     }
     /**
@@ -4008,16 +4074,22 @@ class PayloadBuilder {
      * Resolve tất cả sync mappings
      */
     resolveSyncMappings(mappings, context, rule) {
+        console.log('[PayloadBuilder] resolveSyncMappings - mappings count:', mappings.length);
         const payload = {
             ruleId: rule.id,
             eventTypeId: rule.eventTypeId
         };
         for (const mapping of mappings) {
             const value = this.resolveSyncMapping(mapping, context);
+            console.log('[PayloadBuilder] Resolved sync mapping:', mapping.field, 'from source:', mapping.source, 'value:', value);
             if (this.isValidValue(value)) {
                 payload[mapping.field] = value;
             }
+            else {
+                console.log('[PayloadBuilder] Invalid value for field:', mapping.field);
+            }
         }
+        console.log('[PayloadBuilder] Final sync payload:', payload);
         return payload;
     }
     /**

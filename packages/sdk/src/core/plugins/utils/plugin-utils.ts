@@ -32,11 +32,14 @@ export interface CachedUserInfo {
  * @param userValue - Giá trị user đã bắt được
  */
 export function saveCachedUserInfo(userField: string, userValue: string): void {
+    console.log('[plugin-utils] saveCachedUserInfo called - field:', userField, 'value:', userValue);
+    
     // Chỉ lưu nếu userValue valid (không phải AnonymousId, guest, empty)
     if (!userValue || 
         userValue === 'guest' || 
         userValue.startsWith('anon_') || 
         userField === 'AnonymousId') {
+        console.log('[plugin-utils] Skipping save - invalid user value or AnonymousId');
         return;
     }
 
@@ -47,8 +50,10 @@ export function saveCachedUserInfo(userField: string, userValue: string): void {
             timestamp: Date.now()
         };
         localStorage.setItem(STORAGE_KEYS.CACHED_USER_INFO, JSON.stringify(cachedInfo));
+        console.log('[plugin-utils] Successfully saved cached user info:', cachedInfo);
         log('Saved cached user info:', cachedInfo);
     } catch (error) {
+        console.error('[plugin-utils] Failed to save cached user info:', error);
         log('Failed to save cached user info:', error);
     }
 }
@@ -60,20 +65,26 @@ export function saveCachedUserInfo(userField: string, userValue: string): void {
 export function getCachedUserInfo(): CachedUserInfo | null {
     try {
         const cached = localStorage.getItem(STORAGE_KEYS.CACHED_USER_INFO);
+        console.log('[plugin-utils] getCachedUserInfo - raw cached value:', cached);
         if (!cached) {
+            console.log('[plugin-utils] No cached user info found');
             return null;
         }
         
         const userInfo: CachedUserInfo = JSON.parse(cached);
+        console.log('[plugin-utils] Parsed cached user info:', userInfo);
         
         // Validate cached data
         if (userInfo.userField && userInfo.userValue && userInfo.timestamp) {
+            console.log('[plugin-utils] Valid cached user info:', userInfo);
             log('Retrieved cached user info:', userInfo);
             return userInfo;
         }
         
+        console.log('[plugin-utils] Invalid cached user info structure');
         return null;
     } catch (error) {
+        console.error('[plugin-utils] Error reading cached user info:', error);
         return null;
     }
 }
@@ -85,6 +96,7 @@ export function getCachedUserInfo(): CachedUserInfo | null {
 export function getOrCreateAnonymousId(): string {
     try {
         let anonId = localStorage.getItem(STORAGE_KEYS.ANON_USER_ID);
+        console.log('[plugin-utils] getOrCreateAnonymousId - existing anonId:', anonId);
         
         if (!anonId) {
             // Generate new anonymous ID: anon_timestamp_randomstring
@@ -92,13 +104,19 @@ export function getOrCreateAnonymousId(): string {
             const randomStr = Math.random().toString(36).substring(2, 10);
             anonId = `anon_${timestamp}_${randomStr}`;
             localStorage.setItem(STORAGE_KEYS.ANON_USER_ID, anonId);
+            console.log('[plugin-utils] Created new anonymous ID:', anonId);
             log('Created new anonymous ID:', anonId);
+        } else {
+            console.log('[plugin-utils] Using existing anonymous ID:', anonId);
         }
         
         return anonId;
     } catch (error) {
+        console.error('[plugin-utils] Error accessing localStorage for anonId:', error);
         // Fallback nếu localStorage không available
-        return `anon_${Date.now()}_${Math.random().toString(36).substring(2, 10)}`;
+        const fallbackId = `anon_${Date.now()}_${Math.random().toString(36).substring(2, 10)}`;
+        console.log('[plugin-utils] Using fallback anonymous ID:', fallbackId);
+        return fallbackId;
     }
 }
 

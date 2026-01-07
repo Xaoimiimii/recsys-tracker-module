@@ -25,6 +25,7 @@ export class RuleExecutionContextManager {
      */
     createContext(ruleId, requiredFields, triggerContext, onComplete) {
         const executionId = this.generateExecutionId();
+        console.log('[REC] Creating new context - executionId:', executionId, 'ruleId:', ruleId, 'requiredFields:', requiredFields);
         const context = {
             executionId,
             ruleId,
@@ -37,9 +38,11 @@ export class RuleExecutionContextManager {
         };
         // Setup auto-cleanup
         context.timeoutHandle = setTimeout(() => {
+            console.log('[REC] Context timeout reached for executionId:', executionId);
             this.expireContext(executionId);
         }, this.MAX_WAIT_TIME);
         this.contexts.set(executionId, context);
+        console.log('[REC] Context created successfully, total active contexts:', this.contexts.size);
         return context;
     }
     /**
@@ -82,11 +85,20 @@ export class RuleExecutionContextManager {
      * Thu thập một field vào context
      */
     collectField(executionId, field, value) {
+        console.log('[REC] collectField - executionId:', executionId, 'field:', field, 'value:', value);
         const context = this.contexts.get(executionId);
-        if (!context || context.status !== 'pending') {
+        if (!context) {
+            console.error('[REC] Context not found for executionId:', executionId);
+            return;
+        }
+        if (context.status !== 'pending') {
+            console.warn('[REC] Context status is not pending:', context.status);
             return;
         }
         context.collectedFields.set(field, value);
+        console.log('[REC] Field collected, total collected fields:', context.collectedFields.size, '/', context.requiredFields.size);
+        console.log('[REC] Collected fields:', Array.from(context.collectedFields.keys()));
+        console.log('[REC] Required fields:', Array.from(context.requiredFields));
         // Check nếu đã đủ dữ liệu
         this.checkCompletion(executionId);
     }
@@ -94,25 +106,38 @@ export class RuleExecutionContextManager {
      * Kiểm tra nếu context đã thu thập đủ dữ liệu
      */
     checkCompletion(executionId) {
+        console.log('[REC] checkCompletion - executionId:', executionId);
         const context = this.contexts.get(executionId);
         if (!context || context.status !== 'pending') {
+            console.log('[REC] Context not found or not pending');
             return;
         }
         // Check nếu tất cả required fields đã có
-        const allFieldsCollected = Array.from(context.requiredFields).every(field => context.collectedFields.has(field));
+        const requiredFieldsArray = Array.from(context.requiredFields);
+        const missingFields = requiredFieldsArray.filter(field => !context.collectedFields.has(field));
+        console.log('[REC] Missing fields:', missingFields);
+        const allFieldsCollected = missingFields.length === 0;
+        console.log('[REC] All fields collected?', allFieldsCollected);
         if (allFieldsCollected) {
+            console.log('[REC] All required fields collected, completing context');
             this.completeContext(executionId);
+        }
+        else {
+            console.log('[REC] Still waiting for fields:', missingFields);
         }
     }
     /**
      * Đánh dấu context là completed và trigger callback
      */
     completeContext(executionId) {
+        console.log('[REC] completeContext - executionId:', executionId);
         const context = this.contexts.get(executionId);
         if (!context || context.status !== 'pending') {
+            console.log('[REC] Context not found or not pending');
             return;
         }
         context.status = 'completed';
+        console.log('[REC] Context marked as completed');
         // Clear timeout
         if (context.timeoutHandle) {
             clearTimeout(context.timeoutHandle);
@@ -122,27 +147,38 @@ export class RuleExecutionContextManager {
         context.collectedFields.forEach((value, key) => {
             payload[key] = value;
         });
+        console.log('[REC] Built payload from collected fields:', payload);
         // Trigger callback
         if (context.onComplete) {
+            console.log('[REC] Triggering onComplete callback with payload');
             context.onComplete(payload);
+        }
+        else {
+            console.warn('[REC] No onComplete callback defined');
         }
         // Cleanup sau 1s (giữ một chút để debug)
         setTimeout(() => {
             this.contexts.delete(executionId);
+            console.log('[REC] Context cleaned up, remaining contexts:', this.contexts.size);
         }, 1000);
     }
     /**
      * Đánh dấu context là expired (timeout)
      */
     expireContext(executionId) {
+        console.log('[REC] expireContext - executionId:', executionId);
         const context = this.contexts.get(executionId);
         if (!context || context.status !== 'pending') {
+            console.log('[REC] Context not found or not pending');
             return;
         }
         context.status = 'expired';
+        console.warn('[REC] Context expired - collected:', context.collectedFields.size, 'required:', context.requiredFields.size);
+        console.warn('[REC] Missing fields:', Array.from(context.requiredFields).filter(f => !context.collectedFields.has(f)));
         // Cleanup
         setTimeout(() => {
             this.contexts.delete(executionId);
+            console.log('[REC] Expired context cleaned up, remaining contexts:', this.contexts.size);
         }, 1000);
     }
     /**

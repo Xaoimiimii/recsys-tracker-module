@@ -53,18 +53,24 @@ export class PayloadBuilder {
     triggerContext: any,
     onComplete: (payload: Record<string, any>) => void
   ): void {
+    console.log('[PayloadBuilder] handleTrigger started for rule:', rule.id, 'eventTypeId:', rule.eventTypeId);
+    
     // 1. Phân tích mappings
     const { syncMappings, asyncMappings } = this.classifyMappings(rule);
+    console.log('[PayloadBuilder] Classified mappings - sync:', syncMappings.length, 'async:', asyncMappings.length);
 
     // 2. Nếu không có async → resolve ngay
     if (asyncMappings.length === 0) {
+      console.log('[PayloadBuilder] No async mappings, resolving sync only');
       const payload = this.resolveSyncMappings(syncMappings, triggerContext, rule);
+      console.log('[PayloadBuilder] Sync payload ready:', payload);
       onComplete(payload);
       return;
     }
 
     // 3. Có async data → tạo REC
     const requiredFields = asyncMappings.map(m => m.field);
+    console.log('[PayloadBuilder] Has async mappings, required fields:', requiredFields);
     
     const context = this.recManager.createContext(
       rule.id,
@@ -72,11 +78,14 @@ export class PayloadBuilder {
       triggerContext,
       (collectedData) => {
         // Khi async data đã thu thập xong
+        console.log('[PayloadBuilder] Async data collection complete:', collectedData);
         const syncPayload = this.resolveSyncMappings(syncMappings, triggerContext, rule);
         const finalPayload = { ...syncPayload, ...collectedData };
+        console.log('[PayloadBuilder] Final payload ready:', finalPayload);
         onComplete(finalPayload);
       }
     );
+    console.log('[PayloadBuilder] Created REC context with ID:', context.executionId);
 
     // 4. Resolve sync data ngay và collect vào REC
     const syncPayload = this.resolveSyncMappings(syncMappings, triggerContext, rule);
@@ -101,6 +110,9 @@ export class PayloadBuilder {
     executionId: string,
     asyncMappings: PayloadMapping[]
   ): void {
+    console.log('[PayloadBuilder] collectUserInfoFromAsyncMappings - executionId:', executionId);
+    console.log('[PayloadBuilder] Async mappings:', asyncMappings.map(m => ({ field: m.field, source: m.source })));
+    
     // Tìm xem có mapping nào cho UserValue/AnonymousId không
     const userMapping = asyncMappings.find(m => 
       m.field === 'UserId' ||  
@@ -108,20 +120,27 @@ export class PayloadBuilder {
     );
 
     if (!userMapping) {
+      console.log('[PayloadBuilder] No user mapping found in async mappings');
       return; // Không cần user info
     }
+    
+    console.log('[PayloadBuilder] Found user mapping:', userMapping);
 
     // Lấy cached user info
     const cachedInfo = getCachedUserInfo();
+    console.log('[PayloadBuilder] Cached user info:', cachedInfo);
     
     if (cachedInfo && cachedInfo.userValue) {
       // Có cached user info → dùng nó
+      console.log('[PayloadBuilder] Using cached user info:', cachedInfo.userField, '=', cachedInfo.userValue);
       this.recManager.collectField(executionId, cachedInfo.userField, cachedInfo.userValue);
       return;
     }
 
     // Không có cached user info → dùng AnonymousId
+    console.log('[PayloadBuilder] No cached user info, using AnonymousId');
     const anonId = getOrCreateAnonymousId();
+    console.log('[PayloadBuilder] Generated/retrieved AnonymousId:', anonId);
     this.recManager.collectField(executionId, 'AnonymousId', anonId);
   }
 
@@ -178,6 +197,7 @@ export class PayloadBuilder {
     context: any,
     rule: TrackingRule
   ): Record<string, any> {
+    console.log('[PayloadBuilder] resolveSyncMappings - mappings count:', mappings.length);
     const payload: Record<string, any> = {
       ruleId: rule.id,
       eventTypeId: rule.eventTypeId
@@ -185,12 +205,16 @@ export class PayloadBuilder {
 
     for (const mapping of mappings) {
       const value = this.resolveSyncMapping(mapping, context);
+      console.log('[PayloadBuilder] Resolved sync mapping:', mapping.field, 'from source:', mapping.source, 'value:', value);
       
       if (this.isValidValue(value)) {
         payload[mapping.field] = value;
+      } else {
+        console.log('[PayloadBuilder] Invalid value for field:', mapping.field);
       }
     }
-
+    
+    console.log('[PayloadBuilder] Final sync payload:', payload);
     return payload;
   }
 
