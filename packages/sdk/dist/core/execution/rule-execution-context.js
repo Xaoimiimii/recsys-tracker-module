@@ -82,6 +82,30 @@ export class RuleExecutionContextManager {
         return undefined;
     }
     /**
+     * Thay thế một required field bằng field khác
+     * Dùng cho fallback UserId/Username -> AnonymousId
+     */
+    replaceRequiredField(executionId, oldField, newField) {
+        console.log('[REC] replaceRequiredField - executionId:', executionId, 'from:', oldField, 'to:', newField);
+        const context = this.contexts.get(executionId);
+        if (!context) {
+            console.error('[REC] Context not found for executionId:', executionId);
+            return;
+        }
+        if (context.status !== 'pending') {
+            console.warn('[REC] Context status is not pending:', context.status);
+            return;
+        }
+        if (context.requiredFields.has(oldField)) {
+            context.requiredFields.delete(oldField);
+            context.requiredFields.add(newField);
+            console.log('[REC] Required field replaced, new required fields:', Array.from(context.requiredFields));
+        }
+        else {
+            console.warn('[REC] Old field not found in required fields:', oldField);
+        }
+    }
+    /**
      * Thu thập một field vào context
      */
     collectField(executionId, field, value) {

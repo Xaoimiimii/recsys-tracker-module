@@ -60,6 +60,11 @@ export declare class RuleExecutionContextManager {
      */
     findMatchingContext(ruleId: number, requestTimestamp: number): RuleExecutionContext | undefined;
     /**
+     * Thay thế một required field bằng field khác
+     * Dùng cho fallback UserId/Username -> AnonymousId
+     */
+    replaceRequiredField(executionId: string, oldField: string, newField: string): void;
+    /**
      * Thu thập một field vào context
      */
     collectField(executionId: string, field: string, value: any): void;

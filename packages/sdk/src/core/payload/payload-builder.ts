@@ -137,10 +137,20 @@ export class PayloadBuilder {
       return;
     }
 
-    // Không có cached user info → dùng AnonymousId
-    console.log('[PayloadBuilder] No cached user info, using AnonymousId');
+    // Không có cached user info → fallback về AnonymousId
+    // Thay đổi required field từ UserId/Username -> AnonymousId để tránh hiểu lầm
+    console.log('[PayloadBuilder] No cached user info, falling back to AnonymousId');
+    
+    // Thay thế required field
+    if (userMapping.field === 'UserId' || userMapping.field === 'Username') {
+      console.log('[PayloadBuilder] Replacing required field:', userMapping.field, '-> AnonymousId');
+      this.recManager.replaceRequiredField(executionId, userMapping.field, 'AnonymousId');
+    }
+    
+    // Collect AnonymousId
     const anonId = getOrCreateAnonymousId();
     console.log('[PayloadBuilder] Generated/retrieved AnonymousId:', anonId);
+    console.log('[PayloadBuilder] Collecting into field: AnonymousId');
     this.recManager.collectField(executionId, 'AnonymousId', anonId);
   }
 

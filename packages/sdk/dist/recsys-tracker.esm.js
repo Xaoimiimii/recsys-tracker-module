@@ -3398,6 +3398,30 @@ class RuleExecutionContextManager {
         return undefined;
     }
     /**
+     * Thay thế một required field bằng field khác
+     * Dùng cho fallback UserId/Username -> AnonymousId
+     */
+    replaceRequiredField(executionId, oldField, newField) {
+        console.log('[REC] replaceRequiredField - executionId:', executionId, 'from:', oldField, 'to:', newField);
+        const context = this.contexts.get(executionId);
+        if (!context) {
+            console.error('[REC] Context not found for executionId:', executionId);
+            return;
+        }
+        if (context.status !== 'pending') {
+            console.warn('[REC] Context status is not pending:', context.status);
+            return;
+        }
+        if (context.requiredFields.has(oldField)) {
+            context.requiredFields.delete(oldField);
+            context.requiredFields.add(newField);
+            console.log('[REC] Required field replaced, new required fields:', Array.from(context.requiredFields));
+        }
+        else {
+            console.warn('[REC] Old field not found in required fields:', oldField);
+        }
+    }
+    /**
      * Thu thập một field vào context
      */
     collectField(executionId, field, value) {
@@ -4029,10 +4053,18 @@ class PayloadBuilder {
             this.recManager.collectField(executionId, cachedInfo.userField, cachedInfo.userValue);
             return;
         }
-        // Không có cached user info → dùng AnonymousId
-        console.log('[PayloadBuilder] No cached user info, using AnonymousId');
+        // Không có cached user info → fallback về AnonymousId
+        // Thay đổi required field từ UserId/Username -> AnonymousId để tránh hiểu lầm
+        console.log('[PayloadBuilder] No cached user info, falling back to AnonymousId');
+        // Thay thế required field
+        if (userMapping.field === 'UserId' || userMapping.field === 'Username') {
+            console.log('[PayloadBuilder] Replacing required field:', userMapping.field, '-> AnonymousId');
+            this.recManager.replaceRequiredField(executionId, userMapping.field, 'AnonymousId');
+        }
+        // Collect AnonymousId
         const anonId = getOrCreateAnonymousId();
         console.log('[PayloadBuilder] Generated/retrieved AnonymousId:', anonId);
+        console.log('[PayloadBuilder] Collecting into field: AnonymousId');
         this.recManager.collectField(executionId, 'AnonymousId', anonId);
     }
     /**
