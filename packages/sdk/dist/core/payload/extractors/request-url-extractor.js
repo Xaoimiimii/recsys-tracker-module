@@ -87,16 +87,18 @@ export class RequestUrlExtractor {
         return null;
     }
     extractValueFromUrl(url, valueConfig) {
-        // User convention: value is the path index.
+        // User convention: value is the path index (1-based).
         // Example: /api/rating/{itemId}/add-review
         // Split: ['api', 'rating', '123', 'add-review']
-        // value=2 -> '123'
-        const index = typeof valueConfig === 'string' ? parseInt(valueConfig, 10) : valueConfig;
-        if (typeof index !== 'number' || isNaN(index)) {
+        // value=3 (from user view) -> value=3-1=2 (from dev view) -> '123'
+        const userIndex = typeof valueConfig === 'string' ? parseInt(valueConfig, 10) : valueConfig;
+        if (typeof userIndex !== 'number' || isNaN(userIndex)) {
             return null;
         }
+        // Convert from user view (1-based) to dev view (0-based)
+        const index = userIndex - 1;
         const path = url.split('?')[0];
-        const segments = path.split('/').filter(Boolean); // Remote empty strings
+        const segments = path.split('/').filter(Boolean); // Remove empty strings
         if (index < 0 || index >= segments.length) {
             return null;
         }

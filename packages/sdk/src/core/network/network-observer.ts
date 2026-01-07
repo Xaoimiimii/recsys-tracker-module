@@ -321,7 +321,8 @@ export class NetworkObserver {
         
         if (pathValue && !isNaN(Number(pathValue))) {
           const segments = url.pathname.split('/').filter(s => s);
-          const index = Number(pathValue);
+          // Convert from user view (1-based) to dev view (0-based)
+          const index = Number(pathValue) - 1;
           const result = segments[index] || null;
           return result;
         }
@@ -336,7 +337,8 @@ export class NetworkObserver {
         const segments = url.pathname.split('/').filter(s => s);
         
         if (mapping.value && !isNaN(Number(mapping.value))) {
-          const index = Number(mapping.value);
+          // Convert from user view (1-based) to dev view (0-based)
+          const index = Number(mapping.value) - 1;
           const result = segments[index] || null;
           return result;
         }
