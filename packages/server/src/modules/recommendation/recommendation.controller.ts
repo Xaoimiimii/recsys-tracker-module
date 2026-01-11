@@ -8,13 +8,13 @@ export class RecommendationController {
 
     @Post()
     getRecommendations(@Body() body: RecommendationRequestDto) {
-        const { UserValue, UserField, DomainKey, NumberItems } = body;
+        const { UserId, AnonymousId, DomainKey, NumberItems } = body;
 
         return this.recommendationService.getRecommendations(
-            UserValue,
-            UserField,
+            AnonymousId,
             DomainKey,
             NumberItems ?? 10,
+            UserId,
         );
     }
 }

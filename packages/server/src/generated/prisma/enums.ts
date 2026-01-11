@@ -17,13 +17,16 @@ export const ReturnType = {
 export type ReturnType = (typeof ReturnType)[keyof typeof ReturnType]
 
 
-export const IntentLevel = {
-  High: 'High',
-  Medium: 'Medium',
-  Normal: 'Normal'
+export const ActionType = {
+  View: 'View',
+  AddToFavorite: 'AddToFavorite',
+  AddToWishlist: 'AddToWishlist',
+  AddToCart: 'AddToCart',
+  Purchase: 'Purchase',
+  Submit: 'Submit'
 } as const
 
-export type IntentLevel = (typeof IntentLevel)[keyof typeof IntentLevel]
+export type ActionType = (typeof ActionType)[keyof typeof ActionType]
 
 
 export const PayloadField = {

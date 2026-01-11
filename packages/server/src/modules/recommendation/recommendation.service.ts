@@ -3,6 +3,7 @@ import { PrismaService } from '../prisma/prisma.service';
 import { UserField } from 'src/common/enums/event.enum';
 import { firstValueFrom } from 'rxjs';
 import { HttpService } from '@nestjs/axios';
+import { User } from 'src/generated/prisma/client';
 
 @Injectable()
 export class RecommendationService {
@@ -12,20 +13,35 @@ export class RecommendationService {
         private readonly httpService: HttpService,
     ) { }
 
-    async getRecommendations(userValue: string, userField: UserField, domainKey: string, numberItems: number = 10) {
-        if (!await this.prisma.domain.findUnique({ where: { Key: domainKey } })) {
+    async getRecommendations(anonymousId: string, domainKey: string, numberItems: number = 10, userId?: string) {
+        const domain = await this.prisma.domain.findUnique({ where: { Key: domainKey } });
+        if (!domain) {
             throw new NotFoundException(`Domain with key '${domainKey}' does not exist.`);
         }
 
-        const user = await this.prisma.user.findFirst({
-            where:
-                userField === UserField.USERNAME
-                    ? { Username: userValue, Domain: { Key: domainKey } }
-                    : { DomainUserId: userValue, Domain: { Key: domainKey } },
-        });
+        let user: User | null = null;
+
+        if (userId) {
+            user = await this.prisma.user.findUnique({
+                where: {
+                    AnonymousId_UserId_DomainId: {
+                        AnonymousId: anonymousId,
+                        UserId: userId,
+                        DomainId: domain.Id,    
+                    }
+                },
+            });
+        } else {
+            user = await this.prisma.user.findFirst({
+                where: {
+                    AnonymousId: anonymousId,
+                    DomainId: domain.Id,
+                },
+            });
+        }
 
         if (!user) {
-            throw new NotFoundException(`User with ${userField} '${userValue}' does not exist in domain '${domainKey}'.`);
+            throw new NotFoundException(`User with AnonymousId '${anonymousId}' and UserId '${userId}' does not exist in domain '${domainKey}'.`);
         }
 
         const items = await this.prisma.predict.findMany({

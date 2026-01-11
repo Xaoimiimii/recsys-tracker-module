@@ -1,7 +1,9 @@
 import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateEventDto } from './dto/create-event.dto';
-import { UserField, ItemField } from 'src/common/enums/event.enum';
+import { UserField, ItemField, InteractionType } from 'src/common/enums/event.enum';
+import { User } from 'src/generated/prisma/client';
+import { ActionType } from 'src/generated/prisma/client';
 
 @Injectable()
 export class EventService {
@@ -30,28 +32,91 @@ export class EventService {
 
         if (!domain) throw new NotFoundException(`Domain ID '${trackingRule.DomainID}' does not exist.`);
 
-        let user = await this.prisma.user.findUnique({
-            where:
-                event.UserField === UserField.USERNAME
-                    ? { Username_DomainId: { Username: event.UserValue, DomainId: domain.Id } }
-                    : {
-                        DomainId_DomainUserId: {
-                            DomainUserId: event.UserValue,
-                            DomainId: domain.Id
+        // let user = await this.prisma.user.findUnique({
+        //     where:
+        //         event.UserField === UserField.USERNAME
+        //             ? { Username_DomainId: { Username: event.UserValue, DomainId: domain.Id } }
+        //             : {
+        //                 DomainId_DomainUserId: {
+        //                     DomainUserId: event.UserValue,
+        //                     DomainId: domain.Id
+        //                 }
+        //             }
+        // });
+
+        // if (!user) {
+        //     user = await this.prisma.user.create({
+        //         data:
+        //             event.UserField === UserField.USERNAME
+        //                 ? { Username: event.UserValue, DomainId: domain.Id, CreatedAt: new Date() }
+        //                 : {
+        //                     DomainUserId: event.UserValue,
+        //                     DomainId: domain.Id
+        //             }
+        //     });
+        // }
+
+        let user: User | null = null;
+
+        if (event.UserId)
+        {
+            if (event.AnonymousId)
+            {
+                user = await this.prisma.user.findUnique({
+                    where: {
+                        AnonymousId_UserId_DomainId: {
+                            AnonymousId: event.AnonymousId,
+                            UserId: event.UserId,
+                            DomainId: domain.Id,
                         }
                     }
-        });
-
-        if (!user) {
-            user = await this.prisma.user.create({
-                data:
-                    event.UserField === UserField.USERNAME
-                        ? { Username: event.UserValue, DomainId: domain.Id, CreatedAt: new Date() }
-                        : {
-                            DomainUserId: event.UserValue,
-                            DomainId: domain.Id
+                });
+                if (!user)
+                {
+                    user = await this.prisma.user.create({
+                        data: {
+                            AnonymousId: event.AnonymousId,
+                            UserId: event.UserId,
+                            DomainId: domain.Id,
+                            CreatedAt: new Date(),
+                        }
+                    });
+                }
+            } else {
+                user = await this.prisma.user.findFirst({
+                    where: {
+                        UserId: event.UserId,
+                        DomainId: domain.Id,
                     }
+                });
+                if (!user)
+                {
+                    user = await this.prisma.user.create({
+                        data: {
+                            UserId: event.UserId,
+                            DomainId: domain.Id,
+                            CreatedAt: new Date(),
+                        }
+                    });
+                }
+            }
+        } else {
+            user = await this.prisma.user.findFirst({
+                where: {
+                    AnonymousId: event.AnonymousId,
+                    DomainId: domain.Id,
+                }
             });
+            if (!user)
+            {
+                user = await this.prisma.user.create({
+                    data: {
+                        AnonymousId: event.AnonymousId,
+                        DomainId: domain.Id,
+                        CreatedAt: new Date(),
+                    }
+                });
+            }
         }
         
 
@@ -82,8 +147,8 @@ export class EventService {
         const createdEvent = await this.prisma.event.create({
             data: {
                 EventTypeId: event.EventTypeId,
-                UserField: event.UserField,
-                UserValue: event.UserValue,
+                UserId: event.UserId ? event.UserId : null,
+                AnonymousId: event.AnonymousId,
                 ItemField: event.ItemField,
                 ItemValue: event.ItemValue,
                 RatingValue: event.RatingValue,
@@ -193,6 +258,56 @@ export class EventService {
                         }
                     });
                 }
+            }
+        }
+        // click --> action type
+        else if (event.EventTypeId === 1) {
+            let interactionType: number;
+            if (!trackingRule.ActionType) throw new BadRequestException(`Tracking rule '${trackingRule.Id}' does not have action type defined.`);
+            switch (trackingRule.ActionType) {
+                case ActionType.View:
+                    interactionType = InteractionType.View;
+                    break;
+                case ActionType.AddToFavorite:
+                    interactionType = InteractionType.AddToFavorite;
+                    break;
+                case ActionType.AddToWishlist:
+                    interactionType = InteractionType.AddToWishlist;
+                    break;
+                case ActionType.AddToCart:
+                    interactionType = InteractionType.AddToCart;
+                    break;
+                case ActionType.Purchase:
+                    interactionType = InteractionType.Purchase;
+                    break;
+                case ActionType.Submit:
+                    interactionType = InteractionType.Submit;
+                    break;
+            }
+            let validItemIds: number[] = [];
+            for (const itemId of targetItemIds) {
+                const exist = await this.prisma.interaction.findUnique({
+                    where: {
+                        UserId_ItemId_InteractionTypeId: {
+                            UserId: user.Id,
+                            ItemId: itemId,
+                            InteractionTypeId: interactionType,
+                        }
+                    }
+                })
+                if (!exist) validItemIds.push(itemId);
+            }
+
+            for (const itemId of validItemIds) {
+                await this.prisma.interaction.create({
+                    data: {
+                        UserId: user.Id,
+                        ItemId: itemId,
+                        InteractionTypeId: interactionType,
+                        CreatedAt: event.Timestamp,
+                        DomainId: domain.Id,
+                    }
+                });
             }
         }
         else {

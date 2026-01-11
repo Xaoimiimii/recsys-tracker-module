@@ -1,4 +1,4 @@
-import { IsEnum, IsInt, IsOptional, IsString, Min } from 'class-validator';
+import { IsEnum, IsInt, IsNotEmpty, IsOptional, IsString, Min } from 'class-validator';
 import { Type } from 'class-transformer';
 import { UserField } from 'src/common/enums/event.enum';
 import { ApiProperty } from '@nestjs/swagger';
@@ -6,11 +6,13 @@ import { ApiProperty } from '@nestjs/swagger';
 export class RecommendationRequestDto {
     @ApiProperty({ example: 'username' })
     @IsString()
-    UserValue: string;
+    @IsOptional()
+    UserId?: string;
 
-    @ApiProperty({ enum: UserField })
-    @IsEnum(UserField)
-    UserField: UserField;
+    @ApiProperty({ example: 'anonymous_id_123123123' })
+    @IsString()
+    @IsNotEmpty()
+    AnonymousId: string;
 
     @ApiProperty({ example: 'domain_key' })
     @IsString()

@@ -75,9 +75,9 @@ model ReturnMethod {
   ConfigurationName String
 
   Customizing Json?
-  Layout Json?
-  Style  Json?
-  Delay Float?
+  Layout      Json?
+  Style       Json?
+  Delay       Float?
 }
 
 // model ReturnMethod {
@@ -86,12 +86,6 @@ model ReturnMethod {
 
 //   DomainReturns DomainReturn[]
 // }
-
-enum IntentLevel {
-  High
-  Medium
-  Normal
-}
 
 model TrackingRule {
   Id   Int    @id @default(autoincrement())
@@ -109,7 +103,7 @@ model TrackingRule {
   TrackingTargetId Int
   TrackingTarget   TrackingTarget @relation(fields: [TrackingTargetId], references: [Id])
 
-  IntentLevel IntentLevel?
+  ActionType ActionType?
 
   Conditions      Condition[]
   PayloadMappings PayloadMapping[]
@@ -124,12 +118,21 @@ model TrackingRule {
 //   Interactions Interaction[]
 // }
 
+enum ActionType {
+  View
+  AddToFavorite
+  AddToWishlist
+  AddToCart
+  Purchase
+  Submit
+}
+
 model EventType {
   Id   Int    @id @default(autoincrement())
   Name String
 
   TrackingRules TrackingRule[]
-  Interactions  Interaction[]
+  // Interactions  Interaction[]
   Events        Event[]
 }
 
@@ -224,12 +227,12 @@ enum PayloadUrlPart {
 }
 
 model PayloadMapping {
-  Id                Int                   @id @default(autoincrement())
-  Field             PayloadField
-  Source            PayloadSource
-  Value             String?
+  Id     Int           @id @default(autoincrement())
+  Field  PayloadField
+  Source PayloadSource
+  Value  String?
 
-  RequestUrl        String?
+  RequestUrl String?
 
   RequestUrlPattern String?
   RequestMethod     PayloadRequestMethod?
@@ -275,8 +278,11 @@ model Event {
   EventTypeId Int
   EventType   EventType @relation(fields: [EventTypeId], references: [Id])
 
-  UserField EventUserField
-  UserValue String
+  // UserField EventUserField
+  // UserValue String
+
+  UserId      String?
+  AnonymousId String?
 
   ItemField EventItemField
   ItemValue String
@@ -318,8 +324,8 @@ model Item {
   EmbeddingVector Float[]
   ModifiedAt      DateTime @updatedAt @db.Timestamptz
   ImageUrl        String?
-  
-  Attributes      Json?
+
+  Attributes Json?
 
   ItemCategories ItemCategory[]
   ItemFactors    ItemFactor[]
@@ -364,14 +370,14 @@ model ItemFactor {
 
 model User {
   Id           Int     @id @default(autoincrement())
-  DomainUserId String?
-  Username     String?
+  UserId    String?
+  AnonymousId     String?
 
   DomainId Int
   Domain   Domain @relation(fields: [DomainId], references: [Id])
 
   UserEmbeddingVector Float[]
-  CreatedAt           DateTime @default(now())  @db.Timestamptz
+  CreatedAt           DateTime @default(now()) @db.Timestamptz
   ModifiedAt          DateTime @default(now()) @updatedAt @db.Timestamptz
 
   UserFactors  UserFactor[]
@@ -379,9 +385,8 @@ model User {
   Ratings      Rating[]
   Interactions Interaction[]
 
-  @@unique([Username, DomainId])
-  @@unique([DomainId, DomainUserId])
-  @@unique([Username, DomainUserId])
+  @@unique([AnonymousId, UserId, DomainId])
+  // @@unique([DomainId, DomainUserId])
 }
 
 model UserFactor {
@@ -438,13 +443,13 @@ model Interaction {
   ItemId Int
   Item   Item @relation(fields: [ItemId], references: [Id])
 
-  InteractionTypeId Int
-  InteractionType   EventType @relation(fields: [InteractionTypeId], references: [Id])
+  InteractionTypeId Int?
+  // InteractionType   EventType @relation(fields: [InteractionTypeId], references: [Id])
 
   DomainId Int
   Domain   Domain @relation(fields: [DomainId], references: [Id])
 
-  CreatedAt DateTime @default(now())  @db.Timestamptz
+  CreatedAt DateTime @default(now()) @db.Timestamptz
 
   @@unique([UserId, ItemId, InteractionTypeId])
 }

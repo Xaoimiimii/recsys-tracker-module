@@ -1,7 +1,7 @@
 import { ApiProperty, ApiPropertyOptional } from "@nestjs/swagger";
 import { Type } from "class-transformer";
 import { IsEnum, IsNotEmpty, IsNumber, IsOptional, IsString } from "class-validator";
-import { ItemField, UserField } from "src/common/enums/event.enum";
+import { ItemField } from "src/common/enums/event.enum";
 
 // export class CreateEventDto {
 //     @IsNotEmpty()
@@ -34,15 +34,15 @@ export class CreateEventDto {
     @IsNumber()
     EventTypeId: number;
 
-    @ApiProperty({ enum: UserField })
-    @IsNotEmpty()
-    @IsEnum(UserField)
-    UserField: UserField;
+    @ApiProperty({ example: "user-123" })
+    @IsOptional()
+    @IsString()
+    UserId: string;
 
-    @ApiProperty({ example: "username" })
+    @ApiProperty({ example: "anonymous-123" })
     @IsNotEmpty()
     @IsString()
-    UserValue: string;
+    AnonymousId: string;
 
     @ApiProperty({ enum: ItemField })
     @IsNotEmpty()

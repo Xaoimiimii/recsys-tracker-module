@@ -2061,7 +2061,7 @@ export const TrackingRuleScalarFieldEnum = {
   DomainID: 'DomainID',
   EventTypeID: 'EventTypeID',
   TrackingTargetId: 'TrackingTargetId',
-  IntentLevel: 'IntentLevel'
+  ActionType: 'ActionType'
 } as const
 
 export type TrackingRuleScalarFieldEnum = (typeof TrackingRuleScalarFieldEnum)[keyof typeof TrackingRuleScalarFieldEnum]
@@ -2132,8 +2132,8 @@ export type OperatorScalarFieldEnum = (typeof OperatorScalarFieldEnum)[keyof typ
 export const EventScalarFieldEnum = {
   Id: 'Id',
   EventTypeId: 'EventTypeId',
-  UserField: 'UserField',
-  UserValue: 'UserValue',
+  UserId: 'UserId',
+  AnonymousId: 'AnonymousId',
   ItemField: 'ItemField',
   ItemValue: 'ItemValue',
   RatingValue: 'RatingValue',
@@ -2202,8 +2202,8 @@ export type ItemFactorScalarFieldEnum = (typeof ItemFactorScalarFieldEnum)[keyof
 
 export const UserScalarFieldEnum = {
   Id: 'Id',
-  DomainUserId: 'DomainUserId',
-  Username: 'Username',
+  UserId: 'UserId',
+  AnonymousId: 'AnonymousId',
   DomainId: 'DomainId',
   UserEmbeddingVector: 'UserEmbeddingVector',
   CreatedAt: 'CreatedAt',
@@ -2391,16 +2391,16 @@ export type ListFloatFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaMode
 
 
 /**
- * Reference to a field of type 'IntentLevel'
+ * Reference to a field of type 'ActionType'
  */
-export type EnumIntentLevelFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'IntentLevel'>
+export type EnumActionTypeFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'ActionType'>
     
 
 
 /**
- * Reference to a field of type 'IntentLevel[]'
+ * Reference to a field of type 'ActionType[]'
  */
-export type ListEnumIntentLevelFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'IntentLevel[]'>
+export type ListEnumActionTypeFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'ActionType[]'>
     
 
 
@@ -2457,20 +2457,6 @@ export type EnumPayloadUrlPartFieldRefInput<$PrismaModel> = FieldRefInputType<$P
  * Reference to a field of type 'PayloadUrlPart[]'
  */
 export type ListEnumPayloadUrlPartFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'PayloadUrlPart[]'>
-    
-
-
-/**
- * Reference to a field of type 'EventUserField'
- */
-export type EnumEventUserFieldFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'EventUserField'>
-    
-
-
-/**
- * Reference to a field of type 'EventUserField[]'
- */
-export type ListEnumEventUserFieldFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'EventUserField[]'>
     
 
 

@@ -43,8 +43,8 @@ export type EventSumAggregateOutputType = {
 export type EventMinAggregateOutputType = {
   Id: number | null
   EventTypeId: number | null
-  UserField: $Enums.EventUserField | null
-  UserValue: string | null
+  UserId: string | null
+  AnonymousId: string | null
   ItemField: $Enums.EventItemField | null
   ItemValue: string | null
   RatingValue: number | null
@@ -56,8 +56,8 @@ export type EventMinAggregateOutputType = {
 export type EventMaxAggregateOutputType = {
   Id: number | null
   EventTypeId: number | null
-  UserField: $Enums.EventUserField | null
-  UserValue: string | null
+  UserId: string | null
+  AnonymousId: string | null
   ItemField: $Enums.EventItemField | null
   ItemValue: string | null
   RatingValue: number | null
@@ -69,8 +69,8 @@ export type EventMaxAggregateOutputType = {
 export type EventCountAggregateOutputType = {
   Id: number
   EventTypeId: number
-  UserField: number
-  UserValue: number
+  UserId: number
+  AnonymousId: number
   ItemField: number
   ItemValue: number
   RatingValue: number
@@ -98,8 +98,8 @@ export type EventSumAggregateInputType = {
 export type EventMinAggregateInputType = {
   Id?: true
   EventTypeId?: true
-  UserField?: true
-  UserValue?: true
+  UserId?: true
+  AnonymousId?: true
   ItemField?: true
   ItemValue?: true
   RatingValue?: true
@@ -111,8 +111,8 @@ export type EventMinAggregateInputType = {
 export type EventMaxAggregateInputType = {
   Id?: true
   EventTypeId?: true
-  UserField?: true
-  UserValue?: true
+  UserId?: true
+  AnonymousId?: true
   ItemField?: true
   ItemValue?: true
   RatingValue?: true
@@ -124,8 +124,8 @@ export type EventMaxAggregateInputType = {
 export type EventCountAggregateInputType = {
   Id?: true
   EventTypeId?: true
-  UserField?: true
-  UserValue?: true
+  UserId?: true
+  AnonymousId?: true
   ItemField?: true
   ItemValue?: true
   RatingValue?: true
@@ -224,8 +224,8 @@ export type EventGroupByArgs<ExtArgs extends runtime.Types.Extensions.InternalAr
 export type EventGroupByOutputType = {
   Id: number
   EventTypeId: number
-  UserField: $Enums.EventUserField
-  UserValue: string
+  UserId: string | null
+  AnonymousId: string | null
   ItemField: $Enums.EventItemField
   ItemValue: string
   RatingValue: number | null
@@ -260,8 +260,8 @@ export type EventWhereInput = {
   NOT?: Prisma.EventWhereInput | Prisma.EventWhereInput[]
   Id?: Prisma.IntFilter<"Event"> | number
   EventTypeId?: Prisma.IntFilter<"Event"> | number
-  UserField?: Prisma.EnumEventUserFieldFilter<"Event"> | $Enums.EventUserField
-  UserValue?: Prisma.StringFilter<"Event"> | string
+  UserId?: Prisma.StringNullableFilter<"Event"> | string | null
+  AnonymousId?: Prisma.StringNullableFilter<"Event"> | string | null
   ItemField?: Prisma.EnumEventItemFieldFilter<"Event"> | $Enums.EventItemField
   ItemValue?: Prisma.StringFilter<"Event"> | string
   RatingValue?: Prisma.IntNullableFilter<"Event"> | number | null
@@ -275,8 +275,8 @@ export type EventWhereInput = {
 export type EventOrderByWithRelationInput = {
   Id?: Prisma.SortOrder
   EventTypeId?: Prisma.SortOrder
-  UserField?: Prisma.SortOrder
-  UserValue?: Prisma.SortOrder
+  UserId?: Prisma.SortOrderInput | Prisma.SortOrder
+  AnonymousId?: Prisma.SortOrderInput | Prisma.SortOrder
   ItemField?: Prisma.SortOrder
   ItemValue?: Prisma.SortOrder
   RatingValue?: Prisma.SortOrderInput | Prisma.SortOrder
@@ -293,8 +293,8 @@ export type EventWhereUniqueInput = Prisma.AtLeast<{
   OR?: Prisma.EventWhereInput[]
   NOT?: Prisma.EventWhereInput | Prisma.EventWhereInput[]
   EventTypeId?: Prisma.IntFilter<"Event"> | number
-  UserField?: Prisma.EnumEventUserFieldFilter<"Event"> | $Enums.EventUserField
-  UserValue?: Prisma.StringFilter<"Event"> | string
+  UserId?: Prisma.StringNullableFilter<"Event"> | string | null
+  AnonymousId?: Prisma.StringNullableFilter<"Event"> | string | null
   ItemField?: Prisma.EnumEventItemFieldFilter<"Event"> | $Enums.EventItemField
   ItemValue?: Prisma.StringFilter<"Event"> | string
   RatingValue?: Prisma.IntNullableFilter<"Event"> | number | null
@@ -308,8 +308,8 @@ export type EventWhereUniqueInput = Prisma.AtLeast<{
 export type EventOrderByWithAggregationInput = {
   Id?: Prisma.SortOrder
   EventTypeId?: Prisma.SortOrder
-  UserField?: Prisma.SortOrder
-  UserValue?: Prisma.SortOrder
+  UserId?: Prisma.SortOrderInput | Prisma.SortOrder
+  AnonymousId?: Prisma.SortOrderInput | Prisma.SortOrder
   ItemField?: Prisma.SortOrder
   ItemValue?: Prisma.SortOrder
   RatingValue?: Prisma.SortOrderInput | Prisma.SortOrder
@@ -329,8 +329,8 @@ export type EventScalarWhereWithAggregatesInput = {
   NOT?: Prisma.EventScalarWhereWithAggregatesInput | Prisma.EventScalarWhereWithAggregatesInput[]
   Id?: Prisma.IntWithAggregatesFilter<"Event"> | number
   EventTypeId?: Prisma.IntWithAggregatesFilter<"Event"> | number
-  UserField?: Prisma.EnumEventUserFieldWithAggregatesFilter<"Event"> | $Enums.EventUserField
-  UserValue?: Prisma.StringWithAggregatesFilter<"Event"> | string
+  UserId?: Prisma.StringNullableWithAggregatesFilter<"Event"> | string | null
+  AnonymousId?: Prisma.StringNullableWithAggregatesFilter<"Event"> | string | null
   ItemField?: Prisma.EnumEventItemFieldWithAggregatesFilter<"Event"> | $Enums.EventItemField
   ItemValue?: Prisma.StringWithAggregatesFilter<"Event"> | string
   RatingValue?: Prisma.IntNullableWithAggregatesFilter<"Event"> | number | null
@@ -340,8 +340,8 @@ export type EventScalarWhereWithAggregatesInput = {
 }
 
 export type EventCreateInput = {
-  UserField: $Enums.EventUserField
-  UserValue: string
+  UserId?: string | null
+  AnonymousId?: string | null
   ItemField: $Enums.EventItemField
   ItemValue: string
   RatingValue?: number | null
@@ -354,8 +354,8 @@ export type EventCreateInput = {
 export type EventUncheckedCreateInput = {
   Id?: number
   EventTypeId: number
-  UserField: $Enums.EventUserField
-  UserValue: string
+  UserId?: string | null
+  AnonymousId?: string | null
   ItemField: $Enums.EventItemField
   ItemValue: string
   RatingValue?: number | null
@@ -365,8 +365,8 @@ export type EventUncheckedCreateInput = {
 }
 
 export type EventUpdateInput = {
-  UserField?: Prisma.EnumEventUserFieldFieldUpdateOperationsInput | $Enums.EventUserField
-  UserValue?: Prisma.StringFieldUpdateOperationsInput | string
+  UserId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  AnonymousId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   ItemField?: Prisma.EnumEventItemFieldFieldUpdateOperationsInput | $Enums.EventItemField
   ItemValue?: Prisma.StringFieldUpdateOperationsInput | string
   RatingValue?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
@@ -379,8 +379,8 @@ export type EventUpdateInput = {
 export type EventUncheckedUpdateInput = {
   Id?: Prisma.IntFieldUpdateOperationsInput | number
   EventTypeId?: Prisma.IntFieldUpdateOperationsInput | number
-  UserField?: Prisma.EnumEventUserFieldFieldUpdateOperationsInput | $Enums.EventUserField
-  UserValue?: Prisma.StringFieldUpdateOperationsInput | string
+  UserId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  AnonymousId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   ItemField?: Prisma.EnumEventItemFieldFieldUpdateOperationsInput | $Enums.EventItemField
   ItemValue?: Prisma.StringFieldUpdateOperationsInput | string
   RatingValue?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
@@ -392,8 +392,8 @@ export type EventUncheckedUpdateInput = {
 export type EventCreateManyInput = {
   Id?: number
   EventTypeId: number
-  UserField: $Enums.EventUserField
-  UserValue: string
+  UserId?: string | null
+  AnonymousId?: string | null
   ItemField: $Enums.EventItemField
   ItemValue: string
   RatingValue?: number | null
@@ -403,8 +403,8 @@ export type EventCreateManyInput = {
 }
 
 export type EventUpdateManyMutationInput = {
-  UserField?: Prisma.EnumEventUserFieldFieldUpdateOperationsInput | $Enums.EventUserField
-  UserValue?: Prisma.StringFieldUpdateOperationsInput | string
+  UserId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  AnonymousId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   ItemField?: Prisma.EnumEventItemFieldFieldUpdateOperationsInput | $Enums.EventItemField
   ItemValue?: Prisma.StringFieldUpdateOperationsInput | string
   RatingValue?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
@@ -415,8 +415,8 @@ export type EventUpdateManyMutationInput = {
 export type EventUncheckedUpdateManyInput = {
   Id?: Prisma.IntFieldUpdateOperationsInput | number
   EventTypeId?: Prisma.IntFieldUpdateOperationsInput | number
-  UserField?: Prisma.EnumEventUserFieldFieldUpdateOperationsInput | $Enums.EventUserField
-  UserValue?: Prisma.StringFieldUpdateOperationsInput | string
+  UserId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  AnonymousId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   ItemField?: Prisma.EnumEventItemFieldFieldUpdateOperationsInput | $Enums.EventItemField
   ItemValue?: Prisma.StringFieldUpdateOperationsInput | string
   RatingValue?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
@@ -438,8 +438,8 @@ export type EventOrderByRelationAggregateInput = {
 export type EventCountOrderByAggregateInput = {
   Id?: Prisma.SortOrder
   EventTypeId?: Prisma.SortOrder
-  UserField?: Prisma.SortOrder
-  UserValue?: Prisma.SortOrder
+  UserId?: Prisma.SortOrder
+  AnonymousId?: Prisma.SortOrder
   ItemField?: Prisma.SortOrder
   ItemValue?: Prisma.SortOrder
   RatingValue?: Prisma.SortOrder
@@ -458,8 +458,8 @@ export type EventAvgOrderByAggregateInput = {
 export type EventMaxOrderByAggregateInput = {
   Id?: Prisma.SortOrder
   EventTypeId?: Prisma.SortOrder
-  UserField?: Prisma.SortOrder
-  UserValue?: Prisma.SortOrder
+  UserId?: Prisma.SortOrder
+  AnonymousId?: Prisma.SortOrder
   ItemField?: Prisma.SortOrder
   ItemValue?: Prisma.SortOrder
   RatingValue?: Prisma.SortOrder
@@ -471,8 +471,8 @@ export type EventMaxOrderByAggregateInput = {
 export type EventMinOrderByAggregateInput = {
   Id?: Prisma.SortOrder
   EventTypeId?: Prisma.SortOrder
-  UserField?: Prisma.SortOrder
-  UserValue?: Prisma.SortOrder
+  UserId?: Prisma.SortOrder
+  AnonymousId?: Prisma.SortOrder
   ItemField?: Prisma.SortOrder
   ItemValue?: Prisma.SortOrder
   RatingValue?: Prisma.SortOrder
@@ -572,17 +572,13 @@ export type EventUncheckedUpdateManyWithoutEventTypeNestedInput = {
   deleteMany?: Prisma.EventScalarWhereInput | Prisma.EventScalarWhereInput[]
 }
 
-export type EnumEventUserFieldFieldUpdateOperationsInput = {
-  set?: $Enums.EventUserField
-}
-
 export type EnumEventItemFieldFieldUpdateOperationsInput = {
   set?: $Enums.EventItemField
 }
 
 export type EventCreateWithoutTrackingRuleInput = {
-  UserField: $Enums.EventUserField
-  UserValue: string
+  UserId?: string | null
+  AnonymousId?: string | null
   ItemField: $Enums.EventItemField
   ItemValue: string
   RatingValue?: number | null
@@ -594,8 +590,8 @@ export type EventCreateWithoutTrackingRuleInput = {
 export type EventUncheckedCreateWithoutTrackingRuleInput = {
   Id?: number
   EventTypeId: number
-  UserField: $Enums.EventUserField
-  UserValue: string
+  UserId?: string | null
+  AnonymousId?: string | null
   ItemField: $Enums.EventItemField
   ItemValue: string
   RatingValue?: number | null
@@ -635,8 +631,8 @@ export type EventScalarWhereInput = {
   NOT?: Prisma.EventScalarWhereInput | Prisma.EventScalarWhereInput[]
   Id?: Prisma.IntFilter<"Event"> | number
   EventTypeId?: Prisma.IntFilter<"Event"> | number
-  UserField?: Prisma.EnumEventUserFieldFilter<"Event"> | $Enums.EventUserField
-  UserValue?: Prisma.StringFilter<"Event"> | string
+  UserId?: Prisma.StringNullableFilter<"Event"> | string | null
+  AnonymousId?: Prisma.StringNullableFilter<"Event"> | string | null
   ItemField?: Prisma.EnumEventItemFieldFilter<"Event"> | $Enums.EventItemField
   ItemValue?: Prisma.StringFilter<"Event"> | string
   RatingValue?: Prisma.IntNullableFilter<"Event"> | number | null
@@ -646,8 +642,8 @@ export type EventScalarWhereInput = {
 }
 
 export type EventCreateWithoutEventTypeInput = {
-  UserField: $Enums.EventUserField
-  UserValue: string
+  UserId?: string | null
+  AnonymousId?: string | null
   ItemField: $Enums.EventItemField
   ItemValue: string
   RatingValue?: number | null
@@ -658,8 +654,8 @@ export type EventCreateWithoutEventTypeInput = {
 
 export type EventUncheckedCreateWithoutEventTypeInput = {
   Id?: number
-  UserField: $Enums.EventUserField
-  UserValue: string
+  UserId?: string | null
+  AnonymousId?: string | null
   ItemField: $Enums.EventItemField
   ItemValue: string
   RatingValue?: number | null
@@ -697,8 +693,8 @@ export type EventUpdateManyWithWhereWithoutEventTypeInput = {
 export type EventCreateManyTrackingRuleInput = {
   Id?: number
   EventTypeId: number
-  UserField: $Enums.EventUserField
-  UserValue: string
+  UserId?: string | null
+  AnonymousId?: string | null
   ItemField: $Enums.EventItemField
   ItemValue: string
   RatingValue?: number | null
@@ -707,8 +703,8 @@ export type EventCreateManyTrackingRuleInput = {
 }
 
 export type EventUpdateWithoutTrackingRuleInput = {
-  UserField?: Prisma.EnumEventUserFieldFieldUpdateOperationsInput | $Enums.EventUserField
-  UserValue?: Prisma.StringFieldUpdateOperationsInput | string
+  UserId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  AnonymousId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   ItemField?: Prisma.EnumEventItemFieldFieldUpdateOperationsInput | $Enums.EventItemField
   ItemValue?: Prisma.StringFieldUpdateOperationsInput | string
   RatingValue?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
@@ -720,8 +716,8 @@ export type EventUpdateWithoutTrackingRuleInput = {
 export type EventUncheckedUpdateWithoutTrackingRuleInput = {
   Id?: Prisma.IntFieldUpdateOperationsInput | number
   EventTypeId?: Prisma.IntFieldUpdateOperationsInput | number
-  UserField?: Prisma.EnumEventUserFieldFieldUpdateOperationsInput | $Enums.EventUserField
-  UserValue?: Prisma.StringFieldUpdateOperationsInput | string
+  UserId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  AnonymousId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   ItemField?: Prisma.EnumEventItemFieldFieldUpdateOperationsInput | $Enums.EventItemField
   ItemValue?: Prisma.StringFieldUpdateOperationsInput | string
   RatingValue?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
@@ -732,8 +728,8 @@ export type EventUncheckedUpdateWithoutTrackingRuleInput = {
 export type EventUncheckedUpdateManyWithoutTrackingRuleInput = {
   Id?: Prisma.IntFieldUpdateOperationsInput | number
   EventTypeId?: Prisma.IntFieldUpdateOperationsInput | number
-  UserField?: Prisma.EnumEventUserFieldFieldUpdateOperationsInput | $Enums.EventUserField
-  UserValue?: Prisma.StringFieldUpdateOperationsInput | string
+  UserId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  AnonymousId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   ItemField?: Prisma.EnumEventItemFieldFieldUpdateOperationsInput | $Enums.EventItemField
   ItemValue?: Prisma.StringFieldUpdateOperationsInput | string
   RatingValue?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
@@ -743,8 +739,8 @@ export type EventUncheckedUpdateManyWithoutTrackingRuleInput = {
 
 export type EventCreateManyEventTypeInput = {
   Id?: number
-  UserField: $Enums.EventUserField
-  UserValue: string
+  UserId?: string | null
+  AnonymousId?: string | null
   ItemField: $Enums.EventItemField
   ItemValue: string
   RatingValue?: number | null
@@ -754,8 +750,8 @@ export type EventCreateManyEventTypeInput = {
 }
 
 export type EventUpdateWithoutEventTypeInput = {
-  UserField?: Prisma.EnumEventUserFieldFieldUpdateOperationsInput | $Enums.EventUserField
-  UserValue?: Prisma.StringFieldUpdateOperationsInput | string
+  UserId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  AnonymousId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   ItemField?: Prisma.EnumEventItemFieldFieldUpdateOperationsInput | $Enums.EventItemField
   ItemValue?: Prisma.StringFieldUpdateOperationsInput | string
   RatingValue?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
@@ -766,8 +762,8 @@ export type EventUpdateWithoutEventTypeInput = {
 
 export type EventUncheckedUpdateWithoutEventTypeInput = {
   Id?: Prisma.IntFieldUpdateOperationsInput | number
-  UserField?: Prisma.EnumEventUserFieldFieldUpdateOperationsInput | $Enums.EventUserField
-  UserValue?: Prisma.StringFieldUpdateOperationsInput | string
+  UserId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  AnonymousId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   ItemField?: Prisma.EnumEventItemFieldFieldUpdateOperationsInput | $Enums.EventItemField
   ItemValue?: Prisma.StringFieldUpdateOperationsInput | string
   RatingValue?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
@@ -778,8 +774,8 @@ export type EventUncheckedUpdateWithoutEventTypeInput = {
 
 export type EventUncheckedUpdateManyWithoutEventTypeInput = {
   Id?: Prisma.IntFieldUpdateOperationsInput | number
-  UserField?: Prisma.EnumEventUserFieldFieldUpdateOperationsInput | $Enums.EventUserField
-  UserValue?: Prisma.StringFieldUpdateOperationsInput | string
+  UserId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  AnonymousId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   ItemField?: Prisma.EnumEventItemFieldFieldUpdateOperationsInput | $Enums.EventItemField
   ItemValue?: Prisma.StringFieldUpdateOperationsInput | string
   RatingValue?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
@@ -793,8 +789,8 @@ export type EventUncheckedUpdateManyWithoutEventTypeInput = {
 export type EventSelect<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetSelect<{
   Id?: boolean
   EventTypeId?: boolean
-  UserField?: boolean
-  UserValue?: boolean
+  UserId?: boolean
+  AnonymousId?: boolean
   ItemField?: boolean
   ItemValue?: boolean
   RatingValue?: boolean
@@ -808,8 +804,8 @@ export type EventSelect<ExtArgs extends runtime.Types.Extensions.InternalArgs = 
 export type EventSelectCreateManyAndReturn<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetSelect<{
   Id?: boolean
   EventTypeId?: boolean
-  UserField?: boolean
-  UserValue?: boolean
+  UserId?: boolean
+  AnonymousId?: boolean
   ItemField?: boolean
   ItemValue?: boolean
   RatingValue?: boolean
@@ -823,8 +819,8 @@ export type EventSelectCreateManyAndReturn<ExtArgs extends runtime.Types.Extensi
 export type EventSelectUpdateManyAndReturn<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetSelect<{
   Id?: boolean
   EventTypeId?: boolean
-  UserField?: boolean
-  UserValue?: boolean
+  UserId?: boolean
+  AnonymousId?: boolean
   ItemField?: boolean
   ItemValue?: boolean
   RatingValue?: boolean
@@ -838,8 +834,8 @@ export type EventSelectUpdateManyAndReturn<ExtArgs extends runtime.Types.Extensi
 export type EventSelectScalar = {
   Id?: boolean
   EventTypeId?: boolean
-  UserField?: boolean
-  UserValue?: boolean
+  UserId?: boolean
+  AnonymousId?: boolean
   ItemField?: boolean
   ItemValue?: boolean
   RatingValue?: boolean
@@ -848,7 +844,7 @@ export type EventSelectScalar = {
   TrackingRuleId?: boolean
 }
 
-export type EventOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"Id" | "EventTypeId" | "UserField" | "UserValue" | "ItemField" | "ItemValue" | "RatingValue" | "ReviewValue" | "Timestamp" | "TrackingRuleId", ExtArgs["result"]["event"]>
+export type EventOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"Id" | "EventTypeId" | "UserId" | "AnonymousId" | "ItemField" | "ItemValue" | "RatingValue" | "ReviewValue" | "Timestamp" | "TrackingRuleId", ExtArgs["result"]["event"]>
 export type EventInclude<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   EventType?: boolean | Prisma.EventTypeDefaultArgs<ExtArgs>
   TrackingRule?: boolean | Prisma.TrackingRuleDefaultArgs<ExtArgs>
@@ -871,8 +867,8 @@ export type $EventPayload<ExtArgs extends runtime.Types.Extensions.InternalArgs 
   scalars: runtime.Types.Extensions.GetPayloadResult<{
     Id: number
     EventTypeId: number
-    UserField: $Enums.EventUserField
-    UserValue: string
+    UserId: string | null
+    AnonymousId: string | null
     ItemField: $Enums.EventItemField
     ItemValue: string
     RatingValue: number | null
@@ -1306,8 +1302,8 @@ export interface Prisma__EventClient<T, Null = never, ExtArgs extends runtime.Ty
 export interface EventFieldRefs {
   readonly Id: Prisma.FieldRef<"Event", 'Int'>
   readonly EventTypeId: Prisma.FieldRef<"Event", 'Int'>
-  readonly UserField: Prisma.FieldRef<"Event", 'EventUserField'>
-  readonly UserValue: Prisma.FieldRef<"Event", 'String'>
+  readonly UserId: Prisma.FieldRef<"Event", 'String'>
+  readonly AnonymousId: Prisma.FieldRef<"Event", 'String'>
   readonly ItemField: Prisma.FieldRef<"Event", 'EventItemField'>
   readonly ItemValue: Prisma.FieldRef<"Event", 'String'>
   readonly RatingValue: Prisma.FieldRef<"Event", 'Int'>

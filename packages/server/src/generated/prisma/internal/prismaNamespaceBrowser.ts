@@ -134,7 +134,7 @@ export const TrackingRuleScalarFieldEnum = {
   DomainID: 'DomainID',
   EventTypeID: 'EventTypeID',
   TrackingTargetId: 'TrackingTargetId',
-  IntentLevel: 'IntentLevel'
+  ActionType: 'ActionType'
 } as const
 
 export type TrackingRuleScalarFieldEnum = (typeof TrackingRuleScalarFieldEnum)[keyof typeof TrackingRuleScalarFieldEnum]
@@ -205,8 +205,8 @@ export type OperatorScalarFieldEnum = (typeof OperatorScalarFieldEnum)[keyof typ
 export const EventScalarFieldEnum = {
   Id: 'Id',
   EventTypeId: 'EventTypeId',
-  UserField: 'UserField',
-  UserValue: 'UserValue',
+  UserId: 'UserId',
+  AnonymousId: 'AnonymousId',
   ItemField: 'ItemField',
   ItemValue: 'ItemValue',
   RatingValue: 'RatingValue',
@@ -275,8 +275,8 @@ export type ItemFactorScalarFieldEnum = (typeof ItemFactorScalarFieldEnum)[keyof
 
 export const UserScalarFieldEnum = {
   Id: 'Id',
-  DomainUserId: 'DomainUserId',
-  Username: 'Username',
+  UserId: 'UserId',
+  AnonymousId: 'AnonymousId',
   DomainId: 'DomainId',
   UserEmbeddingVector: 'UserEmbeddingVector',
   CreatedAt: 'CreatedAt',
