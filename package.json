@@ -23,5 +23,9 @@
     "analytics",
     "recsys"
   ],
-  "license": "MIT"
+  "license": "MIT",
+  "dependencies": {
+    "cache-manager-redis-yet": "^5.1.5",
+    "redis": "^5.10.0"
+  }
 }
