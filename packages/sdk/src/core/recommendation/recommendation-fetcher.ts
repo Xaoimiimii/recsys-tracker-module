@@ -39,9 +39,10 @@ export class RecommendationFetcher {
         NumberItems: options.numberItems || 10,
       };
 
-      // Set UserId or AnonymousId based on userField
-      if (userField === 'UserId' || userField === 'Username') {
-        requestBody.UserId = userValue;
+      // Check for cached user info in localStorage
+      const cachedUserId = this.getCachedUserId();
+      if (cachedUserId) {
+        requestBody.UserId = cachedUserId;
       }
 
       // Call API
@@ -123,11 +124,29 @@ export class RecommendationFetcher {
   }
 
   /**
+   * Get cached user ID from localStorage
+   * @returns Cached user ID or null
+   */
+  private getCachedUserId(): string | null {
+    try {
+      const cachedUserInfo = localStorage.getItem('recsys_cached_user_info');
+      if (cachedUserInfo) {
+        const userInfo = JSON.parse(cachedUserInfo);
+        return userInfo.userValue || null;
+      }
+      return null;
+    } catch (error) {
+      console.warn('[RecSysTracker] Failed to get cached user info:', error);
+      return null;
+    }
+  }
+
+  /**
    * Get or create anonymous ID cho user
    * @returns Anonymous ID string
    */
   private getOrCreateAnonymousId(): string {
-    const storageKey = 'recsys_anonymous_id';
+    const storageKey = 'recsys_anon_id';
 
     try {
       // Try to get existing ID from localStorage

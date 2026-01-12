@@ -33,6 +33,11 @@ export declare class RecommendationFetcher {
      */
     private transformResponse;
     /**
+     * Get cached user ID from localStorage
+     * @returns Cached user ID or null
+     */
+    private getCachedUserId;
+    /**
      * Get or create anonymous ID cho user
      * @returns Anonymous ID string
      */

@@ -130,10 +130,6 @@ export class RecSysTracker {
                 });
                 pluginPromises.push(scrollPromise);
             }
-            // ❌ REMOVE NetworkPlugin auto-registration
-            // Network Observer is now initialized globally, not as a plugin
-            // ❌ REMOVE NetworkPlugin auto-registration
-            // Network Observer is now initialized globally, not as a plugin
             // Chờ tất cả plugin được đăng ký trước khi khởi động
             if (pluginPromises.length > 0) {
                 await Promise.all(pluginPromises);
