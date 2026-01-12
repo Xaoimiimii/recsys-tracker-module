@@ -12,8 +12,8 @@ export interface TrackedEvent {
   eventTypeId: number;
   trackingRuleId: number;
   domainKey: string;
-  userField: string;
-  userValue: string;
+  userId?: string;
+  anonymousId: string;
   itemField: string;
   itemValue: string;
   ratingValue?: number;
@@ -91,21 +91,6 @@ export class EventBuffer {
     if (this.queue.length >= this.maxQueueSize) {
       this.queue.shift();
     }
-
-    // console.log('[EventBuffer] Payload được thêm vào queue:', {
-    //   id: event.id,
-    //   eventTypeId: event.eventTypeId,
-    //   trackingRuleId: event.trackingRuleId,
-    //   domainKey: event.domainKey,
-    //   userField: event.userField,
-    //   userValue: event.userValue,
-    //   itemField: event.itemField,
-    //   itemValue: event.itemValue,
-    //   ratingValue: event.ratingValue,
-    //   ratingReview: event.ratingReview,
-    //   timestamp: event.timestamp,
-    //   queueSize: this.queue.length + 1
-    // });
 
     this.queue.push(event);
     this.persistToStorage();

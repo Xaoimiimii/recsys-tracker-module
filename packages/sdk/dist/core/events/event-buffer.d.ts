@@ -4,8 +4,8 @@ export interface TrackedEvent {
     eventTypeId: number;
     trackingRuleId: number;
     domainKey: string;
-    userField: string;
-    userValue: string;
+    userId?: string;
+    anonymousId: string;
     itemField: string;
     itemValue: string;
     ratingValue?: number;

@@ -1,21 +1,10 @@
 import { RecommendationItem, RecommendationOptions, UserField } from './types';
-/**
- * RecommendationFetcher - Class để fetch và quản lý recommendation data
- * Design pattern tương tự ConfigLoader
- */
 export declare class RecommendationFetcher {
     private domainKey;
     private apiBaseUrl;
     private cache;
     private readonly CACHE_TTL;
     constructor(domainKey: string, apiBaseUrl?: string);
-    /**
-     * Fetch recommendations cho user hiện tại
-     * @param userValue - User ID/Username/AnonymousId
-     * @param userField - Loại user field (UserId, Username, AnonymousId)
-     * @param options - Optional configuration
-     * @returns Promise<RecommendationItem[]>
-     */
     fetchRecommendations(userValue: string, userField?: UserField, options?: RecommendationOptions): Promise<RecommendationItem[]>;
     /**
      * Get recommendations cho anonymous user (auto-detect)

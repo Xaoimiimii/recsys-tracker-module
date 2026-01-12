@@ -476,20 +476,6 @@ class EventBuffer {
         if (this.queue.length >= this.maxQueueSize) {
             this.queue.shift();
         }
-        // console.log('[EventBuffer] Payload được thêm vào queue:', {
-        //   id: event.id,
-        //   eventTypeId: event.eventTypeId,
-        //   trackingRuleId: event.trackingRuleId,
-        //   domainKey: event.domainKey,
-        //   userField: event.userField,
-        //   userValue: event.userValue,
-        //   itemField: event.itemField,
-        //   itemValue: event.itemValue,
-        //   ratingValue: event.ratingValue,
-        //   ratingReview: event.ratingReview,
-        //   timestamp: event.timestamp,
-        //   queueSize: this.queue.length + 1
-        // });
         this.queue.push(event);
         this.persistToStorage();
     }
@@ -600,8 +586,8 @@ class EventDispatcher {
             EventTypeId: event.eventTypeId,
             TrackingRuleId: event.trackingRuleId,
             DomainKey: event.domainKey,
-            UserField: event.userField,
-            UserValue: event.userValue,
+            AnonymousId: event.anonymousId,
+            ...(event.userId && { UserId: event.userId }),
             ItemField: event.itemField,
             ItemValue: event.itemValue,
             ...(event.ratingValue !== undefined && { RatingValue: event.ratingValue }),
@@ -1746,10 +1732,6 @@ class PlaceholderImage {
     }
 }
 
-/**
- * RecommendationFetcher - Class để fetch và quản lý recommendation data
- * Design pattern tương tự ConfigLoader
- */
 class RecommendationFetcher {
     constructor(domainKey, apiBaseUrl = 'https://recsys-tracker-module.onrender.com') {
         this.CACHE_TTL = 5 * 60 * 1000; // 5 minutes cache
@@ -1757,13 +1739,6 @@ class RecommendationFetcher {
         this.apiBaseUrl = apiBaseUrl;
         this.cache = new Map();
     }
-    /**
-     * Fetch recommendations cho user hiện tại
-     * @param userValue - User ID/Username/AnonymousId
-     * @param userField - Loại user field (UserId, Username, AnonymousId)
-     * @param options - Optional configuration
-     * @returns Promise<RecommendationItem[]>
-     */
     async fetchRecommendations(userValue, userField = 'AnonymousId', options = {}) {
         try {
             // Check cache first
@@ -1774,11 +1749,14 @@ class RecommendationFetcher {
             }
             // Prepare request payload
             const requestBody = {
-                UserValue: userValue,
-                UserField: userField,
+                AnonymousId: this.getOrCreateAnonymousId(),
                 DomainKey: this.domainKey,
                 NumberItems: options.numberItems || 10,
             };
+            // Set UserId or AnonymousId based on userField
+            if (userField === 'UserId' || userField === 'Username') {
+                requestBody.UserId = userValue;
+            }
             // Call API
             const response = await fetch(`${this.apiBaseUrl}/recommendation`, {
                 method: 'POST',
@@ -4918,25 +4896,27 @@ class RecSysTracker {
             // Support both camelCase and PascalCase field names
             const payload = eventData.eventData || {};
             const ruleId = payload.ruleId || payload.RuleId;
-            // User field - try multiple variants
-            const userValue = payload.userId || payload.UserId ||
-                payload.anonymousId || payload.AnonymousId ||
+            // 1. Luôn lấy anonymousId từ localStorage (hoặc tạo mới nếu chưa có)
+            const anonymousId = getOrCreateAnonymousId();
+            // 2. Kiểm tra userId từ cached user info trong localStorage
+            const cachedUserInfo = getCachedUserInfo();
+            let userId = undefined;
+            if (cachedUserInfo && cachedUserInfo.userValue) {
+                // Có cached user info - sử dụng
+                userId = cachedUserInfo.userValue;
+            }
+            // User field cho deduplication - ưu tiên userId, fallback về anonymousId
+            const userValue = userId ||
+                payload.userId || payload.UserId ||
                 payload.username || payload.Username ||
                 payload.userValue || payload.UserValue ||
-                'guest';
+                anonymousId;
             // Item field - try multiple variants
             const itemValue = payload.itemId || payload.ItemId ||
                 payload.itemTitle || payload.ItemTitle ||
                 payload.itemValue || payload.ItemValue ||
                 '';
             // Determine field names for tracking
-            let userField = 'userId';
-            if (payload.AnonymousId || payload.anonymousId)
-                userField = 'AnonymousId';
-            else if (payload.UserId || payload.userId)
-                userField = 'UserId';
-            else if (payload.Username || payload.username)
-                userField = 'Username';
             let itemField = 'itemId';
             if (payload.ItemId || payload.itemId)
                 itemField = 'ItemId';
@@ -4964,8 +4944,8 @@ class RecSysTracker {
                 eventTypeId: eventData.eventType,
                 trackingRuleId: Number(ruleId) || 0,
                 domainKey: this.config.domainKey,
-                userField: userField,
-                userValue: userValue,
+                anonymousId: anonymousId,
+                ...(userId && { userId }), // Chỉ thêm userId nếu có
                 itemField: itemField,
                 itemValue: itemValue,
                 ...(ratingValue !== undefined && {

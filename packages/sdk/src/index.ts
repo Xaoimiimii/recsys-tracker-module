@@ -14,7 +14,7 @@ import { PayloadBuilder } from './core/payload/payload-builder';
 import { EventDeduplicator } from './core/utils/event-deduplicator';
 import { LoopGuard } from './core/utils/loop-guard';
 import { getNetworkObserver } from './core/network/network-observer';
-import { getOrCreateAnonymousId } from './core/plugins/utils/plugin-utils';
+import { getOrCreateAnonymousId, getCachedUserInfo } from './core/plugins/utils/plugin-utils';
 
 // RecSysTracker - Main SDK class
 export class RecSysTracker {
@@ -207,12 +207,24 @@ export class RecSysTracker {
       const payload = eventData.eventData || {};
       const ruleId = payload.ruleId || payload.RuleId;
       
-      // User field - try multiple variants
-      const userValue = payload.userId || payload.UserId || 
-                       payload.anonymousId || payload.AnonymousId ||
+      // 1. Luôn lấy anonymousId từ localStorage (hoặc tạo mới nếu chưa có)
+      const anonymousId = getOrCreateAnonymousId();
+      
+      // 2. Kiểm tra userId từ cached user info trong localStorage
+      const cachedUserInfo = getCachedUserInfo();
+      let userId: string | undefined = undefined;
+      
+      if (cachedUserInfo && cachedUserInfo.userValue) {
+        // Có cached user info - sử dụng
+        userId = cachedUserInfo.userValue;
+      }
+      
+      // User field cho deduplication - ưu tiên userId, fallback về anonymousId
+      const userValue = userId || 
+                       payload.userId || payload.UserId || 
                        payload.username || payload.Username ||
                        payload.userValue || payload.UserValue ||
-                       'guest';
+                       anonymousId;
       
       // Item field - try multiple variants
       const itemValue = payload.itemId || payload.ItemId ||
@@ -221,11 +233,6 @@ export class RecSysTracker {
                        '';
       
       // Determine field names for tracking
-      let userField = 'userId';
-      if (payload.AnonymousId || payload.anonymousId) userField = 'AnonymousId';
-      else if (payload.UserId || payload.userId) userField = 'UserId';
-      else if (payload.Username || payload.username) userField = 'Username';
-      
       let itemField = 'itemId';
       if (payload.ItemId || payload.itemId) itemField = 'ItemId';
       else if (payload.ItemTitle || payload.itemTitle) itemField = 'ItemTitle';
@@ -261,8 +268,8 @@ export class RecSysTracker {
         eventTypeId: eventData.eventType,
         trackingRuleId: Number(ruleId) || 0,
         domainKey: this.config.domainKey,
-        userField: userField,
-        userValue: userValue,
+        anonymousId: anonymousId,
+        ...(userId && { userId }), // Chỉ thêm userId nếu có
         itemField: itemField,
         itemValue: itemValue,
         ...(ratingValue !== undefined && { 

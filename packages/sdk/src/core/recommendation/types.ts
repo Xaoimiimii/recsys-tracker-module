@@ -1,8 +1,8 @@
 export type UserField = 'UserId' | 'Username' | 'AnonymousId';
 
 export interface RecommendationRequest {
-  UserValue: string;
-  UserField: UserField;
+  UserId?: string;
+  AnonymousId: string;
   DomainKey: string;
   NumberItems: number;
 }

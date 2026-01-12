@@ -1,8 +1,4 @@
 import { PlaceholderImage } from './placeholder-image';
-/**
- * RecommendationFetcher - Class để fetch và quản lý recommendation data
- * Design pattern tương tự ConfigLoader
- */
 export class RecommendationFetcher {
     constructor(domainKey, apiBaseUrl = 'https://recsys-tracker-module.onrender.com') {
         this.CACHE_TTL = 5 * 60 * 1000; // 5 minutes cache
@@ -10,13 +6,6 @@ export class RecommendationFetcher {
         this.apiBaseUrl = apiBaseUrl;
         this.cache = new Map();
     }
-    /**
-     * Fetch recommendations cho user hiện tại
-     * @param userValue - User ID/Username/AnonymousId
-     * @param userField - Loại user field (UserId, Username, AnonymousId)
-     * @param options - Optional configuration
-     * @returns Promise<RecommendationItem[]>
-     */
     async fetchRecommendations(userValue, userField = 'AnonymousId', options = {}) {
         try {
             // Check cache first
@@ -27,11 +16,14 @@ export class RecommendationFetcher {
             }
             // Prepare request payload
             const requestBody = {
-                UserValue: userValue,
-                UserField: userField,
+                AnonymousId: this.getOrCreateAnonymousId(),
                 DomainKey: this.domainKey,
                 NumberItems: options.numberItems || 10,
             };
+            // Set UserId or AnonymousId based on userField
+            if (userField === 'UserId' || userField === 'Username') {
+                requestBody.UserId = userValue;
+            }
             // Call API
             const response = await fetch(`${this.apiBaseUrl}/recommendation`, {
                 method: 'POST',

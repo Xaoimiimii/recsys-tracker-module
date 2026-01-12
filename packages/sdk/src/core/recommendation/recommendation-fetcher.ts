@@ -7,10 +7,6 @@ import {
 } from './types';
 import { PlaceholderImage } from './placeholder-image';
 
-/**
- * RecommendationFetcher - Class để fetch và quản lý recommendation data
- * Design pattern tương tự ConfigLoader
- */
 export class RecommendationFetcher {
   private domainKey: string;
   private apiBaseUrl: string;
@@ -23,13 +19,6 @@ export class RecommendationFetcher {
     this.cache = new Map();
   }
 
-  /**
-   * Fetch recommendations cho user hiện tại
-   * @param userValue - User ID/Username/AnonymousId
-   * @param userField - Loại user field (UserId, Username, AnonymousId)
-   * @param options - Optional configuration
-   * @returns Promise<RecommendationItem[]>
-   */
   async fetchRecommendations(
     userValue: string,
     userField: UserField = 'AnonymousId',
@@ -45,11 +34,15 @@ export class RecommendationFetcher {
 
       // Prepare request payload
       const requestBody: RecommendationRequest = {
-        UserValue: userValue,
-        UserField: userField,
+        AnonymousId: this.getOrCreateAnonymousId(),
         DomainKey: this.domainKey,
         NumberItems: options.numberItems || 10,
       };
+
+      // Set UserId or AnonymousId based on userField
+      if (userField === 'UserId' || userField === 'Username') {
+        requestBody.UserId = userValue;
+      }
 
       // Call API
       const response = await fetch(`${this.apiBaseUrl}/recommendation`, {
