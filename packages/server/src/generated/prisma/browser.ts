@@ -73,6 +73,11 @@ export type Operator = Prisma.OperatorModel
  */
 export type Event = Prisma.EventModel
 /**
+ * Model SearchKeywordConfig
+ * 
+ */
+export type SearchKeywordConfig = Prisma.SearchKeywordConfigModel
+/**
  * Model Category
  * 
  */

@@ -11,7 +11,7 @@ import { ReturnMethodService } from './return-method.service';
 import { CreateReturnMethodsDto } from './dto/create-return-method.dto';
 import { ApiOperation } from '@nestjs/swagger';
 
-@Controller('domain/return-method')
+@Controller('return-method')
 export class ReturnMethodController {
     constructor(private returnMethodService: ReturnMethodService) { }
 
@@ -29,7 +29,7 @@ export class ReturnMethodController {
             dto.ConfigurationName,
             dto.ReturnType,
             dto.Value,
-            dto.OperatorId,
+            dto.OperatorId
         );
 
         if (!result) {

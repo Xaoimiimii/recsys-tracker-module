@@ -9,6 +9,7 @@ import { ConfigModule } from '@nestjs/config';
 import { EventModule } from './modules/event/event.module';
 import { RecommendationModule } from './modules/recommendation/recommendation.module';
 import { TaskModule } from './modules/task/task.module';
+import { SearchModule } from './modules/search/search.module';
 
 @Module({
   imports: [
@@ -26,7 +27,8 @@ import { TaskModule } from './modules/task/task.module';
     EventModule,
     RecommendationModule,
     TaskModule,
-    ScheduleModule.forRoot(),   
+    ScheduleModule.forRoot(),
+    SearchModule,   
   ],
   controllers: [],
 })
