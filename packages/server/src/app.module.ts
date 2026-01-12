@@ -13,6 +13,7 @@ import { SearchModule } from './modules/search/search.module';
 import { ElasticConfigModule } from './common/elastic/elastic-config.module';
 import { CacheModule } from '@nestjs/cache-manager';
 import { redisStore } from 'cache-manager-redis-store';
+import { SearchKeywordConfigModule } from './modules/search-keyword-config/search-keyword-config.module';
 
 @Module({
   imports: [
@@ -47,7 +48,8 @@ import { redisStore } from 'cache-manager-redis-store';
         })
       }),
       inject: [ConfigService],
-    })
+    }),
+    SearchKeywordConfigModule
   ],
   controllers: [],
 })
