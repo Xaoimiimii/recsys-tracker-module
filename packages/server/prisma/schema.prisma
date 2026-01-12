@@ -40,6 +40,7 @@ model Domain {
   Users         User[]
   Ratings       Rating[]
   Models        Model[]
+  SearchKeywordConfigs SearchKeywordConfig[]
 }
 
 // model DomainReturn {
@@ -69,6 +70,9 @@ model ReturnMethod {
 
   OperatorID Int
   Operator   Operator @relation(fields: [OperatorID], references: [Id])
+  
+  SearchKeywordConfigID Int?
+  SearchKeywordConfig   SearchKeywordConfig? @relation(fields: [SearchKeywordConfigID], references: [Id])
 
   ReturnType        ReturnType
   Value             String
@@ -294,6 +298,18 @@ model Event {
 
   TrackingRuleId Int
   TrackingRule   TrackingRule @relation(fields: [TrackingRuleId], references: [Id])
+}
+
+model SearchKeywordConfig {
+  Id Int @id @default(autoincrement())
+
+  DomainID Int
+  Domain   Domain @relation(fields: [DomainID], references: [Id])
+
+  ConfigurationName String
+  InputSelector String
+
+  ReturnMethods ReturnMethod[]
 }
 
 model Category {

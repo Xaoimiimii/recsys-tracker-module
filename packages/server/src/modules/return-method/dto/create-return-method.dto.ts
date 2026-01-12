@@ -1,4 +1,4 @@
-import { IsEnum, IsNotEmpty, IsNumber, IsString } from "class-validator";
+import { IsEnum, IsNotEmpty, IsNumber, IsOptional, IsString } from "class-validator";
 import { ReturnType } from "src/generated/prisma/enums";
 import { ApiProperty } from "@nestjs/swagger";
 

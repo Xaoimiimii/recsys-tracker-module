@@ -30,6 +30,7 @@ export type ReturnMethodAvgAggregateOutputType = {
   Id: number | null
   DomainID: number | null
   OperatorID: number | null
+  SearchKeywordConfigID: number | null
   Delay: number | null
 }
 
@@ -37,6 +38,7 @@ export type ReturnMethodSumAggregateOutputType = {
   Id: number | null
   DomainID: number | null
   OperatorID: number | null
+  SearchKeywordConfigID: number | null
   Delay: number | null
 }
 
@@ -44,6 +46,7 @@ export type ReturnMethodMinAggregateOutputType = {
   Id: number | null
   DomainID: number | null
   OperatorID: number | null
+  SearchKeywordConfigID: number | null
   ReturnType: $Enums.ReturnType | null
   Value: string | null
   ConfigurationName: string | null
@@ -54,6 +57,7 @@ export type ReturnMethodMaxAggregateOutputType = {
   Id: number | null
   DomainID: number | null
   OperatorID: number | null
+  SearchKeywordConfigID: number | null
   ReturnType: $Enums.ReturnType | null
   Value: string | null
   ConfigurationName: string | null
@@ -64,6 +68,7 @@ export type ReturnMethodCountAggregateOutputType = {
   Id: number
   DomainID: number
   OperatorID: number
+  SearchKeywordConfigID: number
   ReturnType: number
   Value: number
   ConfigurationName: number
@@ -79,6 +84,7 @@ export type ReturnMethodAvgAggregateInputType = {
   Id?: true
   DomainID?: true
   OperatorID?: true
+  SearchKeywordConfigID?: true
   Delay?: true
 }
 
@@ -86,6 +92,7 @@ export type ReturnMethodSumAggregateInputType = {
   Id?: true
   DomainID?: true
   OperatorID?: true
+  SearchKeywordConfigID?: true
   Delay?: true
 }
 
@@ -93,6 +100,7 @@ export type ReturnMethodMinAggregateInputType = {
   Id?: true
   DomainID?: true
   OperatorID?: true
+  SearchKeywordConfigID?: true
   ReturnType?: true
   Value?: true
   ConfigurationName?: true
@@ -103,6 +111,7 @@ export type ReturnMethodMaxAggregateInputType = {
   Id?: true
   DomainID?: true
   OperatorID?: true
+  SearchKeywordConfigID?: true
   ReturnType?: true
   Value?: true
   ConfigurationName?: true
@@ -113,6 +122,7 @@ export type ReturnMethodCountAggregateInputType = {
   Id?: true
   DomainID?: true
   OperatorID?: true
+  SearchKeywordConfigID?: true
   ReturnType?: true
   Value?: true
   ConfigurationName?: true
@@ -213,6 +223,7 @@ export type ReturnMethodGroupByOutputType = {
   Id: number
   DomainID: number
   OperatorID: number
+  SearchKeywordConfigID: number | null
   ReturnType: $Enums.ReturnType
   Value: string
   ConfigurationName: string
@@ -249,6 +260,7 @@ export type ReturnMethodWhereInput = {
   Id?: Prisma.IntFilter<"ReturnMethod"> | number
   DomainID?: Prisma.IntFilter<"ReturnMethod"> | number
   OperatorID?: Prisma.IntFilter<"ReturnMethod"> | number
+  SearchKeywordConfigID?: Prisma.IntNullableFilter<"ReturnMethod"> | number | null
   ReturnType?: Prisma.EnumReturnTypeFilter<"ReturnMethod"> | $Enums.ReturnType
   Value?: Prisma.StringFilter<"ReturnMethod"> | string
   ConfigurationName?: Prisma.StringFilter<"ReturnMethod"> | string
@@ -258,12 +270,14 @@ export type ReturnMethodWhereInput = {
   Delay?: Prisma.FloatNullableFilter<"ReturnMethod"> | number | null
   Domain?: Prisma.XOR<Prisma.DomainScalarRelationFilter, Prisma.DomainWhereInput>
   Operator?: Prisma.XOR<Prisma.OperatorScalarRelationFilter, Prisma.OperatorWhereInput>
+  SearchKeywordConfig?: Prisma.XOR<Prisma.SearchKeywordConfigNullableScalarRelationFilter, Prisma.SearchKeywordConfigWhereInput> | null
 }
 
 export type ReturnMethodOrderByWithRelationInput = {
   Id?: Prisma.SortOrder
   DomainID?: Prisma.SortOrder
   OperatorID?: Prisma.SortOrder
+  SearchKeywordConfigID?: Prisma.SortOrderInput | Prisma.SortOrder
   ReturnType?: Prisma.SortOrder
   Value?: Prisma.SortOrder
   ConfigurationName?: Prisma.SortOrder
@@ -273,6 +287,7 @@ export type ReturnMethodOrderByWithRelationInput = {
   Delay?: Prisma.SortOrderInput | Prisma.SortOrder
   Domain?: Prisma.DomainOrderByWithRelationInput
   Operator?: Prisma.OperatorOrderByWithRelationInput
+  SearchKeywordConfig?: Prisma.SearchKeywordConfigOrderByWithRelationInput
 }
 
 export type ReturnMethodWhereUniqueInput = Prisma.AtLeast<{
@@ -282,6 +297,7 @@ export type ReturnMethodWhereUniqueInput = Prisma.AtLeast<{
   NOT?: Prisma.ReturnMethodWhereInput | Prisma.ReturnMethodWhereInput[]
   DomainID?: Prisma.IntFilter<"ReturnMethod"> | number
   OperatorID?: Prisma.IntFilter<"ReturnMethod"> | number
+  SearchKeywordConfigID?: Prisma.IntNullableFilter<"ReturnMethod"> | number | null
   ReturnType?: Prisma.EnumReturnTypeFilter<"ReturnMethod"> | $Enums.ReturnType
   Value?: Prisma.StringFilter<"ReturnMethod"> | string
   ConfigurationName?: Prisma.StringFilter<"ReturnMethod"> | string
@@ -291,12 +307,14 @@ export type ReturnMethodWhereUniqueInput = Prisma.AtLeast<{
   Delay?: Prisma.FloatNullableFilter<"ReturnMethod"> | number | null
   Domain?: Prisma.XOR<Prisma.DomainScalarRelationFilter, Prisma.DomainWhereInput>
   Operator?: Prisma.XOR<Prisma.OperatorScalarRelationFilter, Prisma.OperatorWhereInput>
+  SearchKeywordConfig?: Prisma.XOR<Prisma.SearchKeywordConfigNullableScalarRelationFilter, Prisma.SearchKeywordConfigWhereInput> | null
 }, "Id">
 
 export type ReturnMethodOrderByWithAggregationInput = {
   Id?: Prisma.SortOrder
   DomainID?: Prisma.SortOrder
   OperatorID?: Prisma.SortOrder
+  SearchKeywordConfigID?: Prisma.SortOrderInput | Prisma.SortOrder
   ReturnType?: Prisma.SortOrder
   Value?: Prisma.SortOrder
   ConfigurationName?: Prisma.SortOrder
@@ -318,6 +336,7 @@ export type ReturnMethodScalarWhereWithAggregatesInput = {
   Id?: Prisma.IntWithAggregatesFilter<"ReturnMethod"> | number
   DomainID?: Prisma.IntWithAggregatesFilter<"ReturnMethod"> | number
   OperatorID?: Prisma.IntWithAggregatesFilter<"ReturnMethod"> | number
+  SearchKeywordConfigID?: Prisma.IntNullableWithAggregatesFilter<"ReturnMethod"> | number | null
   ReturnType?: Prisma.EnumReturnTypeWithAggregatesFilter<"ReturnMethod"> | $Enums.ReturnType
   Value?: Prisma.StringWithAggregatesFilter<"ReturnMethod"> | string
   ConfigurationName?: Prisma.StringWithAggregatesFilter<"ReturnMethod"> | string
@@ -337,12 +356,14 @@ export type ReturnMethodCreateInput = {
   Delay?: number | null
   Domain: Prisma.DomainCreateNestedOneWithoutReturnMethodsInput
   Operator: Prisma.OperatorCreateNestedOneWithoutReturnMethodsInput
+  SearchKeywordConfig?: Prisma.SearchKeywordConfigCreateNestedOneWithoutReturnMethodsInput
 }
 
 export type ReturnMethodUncheckedCreateInput = {
   Id?: number
   DomainID: number
   OperatorID: number
+  SearchKeywordConfigID?: number | null
   ReturnType: $Enums.ReturnType
   Value: string
   ConfigurationName: string
@@ -362,12 +383,14 @@ export type ReturnMethodUpdateInput = {
   Delay?: Prisma.NullableFloatFieldUpdateOperationsInput | number | null
   Domain?: Prisma.DomainUpdateOneRequiredWithoutReturnMethodsNestedInput
   Operator?: Prisma.OperatorUpdateOneRequiredWithoutReturnMethodsNestedInput
+  SearchKeywordConfig?: Prisma.SearchKeywordConfigUpdateOneWithoutReturnMethodsNestedInput
 }
 
 export type ReturnMethodUncheckedUpdateInput = {
   Id?: Prisma.IntFieldUpdateOperationsInput | number
   DomainID?: Prisma.IntFieldUpdateOperationsInput | number
   OperatorID?: Prisma.IntFieldUpdateOperationsInput | number
+  SearchKeywordConfigID?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
   ReturnType?: Prisma.EnumReturnTypeFieldUpdateOperationsInput | $Enums.ReturnType
   Value?: Prisma.StringFieldUpdateOperationsInput | string
   ConfigurationName?: Prisma.StringFieldUpdateOperationsInput | string
@@ -381,6 +404,7 @@ export type ReturnMethodCreateManyInput = {
   Id?: number
   DomainID: number
   OperatorID: number
+  SearchKeywordConfigID?: number | null
   ReturnType: $Enums.ReturnType
   Value: string
   ConfigurationName: string
@@ -404,6 +428,7 @@ export type ReturnMethodUncheckedUpdateManyInput = {
   Id?: Prisma.IntFieldUpdateOperationsInput | number
   DomainID?: Prisma.IntFieldUpdateOperationsInput | number
   OperatorID?: Prisma.IntFieldUpdateOperationsInput | number
+  SearchKeywordConfigID?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
   ReturnType?: Prisma.EnumReturnTypeFieldUpdateOperationsInput | $Enums.ReturnType
   Value?: Prisma.StringFieldUpdateOperationsInput | string
   ConfigurationName?: Prisma.StringFieldUpdateOperationsInput | string
@@ -427,6 +452,7 @@ export type ReturnMethodCountOrderByAggregateInput = {
   Id?: Prisma.SortOrder
   DomainID?: Prisma.SortOrder
   OperatorID?: Prisma.SortOrder
+  SearchKeywordConfigID?: Prisma.SortOrder
   ReturnType?: Prisma.SortOrder
   Value?: Prisma.SortOrder
   ConfigurationName?: Prisma.SortOrder
@@ -440,6 +466,7 @@ export type ReturnMethodAvgOrderByAggregateInput = {
   Id?: Prisma.SortOrder
   DomainID?: Prisma.SortOrder
   OperatorID?: Prisma.SortOrder
+  SearchKeywordConfigID?: Prisma.SortOrder
   Delay?: Prisma.SortOrder
 }
 
@@ -447,6 +474,7 @@ export type ReturnMethodMaxOrderByAggregateInput = {
   Id?: Prisma.SortOrder
   DomainID?: Prisma.SortOrder
   OperatorID?: Prisma.SortOrder
+  SearchKeywordConfigID?: Prisma.SortOrder
   ReturnType?: Prisma.SortOrder
   Value?: Prisma.SortOrder
   ConfigurationName?: Prisma.SortOrder
@@ -457,6 +485,7 @@ export type ReturnMethodMinOrderByAggregateInput = {
   Id?: Prisma.SortOrder
   DomainID?: Prisma.SortOrder
   OperatorID?: Prisma.SortOrder
+  SearchKeywordConfigID?: Prisma.SortOrder
   ReturnType?: Prisma.SortOrder
   Value?: Prisma.SortOrder
   ConfigurationName?: Prisma.SortOrder
@@ -467,6 +496,7 @@ export type ReturnMethodSumOrderByAggregateInput = {
   Id?: Prisma.SortOrder
   DomainID?: Prisma.SortOrder
   OperatorID?: Prisma.SortOrder
+  SearchKeywordConfigID?: Prisma.SortOrder
   Delay?: Prisma.SortOrder
 }
 
@@ -566,6 +596,48 @@ export type ReturnMethodUncheckedUpdateManyWithoutOperatorNestedInput = {
   deleteMany?: Prisma.ReturnMethodScalarWhereInput | Prisma.ReturnMethodScalarWhereInput[]
 }
 
+export type ReturnMethodCreateNestedManyWithoutSearchKeywordConfigInput = {
+  create?: Prisma.XOR<Prisma.ReturnMethodCreateWithoutSearchKeywordConfigInput, Prisma.ReturnMethodUncheckedCreateWithoutSearchKeywordConfigInput> | Prisma.ReturnMethodCreateWithoutSearchKeywordConfigInput[] | Prisma.ReturnMethodUncheckedCreateWithoutSearchKeywordConfigInput[]
+  connectOrCreate?: Prisma.ReturnMethodCreateOrConnectWithoutSearchKeywordConfigInput | Prisma.ReturnMethodCreateOrConnectWithoutSearchKeywordConfigInput[]
+  createMany?: Prisma.ReturnMethodCreateManySearchKeywordConfigInputEnvelope
+  connect?: Prisma.ReturnMethodWhereUniqueInput | Prisma.ReturnMethodWhereUniqueInput[]
+}
+
+export type ReturnMethodUncheckedCreateNestedManyWithoutSearchKeywordConfigInput = {
+  create?: Prisma.XOR<Prisma.ReturnMethodCreateWithoutSearchKeywordConfigInput, Prisma.ReturnMethodUncheckedCreateWithoutSearchKeywordConfigInput> | Prisma.ReturnMethodCreateWithoutSearchKeywordConfigInput[] | Prisma.ReturnMethodUncheckedCreateWithoutSearchKeywordConfigInput[]
+  connectOrCreate?: Prisma.ReturnMethodCreateOrConnectWithoutSearchKeywordConfigInput | Prisma.ReturnMethodCreateOrConnectWithoutSearchKeywordConfigInput[]
+  createMany?: Prisma.ReturnMethodCreateManySearchKeywordConfigInputEnvelope
+  connect?: Prisma.ReturnMethodWhereUniqueInput | Prisma.ReturnMethodWhereUniqueInput[]
+}
+
+export type ReturnMethodUpdateManyWithoutSearchKeywordConfigNestedInput = {
+  create?: Prisma.XOR<Prisma.ReturnMethodCreateWithoutSearchKeywordConfigInput, Prisma.ReturnMethodUncheckedCreateWithoutSearchKeywordConfigInput> | Prisma.ReturnMethodCreateWithoutSearchKeywordConfigInput[] | Prisma.ReturnMethodUncheckedCreateWithoutSearchKeywordConfigInput[]
+  connectOrCreate?: Prisma.ReturnMethodCreateOrConnectWithoutSearchKeywordConfigInput | Prisma.ReturnMethodCreateOrConnectWithoutSearchKeywordConfigInput[]
+  upsert?: Prisma.ReturnMethodUpsertWithWhereUniqueWithoutSearchKeywordConfigInput | Prisma.ReturnMethodUpsertWithWhereUniqueWithoutSearchKeywordConfigInput[]
+  createMany?: Prisma.ReturnMethodCreateManySearchKeywordConfigInputEnvelope
+  set?: Prisma.ReturnMethodWhereUniqueInput | Prisma.ReturnMethodWhereUniqueInput[]
+  disconnect?: Prisma.ReturnMethodWhereUniqueInput | Prisma.ReturnMethodWhereUniqueInput[]
+  delete?: Prisma.ReturnMethodWhereUniqueInput | Prisma.ReturnMethodWhereUniqueInput[]
+  connect?: Prisma.ReturnMethodWhereUniqueInput | Prisma.ReturnMethodWhereUniqueInput[]
+  update?: Prisma.ReturnMethodUpdateWithWhereUniqueWithoutSearchKeywordConfigInput | Prisma.ReturnMethodUpdateWithWhereUniqueWithoutSearchKeywordConfigInput[]
+  updateMany?: Prisma.ReturnMethodUpdateManyWithWhereWithoutSearchKeywordConfigInput | Prisma.ReturnMethodUpdateManyWithWhereWithoutSearchKeywordConfigInput[]
+  deleteMany?: Prisma.ReturnMethodScalarWhereInput | Prisma.ReturnMethodScalarWhereInput[]
+}
+
+export type ReturnMethodUncheckedUpdateManyWithoutSearchKeywordConfigNestedInput = {
+  create?: Prisma.XOR<Prisma.ReturnMethodCreateWithoutSearchKeywordConfigInput, Prisma.ReturnMethodUncheckedCreateWithoutSearchKeywordConfigInput> | Prisma.ReturnMethodCreateWithoutSearchKeywordConfigInput[] | Prisma.ReturnMethodUncheckedCreateWithoutSearchKeywordConfigInput[]
+  connectOrCreate?: Prisma.ReturnMethodCreateOrConnectWithoutSearchKeywordConfigInput | Prisma.ReturnMethodCreateOrConnectWithoutSearchKeywordConfigInput[]
+  upsert?: Prisma.ReturnMethodUpsertWithWhereUniqueWithoutSearchKeywordConfigInput | Prisma.ReturnMethodUpsertWithWhereUniqueWithoutSearchKeywordConfigInput[]
+  createMany?: Prisma.ReturnMethodCreateManySearchKeywordConfigInputEnvelope
+  set?: Prisma.ReturnMethodWhereUniqueInput | Prisma.ReturnMethodWhereUniqueInput[]
+  disconnect?: Prisma.ReturnMethodWhereUniqueInput | Prisma.ReturnMethodWhereUniqueInput[]
+  delete?: Prisma.ReturnMethodWhereUniqueInput | Prisma.ReturnMethodWhereUniqueInput[]
+  connect?: Prisma.ReturnMethodWhereUniqueInput | Prisma.ReturnMethodWhereUniqueInput[]
+  update?: Prisma.ReturnMethodUpdateWithWhereUniqueWithoutSearchKeywordConfigInput | Prisma.ReturnMethodUpdateWithWhereUniqueWithoutSearchKeywordConfigInput[]
+  updateMany?: Prisma.ReturnMethodUpdateManyWithWhereWithoutSearchKeywordConfigInput | Prisma.ReturnMethodUpdateManyWithWhereWithoutSearchKeywordConfigInput[]
+  deleteMany?: Prisma.ReturnMethodScalarWhereInput | Prisma.ReturnMethodScalarWhereInput[]
+}
+
 export type ReturnMethodCreateWithoutDomainInput = {
   ReturnType: $Enums.ReturnType
   Value: string
@@ -575,11 +647,13 @@ export type ReturnMethodCreateWithoutDomainInput = {
   Style?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   Delay?: number | null
   Operator: Prisma.OperatorCreateNestedOneWithoutReturnMethodsInput
+  SearchKeywordConfig?: Prisma.SearchKeywordConfigCreateNestedOneWithoutReturnMethodsInput
 }
 
 export type ReturnMethodUncheckedCreateWithoutDomainInput = {
   Id?: number
   OperatorID: number
+  SearchKeywordConfigID?: number | null
   ReturnType: $Enums.ReturnType
   Value: string
   ConfigurationName: string
@@ -622,6 +696,7 @@ export type ReturnMethodScalarWhereInput = {
   Id?: Prisma.IntFilter<"ReturnMethod"> | number
   DomainID?: Prisma.IntFilter<"ReturnMethod"> | number
   OperatorID?: Prisma.IntFilter<"ReturnMethod"> | number
+  SearchKeywordConfigID?: Prisma.IntNullableFilter<"ReturnMethod"> | number | null
   ReturnType?: Prisma.EnumReturnTypeFilter<"ReturnMethod"> | $Enums.ReturnType
   Value?: Prisma.StringFilter<"ReturnMethod"> | string
   ConfigurationName?: Prisma.StringFilter<"ReturnMethod"> | string
@@ -640,11 +715,13 @@ export type ReturnMethodCreateWithoutOperatorInput = {
   Style?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   Delay?: number | null
   Domain: Prisma.DomainCreateNestedOneWithoutReturnMethodsInput
+  SearchKeywordConfig?: Prisma.SearchKeywordConfigCreateNestedOneWithoutReturnMethodsInput
 }
 
 export type ReturnMethodUncheckedCreateWithoutOperatorInput = {
   Id?: number
   DomainID: number
+  SearchKeywordConfigID?: number | null
   ReturnType: $Enums.ReturnType
   Value: string
   ConfigurationName: string
@@ -680,9 +757,61 @@ export type ReturnMethodUpdateManyWithWhereWithoutOperatorInput = {
   data: Prisma.XOR<Prisma.ReturnMethodUpdateManyMutationInput, Prisma.ReturnMethodUncheckedUpdateManyWithoutOperatorInput>
 }
 
+export type ReturnMethodCreateWithoutSearchKeywordConfigInput = {
+  ReturnType: $Enums.ReturnType
+  Value: string
+  ConfigurationName: string
+  Customizing?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  Layout?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  Style?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  Delay?: number | null
+  Domain: Prisma.DomainCreateNestedOneWithoutReturnMethodsInput
+  Operator: Prisma.OperatorCreateNestedOneWithoutReturnMethodsInput
+}
+
+export type ReturnMethodUncheckedCreateWithoutSearchKeywordConfigInput = {
+  Id?: number
+  DomainID: number
+  OperatorID: number
+  ReturnType: $Enums.ReturnType
+  Value: string
+  ConfigurationName: string
+  Customizing?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  Layout?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  Style?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  Delay?: number | null
+}
+
+export type ReturnMethodCreateOrConnectWithoutSearchKeywordConfigInput = {
+  where: Prisma.ReturnMethodWhereUniqueInput
+  create: Prisma.XOR<Prisma.ReturnMethodCreateWithoutSearchKeywordConfigInput, Prisma.ReturnMethodUncheckedCreateWithoutSearchKeywordConfigInput>
+}
+
+export type ReturnMethodCreateManySearchKeywordConfigInputEnvelope = {
+  data: Prisma.ReturnMethodCreateManySearchKeywordConfigInput | Prisma.ReturnMethodCreateManySearchKeywordConfigInput[]
+  skipDuplicates?: boolean
+}
+
+export type ReturnMethodUpsertWithWhereUniqueWithoutSearchKeywordConfigInput = {
+  where: Prisma.ReturnMethodWhereUniqueInput
+  update: Prisma.XOR<Prisma.ReturnMethodUpdateWithoutSearchKeywordConfigInput, Prisma.ReturnMethodUncheckedUpdateWithoutSearchKeywordConfigInput>
+  create: Prisma.XOR<Prisma.ReturnMethodCreateWithoutSearchKeywordConfigInput, Prisma.ReturnMethodUncheckedCreateWithoutSearchKeywordConfigInput>
+}
+
+export type ReturnMethodUpdateWithWhereUniqueWithoutSearchKeywordConfigInput = {
+  where: Prisma.ReturnMethodWhereUniqueInput
+  data: Prisma.XOR<Prisma.ReturnMethodUpdateWithoutSearchKeywordConfigInput, Prisma.ReturnMethodUncheckedUpdateWithoutSearchKeywordConfigInput>
+}
+
+export type ReturnMethodUpdateManyWithWhereWithoutSearchKeywordConfigInput = {
+  where: Prisma.ReturnMethodScalarWhereInput
+  data: Prisma.XOR<Prisma.ReturnMethodUpdateManyMutationInput, Prisma.ReturnMethodUncheckedUpdateManyWithoutSearchKeywordConfigInput>
+}
+
 export type ReturnMethodCreateManyDomainInput = {
   Id?: number
   OperatorID: number
+  SearchKeywordConfigID?: number | null
   ReturnType: $Enums.ReturnType
   Value: string
   ConfigurationName: string
@@ -701,11 +830,13 @@ export type ReturnMethodUpdateWithoutDomainInput = {
   Style?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   Delay?: Prisma.NullableFloatFieldUpdateOperationsInput | number | null
   Operator?: Prisma.OperatorUpdateOneRequiredWithoutReturnMethodsNestedInput
+  SearchKeywordConfig?: Prisma.SearchKeywordConfigUpdateOneWithoutReturnMethodsNestedInput
 }
 
 export type ReturnMethodUncheckedUpdateWithoutDomainInput = {
   Id?: Prisma.IntFieldUpdateOperationsInput | number
   OperatorID?: Prisma.IntFieldUpdateOperationsInput | number
+  SearchKeywordConfigID?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
   ReturnType?: Prisma.EnumReturnTypeFieldUpdateOperationsInput | $Enums.ReturnType
   Value?: Prisma.StringFieldUpdateOperationsInput | string
   ConfigurationName?: Prisma.StringFieldUpdateOperationsInput | string
@@ -718,6 +849,7 @@ export type ReturnMethodUncheckedUpdateWithoutDomainInput = {
 export type ReturnMethodUncheckedUpdateManyWithoutDomainInput = {
   Id?: Prisma.IntFieldUpdateOperationsInput | number
   OperatorID?: Prisma.IntFieldUpdateOperationsInput | number
+  SearchKeywordConfigID?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
   ReturnType?: Prisma.EnumReturnTypeFieldUpdateOperationsInput | $Enums.ReturnType
   Value?: Prisma.StringFieldUpdateOperationsInput | string
   ConfigurationName?: Prisma.StringFieldUpdateOperationsInput | string
@@ -730,6 +862,7 @@ export type ReturnMethodUncheckedUpdateManyWithoutDomainInput = {
 export type ReturnMethodCreateManyOperatorInput = {
   Id?: number
   DomainID: number
+  SearchKeywordConfigID?: number | null
   ReturnType: $Enums.ReturnType
   Value: string
   ConfigurationName: string
@@ -748,11 +881,13 @@ export type ReturnMethodUpdateWithoutOperatorInput = {
   Style?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   Delay?: Prisma.NullableFloatFieldUpdateOperationsInput | number | null
   Domain?: Prisma.DomainUpdateOneRequiredWithoutReturnMethodsNestedInput
+  SearchKeywordConfig?: Prisma.SearchKeywordConfigUpdateOneWithoutReturnMethodsNestedInput
 }
 
 export type ReturnMethodUncheckedUpdateWithoutOperatorInput = {
   Id?: Prisma.IntFieldUpdateOperationsInput | number
   DomainID?: Prisma.IntFieldUpdateOperationsInput | number
+  SearchKeywordConfigID?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
   ReturnType?: Prisma.EnumReturnTypeFieldUpdateOperationsInput | $Enums.ReturnType
   Value?: Prisma.StringFieldUpdateOperationsInput | string
   ConfigurationName?: Prisma.StringFieldUpdateOperationsInput | string
@@ -765,6 +900,58 @@ export type ReturnMethodUncheckedUpdateWithoutOperatorInput = {
 export type ReturnMethodUncheckedUpdateManyWithoutOperatorInput = {
   Id?: Prisma.IntFieldUpdateOperationsInput | number
   DomainID?: Prisma.IntFieldUpdateOperationsInput | number
+  SearchKeywordConfigID?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
+  ReturnType?: Prisma.EnumReturnTypeFieldUpdateOperationsInput | $Enums.ReturnType
+  Value?: Prisma.StringFieldUpdateOperationsInput | string
+  ConfigurationName?: Prisma.StringFieldUpdateOperationsInput | string
+  Customizing?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  Layout?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  Style?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  Delay?: Prisma.NullableFloatFieldUpdateOperationsInput | number | null
+}
+
+export type ReturnMethodCreateManySearchKeywordConfigInput = {
+  Id?: number
+  DomainID: number
+  OperatorID: number
+  ReturnType: $Enums.ReturnType
+  Value: string
+  ConfigurationName: string
+  Customizing?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  Layout?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  Style?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  Delay?: number | null
+}
+
+export type ReturnMethodUpdateWithoutSearchKeywordConfigInput = {
+  ReturnType?: Prisma.EnumReturnTypeFieldUpdateOperationsInput | $Enums.ReturnType
+  Value?: Prisma.StringFieldUpdateOperationsInput | string
+  ConfigurationName?: Prisma.StringFieldUpdateOperationsInput | string
+  Customizing?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  Layout?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  Style?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  Delay?: Prisma.NullableFloatFieldUpdateOperationsInput | number | null
+  Domain?: Prisma.DomainUpdateOneRequiredWithoutReturnMethodsNestedInput
+  Operator?: Prisma.OperatorUpdateOneRequiredWithoutReturnMethodsNestedInput
+}
+
+export type ReturnMethodUncheckedUpdateWithoutSearchKeywordConfigInput = {
+  Id?: Prisma.IntFieldUpdateOperationsInput | number
+  DomainID?: Prisma.IntFieldUpdateOperationsInput | number
+  OperatorID?: Prisma.IntFieldUpdateOperationsInput | number
+  ReturnType?: Prisma.EnumReturnTypeFieldUpdateOperationsInput | $Enums.ReturnType
+  Value?: Prisma.StringFieldUpdateOperationsInput | string
+  ConfigurationName?: Prisma.StringFieldUpdateOperationsInput | string
+  Customizing?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  Layout?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  Style?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  Delay?: Prisma.NullableFloatFieldUpdateOperationsInput | number | null
+}
+
+export type ReturnMethodUncheckedUpdateManyWithoutSearchKeywordConfigInput = {
+  Id?: Prisma.IntFieldUpdateOperationsInput | number
+  DomainID?: Prisma.IntFieldUpdateOperationsInput | number
+  OperatorID?: Prisma.IntFieldUpdateOperationsInput | number
   ReturnType?: Prisma.EnumReturnTypeFieldUpdateOperationsInput | $Enums.ReturnType
   Value?: Prisma.StringFieldUpdateOperationsInput | string
   ConfigurationName?: Prisma.StringFieldUpdateOperationsInput | string
@@ -780,6 +967,7 @@ export type ReturnMethodSelect<ExtArgs extends runtime.Types.Extensions.Internal
   Id?: boolean
   DomainID?: boolean
   OperatorID?: boolean
+  SearchKeywordConfigID?: boolean
   ReturnType?: boolean
   Value?: boolean
   ConfigurationName?: boolean
@@ -789,12 +977,14 @@ export type ReturnMethodSelect<ExtArgs extends runtime.Types.Extensions.Internal
   Delay?: boolean
   Domain?: boolean | Prisma.DomainDefaultArgs<ExtArgs>
   Operator?: boolean | Prisma.OperatorDefaultArgs<ExtArgs>
+  SearchKeywordConfig?: boolean | Prisma.ReturnMethod$SearchKeywordConfigArgs<ExtArgs>
 }, ExtArgs["result"]["returnMethod"]>
 
 export type ReturnMethodSelectCreateManyAndReturn<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetSelect<{
   Id?: boolean
   DomainID?: boolean
   OperatorID?: boolean
+  SearchKeywordConfigID?: boolean
   ReturnType?: boolean
   Value?: boolean
   ConfigurationName?: boolean
@@ -804,12 +994,14 @@ export type ReturnMethodSelectCreateManyAndReturn<ExtArgs extends runtime.Types.
   Delay?: boolean
   Domain?: boolean | Prisma.DomainDefaultArgs<ExtArgs>
   Operator?: boolean | Prisma.OperatorDefaultArgs<ExtArgs>
+  SearchKeywordConfig?: boolean | Prisma.ReturnMethod$SearchKeywordConfigArgs<ExtArgs>
 }, ExtArgs["result"]["returnMethod"]>
 
 export type ReturnMethodSelectUpdateManyAndReturn<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetSelect<{
   Id?: boolean
   DomainID?: boolean
   OperatorID?: boolean
+  SearchKeywordConfigID?: boolean
   ReturnType?: boolean
   Value?: boolean
   ConfigurationName?: boolean
@@ -819,12 +1011,14 @@ export type ReturnMethodSelectUpdateManyAndReturn<ExtArgs extends runtime.Types.
   Delay?: boolean
   Domain?: boolean | Prisma.DomainDefaultArgs<ExtArgs>
   Operator?: boolean | Prisma.OperatorDefaultArgs<ExtArgs>
+  SearchKeywordConfig?: boolean | Prisma.ReturnMethod$SearchKeywordConfigArgs<ExtArgs>
 }, ExtArgs["result"]["returnMethod"]>
 
 export type ReturnMethodSelectScalar = {
   Id?: boolean
   DomainID?: boolean
   OperatorID?: boolean
+  SearchKeywordConfigID?: boolean
   ReturnType?: boolean
   Value?: boolean
   ConfigurationName?: boolean
@@ -834,18 +1028,21 @@ export type ReturnMethodSelectScalar = {
   Delay?: boolean
 }
 
-export type ReturnMethodOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"Id" | "DomainID" | "OperatorID" | "ReturnType" | "Value" | "ConfigurationName" | "Customizing" | "Layout" | "Style" | "Delay", ExtArgs["result"]["returnMethod"]>
+export type ReturnMethodOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"Id" | "DomainID" | "OperatorID" | "SearchKeywordConfigID" | "ReturnType" | "Value" | "ConfigurationName" | "Customizing" | "Layout" | "Style" | "Delay", ExtArgs["result"]["returnMethod"]>
 export type ReturnMethodInclude<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   Domain?: boolean | Prisma.DomainDefaultArgs<ExtArgs>
   Operator?: boolean | Prisma.OperatorDefaultArgs<ExtArgs>
+  SearchKeywordConfig?: boolean | Prisma.ReturnMethod$SearchKeywordConfigArgs<ExtArgs>
 }
 export type ReturnMethodIncludeCreateManyAndReturn<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   Domain?: boolean | Prisma.DomainDefaultArgs<ExtArgs>
   Operator?: boolean | Prisma.OperatorDefaultArgs<ExtArgs>
+  SearchKeywordConfig?: boolean | Prisma.ReturnMethod$SearchKeywordConfigArgs<ExtArgs>
 }
 export type ReturnMethodIncludeUpdateManyAndReturn<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   Domain?: boolean | Prisma.DomainDefaultArgs<ExtArgs>
   Operator?: boolean | Prisma.OperatorDefaultArgs<ExtArgs>
+  SearchKeywordConfig?: boolean | Prisma.ReturnMethod$SearchKeywordConfigArgs<ExtArgs>
 }
 
 export type $ReturnMethodPayload<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
@@ -853,11 +1050,13 @@ export type $ReturnMethodPayload<ExtArgs extends runtime.Types.Extensions.Intern
   objects: {
     Domain: Prisma.$DomainPayload<ExtArgs>
     Operator: Prisma.$OperatorPayload<ExtArgs>
+    SearchKeywordConfig: Prisma.$SearchKeywordConfigPayload<ExtArgs> | null
   }
   scalars: runtime.Types.Extensions.GetPayloadResult<{
     Id: number
     DomainID: number
     OperatorID: number
+    SearchKeywordConfigID: number | null
     ReturnType: $Enums.ReturnType
     Value: string
     ConfigurationName: string
@@ -1261,6 +1460,7 @@ export interface Prisma__ReturnMethodClient<T, Null = never, ExtArgs extends run
   readonly [Symbol.toStringTag]: "PrismaPromise"
   Domain<T extends Prisma.DomainDefaultArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.DomainDefaultArgs<ExtArgs>>): Prisma.Prisma__DomainClient<runtime.Types.Result.GetResult<Prisma.$DomainPayload<ExtArgs>, T, "findUniqueOrThrow", GlobalOmitOptions> | Null, Null, ExtArgs, GlobalOmitOptions>
   Operator<T extends Prisma.OperatorDefaultArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.OperatorDefaultArgs<ExtArgs>>): Prisma.Prisma__OperatorClient<runtime.Types.Result.GetResult<Prisma.$OperatorPayload<ExtArgs>, T, "findUniqueOrThrow", GlobalOmitOptions> | Null, Null, ExtArgs, GlobalOmitOptions>
+  SearchKeywordConfig<T extends Prisma.ReturnMethod$SearchKeywordConfigArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.ReturnMethod$SearchKeywordConfigArgs<ExtArgs>>): Prisma.Prisma__SearchKeywordConfigClient<runtime.Types.Result.GetResult<Prisma.$SearchKeywordConfigPayload<ExtArgs>, T, "findUniqueOrThrow", GlobalOmitOptions> | null, null, ExtArgs, GlobalOmitOptions>
   /**
    * Attaches callbacks for the resolution and/or rejection of the Promise.
    * @param onfulfilled The callback to execute when the Promise is resolved.
@@ -1293,6 +1493,7 @@ export interface ReturnMethodFieldRefs {
   readonly Id: Prisma.FieldRef<"ReturnMethod", 'Int'>
   readonly DomainID: Prisma.FieldRef<"ReturnMethod", 'Int'>
   readonly OperatorID: Prisma.FieldRef<"ReturnMethod", 'Int'>
+  readonly SearchKeywordConfigID: Prisma.FieldRef<"ReturnMethod", 'Int'>
   readonly ReturnType: Prisma.FieldRef<"ReturnMethod", 'ReturnType'>
   readonly Value: Prisma.FieldRef<"ReturnMethod", 'String'>
   readonly ConfigurationName: Prisma.FieldRef<"ReturnMethod", 'String'>
@@ -1693,6 +1894,25 @@ export type ReturnMethodDeleteManyArgs<ExtArgs extends runtime.Types.Extensions.
    * Limit how many ReturnMethods to delete.
    */
   limit?: number
+}
+
+/**
+ * ReturnMethod.SearchKeywordConfig
+ */
+export type ReturnMethod$SearchKeywordConfigArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  /**
+   * Select specific fields to fetch from the SearchKeywordConfig
+   */
+  select?: Prisma.SearchKeywordConfigSelect<ExtArgs> | null
+  /**
+   * Omit specific fields from the SearchKeywordConfig
+   */
+  omit?: Prisma.SearchKeywordConfigOmit<ExtArgs> | null
+  /**
+   * Choose, which related nodes to fetch as well
+   */
+  include?: Prisma.SearchKeywordConfigInclude<ExtArgs> | null
+  where?: Prisma.SearchKeywordConfigWhereInput
 }
 
 /**
