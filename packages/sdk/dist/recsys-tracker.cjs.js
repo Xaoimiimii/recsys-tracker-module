@@ -201,7 +201,7 @@ class ConfigLoader {
             const [domainResponse, rulesListResponse, returnMethodsResponse, eventTypesResponse] = await Promise.all([
                 fetch(`${baseUrl}${DEFAULT_CONFIG_ENDPOINT_PATH}/${this.domainKey}`),
                 fetch(`${baseUrl}/rule/domain/${this.domainKey}`),
-                fetch(`${baseUrl}/domain/return-method/${this.domainKey}`),
+                fetch(`${baseUrl}/return-method/${this.domainKey}`),
                 fetch(`${baseUrl}/rule/event-type`)
             ]);
             // Kiểm tra response
