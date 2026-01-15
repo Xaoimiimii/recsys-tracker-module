@@ -62,6 +62,7 @@ export const ModelName = {
   PayloadMapping: 'PayloadMapping',
   Operator: 'Operator',
   Event: 'Event',
+  SearchKeywordConfig: 'SearchKeywordConfig',
   Category: 'Category',
   ItemCategory: 'ItemCategory',
   Item: 'Item',
@@ -116,6 +117,7 @@ export const ReturnMethodScalarFieldEnum = {
   Id: 'Id',
   DomainID: 'DomainID',
   OperatorID: 'OperatorID',
+  SearchKeywordConfigID: 'SearchKeywordConfigID',
   ReturnType: 'ReturnType',
   Value: 'Value',
   ConfigurationName: 'ConfigurationName',
@@ -216,6 +218,16 @@ export const EventScalarFieldEnum = {
 } as const
 
 export type EventScalarFieldEnum = (typeof EventScalarFieldEnum)[keyof typeof EventScalarFieldEnum]
+
+
+export const SearchKeywordConfigScalarFieldEnum = {
+  Id: 'Id',
+  DomainID: 'DomainID',
+  ConfigurationName: 'ConfigurationName',
+  InputSelector: 'InputSelector'
+} as const
+
+export type SearchKeywordConfigScalarFieldEnum = (typeof SearchKeywordConfigScalarFieldEnum)[keyof typeof SearchKeywordConfigScalarFieldEnum]
 
 
 export const CategoryScalarFieldEnum = {

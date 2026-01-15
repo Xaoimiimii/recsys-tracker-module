@@ -1765,9 +1765,10 @@ var RecSysTracker = (function (exports) {
                     //DomainKey: this.domainKey,
                     NumberItems: options.numberItems || 10,
                 };
-                // Set UserId or AnonymousId based on userField
-                if (userField === 'UserId' || userField === 'Username') {
-                    requestBody.UserId = userValue;
+                // Check for cached user info in localStorage
+                const cachedUserId = this.getCachedUserId();
+                if (cachedUserId) {
+                    requestBody.UserId = cachedUserId;
                 }
                 // Call API
                 const response = await fetch(`${this.apiBaseUrl}/recommendation`, {
@@ -1837,11 +1838,29 @@ var RecSysTracker = (function (exports) {
             }));
         }
         /**
+         * Get cached user ID from localStorage
+         * @returns Cached user ID or null
+         */
+        getCachedUserId() {
+            try {
+                const cachedUserInfo = localStorage.getItem('recsys_cached_user_info');
+                if (cachedUserInfo) {
+                    const userInfo = JSON.parse(cachedUserInfo);
+                    return userInfo.userValue || null;
+                }
+                return null;
+            }
+            catch (error) {
+                console.warn('[RecSysTracker] Failed to get cached user info:', error);
+                return null;
+            }
+        }
+        /**
          * Get or create anonymous ID cho user
          * @returns Anonymous ID string
          */
         getOrCreateAnonymousId() {
-            const storageKey = 'recsys_anonymous_id';
+            const storageKey = 'recsys_anon_id';
             try {
                 // Try to get existing ID from localStorage
                 let anonymousId = localStorage.getItem(storageKey);
@@ -4902,10 +4921,6 @@ var RecSysTracker = (function (exports) {
                     });
                     pluginPromises.push(scrollPromise);
                 }
-                // ❌ REMOVE NetworkPlugin auto-registration
-                // Network Observer is now initialized globally, not as a plugin
-                // ❌ REMOVE NetworkPlugin auto-registration
-                // Network Observer is now initialized globally, not as a plugin
                 // Chờ tất cả plugin được đăng ký trước khi khởi động
                 if (pluginPromises.length > 0) {
                     await Promise.all(pluginPromises);

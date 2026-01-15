@@ -193,7 +193,6 @@ export type EventTypeWhereInput = {
   Id?: Prisma.IntFilter<"EventType"> | number
   Name?: Prisma.StringFilter<"EventType"> | string
   TrackingRules?: Prisma.TrackingRuleListRelationFilter
-  Interactions?: Prisma.InteractionListRelationFilter
   Events?: Prisma.EventListRelationFilter
 }
 
@@ -201,7 +200,6 @@ export type EventTypeOrderByWithRelationInput = {
   Id?: Prisma.SortOrder
   Name?: Prisma.SortOrder
   TrackingRules?: Prisma.TrackingRuleOrderByRelationAggregateInput
-  Interactions?: Prisma.InteractionOrderByRelationAggregateInput
   Events?: Prisma.EventOrderByRelationAggregateInput
 }
 
@@ -212,7 +210,6 @@ export type EventTypeWhereUniqueInput = Prisma.AtLeast<{
   NOT?: Prisma.EventTypeWhereInput | Prisma.EventTypeWhereInput[]
   Name?: Prisma.StringFilter<"EventType"> | string
   TrackingRules?: Prisma.TrackingRuleListRelationFilter
-  Interactions?: Prisma.InteractionListRelationFilter
   Events?: Prisma.EventListRelationFilter
 }, "Id">
 
@@ -237,7 +234,6 @@ export type EventTypeScalarWhereWithAggregatesInput = {
 export type EventTypeCreateInput = {
   Name: string
   TrackingRules?: Prisma.TrackingRuleCreateNestedManyWithoutEventTypeInput
-  Interactions?: Prisma.InteractionCreateNestedManyWithoutInteractionTypeInput
   Events?: Prisma.EventCreateNestedManyWithoutEventTypeInput
 }
 
@@ -245,14 +241,12 @@ export type EventTypeUncheckedCreateInput = {
   Id?: number
   Name: string
   TrackingRules?: Prisma.TrackingRuleUncheckedCreateNestedManyWithoutEventTypeInput
-  Interactions?: Prisma.InteractionUncheckedCreateNestedManyWithoutInteractionTypeInput
   Events?: Prisma.EventUncheckedCreateNestedManyWithoutEventTypeInput
 }
 
 export type EventTypeUpdateInput = {
   Name?: Prisma.StringFieldUpdateOperationsInput | string
   TrackingRules?: Prisma.TrackingRuleUpdateManyWithoutEventTypeNestedInput
-  Interactions?: Prisma.InteractionUpdateManyWithoutInteractionTypeNestedInput
   Events?: Prisma.EventUpdateManyWithoutEventTypeNestedInput
 }
 
@@ -260,7 +254,6 @@ export type EventTypeUncheckedUpdateInput = {
   Id?: Prisma.IntFieldUpdateOperationsInput | number
   Name?: Prisma.StringFieldUpdateOperationsInput | string
   TrackingRules?: Prisma.TrackingRuleUncheckedUpdateManyWithoutEventTypeNestedInput
-  Interactions?: Prisma.InteractionUncheckedUpdateManyWithoutInteractionTypeNestedInput
   Events?: Prisma.EventUncheckedUpdateManyWithoutEventTypeNestedInput
 }
 
@@ -334,30 +327,14 @@ export type EventTypeUpdateOneRequiredWithoutEventsNestedInput = {
   update?: Prisma.XOR<Prisma.XOR<Prisma.EventTypeUpdateToOneWithWhereWithoutEventsInput, Prisma.EventTypeUpdateWithoutEventsInput>, Prisma.EventTypeUncheckedUpdateWithoutEventsInput>
 }
 
-export type EventTypeCreateNestedOneWithoutInteractionsInput = {
-  create?: Prisma.XOR<Prisma.EventTypeCreateWithoutInteractionsInput, Prisma.EventTypeUncheckedCreateWithoutInteractionsInput>
-  connectOrCreate?: Prisma.EventTypeCreateOrConnectWithoutInteractionsInput
-  connect?: Prisma.EventTypeWhereUniqueInput
-}
-
-export type EventTypeUpdateOneRequiredWithoutInteractionsNestedInput = {
-  create?: Prisma.XOR<Prisma.EventTypeCreateWithoutInteractionsInput, Prisma.EventTypeUncheckedCreateWithoutInteractionsInput>
-  connectOrCreate?: Prisma.EventTypeCreateOrConnectWithoutInteractionsInput
-  upsert?: Prisma.EventTypeUpsertWithoutInteractionsInput
-  connect?: Prisma.EventTypeWhereUniqueInput
-  update?: Prisma.XOR<Prisma.XOR<Prisma.EventTypeUpdateToOneWithWhereWithoutInteractionsInput, Prisma.EventTypeUpdateWithoutInteractionsInput>, Prisma.EventTypeUncheckedUpdateWithoutInteractionsInput>
-}
-
 export type EventTypeCreateWithoutTrackingRulesInput = {
   Name: string
-  Interactions?: Prisma.InteractionCreateNestedManyWithoutInteractionTypeInput
   Events?: Prisma.EventCreateNestedManyWithoutEventTypeInput
 }
 
 export type EventTypeUncheckedCreateWithoutTrackingRulesInput = {
   Id?: number
   Name: string
-  Interactions?: Prisma.InteractionUncheckedCreateNestedManyWithoutInteractionTypeInput
   Events?: Prisma.EventUncheckedCreateNestedManyWithoutEventTypeInput
 }
 
@@ -379,28 +356,24 @@ export type EventTypeUpdateToOneWithWhereWithoutTrackingRulesInput = {
 
 export type EventTypeUpdateWithoutTrackingRulesInput = {
   Name?: Prisma.StringFieldUpdateOperationsInput | string
-  Interactions?: Prisma.InteractionUpdateManyWithoutInteractionTypeNestedInput
   Events?: Prisma.EventUpdateManyWithoutEventTypeNestedInput
 }
 
 export type EventTypeUncheckedUpdateWithoutTrackingRulesInput = {
   Id?: Prisma.IntFieldUpdateOperationsInput | number
   Name?: Prisma.StringFieldUpdateOperationsInput | string
-  Interactions?: Prisma.InteractionUncheckedUpdateManyWithoutInteractionTypeNestedInput
   Events?: Prisma.EventUncheckedUpdateManyWithoutEventTypeNestedInput
 }
 
 export type EventTypeCreateWithoutEventsInput = {
   Name: string
   TrackingRules?: Prisma.TrackingRuleCreateNestedManyWithoutEventTypeInput
-  Interactions?: Prisma.InteractionCreateNestedManyWithoutInteractionTypeInput
 }
 
 export type EventTypeUncheckedCreateWithoutEventsInput = {
   Id?: number
   Name: string
   TrackingRules?: Prisma.TrackingRuleUncheckedCreateNestedManyWithoutEventTypeInput
-  Interactions?: Prisma.InteractionUncheckedCreateNestedManyWithoutInteractionTypeInput
 }
 
 export type EventTypeCreateOrConnectWithoutEventsInput = {
@@ -422,56 +395,12 @@ export type EventTypeUpdateToOneWithWhereWithoutEventsInput = {
 export type EventTypeUpdateWithoutEventsInput = {
   Name?: Prisma.StringFieldUpdateOperationsInput | string
   TrackingRules?: Prisma.TrackingRuleUpdateManyWithoutEventTypeNestedInput
-  Interactions?: Prisma.InteractionUpdateManyWithoutInteractionTypeNestedInput
 }
 
 export type EventTypeUncheckedUpdateWithoutEventsInput = {
   Id?: Prisma.IntFieldUpdateOperationsInput | number
   Name?: Prisma.StringFieldUpdateOperationsInput | string
   TrackingRules?: Prisma.TrackingRuleUncheckedUpdateManyWithoutEventTypeNestedInput
-  Interactions?: Prisma.InteractionUncheckedUpdateManyWithoutInteractionTypeNestedInput
-}
-
-export type EventTypeCreateWithoutInteractionsInput = {
-  Name: string
-  TrackingRules?: Prisma.TrackingRuleCreateNestedManyWithoutEventTypeInput
-  Events?: Prisma.EventCreateNestedManyWithoutEventTypeInput
-}
-
-export type EventTypeUncheckedCreateWithoutInteractionsInput = {
-  Id?: number
-  Name: string
-  TrackingRules?: Prisma.TrackingRuleUncheckedCreateNestedManyWithoutEventTypeInput
-  Events?: Prisma.EventUncheckedCreateNestedManyWithoutEventTypeInput
-}
-
-export type EventTypeCreateOrConnectWithoutInteractionsInput = {
-  where: Prisma.EventTypeWhereUniqueInput
-  create: Prisma.XOR<Prisma.EventTypeCreateWithoutInteractionsInput, Prisma.EventTypeUncheckedCreateWithoutInteractionsInput>
-}
-
-export type EventTypeUpsertWithoutInteractionsInput = {
-  update: Prisma.XOR<Prisma.EventTypeUpdateWithoutInteractionsInput, Prisma.EventTypeUncheckedUpdateWithoutInteractionsInput>
-  create: Prisma.XOR<Prisma.EventTypeCreateWithoutInteractionsInput, Prisma.EventTypeUncheckedCreateWithoutInteractionsInput>
-  where?: Prisma.EventTypeWhereInput
-}
-
-export type EventTypeUpdateToOneWithWhereWithoutInteractionsInput = {
-  where?: Prisma.EventTypeWhereInput
-  data: Prisma.XOR<Prisma.EventTypeUpdateWithoutInteractionsInput, Prisma.EventTypeUncheckedUpdateWithoutInteractionsInput>
-}
-
-export type EventTypeUpdateWithoutInteractionsInput = {
-  Name?: Prisma.StringFieldUpdateOperationsInput | string
-  TrackingRules?: Prisma.TrackingRuleUpdateManyWithoutEventTypeNestedInput
-  Events?: Prisma.EventUpdateManyWithoutEventTypeNestedInput
-}
-
-export type EventTypeUncheckedUpdateWithoutInteractionsInput = {
-  Id?: Prisma.IntFieldUpdateOperationsInput | number
-  Name?: Prisma.StringFieldUpdateOperationsInput | string
-  TrackingRules?: Prisma.TrackingRuleUncheckedUpdateManyWithoutEventTypeNestedInput
-  Events?: Prisma.EventUncheckedUpdateManyWithoutEventTypeNestedInput
 }
 
 
@@ -481,13 +410,11 @@ export type EventTypeUncheckedUpdateWithoutInteractionsInput = {
 
 export type EventTypeCountOutputType = {
   TrackingRules: number
-  Interactions: number
   Events: number
 }
 
 export type EventTypeCountOutputTypeSelect<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   TrackingRules?: boolean | EventTypeCountOutputTypeCountTrackingRulesArgs
-  Interactions?: boolean | EventTypeCountOutputTypeCountInteractionsArgs
   Events?: boolean | EventTypeCountOutputTypeCountEventsArgs
 }
 
@@ -511,13 +438,6 @@ export type EventTypeCountOutputTypeCountTrackingRulesArgs<ExtArgs extends runti
 /**
  * EventTypeCountOutputType without action
  */
-export type EventTypeCountOutputTypeCountInteractionsArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
-  where?: Prisma.InteractionWhereInput
-}
-
-/**
- * EventTypeCountOutputType without action
- */
 export type EventTypeCountOutputTypeCountEventsArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   where?: Prisma.EventWhereInput
 }
@@ -527,7 +447,6 @@ export type EventTypeSelect<ExtArgs extends runtime.Types.Extensions.InternalArg
   Id?: boolean
   Name?: boolean
   TrackingRules?: boolean | Prisma.EventType$TrackingRulesArgs<ExtArgs>
-  Interactions?: boolean | Prisma.EventType$InteractionsArgs<ExtArgs>
   Events?: boolean | Prisma.EventType$EventsArgs<ExtArgs>
   _count?: boolean | Prisma.EventTypeCountOutputTypeDefaultArgs<ExtArgs>
 }, ExtArgs["result"]["eventType"]>
@@ -550,7 +469,6 @@ export type EventTypeSelectScalar = {
 export type EventTypeOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"Id" | "Name", ExtArgs["result"]["eventType"]>
 export type EventTypeInclude<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   TrackingRules?: boolean | Prisma.EventType$TrackingRulesArgs<ExtArgs>
-  Interactions?: boolean | Prisma.EventType$InteractionsArgs<ExtArgs>
   Events?: boolean | Prisma.EventType$EventsArgs<ExtArgs>
   _count?: boolean | Prisma.EventTypeCountOutputTypeDefaultArgs<ExtArgs>
 }
@@ -561,7 +479,6 @@ export type $EventTypePayload<ExtArgs extends runtime.Types.Extensions.InternalA
   name: "EventType"
   objects: {
     TrackingRules: Prisma.$TrackingRulePayload<ExtArgs>[]
-    Interactions: Prisma.$InteractionPayload<ExtArgs>[]
     Events: Prisma.$EventPayload<ExtArgs>[]
   }
   scalars: runtime.Types.Extensions.GetPayloadResult<{
@@ -962,7 +879,6 @@ readonly fields: EventTypeFieldRefs;
 export interface Prisma__EventTypeClient<T, Null = never, ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs, GlobalOmitOptions = {}> extends Prisma.PrismaPromise<T> {
   readonly [Symbol.toStringTag]: "PrismaPromise"
   TrackingRules<T extends Prisma.EventType$TrackingRulesArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.EventType$TrackingRulesArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$TrackingRulePayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
-  Interactions<T extends Prisma.EventType$InteractionsArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.EventType$InteractionsArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$InteractionPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
   Events<T extends Prisma.EventType$EventsArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.EventType$EventsArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$EventPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
   /**
    * Attaches callbacks for the resolution and/or rejection of the Promise.
@@ -1404,30 +1320,6 @@ export type EventType$TrackingRulesArgs<ExtArgs extends runtime.Types.Extensions
   take?: number
   skip?: number
   distinct?: Prisma.TrackingRuleScalarFieldEnum | Prisma.TrackingRuleScalarFieldEnum[]
-}
-
-/**
- * EventType.Interactions
- */
-export type EventType$InteractionsArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
-  /**
-   * Select specific fields to fetch from the Interaction
-   */
-  select?: Prisma.InteractionSelect<ExtArgs> | null
-  /**
-   * Omit specific fields from the Interaction
-   */
-  omit?: Prisma.InteractionOmit<ExtArgs> | null
-  /**
-   * Choose, which related nodes to fetch as well
-   */
-  include?: Prisma.InteractionInclude<ExtArgs> | null
-  where?: Prisma.InteractionWhereInput
-  orderBy?: Prisma.InteractionOrderByWithRelationInput | Prisma.InteractionOrderByWithRelationInput[]
-  cursor?: Prisma.InteractionWhereUniqueInput
-  take?: number
-  skip?: number
-  distinct?: Prisma.InteractionScalarFieldEnum | Prisma.InteractionScalarFieldEnum[]
 }
 
 /**

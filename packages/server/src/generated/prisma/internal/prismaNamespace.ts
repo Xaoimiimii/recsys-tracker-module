@@ -395,6 +395,7 @@ export const ModelName = {
   PayloadMapping: 'PayloadMapping',
   Operator: 'Operator',
   Event: 'Event',
+  SearchKeywordConfig: 'SearchKeywordConfig',
   Category: 'Category',
   ItemCategory: 'ItemCategory',
   Item: 'Item',
@@ -420,7 +421,7 @@ export type TypeMap<ExtArgs extends runtime.Types.Extensions.InternalArgs = runt
     omit: GlobalOmitOptions
   }
   meta: {
-    modelProps: "ternant" | "domain" | "returnMethod" | "trackingRule" | "eventType" | "trackingTarget" | "condition" | "pattern" | "payloadMapping" | "operator" | "event" | "category" | "itemCategory" | "item" | "model" | "itemFactor" | "user" | "userFactor" | "predict" | "rating" | "interaction"
+    modelProps: "ternant" | "domain" | "returnMethod" | "trackingRule" | "eventType" | "trackingTarget" | "condition" | "pattern" | "payloadMapping" | "operator" | "event" | "searchKeywordConfig" | "category" | "itemCategory" | "item" | "model" | "itemFactor" | "user" | "userFactor" | "predict" | "rating" | "interaction"
     txIsolationLevel: TransactionIsolationLevel
   }
   model: {
@@ -1238,6 +1239,80 @@ export type TypeMap<ExtArgs extends runtime.Types.Extensions.InternalArgs = runt
         }
       }
     }
+    SearchKeywordConfig: {
+      payload: Prisma.$SearchKeywordConfigPayload<ExtArgs>
+      fields: Prisma.SearchKeywordConfigFieldRefs
+      operations: {
+        findUnique: {
+          args: Prisma.SearchKeywordConfigFindUniqueArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$SearchKeywordConfigPayload> | null
+        }
+        findUniqueOrThrow: {
+          args: Prisma.SearchKeywordConfigFindUniqueOrThrowArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$SearchKeywordConfigPayload>
+        }
+        findFirst: {
+          args: Prisma.SearchKeywordConfigFindFirstArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$SearchKeywordConfigPayload> | null
+        }
+        findFirstOrThrow: {
+          args: Prisma.SearchKeywordConfigFindFirstOrThrowArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$SearchKeywordConfigPayload>
+        }
+        findMany: {
+          args: Prisma.SearchKeywordConfigFindManyArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$SearchKeywordConfigPayload>[]
+        }
+        create: {
+          args: Prisma.SearchKeywordConfigCreateArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$SearchKeywordConfigPayload>
+        }
+        createMany: {
+          args: Prisma.SearchKeywordConfigCreateManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        createManyAndReturn: {
+          args: Prisma.SearchKeywordConfigCreateManyAndReturnArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$SearchKeywordConfigPayload>[]
+        }
+        delete: {
+          args: Prisma.SearchKeywordConfigDeleteArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$SearchKeywordConfigPayload>
+        }
+        update: {
+          args: Prisma.SearchKeywordConfigUpdateArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$SearchKeywordConfigPayload>
+        }
+        deleteMany: {
+          args: Prisma.SearchKeywordConfigDeleteManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        updateMany: {
+          args: Prisma.SearchKeywordConfigUpdateManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        updateManyAndReturn: {
+          args: Prisma.SearchKeywordConfigUpdateManyAndReturnArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$SearchKeywordConfigPayload>[]
+        }
+        upsert: {
+          args: Prisma.SearchKeywordConfigUpsertArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$SearchKeywordConfigPayload>
+        }
+        aggregate: {
+          args: Prisma.SearchKeywordConfigAggregateArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.AggregateSearchKeywordConfig>
+        }
+        groupBy: {
+          args: Prisma.SearchKeywordConfigGroupByArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.SearchKeywordConfigGroupByOutputType>[]
+        }
+        count: {
+          args: Prisma.SearchKeywordConfigCountArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.SearchKeywordConfigCountAggregateOutputType> | number
+        }
+      }
+    }
     Category: {
       payload: Prisma.$CategoryPayload<ExtArgs>
       fields: Prisma.CategoryFieldRefs
@@ -2043,6 +2118,7 @@ export const ReturnMethodScalarFieldEnum = {
   Id: 'Id',
   DomainID: 'DomainID',
   OperatorID: 'OperatorID',
+  SearchKeywordConfigID: 'SearchKeywordConfigID',
   ReturnType: 'ReturnType',
   Value: 'Value',
   ConfigurationName: 'ConfigurationName',
@@ -2143,6 +2219,16 @@ export const EventScalarFieldEnum = {
 } as const
 
 export type EventScalarFieldEnum = (typeof EventScalarFieldEnum)[keyof typeof EventScalarFieldEnum]
+
+
+export const SearchKeywordConfigScalarFieldEnum = {
+  Id: 'Id',
+  DomainID: 'DomainID',
+  ConfigurationName: 'ConfigurationName',
+  InputSelector: 'InputSelector'
+} as const
+
+export type SearchKeywordConfigScalarFieldEnum = (typeof SearchKeywordConfigScalarFieldEnum)[keyof typeof SearchKeywordConfigScalarFieldEnum]
 
 
 export const CategoryScalarFieldEnum = {
@@ -2579,6 +2665,7 @@ export type GlobalOmitConfig = {
   payloadMapping?: Prisma.PayloadMappingOmit
   operator?: Prisma.OperatorOmit
   event?: Prisma.EventOmit
+  searchKeywordConfig?: Prisma.SearchKeywordConfigOmit
   category?: Prisma.CategoryOmit
   itemCategory?: Prisma.ItemCategoryOmit
   item?: Prisma.ItemOmit
