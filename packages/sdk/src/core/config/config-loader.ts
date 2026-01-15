@@ -66,7 +66,7 @@ export class ConfigLoader {
       const [domainResponse, rulesListResponse, returnMethodsResponse, eventTypesResponse] = await Promise.all([
         fetch(`${baseUrl}${DEFAULT_CONFIG_ENDPOINT_PATH}/${this.domainKey}`),
         fetch(`${baseUrl}/rule/domain/${this.domainKey}`),
-        fetch(`${baseUrl}/domain/return-method/${this.domainKey}`),
+        fetch(`${baseUrl}/return-method/${this.domainKey}`),
         fetch(`${baseUrl}/rule/event-type`)
       ]);
 
@@ -179,16 +179,32 @@ export class ConfigLoader {
   private transformReturnMethods(returnMethodsData: any): ReturnMethod[] {
     if (!returnMethodsData || !Array.isArray(returnMethodsData)) return [];
 
-    return returnMethodsData.map(method => ({
-      id: method.Id || method.id,
-      domainId: method.DomainID || method.domainId,
-      operatorId: method.OperatorID || method.operatorId,
-      returnType: method.ReturnType || method.returnType,
-      value: method.Value || method.value || '',
-      configurationName: method.ConfigurationName || method.configurationName,
-    }));
-  }
+    return returnMethodsData.map(method => {
+      let layoutJson = method.Layout || method.layout;
+      let styleJson = method.Style || method.style;
+      let customFields = method.Customizing || method.customizing;
 
+      try {
+        if (typeof layoutJson === 'string') layoutJson = JSON.parse(layoutJson);
+        if (typeof styleJson === 'string') styleJson = JSON.parse(styleJson);
+        if (typeof customFields === 'string') customFields = JSON.parse(customFields);
+      } catch (e) {
+        console.warn('Error parsing JSON fields for method:', method.ConfigurationName);
+      }
+      return {
+        ConfigurationName: method.ConfigurationName || method.configurationName,
+        ReturnType: method.ReturnType || method.returnType,
+        Value: method.Value || method.value || '',
+        OperatorId: method.OperatorID || method.operatorId,
+        LayoutJson: layoutJson || {},
+        StyleJson: styleJson || {},
+        CustomizingFields: { 
+            fields: Array.isArray(customFields) ? customFields : [] 
+        },
+        DelayDuration: Number(method.DelayDuration || method.delayDuration || method.Duration || 0),
+      } as unknown as ReturnMethod;
+    });
+  }
   // Transform event types từ server format sang SDK format
   private transformEventTypes(eventTypesData: any): any[] {
     if (!eventTypesData || !Array.isArray(eventTypesData)) return [];

@@ -131,6 +131,7 @@ class OriginVerifier {
     }
 }
 
+//export const DEFAULT_API_URL = 'https://recsys-tracker-module.onrender.com';
 const DEFAULT_TRACK_ENDPOINT_PATH = '/event';
 const DEFAULT_CONFIG_ENDPOINT_PATH = '/domain';
 
@@ -197,7 +198,7 @@ class ConfigLoader {
             const [domainResponse, rulesListResponse, returnMethodsResponse, eventTypesResponse] = await Promise.all([
                 fetch(`${baseUrl}${DEFAULT_CONFIG_ENDPOINT_PATH}/${this.domainKey}`),
                 fetch(`${baseUrl}/rule/domain/${this.domainKey}`),
-                fetch(`${baseUrl}/domain/return-method/${this.domainKey}`),
+                fetch(`${baseUrl}/return-method/${this.domainKey}`),
                 fetch(`${baseUrl}/rule/event-type`)
             ]);
             // Kiểm tra response
@@ -303,14 +304,34 @@ class ConfigLoader {
     transformReturnMethods(returnMethodsData) {
         if (!returnMethodsData || !Array.isArray(returnMethodsData))
             return [];
-        return returnMethodsData.map(method => ({
-            id: method.Id || method.id,
-            domainId: method.DomainID || method.domainId,
-            operatorId: method.OperatorID || method.operatorId,
-            returnType: method.ReturnType || method.returnType,
-            value: method.Value || method.value || '',
-            configurationName: method.ConfigurationName || method.configurationName,
-        }));
+        return returnMethodsData.map(method => {
+            let layoutJson = method.Layout || method.layout;
+            let styleJson = method.Style || method.style;
+            let customFields = method.Customizing || method.customizing;
+            try {
+                if (typeof layoutJson === 'string')
+                    layoutJson = JSON.parse(layoutJson);
+                if (typeof styleJson === 'string')
+                    styleJson = JSON.parse(styleJson);
+                if (typeof customFields === 'string')
+                    customFields = JSON.parse(customFields);
+            }
+            catch (e) {
+                console.warn('Error parsing JSON fields for method:', method.ConfigurationName);
+            }
+            return {
+                ConfigurationName: method.ConfigurationName || method.configurationName,
+                ReturnType: method.ReturnType || method.returnType,
+                Value: method.Value || method.value || '',
+                OperatorId: method.OperatorID || method.operatorId,
+                LayoutJson: layoutJson || {},
+                StyleJson: styleJson || {},
+                CustomizingFields: {
+                    fields: Array.isArray(customFields) ? customFields : []
+                },
+                DelayDuration: Number(method.DelayDuration || method.delayDuration || method.Duration || 0),
+            };
+        });
     }
     // Transform event types từ server format sang SDK format
     transformEventTypes(eventTypesData) {
@@ -1028,83 +1049,82 @@ class LoopGuard {
 }
 
 class PopupDisplay {
-    constructor(_domainKey, _slotName, _apiBaseUrl, config = {}, recommendationGetter) {
+    constructor(_slotName, _apiBaseUrl, config = {}, recommendationGetter) {
+        var _a;
         this.popupTimeout = null;
         this.autoCloseTimeout = null;
         this.autoSlideTimeout = null;
         this.shadowHost = null;
-        this.DEFAULT_MIN_DELAY = 5000; // 5s
-        this.DEFAULT_MAX_DELAY = 10000; // 10s
-        this.AUTO_SLIDE_DELAY = 5000; // 5s auto slide
+        this.DEFAULT_DELAY = 5000;
         this.recommendationGetter = recommendationGetter;
         this.config = {
-            minDelay: config.minDelay || this.DEFAULT_MIN_DELAY,
-            maxDelay: config.maxDelay || this.DEFAULT_MAX_DELAY,
+            delay: (_a = config.delay) !== null && _a !== void 0 ? _a : this.DEFAULT_DELAY,
             autoCloseDelay: config.autoCloseDelay,
-            pages: config.pages || ['*'], // Default show on all pages
+            ...config
         };
     }
-    // Bắt đầu schedule popup
     start() {
         this.scheduleNextPopup();
     }
-    // Dừng popup
     stop() {
         this.clearTimeouts();
         this.removePopup();
     }
-    // Lập lịch hiển thị popup tiếp theo
+    // --- LOGIC 1: TRIGGER CONFIG (URL CHECKING) ---
+    shouldShowPopup() {
+        const trigger = this.config.triggerConfig;
+        // Nếu không có trigger config, mặc định cho hiện (hoặc check pages cũ nếu cần)
+        if (!trigger || !trigger.targetValue)
+            return true;
+        // Lấy URL hiện tại (pathname: /products/ao-thun)
+        const currentUrl = window.location.pathname;
+        const targetUrl = trigger.targetValue;
+        // Logic OperatorId (Map với select option trong form của bạn)
+        switch (trigger.operatorId) {
+            case 1: // Contains
+                return currentUrl.includes(targetUrl);
+            case 2: // Equals
+                return currentUrl === targetUrl;
+            case 3: // Starts with
+                return currentUrl.startsWith(targetUrl);
+            case 4: // Ends with
+                return currentUrl.endsWith(targetUrl);
+            default:
+                return true;
+        }
+    }
     scheduleNextPopup() {
         this.clearTimeouts();
-        const delay = this.getRandomDelay();
+        // Check ngay lập tức trước khi hẹn giờ
+        if (!this.shouldShowPopup()) {
+            return; // Không khớp URL -> Không làm gì cả
+        }
+        const delay = this.config.delay || 0;
         this.popupTimeout = setTimeout(() => {
-            if (this.isPageAllowed(window.location.pathname)) {
+            // Check lại lần nữa khi timer nổ (đề phòng SPA chuyển trang)
+            if (this.shouldShowPopup()) {
                 this.showPopup();
             }
             else {
+                // Nếu chuyển sang trang không khớp, thử lại sau (hoặc dừng hẳn tùy logic)
                 this.scheduleNextPopup();
             }
         }, delay);
     }
-    // Tính toán delay ngẫu nhiên
-    getRandomDelay() {
-        const min = this.config.minDelay;
-        const max = this.config.maxDelay;
-        return Math.floor(Math.random() * (max - min) + min);
-    }
-    // Kiểm tra page có được phép hiển thị không
-    isPageAllowed(currentPath) {
-        const allowedPatterns = this.config.pages || [];
-        if (allowedPatterns.length === 0 || allowedPatterns.includes('*')) {
-            return true;
-        }
-        return allowedPatterns.some(pattern => {
-            if (pattern === '/')
-                return currentPath === '/';
-            // Hỗ trợ wildcard (vd: /products/*)
-            if (pattern.endsWith('/*')) {
-                const base = pattern.slice(0, -2);
-                return currentPath.startsWith(base);
-            }
-            return currentPath === pattern;
-        });
-    }
-    // Hiển thị popup
     async showPopup() {
         try {
             const items = await this.fetchRecommendations();
+            console.log('PopupDisplay - Fetched items:', items);
             if (items && items.length > 0) {
                 this.renderPopup(items);
-                // Auto close nếu có config
-                if (this.config.autoCloseDelay) {
+                if (this.config.autoCloseDelay && this.config.autoCloseDelay > 0) {
                     this.autoCloseTimeout = setTimeout(() => {
                         this.removePopup();
                         this.scheduleNextPopup();
-                    }, this.config.autoCloseDelay);
+                    }, this.config.autoCloseDelay * 1000); // DB lưu giây, setTimeout cần ms
                 }
             }
             else {
-                // Không có items, schedule lại
                 this.scheduleNextPopup();
             }
         }
@@ -1112,76 +1132,260 @@ class PopupDisplay {
             this.scheduleNextPopup();
         }
     }
-    // Fetch recommendations từ DisplayManager (đã cached)
     async fetchRecommendations() {
         try {
-            const items = await this.recommendationGetter();
-            return items;
+            return await this.recommendationGetter();
         }
-        catch (error) {
+        catch {
             return [];
         }
     }
-    // Render popup với Shadow DOM
+    // --- LOGIC 2: DYNAMIC CSS GENERATOR ---
+    getDynamicStyles() {
+        var _a, _b, _c, _d, _e, _f, _g, _h, _j, _k, _l;
+        const style = this.config.styleJson || {};
+        const layout = this.config.layoutJson || {};
+        const tokens = style.tokens || {};
+        const colors = tokens.colors || {};
+        const typo = tokens.typography || {};
+        // Position Logic
+        const popupWrapper = ((_a = layout.wrapper) === null || _a === void 0 ? void 0 : _a.popup) || {};
+        let posCSS = 'bottom: 24px; right: 24px;';
+        if (popupWrapper.position === 'center') {
+            posCSS = 'top: 50%; left: 50%; transform: translate(-50%, -50%);';
+        }
+        else if (popupWrapper.position === 'bottom-left') {
+            posCSS = 'bottom: 24px; left: 24px;';
+        }
+        else if (popupWrapper.position === 'top-center') {
+            posCSS = 'top: 24px; left: 50%; transform: translateX(-50%);';
+        }
+        const width = popupWrapper.width ? `${popupWrapper.width}px` : '340px';
+        const fontFamily = typo.fontFamily || 'Arial, sans-serif';
+        const contentMode = layout.contentMode || 'carousel'; // carousel, grid, list
+        // CSS cho phần body (nơi chứa items)
+        let bodyLayoutCSS = '';
+        if (contentMode === 'grid') {
+            const gridGap = ((_c = (_b = layout.modes) === null || _b === void 0 ? void 0 : _b.grid) === null || _c === void 0 ? void 0 : _c.gap) || '10px';
+            bodyLayoutCSS = `
+            display: grid; 
+            grid-template-columns: repeat(2, 1fr); /* Popup nhỏ nên mặc định 2 cột */
+            gap: ${gridGap};
+            padding: 16px;
+            overflow-y: auto;
+            max-height: 400px; /* Giới hạn chiều cao nếu nhiều item */
+        `;
+        }
+        else if (contentMode === 'list') {
+            const listGap = ((_e = (_d = layout.modes) === null || _d === void 0 ? void 0 : _d.list) === null || _e === void 0 ? void 0 : _e.gap) || '10px';
+            bodyLayoutCSS = `
+            display: flex;
+            flex-direction: column;
+            gap: ${listGap};
+            padding: 16px;
+            overflow-y: auto;
+            max-height: 400px;
+        `;
+        }
+        else {
+            bodyLayoutCSS = `width: 100%; padding: 16px;`;
+        }
+        return `
+      :host { all: initial; font-family: ${fontFamily}; }
+      * { box-sizing: border-box; }
+
+      .recsys-popup {
+        position: fixed;
+        ${posCSS}
+        width: ${width};
+        background: ${colors.surface || '#fff'};
+        border-radius: ${((_f = tokens.radius) === null || _f === void 0 ? void 0 : _f.card) || 8}px;
+        box-shadow: ${((_g = tokens.shadow) === null || _g === void 0 ? void 0 : _g.card) || '0 4px 12px rgba(0,0,0,0.15)'};
+        z-index: 2147483647;
+        overflow: hidden;
+        display: flex;
+        flex-direction: column;
+        border: 1px solid ${colors.border || '#eee'};
+        animation: fadeIn 0.3s ease;
+      }
+
+      @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+
+      .recsys-header {
+        background: ${colors.surface || '#fff'};
+        color: ${colors.textPrimary || '#333'};
+        padding: 12px 16px;
+        border-bottom: 1px solid ${colors.border || '#eee'};
+        display: flex; justify-content: space-between; align-items: center;
+      }
+      
+      .recsys-header-title {
+         font-size: ${((_h = typo.title) === null || _h === void 0 ? void 0 : _h.fontSize) || 16}px;
+         font-weight: ${((_j = typo.title) === null || _j === void 0 ? void 0 : _j.fontWeight) || 600};
+      }
+
+      .recsys-close {
+        background: none; border: none; cursor: pointer; font-size: 20px;
+        color: ${colors.textSecondary || '#999'}; padding: 0;
+      }
+
+      .recsys-body { position: relative; padding: 0; background: ${colors.surface || '#fff'}; }
+
+      /* Nút điều hướng Carousel */
+      .recsys-nav {
+        position: absolute; top: 50%; transform: translateY(-50%);
+        width: 32px; height: 32px; border-radius: 50%;
+        background: rgba(255,255,255,0.9); border: 1px solid ${colors.border || '#ddd'};
+        color: ${colors.textPrimary || '#333'};
+        cursor: pointer; z-index: 2; display: flex; align-items: center; justify-content: center;
+      }
+      .recsys-prev { left: 8px; }
+      .recsys-next { right: 8px; }
+
+      .recsys-slide { width: 100%; padding: 16px; }
+
+      .recsys-item { display: flex; flex-direction: column; gap: 8px; text-align: center; }
+
+      .recsys-img { 
+         width: 100%; height: 180px; object-fit: cover; 
+         border-radius: ${((_k = tokens.radius) === null || _k === void 0 ? void 0 : _k.image) || 4}px; 
+      }
+
+      /* Style cho các field động */
+      .recsys-field { margin-bottom: 2px; }
+      .recsys-field-product_name, .recsys-field-name {
+         font-size: ${((_l = typo.body) === null || _l === void 0 ? void 0 : _l.fontSize) || 14}px;
+         font-weight: 600; color: ${colors.textPrimary || '#333'};
+         display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;
+      }
+      .recsys-field-price {
+         color: ${colors.primary || '#d32f2f'}; font-weight: bold; font-size: 14px;
+      }
+      .recsys-field-rating { color: #f59e0b; font-size: 12px; }
+      .recsys-field-description {
+         font-size: 12px; color: ${colors.textSecondary || '#666'};
+         display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;
+      }
+      .recsys-container {
+         ${bodyLayoutCSS}
+      }
+      
+      /* Ẩn nút nav nếu không phải carousel */
+      .recsys-nav {
+         display: ${contentMode === 'carousel' ? 'flex' : 'none'};
+      }
+      
+      /* Chỉnh sửa item layout nếu là list */
+      .recsys-item { 
+         display: flex; 
+         flex-direction: ${contentMode === 'list' ? 'row' : 'column'}; 
+         gap: 8px; 
+         text-align: ${contentMode === 'list' ? 'left' : 'center'};
+         border: ${contentMode === 'list' ? '1px solid #eee' : 'none'};
+         padding: ${contentMode === 'list' ? '8px' : '0'};
+         border-radius: 4px;
+      }
+      
+      /* Chỉnh ảnh nhỏ lại nếu là list */
+      .recsys-img { 
+         width: ${contentMode === 'list' ? '60px' : '100%'}; 
+         height: ${contentMode === 'list' ? '60px' : '180px'}; 
+      }
+    `;
+    }
+    // --- LOGIC 3: DYNAMIC HTML RENDERER ---
+    renderItemContent(item) {
+        var _a;
+        // Lấy field config và sort theo position
+        const fields = ((_a = this.config.customizingFields) === null || _a === void 0 ? void 0 : _a.fields) || [];
+        const activeFields = fields
+            .filter(f => f.isEnabled)
+            .sort((a, b) => a.position - b.position);
+        let html = '';
+        activeFields.forEach(field => {
+            const key = field.key;
+            // 1. Xử lý ảnh
+            if (key === 'image' || key === 'img') {
+                if (item.img)
+                    html += `<img src="${item.img}" class="recsys-img" />`;
+                return;
+            }
+            // 2. Mapping Key từ Config -> Item Data
+            let value = '';
+            if (key === 'product_name' || key === 'name')
+                value = item.title;
+            else if (key === 'description')
+                value = item.description;
+            else
+                value = item[key]; // Các trường khác (price, rating...)
+            // 3. Render Text
+            if (value) {
+                html += `<div class="recsys-field recsys-field-${key}">${value}</div>`;
+            }
+        });
+        return `<div class="recsys-item" data-id="${item.id}">${html}</div>`;
+    }
     renderPopup(items) {
-        // Remove existing popup if any
+        var _a;
         this.removePopup();
-        // Create shadow host
         const host = document.createElement('div');
         host.id = 'recsys-popup-host';
         document.body.appendChild(host);
         const shadow = host.attachShadow({ mode: 'open' });
-        // Add styles
         const style = document.createElement('style');
-        style.textContent = this.getPopupStyles();
+        style.textContent = this.getDynamicStyles();
         shadow.appendChild(style);
-        // Create popup structure
+        // Main Popup
+        const layout = this.config.layoutJson || {};
+        const contentMode = layout.contentMode || 'carousel';
         const popup = document.createElement('div');
         popup.className = 'recsys-popup';
         popup.innerHTML = `
       <div class="recsys-header">
-        Gợi ý dành cho 
+        <span class="recsys-header-title">Gợi ý cho bạn</span>
         <button class="recsys-close">✕</button>
       </div>
-      <div class="recsys-body">
-        <button class="recsys-nav recsys-prev">◀</button>
-        <div class="recsys-slide"></div>
-        <button class="recsys-nav recsys-next">▶</button>
+      <div class="recsys-body">${contentMode === 'carousel' ? '<button class="recsys-nav recsys-prev">‹</button>' : ''}  
+      <div class="${contentMode === 'carousel' ? 'recsys-slide' : 'recsys-container'}"></div>
+        ${contentMode === 'carousel' ? '<button class="recsys-nav recsys-next">›</button>' : ''}
       </div>
     `;
         shadow.appendChild(popup);
         this.shadowHost = host;
-        // Setup carousel
-        this.setupCarousel(shadow, items);
-        // Setup close button
-        const closeBtn = shadow.querySelector('.recsys-close');
-        closeBtn === null || closeBtn === void 0 ? void 0 : closeBtn.addEventListener('click', () => {
-            if (this.autoSlideTimeout) {
+        if (contentMode === 'carousel') {
+            this.setupCarousel(shadow, items);
+        }
+        else {
+            // Nếu là Grid hoặc List -> Render tất cả items ra luôn
+            this.renderStaticItems(shadow, items);
+        }
+        (_a = shadow.querySelector('.recsys-close')) === null || _a === void 0 ? void 0 : _a.addEventListener('click', () => {
+            if (this.autoSlideTimeout)
                 clearTimeout(this.autoSlideTimeout);
-                this.autoSlideTimeout = null;
-            }
             this.removePopup();
             this.scheduleNextPopup();
         });
     }
-    // Setup carousel functionality
+    renderStaticItems(shadow, items) {
+        const container = shadow.querySelector('.recsys-container');
+        if (!container)
+            return;
+        let html = '';
+        // Giới hạn số lượng hiển thị nếu là popup tĩnh (vd: tối đa 4 cái)
+        const maxItems = 4;
+        items.slice(0, maxItems).forEach(item => {
+            html += this.renderItemContent(item);
+        });
+        container.innerHTML = html;
+    }
     setupCarousel(shadow, items) {
+        var _a, _b;
         let currentIndex = 0;
         const slideContainer = shadow.querySelector('.recsys-slide');
-        const prevBtn = shadow.querySelector('.recsys-prev');
-        const nextBtn = shadow.querySelector('.recsys-next');
         const renderSlide = () => {
             const item = items[currentIndex];
-            const title = item.title || 'Sản phẩm';
-            const description = item.description || '';
-            const img = item.img;
-            slideContainer.innerHTML = `
-        <div class="recsys-item" data-id="${item.id}" data-domain-item-id="${item.domainItemId}">
-          <img src="${img}" alt="${title}" />
-          <div class="recsys-name">${title}</div>
-          <div class="recsys-description">${description}</div>
-        </div>
-      `;
+            // GỌI HÀM RENDER ĐỘNG
+            slideContainer.innerHTML = this.renderItemContent(item);
         };
         const next = () => {
             currentIndex = (currentIndex + 1) % items.length;
@@ -1194,208 +1398,48 @@ class PopupDisplay {
             resetAutoSlide();
         };
         const resetAutoSlide = () => {
-            if (this.autoSlideTimeout) {
+            if (this.autoSlideTimeout)
                 clearTimeout(this.autoSlideTimeout);
-            }
-            this.autoSlideTimeout = setTimeout(next, this.AUTO_SLIDE_DELAY);
+            this.autoSlideTimeout = setTimeout(next, this.DEFAULT_DELAY);
         };
-        prevBtn === null || prevBtn === void 0 ? void 0 : prevBtn.addEventListener('click', prev);
-        nextBtn === null || nextBtn === void 0 ? void 0 : nextBtn.addEventListener('click', next);
-        // Click handler for items
-        slideContainer === null || slideContainer === void 0 ? void 0 : slideContainer.addEventListener('click', (e) => {
-            e.target.closest('.recsys-item');
-        });
-        // Start carousel
+        (_a = shadow.querySelector('.recsys-prev')) === null || _a === void 0 ? void 0 : _a.addEventListener('click', prev);
+        (_b = shadow.querySelector('.recsys-next')) === null || _b === void 0 ? void 0 : _b.addEventListener('click', next);
         renderSlide();
         resetAutoSlide();
     }
-    // Remove popup
     removePopup() {
         if (this.shadowHost) {
             this.shadowHost.remove();
             this.shadowHost = null;
         }
     }
-    // Clear all timeouts
     clearTimeouts() {
-        if (this.popupTimeout) {
+        if (this.popupTimeout)
             clearTimeout(this.popupTimeout);
-            this.popupTimeout = null;
-        }
-        if (this.autoCloseTimeout) {
+        if (this.autoCloseTimeout)
             clearTimeout(this.autoCloseTimeout);
-            this.autoCloseTimeout = null;
-        }
-        if (this.autoSlideTimeout) {
+        if (this.autoSlideTimeout)
             clearTimeout(this.autoSlideTimeout);
-            this.autoSlideTimeout = null;
-        }
-    }
-    // Get popup styles
-    getPopupStyles() {
-        return `
-      :host { all: initial; font-family: Arial, sans-serif; }
-      * { box-sizing: border-box; }
-
-      .recsys-popup {
-        position: fixed;
-        bottom: 24px;
-        right: 24px;
-        width: 340px;
-        background: #fff;
-        border-radius: 12px;
-        box-shadow: 0 4px 28px rgba(0,0,0,0.25);
-        z-index: 2147483647;
-        overflow: hidden;
-        animation: fadeIn 0.3s ease;
-        display: flex;
-        flex-direction: column;
-        border: 1px solid #e0e0e0;
-      }
-
-      @keyframes fadeIn {
-        from {
-          opacity: 0;
-          transform: translateY(10px);
-        }
-        to {
-          opacity: 1;
-          transform: translateY(0);
-        }
-      }
-
-      .recsys-header {
-        background: #111;
-        color: #fff;
-        padding: 12px 14px;
-        font-size: 15px;
-        font-weight: bold;
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-      }
-
-      .recsys-close {
-        cursor: pointer;
-        font-size: 18px;
-        line-height: 1;
-        opacity: 0.8;
-        background: none;
-        border: none;
-        color: white;
-        padding: 0;
-      }
-
-      .recsys-close:hover {
-        opacity: 1;
-      }
-
-      .recsys-body {
-        position: relative;
-        height: 220px;
-        background: #fff;
-      }
-
-      .recsys-nav {
-        position: absolute;
-        top: 50%;
-        transform: translateY(-50%);
-        font-size: 20px;
-        background: rgba(255,255,255,0.8);
-        border: 1px solid #ddd;
-        cursor: pointer;
-        width: 30px;
-        height: 30px;
-        border-radius: 50%;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        z-index: 2;
-        transition: all 0.2s;
-        color: #333;
-        padding: 0;
-      }
-
-      .recsys-nav:hover {
-        background: #fff;
-        box-shadow: 0 2px 5px rgba(0,0,0,0.1);
-      }
-
-      .recsys-prev {
-        left: 10px;
-      }
-
-      .recsys-next {
-        right: 10px;
-      }
-
-      .recsys-slide {
-        text-align: center;
-        padding: 15px;
-        height: 100%;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-      }
-
-      .recsys-item {
-        display: flex;
-        flex-direction: column;
-        align-items: center;
-        gap: 8px;
-        cursor: pointer;
-      }
-
-      .recsys-item img {
-        width: 180px;
-        height: 130px;
-        border-radius: 8px;
-        object-fit: cover;
-      }
-
-      .recsys-name {
-        font-size: 16px;
-        font-weight: 600;
-        margin: 5px 0 0;
-        color: #333;
-      }
-
-      .recsys-description {
-        font-size: 12px;
-        color: #666;
-        margin-top: 4px;
-        display: -webkit-box;
-        -webkit-line-clamp: 2;
-        -webkit-box-orient: vertical;
-        overflow: hidden;
-        text-overflow: ellipsis;
-      }
-    `;
+        this.popupTimeout = null;
+        this.autoCloseTimeout = null;
+        this.autoSlideTimeout = null;
     }
 }
 
 class InlineDisplay {
-    constructor(_domainKey, _slotName, selector, _apiBaseUrl, config = {}, recommendationGetter) {
+    constructor(_slotName, selector, _apiBaseUrl, config = {}, recommendationGetter) {
         this.observer = null;
         this.debounceTimer = null;
         this.selector = selector;
         this.recommendationGetter = recommendationGetter;
-        this.config = {
-            pages: config.pages || ['*'], // Default show on all pages
-        };
+        this.config = { ...config };
     }
-    // Bắt đầu inline display
     start() {
-        // Kiểm tra page có được phép không
-        if (!this.isPageAllowed(window.location.pathname)) {
-            return;
-        }
-        // Quét lần đầu
+        // Inline thường chỉ cần check selector tồn tại, 
+        // nhưng nếu có trigger config check URL thì thêm ở đây
         this.scanAndRender();
-        // Setup MutationObserver để theo dõi DOM changes
         this.setupObserver();
     }
-    // Dừng inline display
     stop() {
         if (this.observer) {
             this.observer.disconnect();
@@ -1403,226 +1447,187 @@ class InlineDisplay {
         }
         if (this.debounceTimer) {
             clearTimeout(this.debounceTimer);
-            this.debounceTimer = null;
         }
     }
-    // Quét và render tất cả containers
     scanAndRender() {
         const containers = this.findContainers();
         containers.forEach(container => {
             this.processContainer(container);
         });
     }
-    // Tìm containers với fallback logic
     findContainers() {
-        // Thử selector gốc trước
         let containers = document.querySelectorAll(this.selector);
         if (containers.length === 0) {
-            // Thử thêm . (class selector)
-            const classSelector = `.${this.selector}`;
-            containers = document.querySelectorAll(classSelector);
+            containers = document.querySelectorAll(`.${this.selector}`);
             if (containers.length === 0) {
-                // Thử thêm # (id selector)
-                const idSelector = `#${this.selector}`;
-                containers = document.querySelectorAll(idSelector);
+                containers = document.querySelectorAll(`#${this.selector}`);
             }
         }
         return containers;
     }
-    // Setup MutationObserver để theo dõi DOM changes
     setupObserver() {
         this.observer = new MutationObserver(() => {
-            // Debounce để tránh xử lý quá nhiều
-            if (this.debounceTimer) {
+            if (this.debounceTimer)
                 clearTimeout(this.debounceTimer);
-            }
             this.debounceTimer = setTimeout(() => {
                 this.scanAndRender();
             }, 100);
         });
-        this.observer.observe(document.body, {
-            childList: true,
-            subtree: true,
-        });
+        this.observer.observe(document.body, { childList: true, subtree: true });
     }
-    // Xử lý từng container
     async processContainer(container) {
-        // Kiểm tra đã render chưa
-        if (!container || container.getAttribute('data-recsys-loaded') === 'true') {
+        if (!container || container.getAttribute('data-recsys-loaded') === 'true')
             return;
-        }
-        // Đánh dấu đã xử lý
         container.setAttribute('data-recsys-loaded', 'true');
         try {
-            // Fetch recommendations
             const items = await this.fetchRecommendations();
             if (items && items.length > 0) {
                 this.renderWidget(container, items);
             }
         }
-        catch (error) {
-            // console.error('[InlineDisplay] Error processing container:', error);
-        }
+        catch (error) { }
     }
-    // Kiểm tra page có được phép hiển thị không
-    isPageAllowed(currentPath) {
-        const allowedPatterns = this.config.pages || [];
-        if (allowedPatterns.length === 0 || allowedPatterns.includes('*')) {
-            return true;
-        }
-        return allowedPatterns.some(pattern => {
-            if (pattern === '/')
-                return currentPath === '/';
-            // Hỗ trợ wildcard
-            if (pattern.endsWith('/*')) {
-                const base = pattern.slice(0, -2);
-                return currentPath.startsWith(base);
-            }
-            return currentPath === pattern;
-        });
-    }
-    // Fetch recommendations từ DisplayManager (đã cached)
     async fetchRecommendations() {
         try {
-            const items = await this.recommendationGetter();
-            return items;
+            return await this.recommendationGetter();
         }
-        catch (error) {
+        catch {
             return [];
         }
     }
-    // Render widget với Shadow DOM
-    renderWidget(container, items) {
-        try {
-            // Setup Shadow DOM
-            let shadow = container.shadowRoot;
-            if (!shadow) {
-                shadow = container.attachShadow({ mode: 'open' });
-            }
-            // Clear existing content
-            shadow.innerHTML = '';
-            // Add styles
-            const style = document.createElement('style');
-            style.textContent = this.getWidgetStyles();
-            shadow.appendChild(style);
-            // Create wrapper
-            const wrapper = document.createElement('div');
-            wrapper.className = 'recsys-wrapper';
-            // Create items
-            items.forEach(item => {
-                const title = item.title || 'Sản phẩm';
-                const description = item.description || '';
-                const img = item.img;
-                const itemEl = document.createElement('div');
-                itemEl.className = 'recsys-item';
-                itemEl.setAttribute('data-id', String(item.id));
-                itemEl.setAttribute('data-domain-item-id', item.domainItemId);
-                itemEl.innerHTML = `
-          <div class="recsys-img-box">
-            <img src="${img}" alt="${title}">
-          </div>
-          <div class="recsys-info">
-            <div class="recsys-title">${title}</div>
-            <div class="recsys-description">${description}</div>
-          </div>
-        `;
-                wrapper.appendChild(itemEl);
-            });
-            shadow.appendChild(wrapper);
-            // Setup click handler
-            wrapper.addEventListener('click', (e) => {
-                const itemEl = e.target.closest('.recsys-item');
-                if (itemEl) {
-                    // const itemId = itemEl.getAttribute('data-id');
-                    // TODO: Track click event
-                }
-            });
-        }
-        catch (error) {
-            // console.error('[InlineDisplay] Error rendering widget:', error);
-        }
-    }
-    // Get widget styles
+    // --- DYNAMIC CSS INLINE ---
     getWidgetStyles() {
+        var _a, _b, _c, _d, _e, _f, _g;
+        const style = this.config.styleJson || {};
+        const tokens = style.tokens || {};
+        const contentMode = ((_a = this.config.layoutJson) === null || _a === void 0 ? void 0 : _a.contentMode) || 'grid';
+        const colors = tokens.colors || {};
+        const typo = tokens.typography || {};
+        // Grid settings
+        const gridMode = ((_c = (_b = this.config.layoutJson) === null || _b === void 0 ? void 0 : _b.modes) === null || _c === void 0 ? void 0 : _c.grid) || {};
+        const listMode = ((_e = (_d = this.config.layoutJson) === null || _d === void 0 ? void 0 : _d.modes) === null || _e === void 0 ? void 0 : _e.list) || {};
+        const gridCSS = `
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+        gap: ${gridMode.gap || '16px'};
+    `;
+        const listCSS = `
+        display: flex;
+        flex-direction: column;
+        gap: ${listMode.gap || '12px'};
+    `;
+        const wrapperCSS = contentMode === 'list' ? listCSS : gridCSS;
+        const itemDirection = contentMode === 'list' ? 'row' : 'column';
+        const imgWidth = contentMode === 'list' ? '120px' : '100%';
+        const imgHeight = contentMode === 'list' ? 'auto' : '100%';
+        const imgPos = contentMode === 'list' ? 'relative' : 'absolute';
+        const imgBoxPadding = contentMode === 'list' ? '0' : '100%';
         return `
-      :host {
-        display: block;
-        all: initial;
-        font-family: Arial, sans-serif;
-        width: 100%;
-      }
-      * {
-        box-sizing: border-box;
-      }
+      :host { all: initial; font-family: ${typo.fontFamily || 'Arial, sans-serif'}; width: 100%; display: block; }
+      * { box-sizing: border-box; }
 
       .recsys-wrapper {
-        display: grid;
-        grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
-        gap: 16px;
-        padding: 0px 0px 32px 0px;
+        ${wrapperCSS}
+        padding: 16px 0;
       }
 
       .recsys-item {
-        border: 1px solid #eee;
-        border-radius: 8px;
+        background: ${colors.surface || '#fff'};
+        border: 1px solid ${colors.border || '#eee'};
+        border-radius: ${((_f = tokens.radius) === null || _f === void 0 ? void 0 : _f.card) || 8}px;
         overflow: hidden;
-        background: #fff;
         cursor: pointer;
         transition: transform 0.2s, box-shadow 0.2s;
-        display: flex;
-        flex-direction: column;
+        display: flex; 
+        flex-direction: ${itemDirection}; /* Dynamic direction */
+        height: 100%;
+        min-height: ${contentMode === 'list' ? '100px' : 'auto'};
       }
 
       .recsys-item:hover {
         transform: translateY(-2px);
-        box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+        box-shadow: ${((_g = tokens.shadow) === null || _g === void 0 ? void 0 : _g.cardHover) || '0 4px 12px rgba(0,0,0,0.1)'};
       }
 
       .recsys-img-box {
-        width: 100%;
-        padding-top: 100%;
-        position: relative;
+        width: ${imgWidth}; 
+        padding-top: ${imgBoxPadding}; 
+        position: relative; 
         background: #f9f9f9;
+        flex-shrink: 0; /* Không bị co lại trong list view */
       }
-
+      
       .recsys-img-box img {
-        position: absolute;
-        top: 0;
-        left: 0;
-        width: 100%;
-        height: 100%;
-        object-fit: cover;
+        position: ${imgPos}; top: 0; left: 0; width: 100%; height: ${imgHeight}; object-fit: cover;
       }
 
-      .recsys-info {
-        padding: 10px;
-        flex-grow: 1;
-        display: flex;
-        flex-direction: column;
-      }
+      .recsys-info { padding: 12px; display: flex; flex-direction: column; flex-grow: 1; gap: 4px; justify-content: center; }
 
-      .recsys-title {
-        font-size: 14px;
-        font-weight: 600;
-        color: #333;
-        margin-bottom: 4px;
-        display: -webkit-box;
-        -webkit-line-clamp: 2;
-        -webkit-box-orient: vertical;
-        overflow: hidden;
+      /* Styles giữ nguyên... */
+      .recsys-field-product_name {
+        font-size: 14px; font-weight: 600; color: ${colors.textPrimary || '#333'};
+        display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;
       }
-
-      .recsys-description {
-        font-size: 12px;
-        color: #666;
-        margin-top: auto;
-        display: -webkit-box;
-        -webkit-line-clamp: 2;
-        -webkit-box-orient: vertical;
-        overflow: hidden;
-        text-overflow: ellipsis;
+      .recsys-field-price { color: ${colors.primary || '#d32f2f'}; font-weight: bold; }
+      .recsys-field-description {
+        font-size: 12px; color: ${colors.textSecondary || '#666'};
+        display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;
       }
     `;
+    }
+    // --- DYNAMIC HTML INLINE ---
+    renderItemContent(item) {
+        var _a;
+        const fields = ((_a = this.config.customizingFields) === null || _a === void 0 ? void 0 : _a.fields) || [];
+        const activeFields = fields.filter(f => f.isEnabled).sort((a, b) => a.position - b.position);
+        let html = '';
+        // Tách ảnh ra render riêng ở trên đầu card (chuẩn UI card)
+        const imageField = activeFields.find(f => f.key === 'image' || f.key === 'img');
+        if (imageField) {
+            html += `
+          <div class="recsys-img-box">
+             <img src="${item.img}" alt="${item.title || ''}">
+          </div>
+        `;
+        }
+        html += `<div class="recsys-info">`;
+        activeFields.forEach(field => {
+            const key = field.key;
+            if (key === 'image' || key === 'img')
+                return; // Đã render ở trên
+            let value = '';
+            if (key === 'product_name' || key === 'name')
+                value = item.title;
+            else if (key === 'description')
+                value = item.description;
+            else
+                value = item[key];
+            if (value) {
+                html += `<div class="recsys-field-${key}">${value}</div>`;
+            }
+        });
+        html += `</div>`;
+        return html;
+    }
+    renderWidget(container, items) {
+        let shadow = container.shadowRoot;
+        if (!shadow)
+            shadow = container.attachShadow({ mode: 'open' });
+        shadow.innerHTML = '';
+        const style = document.createElement('style');
+        style.textContent = this.getWidgetStyles();
+        shadow.appendChild(style);
+        const wrapper = document.createElement('div');
+        wrapper.className = 'recsys-wrapper';
+        items.forEach(item => {
+            const itemEl = document.createElement('div');
+            itemEl.className = 'recsys-item';
+            itemEl.setAttribute('data-id', String(item.id));
+            // GỌI RENDER ĐỘNG
+            itemEl.innerHTML = this.renderItemContent(item);
+            wrapper.appendChild(itemEl);
+        });
+        shadow.appendChild(wrapper);
     }
 }
 
@@ -1733,9 +1738,13 @@ class PlaceholderImage {
 }
 
 class RecommendationFetcher {
-    constructor(domainKey, apiBaseUrl = 'https://recsys-tracker-module.onrender.com') {
+    // constructor(domainKey: string, apiBaseUrl: string = 'https://recsys-tracker-module.onrender.com') {
+    //   this.domainKey = domainKey;
+    //   this.apiBaseUrl = apiBaseUrl;
+    //   this.cache = new Map();
+    // }
+    constructor(apiBaseUrl = 'http://localhost:3001') {
         this.CACHE_TTL = 5 * 60 * 1000; // 5 minutes cache
-        this.domainKey = domainKey;
         this.apiBaseUrl = apiBaseUrl;
         this.cache = new Map();
     }
@@ -1750,7 +1759,7 @@ class RecommendationFetcher {
             // Prepare request payload
             const requestBody = {
                 AnonymousId: this.getOrCreateAnonymousId(),
-                DomainKey: this.domainKey,
+                //DomainKey: this.domainKey,
                 NumberItems: options.numberItems || 10,
             };
             // Set UserId or AnonymousId based on userField
@@ -1759,7 +1768,7 @@ class RecommendationFetcher {
             }
             // Call API
             const response = await fetch(`${this.apiBaseUrl}/recommendation`, {
-                method: 'POST',
+                method: 'GET',
                 headers: {
                     'Content-Type': 'application/json',
                 },
@@ -1914,37 +1923,112 @@ class RecommendationFetcher {
 
 const ANON_USER_ID_KEY = 'recsys_anon_id';
 class DisplayManager {
-    constructor(domainKey, apiBaseUrl = 'https://recsys-tracker-module.onrender.com') {
+    // constructor(domainKey: string, apiBaseUrl: string = 'https://recsys-tracker-module.onrender.com') {
+    //   this.domainKey = domainKey;
+    //   this.apiBaseUrl = apiBaseUrl;
+    //   this.recommendationFetcher = new RecommendationFetcher(domainKey, apiBaseUrl);
+    // }
+    constructor(apiBaseUrl = 'https://recsys-tracker-module.onrender.com') {
         this.popupDisplay = null;
         this.inlineDisplay = null;
         this.cachedRecommendations = null;
         this.fetchPromise = null;
-        this.domainKey = domainKey;
         this.apiBaseUrl = apiBaseUrl;
-        this.recommendationFetcher = new RecommendationFetcher(domainKey, apiBaseUrl);
+        this.recommendationFetcher = new RecommendationFetcher(apiBaseUrl);
     }
-    // Khởi tạo display methods dựa trên config
+    // Khởi tạo display methods dựa trên danh sách config
     async initialize(returnMethods) {
-        if (!returnMethods || returnMethods.length === 0) {
+        if (!returnMethods || !Array.isArray(returnMethods) || returnMethods.length === 0) {
+            console.warn('[DisplayManager] No return methods provided for initialization.');
             return;
         }
-        // Fetch recommendations 1 lần duy nhất cho tất cả display methods
-        await this.fetchRecommendationsOnce();
+        try {
+            await this.fetchRecommendationsOnce();
+        }
+        catch (error) {
+            console.error('[DisplayManager] Failed to fetch recommendations.');
+        }
         returnMethods.forEach(method => {
             this.activateDisplayMethod(method);
         });
+        console.log('[DisplayManager] Initialized with return methods:', returnMethods);
     }
-    // Fetch recommendations 1 lần duy nhất và cache kết quả
+    // Phân loại và kích hoạt display method tương ứng
+    activateDisplayMethod(method) {
+        var _a;
+        const { ReturnType, ConfigurationName, Value, OperatorId } = method;
+        // Chuẩn bị cấu hình chung (Giao diện, Style, Fields)
+        const commonConfig = {
+            layoutJson: method.LayoutJson,
+            styleJson: method.StyleJson,
+            customizingFields: method.CustomizingFields
+        };
+        // Kiểm tra loại hiển thị (Lưu ý: Backend thường trả về chữ hoa)
+        const type = ReturnType === null || ReturnType === void 0 ? void 0 : ReturnType.toUpperCase();
+        if (type === 'POPUP') {
+            const duration = ((_a = method.DelayDuration) !== null && _a !== void 0 ? _a : 0) * 1000;
+            const popupConfig = {
+                ...commonConfig,
+                delay: duration,
+                autoCloseDelay: 0,
+                triggerConfig: {
+                    targetValue: Value,
+                    operatorId: OperatorId
+                }
+            };
+            this.initializePopup(ConfigurationName, popupConfig);
+        }
+        else if (type === 'INLINE-INJECTION' || type === 'INLINE_INJECTION') {
+            const inlineConfig = {
+                ...commonConfig,
+                selector: Value
+            };
+            this.initializeInline(ConfigurationName, inlineConfig);
+        }
+    }
+    // Khởi tạo Popup Display với Config đầy đủ
+    // private initializePopup(slotName: string, config: PopupConfig): void {
+    //   try {
+    //     this.popupDisplay = new PopupDisplay(
+    //       this.domainKey,
+    //       slotName,
+    //       this.apiBaseUrl,
+    //       config, 
+    //       () => this.getRecommendations()
+    //     );
+    //     this.popupDisplay.start();
+    //   } catch (error) {
+    //     console.error('[DisplayManager] Error initializing popup:', error);
+    //   }
+    // }
+    initializePopup(slotName, config) {
+        try {
+            this.popupDisplay = new PopupDisplay(slotName, this.apiBaseUrl, config, () => this.getRecommendations());
+            this.popupDisplay.start();
+        }
+        catch (error) {
+            console.error('[DisplayManager] Error initializing popup:', error);
+        }
+    }
+    // Khởi tạo Inline Display với Config đầy đủ
+    initializeInline(slotName, config) {
+        try {
+            if (!config.selector)
+                return;
+            this.inlineDisplay = new InlineDisplay(slotName, config.selector, this.apiBaseUrl, config, // Truyền object config
+            () => this.getRecommendations());
+            this.inlineDisplay.start();
+        }
+        catch (error) {
+            console.error('[DisplayManager] Error initializing inline:', error);
+        }
+    }
+    // --- LOGIC FETCH RECOMMENDATION (GIỮ NGUYÊN) ---
     async fetchRecommendationsOnce() {
-        // Nếu đã có cache, return ngay
-        if (this.cachedRecommendations) {
+        if (this.cachedRecommendations)
             return this.cachedRecommendations;
-        }
-        // Nếu đang fetch, đợi kết quả
-        if (this.fetchPromise) {
+        if (this.fetchPromise)
             return this.fetchPromise;
-        }
-        // Fetch mới
         this.fetchPromise = this.fetchRecommendationsInternal();
         try {
             this.cachedRecommendations = await this.fetchPromise;
@@ -1954,88 +2038,28 @@ class DisplayManager {
             this.fetchPromise = null;
         }
     }
-    // Internal fetch method
     async fetchRecommendationsInternal() {
         try {
-            // MOCK: Temporarily using UserId="1" for testing
-            // TODO: Uncomment below code when enough data is available
             const anonymousId = this.getAnonymousId();
-            if (!anonymousId) {
+            if (!anonymousId)
                 return [];
-            }
-            const items = await this.recommendationFetcher.fetchRecommendations(anonymousId, 'AnonymousId', { numberItems: 6 });
-            return items;
+            return await this.recommendationFetcher.fetchRecommendations(anonymousId, 'AnonymousId', { numberItems: 6 });
         }
         catch (error) {
             return [];
         }
     }
-    // Lấy anonymous ID từ localStorage (recsys_anon_id)
     getAnonymousId() {
         try {
-            const anonId = localStorage.getItem(ANON_USER_ID_KEY);
-            if (anonId) {
-                return anonId;
-            }
-            return null;
+            return localStorage.getItem(ANON_USER_ID_KEY) || null;
         }
-        catch (error) {
+        catch {
             return null;
         }
     }
-    // Get cached recommendations
     async getRecommendations() {
         return this.fetchRecommendationsOnce();
     }
-    // Kích hoạt display method tương ứng
-    activateDisplayMethod(method) {
-        const { returnType, configurationName, value } = method;
-        switch (returnType) {
-            case 'POPUP': // Popup
-                this.initializePopup(configurationName, value);
-                break;
-            case 'INLINE-INJECTION': // Inline (with hyphen)
-            case 'INLINE_INJECTION': // Inline (with underscore)
-                this.initializeInline(configurationName, value);
-                break;
-        }
-    }
-    // Khởi tạo Popup Display
-    initializePopup(slotName, config) {
-        try {
-            // Parse config nếu là JSON string, nếu không thì dùng default
-            let popupConfig = {};
-            if (config) {
-                try {
-                    popupConfig = JSON.parse(config);
-                }
-                catch {
-                    popupConfig = {};
-                }
-            }
-            this.popupDisplay = new PopupDisplay(this.domainKey, slotName, this.apiBaseUrl, popupConfig, () => this.getRecommendations() // Provide getter function
-            );
-            this.popupDisplay.start();
-        }
-        catch (error) {
-            // console.error('[DisplayManager] Error initializing popup:', error);
-        }
-    }
-    // Khởi tạo Inline Display
-    initializeInline(slotName, selector) {
-        try {
-            if (!selector) {
-                return;
-            }
-            this.inlineDisplay = new InlineDisplay(this.domainKey, slotName, selector, this.apiBaseUrl, {}, () => this.getRecommendations() // Provide getter function
-            );
-            this.inlineDisplay.start();
-        }
-        catch (error) {
-            console.error('[DisplayManager] Error initializing inline:', error);
-        }
-    }
-    // Dừng tất cả display methods
     destroy() {
         if (this.popupDisplay) {
             this.popupDisplay.stop();
@@ -4800,8 +4824,10 @@ class RecSysTracker {
                 }
                 // Khởi tạo Display Manager nếu có returnMethods
                 if (this.config.returnMethods && this.config.returnMethods.length > 0) {
+                    //const apiBaseUrl = "https://recsys-tracker-module.onrender.com" || 'https://recsys-tracker-module.onrender.com';
                     const apiBaseUrl = "https://recsys-tracker-module.onrender.com";
-                    this.displayManager = new DisplayManager(this.config.domainKey, apiBaseUrl);
+                    // this.displayManager = new DisplayManager(this.config.domainKey, apiBaseUrl);
+                    this.displayManager = new DisplayManager(apiBaseUrl);
                     await this.displayManager.initialize(this.config.returnMethods);
                 }
                 // Tự động khởi tạo plugins dựa trên rules

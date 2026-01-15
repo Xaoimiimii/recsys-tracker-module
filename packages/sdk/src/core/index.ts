@@ -26,7 +26,7 @@ export { LoopGuard } from './utils/loop-guard';
 export { DisplayManager } from './display/display-manager';
 export { PopupDisplay } from './display/popup-display';
 export { InlineDisplay } from './display/inline-display';
-export * from './display/types';
+export * from '../types';
 
 // Recommendation
 export { RecommendationFetcher } from './recommendation/recommendation-fetcher';

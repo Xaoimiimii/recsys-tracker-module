@@ -3,7 +3,7 @@ export type UserField = 'UserId' | 'Username' | 'AnonymousId';
 export interface RecommendationRequest {
   UserId?: string;
   AnonymousId: string;
-  DomainKey: string;
+  //DomainKey: string;
   NumberItems: number;
 }
 
