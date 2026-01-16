@@ -29,48 +29,23 @@ export const ActionType = {
 export type ActionType = (typeof ActionType)[keyof typeof ActionType]
 
 
-export const PayloadField = {
-  UserId: 'UserId',
-  Username: 'Username',
-  ItemId: 'ItemId',
-  ItemTitle: 'ItemTitle',
-  Value: 'Value',
-  AnonymousId: 'AnonymousId'
+export const ItemIdentitySource = {
+  request_body: 'request_body',
+  request_url: 'request_url'
 } as const
 
-export type PayloadField = (typeof PayloadField)[keyof typeof PayloadField]
+export type ItemIdentitySource = (typeof ItemIdentitySource)[keyof typeof ItemIdentitySource]
 
 
-export const PayloadSource = {
-  RequestBody: 'RequestBody',
-  Element: 'Element',
-  Cookie: 'Cookie',
-  LocalStorage: 'LocalStorage',
-  SessionStorage: 'SessionStorage',
-  Url: 'Url',
-  RequestUrl: 'RequestUrl'
+export const UserIdentitySource = {
+  request_body: 'request_body',
+  local_storage: 'local_storage',
+  session_storage: 'session_storage',
+  cookie: 'cookie',
+  element: 'element'
 } as const
 
-export type PayloadSource = (typeof PayloadSource)[keyof typeof PayloadSource]
-
-
-export const PayloadRequestMethod = {
-  GET: 'GET',
-  POST: 'POST',
-  PUT: 'PUT',
-  PATCH: 'PATCH'
-} as const
-
-export type PayloadRequestMethod = (typeof PayloadRequestMethod)[keyof typeof PayloadRequestMethod]
-
-
-export const PayloadUrlPart = {
-  QueryParam: 'QueryParam',
-  PathName: 'PathName',
-  Hash: 'Hash'
-} as const
-
-export type PayloadUrlPart = (typeof PayloadUrlPart)[keyof typeof PayloadUrlPart]
+export type UserIdentitySource = (typeof UserIdentitySource)[keyof typeof UserIdentitySource]
 
 
 export const EventUserField = {

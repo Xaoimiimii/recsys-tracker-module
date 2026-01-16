@@ -56,10 +56,8 @@ export const ModelName = {
   ReturnMethod: 'ReturnMethod',
   TrackingRule: 'TrackingRule',
   EventType: 'EventType',
-  TrackingTarget: 'TrackingTarget',
-  Condition: 'Condition',
-  Pattern: 'Pattern',
-  PayloadMapping: 'PayloadMapping',
+  ItemIdentity: 'ItemIdentity',
+  UserIdentity: 'UserIdentity',
   Operator: 'Operator',
   Event: 'Event',
   SearchKeywordConfig: 'SearchKeywordConfig',
@@ -116,7 +114,6 @@ export type DomainScalarFieldEnum = (typeof DomainScalarFieldEnum)[keyof typeof 
 export const ReturnMethodScalarFieldEnum = {
   Id: 'Id',
   DomainID: 'DomainID',
-  OperatorID: 'OperatorID',
   SearchKeywordConfigID: 'SearchKeywordConfigID',
   ReturnType: 'ReturnType',
   Value: 'Value',
@@ -135,7 +132,7 @@ export const TrackingRuleScalarFieldEnum = {
   Name: 'Name',
   DomainID: 'DomainID',
   EventTypeID: 'EventTypeID',
-  TrackingTargetId: 'TrackingTargetId',
+  TrackingTarget: 'TrackingTarget',
   ActionType: 'ActionType'
 } as const
 
@@ -150,50 +147,25 @@ export const EventTypeScalarFieldEnum = {
 export type EventTypeScalarFieldEnum = (typeof EventTypeScalarFieldEnum)[keyof typeof EventTypeScalarFieldEnum]
 
 
-export const TrackingTargetScalarFieldEnum = {
+export const ItemIdentityScalarFieldEnum = {
   Id: 'Id',
-  Value: 'Value',
-  PatternId: 'PatternId',
-  OperatorId: 'OperatorId'
-} as const
-
-export type TrackingTargetScalarFieldEnum = (typeof TrackingTargetScalarFieldEnum)[keyof typeof TrackingTargetScalarFieldEnum]
-
-
-export const ConditionScalarFieldEnum = {
-  Id: 'Id',
-  Value: 'Value',
-  TrackingRuleID: 'TrackingRuleID',
-  PatternId: 'PatternId',
-  OperatorID: 'OperatorID'
-} as const
-
-export type ConditionScalarFieldEnum = (typeof ConditionScalarFieldEnum)[keyof typeof ConditionScalarFieldEnum]
-
-
-export const PatternScalarFieldEnum = {
-  Id: 'Id',
-  Name: 'Name'
-} as const
-
-export type PatternScalarFieldEnum = (typeof PatternScalarFieldEnum)[keyof typeof PatternScalarFieldEnum]
-
-
-export const PayloadMappingScalarFieldEnum = {
-  Id: 'Id',
-  Field: 'Field',
   Source: 'Source',
-  Value: 'Value',
-  RequestUrl: 'RequestUrl',
-  RequestUrlPattern: 'RequestUrlPattern',
-  RequestMethod: 'RequestMethod',
-  RequestBodyPath: 'RequestBodyPath',
-  UrlPart: 'UrlPart',
-  UrlPartValue: 'UrlPartValue',
-  TrackingRuleId: 'TrackingRuleId'
+  TrackingRuleId: 'TrackingRuleId',
+  RequestConfig: 'RequestConfig'
 } as const
 
-export type PayloadMappingScalarFieldEnum = (typeof PayloadMappingScalarFieldEnum)[keyof typeof PayloadMappingScalarFieldEnum]
+export type ItemIdentityScalarFieldEnum = (typeof ItemIdentityScalarFieldEnum)[keyof typeof ItemIdentityScalarFieldEnum]
+
+
+export const UserIdentityScalarFieldEnum = {
+  Id: 'Id',
+  Source: 'Source',
+  DomainId: 'DomainId',
+  RequestConfig: 'RequestConfig',
+  Value: 'Value'
+} as const
+
+export type UserIdentityScalarFieldEnum = (typeof UserIdentityScalarFieldEnum)[keyof typeof UserIdentityScalarFieldEnum]
 
 
 export const OperatorScalarFieldEnum = {
