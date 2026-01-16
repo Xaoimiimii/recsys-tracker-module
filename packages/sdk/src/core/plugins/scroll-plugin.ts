@@ -1,12 +1,6 @@
 import { BasePlugin } from './base-plugin';
 import { RecSysTracker } from '../..';
 
-// CONDITION PATTERNS
-const CONDITION_PATTERN = { CSS_SELECTOR: 1, URL: 2, DATA_ATTRIBUTE: 3 };
-
-// OPERATORS
-const TARGET_OPERATOR = { CONTAINS: 1, EQUALS: 2, STARTS_WITH: 3, ENDS_WITH: 4 };
-
 export class ScrollPlugin extends BasePlugin {
     public readonly name = 'ScrollPlugin';
 
@@ -91,12 +85,10 @@ export class ScrollPlugin extends BasePlugin {
             if (element) {
                 const representativeEl = (element instanceof Window) ? document.body : element as HTMLElement;
 
-                if (this.checkConditions(representativeEl, rule)) {
-                    this.activeRule = rule;
-                    this.targetScrollElement = (element instanceof Window) ? null : element as HTMLElement;
-                    this.detectContextForItem(representativeEl);
-                    return true;
-                }
+                this.activeRule = rule;
+                this.targetScrollElement = (element instanceof Window) ? null : element as HTMLElement;
+                this.detectContextForItem(representativeEl);
+                return true;
             }
         }
 
@@ -104,14 +96,15 @@ export class ScrollPlugin extends BasePlugin {
     }
 
     private findTargetElement(rule: any): HTMLElement | Window | null {
-        const target = rule.targetElement || rule.TargetElement;
-        if (!target || !target.targetElementValue || target.targetElementValue === 'document' || target.targetElementValue === 'window') {
+        // Use trackingTarget directly (always CSS Selector)
+        const target = rule.trackingTarget || rule.TrackingTarget;
+        if (!target || target === 'document' || target === 'window') {
             return window;
         }
 
-        const selector = target.targetElementValue || target.Value;
+        // Target is CSS Selector
         try {
-            const el = document.querySelector(selector);
+            const el = document.querySelector(target);
             return el as HTMLElement;
         } catch {
             return null;
@@ -135,51 +128,8 @@ export class ScrollPlugin extends BasePlugin {
         }
     }
 
-    private checkConditions(element: HTMLElement, rule: any): boolean {
-        const conditions = rule.Conditions || rule.conditions;
-        if (!conditions || conditions.length === 0) return true;
-
-        for (const condition of conditions) {
-            const patternId = condition.EventPatternID || condition.eventPatternId || 1;
-            const operatorId = condition.OperatorID || condition.operatorId || 5;
-            const expectedValue = condition.Value || condition.value || '';
-
-            let actualValue: string | null = null;
-            let isMet = false;
-
-            switch (patternId) {
-                case CONDITION_PATTERN.URL:
-                    const urlParams = new URLSearchParams(window.location.search);
-                    if (urlParams.has(expectedValue)) actualValue = urlParams.get(expectedValue);
-                    else actualValue = window.location.href;
-                    break;
-                case CONDITION_PATTERN.CSS_SELECTOR:
-                    try {
-                        isMet = element.matches(expectedValue);
-                        if (!isMet) return false;
-                        continue;
-                    } catch { return false; }
-                case CONDITION_PATTERN.DATA_ATTRIBUTE:
-                    actualValue = element.getAttribute(expectedValue); break;
-                default: actualValue = '';
-            }
-
-            isMet = this.compareValues(actualValue, expectedValue, operatorId);
-            if (!isMet) return false;
-        }
-        return true;
-    }
-
-    private compareValues(actual: string | null, expected: string, operatorId: number): boolean {
-        if (actual === null) actual = '';
-        switch (operatorId) {
-            case TARGET_OPERATOR.EQUALS: return actual === expected;
-            case TARGET_OPERATOR.CONTAINS: return actual.includes(expected);
-            case TARGET_OPERATOR.STARTS_WITH: return actual.startsWith(expected);
-            case TARGET_OPERATOR.ENDS_WITH: return actual.endsWith(expected);
-            default: return actual === expected;
-        }
-    }
+    // checkConditions removed - schema simplified, no longer uses conditions with patternId/operatorId
+    // Now tracking rules are matched directly by trackingTarget (CSS Selector)
 
     private scanSurroundingContext(element: HTMLElement): { id?: string, name?: string, type?: string, source: string } {
         const getAttrs = (el: Element | null) => {
@@ -318,8 +268,8 @@ export class ScrollPlugin extends BasePlugin {
     private createDefaultRule(id: string, name: string): any {
         return {
             id, name, eventTypeId: 4,
-            targetElement: { targetElementValue: 'document', targetEventPatternId: 1, targetOperatorId: 5 },
-            conditions: [], payloadMappings: [] // Empty mappings
+            trackingTarget: 'document', // CSS Selector
+            itemIdentities: [] // Empty mappings
         };
     }
 }

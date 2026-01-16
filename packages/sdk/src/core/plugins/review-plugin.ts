@@ -113,10 +113,11 @@ export class ReviewPlugin extends BasePlugin {
   }
 
   /**
-   * Find element matching rule selector
+   * Find element matching rule selector (CSS Selector)
    */
   private findMatchingElement(target: Element, rule: TrackingRule): Element | null {
-    const selector = rule.trackingTarget?.value;
+    // trackingTarget is now a direct string (CSS Selector)
+    const selector = rule.trackingTarget;
     if (!selector) return null;
 
     try {

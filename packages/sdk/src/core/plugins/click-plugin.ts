@@ -69,10 +69,7 @@ export class ClickPlugin extends BasePlugin {
         continue;
       }
 
-      // Check conditions
-      if (!this.checkConditions(matchedElement, rule)) {
-        continue;
-      }
+      // No checkConditions needed - schema simplified
 
       // Create trigger context
       const triggerContext = {
@@ -99,10 +96,11 @@ export class ClickPlugin extends BasePlugin {
   }
 
   /**
-   * Find element matching rule selector
+   * Find element matching rule selector (CSS Selector)
    */
   private findMatchingElement(clickedElement: HTMLElement, rule: TrackingRule): HTMLElement | null {
-    const selector = rule.trackingTarget?.value;
+    // trackingTarget is now a direct string (CSS Selector)
+    const selector = rule.trackingTarget;
     if (!selector) return null;
 
     try {
@@ -196,26 +194,10 @@ export class ClickPlugin extends BasePlugin {
   }
 
   /**
-   * Check conditions
+   * Check conditions - removed, schema simplified
+   * No longer uses conditions with patternId/operatorId
    */
-  private checkConditions(_element: HTMLElement, rule: TrackingRule): boolean {
-    const conditions = rule.conditions;
-    if (!conditions || conditions.length === 0) {
-      return true;
-    }
-
-    for (const cond of conditions) {
-      // Pattern ID 2 = URL, Operator ID 1 = CONTAINS
-      if (cond.patternId === 2 && cond.operatorId === 1) {
-        if (!window.location.href.includes(cond.value)) {
-          return false;
-        }
-      }
-      // Add more condition types as needed
-    }
-
-    return true;
-  }
+  // checkConditions removed
 
   /**
    * Dispatch tracking event

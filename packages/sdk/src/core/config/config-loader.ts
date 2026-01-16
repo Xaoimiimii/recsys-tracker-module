@@ -1,4 +1,4 @@
-import { TrackerConfig, TrackingRule, ReturnMethod, PayloadMapping, Condition, TrackingTarget } from '../../types';
+import { TrackerConfig, TrackingRule, ReturnMethod } from '../../types';
 import { OriginVerifier } from '../utils/origin-verifier';
 import { DEFAULT_API_URL, DEFAULT_CONFIG_ENDPOINT_PATH } from '../constants';
 
@@ -90,6 +90,7 @@ export class ConfigLoader {
           trackingRules: this.transformRules(rulesListData),
           returnMethods: this.transformReturnMethods(returnMethodsData),
           eventTypes: this.transformEventTypes(eventTypesData),
+          userIdentities: this.transformUserIdentities(domainData?.UserIdentities || []),
         };
 
         // Verify origin sau khi có domainUrl từ server
@@ -118,61 +119,21 @@ export class ConfigLoader {
       name: rule.Name || rule.name,
       domainId: rule.DomainID || rule.domainId,
       eventTypeId: rule.EventTypeID || rule.eventTypeId,
-      trackingTargetId: rule.TrackingTargetId || rule.trackingTargetId,
-      payloadMappings: this.transformPayloadMappings(rule.PayloadMappings || rule.payloadMappings || []),
-      conditions: this.transformConditions(rule.Conditions || rule.conditions || []),
-      trackingTarget: this.transformTrackingTarget(rule.TrackingTarget || rule.trackingTarget),
+      trackingTarget: rule.TrackingTarget || rule.trackingTarget || null,
+      itemIdentities: this.transformItemIdentities(rule.ItemIdentities || rule.itemIdentities || []),
     }));
   }
 
-  // Transform conditions từ server format sang SDK format
-  private transformConditions(conditionsData: any[]): Condition[] {
-    if (!Array.isArray(conditionsData)) return [];
+  // Transform item identities từ server format sang SDK format
+  private transformItemIdentities(itemIdentitiesData: any[]): any[] {
+    if (!Array.isArray(itemIdentitiesData)) return [];
 
-    return conditionsData.map(condition => ({
-      id: condition.Id || condition.id,
-      value: condition.Value || condition.value,
-      trackingRuleId: condition.TrackingRuleID || condition.trackingRuleId,
-      patternId: condition.PatternId || condition.patternId,
-      operatorId: condition.OperatorID || condition.operatorId,
+    return itemIdentitiesData.map(identity => ({
+      id: identity.Id || identity.id,
+      source: identity.Source || identity.source,
+      trackingRuleId: identity.TrackingRuleId || identity.trackingRuleId,
+      requestConfig: identity.RequestConfig || identity.requestConfig || null,
     }));
-  }
-
-  // Transform payload mappings từ server format sang SDK format
-  private transformPayloadMappings(payloadData: any[]): PayloadMapping[] {
-    if (!Array.isArray(payloadData)) return [];
-
-    return payloadData.map(payload => ({
-      id: payload.Id || payload.id,
-      field: payload.Field || payload.field,
-      source: payload.Source || payload.source,
-      value: payload.Value || payload.value,
-      requestUrlPattern: payload.RequestUrlPattern || payload.requestUrlPattern || null,
-      requestMethod: payload.RequestMethod || payload.requestMethod || null,
-      requestBodyPath: payload.RequestBodyPath || payload.requestBodyPath || null,
-      urlPart: payload.UrlPart || payload.urlPart || null,
-      urlPartValue: payload.UrlPartValue || payload.urlPartValue || null,
-      trackingRuleId: payload.TrackingRuleId || payload.trackingRuleId,
-    }));
-  }
-
-  // Transform tracking target từ server format sang SDK format
-  private transformTrackingTarget(targetData: any): TrackingTarget {
-    if (!targetData) {
-      return {
-        id: 0,
-        value: '',
-        patternId: 0,
-        operatorId: 0,
-      };
-    }
-
-    return {
-      id: targetData.Id || targetData.id || 0,
-      value: targetData.Value || targetData.value || '',
-      patternId: targetData.PatternId || targetData.patternId || 0,
-      operatorId: targetData.OperatorId || targetData.operatorId || 0,
-    };
   }
 
   // Transform return methods từ server format sang SDK format
@@ -182,7 +143,6 @@ export class ConfigLoader {
     return returnMethodsData.map(method => ({
       id: method.Id || method.id,
       domainId: method.DomainID || method.domainId,
-      operatorId: method.OperatorID || method.operatorId,
       returnType: method.ReturnType || method.returnType,
       value: method.Value || method.value || '',
       configurationName: method.ConfigurationName || method.configurationName,
@@ -196,6 +156,19 @@ export class ConfigLoader {
     return eventTypesData.map(type => ({
       id: type.Id || type.id,
       name: type.Name || type.name,
+    }));
+  }
+
+  // Transform user identities từ server format sang SDK format
+  private transformUserIdentities(userIdentitiesData: any[]): any[] {
+    if (!Array.isArray(userIdentitiesData)) return [];
+
+    return userIdentitiesData.map(identity => ({
+      id: identity.Id || identity.id,
+      source: identity.Source || identity.source,
+      domainId: identity.DomainId || identity.domainId,
+      requestConfig: identity.RequestConfig || identity.requestConfig || null,
+      value: identity.Value || identity.value || null,
     }));
   }
 

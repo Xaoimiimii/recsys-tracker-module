@@ -5,6 +5,7 @@ export interface TrackerConfig {
   trackingRules?: TrackingRule[];
   returnMethods?: ReturnMethod[];
   eventTypes?: EventType[];
+  userIdentities?: UserIdentity[];
   options?: TrackerOptions;
 }
 
@@ -18,55 +19,13 @@ export interface TrackingRule {
   name: string;
   domainId: number;
   eventTypeId: number; 
-  trackingTargetId: number;
-  payloadMappings: PayloadMapping[];
-  conditions: Condition[];
-  trackingTarget: TrackingTarget;
-}
-
-export interface PayloadMapping {
-  id: number;
-  field: string;
-  source: string;
-  value: string;
-  requestUrlPattern?: string | null;
-  requestMethod?: string | null;
-  requestBodyPath?: string | null;
-  urlPart?: string | null;
-  urlPartValue?: string | null;
-  trackingRuleId: number;
-}
-
-export interface PayloadConfig {
-  field: string;
-  source: string;
-  value?: string;
-  requestUrlPattern?: string;
-  requestMethod?: string;
-  requestBodyPath?: string;
-  urlPart?: string;
-  urlPartValue?: string;
-}
-
-export interface Condition {
-  id: number;
-  value: string;
-  trackingRuleId: number;
-  patternId: number;
-  operatorId: number;
-}
-
-export interface TrackingTarget {
-  id: number;
-  value: string;
-  patternId: number;
-  operatorId: number;
+  trackingTarget: string | null;
+  itemIdentities: ItemIdentity[];
 }
 
 export interface ReturnMethod {
   id: number;
   domainId: number;
-  operatorId: number;
   returnType: string;
   value: string;
   configurationName: string;
@@ -77,6 +36,25 @@ export interface TrackerOptions {
   batchSize?: number;
   batchDelay?: number; // ms
   offlineStorage?: boolean;
+}
+
+export type ItemIdentitySource = 'request_body' | 'request_url';
+
+export interface ItemIdentity {
+  id: number;
+  source: ItemIdentitySource;
+  trackingRuleId: number;
+  requestConfig: any | null;
+}
+
+export type UserIdentitySource = 'request_body' | 'local_storage' | 'session_storage' | 'cookie' | 'element';
+
+export interface UserIdentity {
+  id: number;
+  source: UserIdentitySource;
+  domainId: number;
+  requestConfig: any | null;
+  value: string | null;
 }
 
 // Plugin-related types (đồng bộ với plugin interfaces)

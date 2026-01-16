@@ -1,5 +1,3 @@
-import { Condition } from '../../../types';
-
 export const STORAGE_KEYS = {
     ANON_USER_ID: 'recsys_anon_id',
     USER_ID: 'recsys_user_id',
@@ -145,25 +143,6 @@ export function throttle<T extends (...args: any[]) => void>(fn: T, delay: numbe
         }
     };
 }
-
-export function checkRuleCondition(url: string, condition: Condition): boolean {
-    if (condition.patternId === 0) { return true; }
-    let urlPath: string;
-    try {
-        urlPath = new URL(url).pathname;
-    } catch (e) {
-        urlPath = "";
-    }
-    if (
-        condition.patternId === 2 &&
-        condition.operatorId === 5 &&
-        condition.value
-    ) {
-        return urlPath === condition.value;
-    }
-    return true;
-}
-
 
 export const CUSTOM_ROUTE_EVENT = "recsys_route_change";
 export function setupSPARouterWrapper() {

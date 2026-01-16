@@ -80,9 +80,7 @@ export class RecSysTracker {
         console.log(this.config);
 
         // Register user info mappings với NetworkObserver để smart caching
-        if (this.config.trackingRules && this.config.trackingRules.length > 0) {
-          networkObserver.registerUserInfoMappings(this.config.trackingRules);
-        }
+        networkObserver.registerUserInfoMappings(this.config);
 
         // Khởi tạo Display Manager nếu có returnMethods
         if (this.config.returnMethods && this.config.returnMethods.length > 0) {
@@ -221,24 +219,16 @@ export class RecSysTracker {
                        payload.userValue || payload.UserValue ||
                        anonymousId;
       
-      // Item field - try multiple variants
-      const itemValue = payload.itemId || payload.ItemId ||
-                       payload.itemTitle || payload.ItemTitle ||
-                       payload.itemValue || payload.ItemValue ||
-                       '';
-      
-      // Determine field names for tracking
-      let itemField = 'itemId';
-      if (payload.ItemId || payload.itemId) itemField = 'ItemId';
-      else if (payload.ItemTitle || payload.itemTitle) itemField = 'ItemTitle';
+      // Item ID extraction
+      const itemId = payload.itemId || payload.ItemId || '';
 
       // Check for duplicate event (fingerprint-based deduplication)
-      if (ruleId && userValue && itemValue) {
+      if (ruleId && userValue && itemId) {
         const isDuplicate = this.eventDeduplicator.isDuplicate(
           eventData.eventType,
           ruleId,
           userValue,
-          itemValue
+          itemId
         );
 
         if (isDuplicate) {
@@ -265,8 +255,7 @@ export class RecSysTracker {
         domainKey: this.config.domainKey,
         anonymousId: anonymousId,
         ...(userId && { userId }), // Chỉ thêm userId nếu có
-        itemField: itemField,
-        itemValue: itemValue,
+        itemId: itemId,
         ...(ratingValue !== undefined && { 
           ratingValue: ratingValue 
         }),

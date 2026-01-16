@@ -88,70 +88,39 @@ export abstract class BasePlugin implements IPlugin {
   }
 
   // Xử lý thông tin user, item, rating/review_value từ extracted data
-  protected resolvePayloadIdentity(extractedData: any, rule?: any): {
+  protected resolvePayloadIdentity(extractedData: any, _rule?: any): {
     userField: string;
     userValue: string;
-    itemField: string;
-    itemValue: string;
+    itemId: string;
     value: string;
   } {
     // Default values
     let userField = 'UserId';
     let userValue = '';
-    let itemField = 'ItemId';
-    let itemValue = '';
+    let itemId = '';
     let value = '';
 
-    // If rule is provided, use its mappings to determine fields
-    if (rule && rule.payloadMappings && Array.isArray(rule.payloadMappings)) {
-      for (const mapping of rule.payloadMappings) {
-        const fieldName = mapping.Field || mapping.field; // Handle potential case differences
-        const fieldValue = extractedData[fieldName];
+    // Fallback - find values from extracted data
+    const userFieldPatterns = ['UserId', 'AnonymousId'];
+    const itemIdPatterns = ['ItemId'];
+    const valuePatterns = ['Value'];
 
-        // Check for User fields
-        if (fieldName && ['UserId', 'Username', 'AnonymousId'].some(f => f.toLowerCase() === fieldName.toLowerCase())) {
-          userField = fieldName;
-          userValue = fieldValue || '';
-        }
-
-        // Check for Item fields
-        if (fieldName && ['ItemId', 'ItemTitle'].some(f => f.toLowerCase() === fieldName.toLowerCase())) {
-          itemField = fieldName;
-          itemValue = fieldValue || '';
-        }
-
-        // Check for Value field
-        if (fieldName && ['Value'].some(f => f.toLowerCase() === fieldName.toLowerCase())) {
-          value = fieldValue || '';
-        }
+    // Find first available user field
+    for (const key of Object.keys(extractedData)) {
+      if (!userValue && userFieldPatterns.some(pattern => key.toLowerCase().includes(pattern.toLowerCase()))) {
+        userField = key;
+        userValue = extractedData[key];
       }
-    } else {
-      // Fallback if no rule provided
-      // Common user field patterns (prioritized)
-      const userFieldPatterns = ['UserId', 'Username'];
-      // Common item field patterns (prioritized)
-      const itemFieldPatterns = ['ItemId', 'ItemTitle'];
-      // Common rating/review_value patterns (prioritized)
-      const valuePatterns = ['Value'];
-
-      // Find first available user field
-      for (const key of Object.keys(extractedData)) {
-        if (!userValue && userFieldPatterns.some(pattern => key.toLowerCase().includes(pattern.toLowerCase()))) {
-          userField = key;
-          userValue = extractedData[key];
-        }
-        if (!itemValue && itemFieldPatterns.some(pattern => key.toLowerCase().includes(pattern.toLowerCase()))) {
-          itemField = key;
-          itemValue = extractedData[key];
-        }
-        if (!value && valuePatterns.some(pattern => key.toLowerCase().includes(pattern.toLowerCase()))) {
-          value = extractedData[key];
-        }
-        if (userValue && itemValue && value) break;
+      if (!itemId && itemIdPatterns.some(pattern => key.toLowerCase().includes(pattern.toLowerCase()))) {
+        itemId = extractedData[key];
       }
+      if (!value && valuePatterns.some(pattern => key.toLowerCase().includes(pattern.toLowerCase()))) {
+        value = extractedData[key];
+      }
+      if (userValue && itemId && value) break;
     }
 
-    return { userField, userValue, itemField, itemValue, value };
+    return { userField, userValue, itemId, value };
   }
 
   /**
@@ -170,8 +139,7 @@ export abstract class BasePlugin implements IPlugin {
     // Get values from collectedData
     const userField = collectedData.UserId ? 'UserId' : (collectedData.Username ? 'Username' : (collectedData.AnonymousId ? 'AnonymousId' : 'UserId'));
     const userValue = collectedData.UserId || collectedData.Username || collectedData.AnonymousId || TrackerInit.getUsername() || 'guest';
-    const itemField = collectedData.ItemId ? 'ItemId' : (collectedData.ItemTitle ? 'ItemTitle' : 'ItemId');
-    const itemValue = collectedData.ItemId || collectedData.ItemTitle || '';
+    const itemId = collectedData.ItemId || ''; // Always ItemId
     const value = collectedData.Value || '';
 
     // Construct payload
@@ -180,8 +148,7 @@ export abstract class BasePlugin implements IPlugin {
       trackingRuleId: Number(rule.id),
       userField,
       userValue,
-      itemField,
-      itemValue,
+      itemId,
       ratingValue: eventId === 2 ? Number(value) : undefined,
       ratingReview: eventId === 3 ? value : undefined,
     };

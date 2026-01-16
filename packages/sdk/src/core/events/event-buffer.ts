@@ -14,8 +14,7 @@ export interface TrackedEvent {
   domainKey: string;
   userId?: string;
   anonymousId: string;
-  itemField: string;
-  itemValue: string;
+  itemId: string;
   ratingValue?: number;
   ratingReview?: string;
   retryCount?: number; // Cho logic SDK retry

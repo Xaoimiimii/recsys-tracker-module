@@ -57,8 +57,8 @@ export class EventDispatcher {
       DomainKey: event.domainKey,
       AnonymousId: event.anonymousId,
       ...(event.userId && { UserId: event.userId }),
-      ItemField: event.itemField,
-      ItemValue: event.itemValue,
+      ItemField: 'ItemId',
+      ItemValue: event.itemId,
       ...(event.ratingValue !== undefined && { RatingValue: event.ratingValue }),
       ...(event.ratingReview !== undefined && { RatingReview: event.ratingReview })
     };
