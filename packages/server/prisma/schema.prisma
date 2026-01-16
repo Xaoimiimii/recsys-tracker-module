@@ -242,6 +242,7 @@ model UserIdentity {
 
   RequestConfig Json?
   Value         String?
+  IsActivated Boolean @default(false)
 }
 
 model Operator {
