@@ -55,11 +55,3 @@ export const EventUserField = {
 } as const
 
 export type EventUserField = (typeof EventUserField)[keyof typeof EventUserField]
-
-
-export const EventItemField = {
-  ItemId: 'ItemId',
-  ItemTitle: 'ItemTitle'
-} as const
-
-export type EventItemField = (typeof EventItemField)[keyof typeof EventItemField]

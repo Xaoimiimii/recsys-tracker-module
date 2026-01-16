@@ -256,10 +256,10 @@ enum EventUserField {
   AnonymousId
 }
 
-enum EventItemField {
-  ItemId
-  ItemTitle
-}
+// enum EventItemField {
+//   ItemId
+//   ItemTitle
+// }
 
 model Event {
   Id Int @id @default(autoincrement())
@@ -273,8 +273,9 @@ model Event {
   UserId      String?
   AnonymousId String?
 
-  ItemField EventItemField
-  ItemValue String
+  // ItemField EventItemField
+  // ItemValue String
+  ItemId  String?
 
   RatingValue Int?
   ReviewValue String?
