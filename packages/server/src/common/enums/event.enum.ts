@@ -4,11 +4,6 @@ export enum UserField {
     ANONYMOUS_ID = 'AnonymousId',
 }
 
-export enum ItemField {
-    ITEM_ID = 'ItemId',
-    ITEM_TITLE = 'ItemTitle',
-}
-
 export enum InteractionType {
     View = 1,
     AddToFavorite = 2,

@@ -162,7 +162,8 @@ export const UserIdentityScalarFieldEnum = {
   Source: 'Source',
   DomainId: 'DomainId',
   RequestConfig: 'RequestConfig',
-  Value: 'Value'
+  Value: 'Value',
+  IsActivated: 'IsActivated'
 } as const
 
 export type UserIdentityScalarFieldEnum = (typeof UserIdentityScalarFieldEnum)[keyof typeof UserIdentityScalarFieldEnum]
@@ -181,8 +182,7 @@ export const EventScalarFieldEnum = {
   EventTypeId: 'EventTypeId',
   UserId: 'UserId',
   AnonymousId: 'AnonymousId',
-  ItemField: 'ItemField',
-  ItemValue: 'ItemValue',
+  ItemId: 'ItemId',
   RatingValue: 'RatingValue',
   ReviewValue: 'ReviewValue',
   Timestamp: 'Timestamp',

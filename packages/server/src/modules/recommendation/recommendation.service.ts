@@ -3,7 +3,7 @@ import { PrismaService } from '../prisma/prisma.service';
 import { UserField } from 'src/common/enums/event.enum';
 import { firstValueFrom } from 'rxjs';
 import { HttpService } from '@nestjs/axios';
-import { User } from 'src/generated/prisma/client';
+import { Event, Item, User } from 'src/generated/prisma/client';
 import { SearchService } from '../search/search.service';
 import { CACHE_MANAGER } from '@nestjs/cache-manager';
 import type { Cache } from 'cache-manager';
@@ -25,6 +25,7 @@ export class RecommendationService {
         }
 
         let user: User | null = null;
+        let itemHistory: Event[] | null = null;
 
         if (userId) {
             user = await this.prisma.user.findUnique({
@@ -36,6 +37,23 @@ export class RecommendationService {
                     }
                 },
             });
+
+            itemHistory = await this.prisma.event.findMany({
+                where: {
+                    UserId: userId,
+                    AnonymousId: anonymousId,
+                    TrackingRule: {
+                        DomainID: domain.Id
+                    },
+                    Timestamp: {
+                        gte: new Date(Date.now() - 15 * 60 * 1000)
+                    }
+                },
+                orderBy: {
+                    Timestamp: "desc"
+                },
+                take: 10
+            });
         } else {
             user = await this.prisma.user.findFirst({
                 where: {
@@ -43,10 +61,50 @@ export class RecommendationService {
                     DomainId: domain.Id,
                 },
             });
+
+            itemHistory = await this.prisma.event.findMany({
+                where: {
+                    AnonymousId: anonymousId,
+                    TrackingRule: {
+                        DomainID: domain.Id
+                    },
+                    Timestamp: {
+                        gte: new Date(Date.now() - 15 * 60 * 1000)
+                    },
+                },
+                orderBy: {
+                    Timestamp: "desc"
+                },
+                take: 10
+            })
         }
 
         if (!user) {
             return [];
+        }
+
+        let priorityCategoryIds: number[] = [];
+
+        if (itemHistory && itemHistory.length > 0) {
+            const historyDomainItemIds = itemHistory
+                .map((event) => event.ItemId)
+                .filter((id): id is string => id !== null);
+
+            if (historyDomainItemIds.length > 0) {
+                const categories = await this.prisma.itemCategory.findMany({
+                    where: {
+                        Item: {
+                            DomainItemId: { in: historyDomainItemIds }
+                        }
+                    },
+                    select: {
+                        CategoryId: true,
+                    },
+                    distinct: ['CategoryId'],
+                });
+
+                priorityCategoryIds = categories.map((c) => c.CategoryId);
+            }
         }
 
         const cacheKeywordKey = `recommendation_keyword_${user.Id}`;
@@ -61,12 +119,21 @@ export class RecommendationService {
             orderBy: { Value: 'desc' },
         });
 
-        if (cachedKeyword) {
-            this.logger.log(`Cache hit for recommendation keyword for user ${user.Id}: "${cachedKeyword}"`);
+        if (cachedKeyword || priorityCategoryIds.length > 0) {
+            const keywordToSearch = cachedKeyword || "";
+            
+            if (cachedKeyword) {
+                this.logger.log(`Cache hit keyword: "${cachedKeyword}"`);
+            } else {
+                this.logger.log(`No cache keyword, searching by Priority Categories only.`);
+            }
 
-            const searchResult = await this.searchService.search(domain.Id, cachedKeyword);
+            const searchResult = await this.searchService.search(
+                domain.Id, 
+                keywordToSearch, 
+                priorityCategoryIds
+            );
             const priorityItemIds = searchResult.items.map(item => item.Id);
-
             // priority items (in search result) and other items
             priorityItems = allItems.filter(item => priorityItemIds.includes(item.ItemId));
             const otherItems = allItems.filter(item => !priorityItemIds.includes(item.ItemId));
