@@ -43,10 +43,10 @@ export type TrackingRule = Prisma.TrackingRuleModel
  */
 export type EventType = Prisma.EventTypeModel
 /**
- * Model ItemIdentity
+ * Model PayloadMapping
  * 
  */
-export type ItemIdentity = Prisma.ItemIdentityModel
+export type PayloadMapping = Prisma.PayloadMappingModel
 /**
  * Model UserIdentity
  * 

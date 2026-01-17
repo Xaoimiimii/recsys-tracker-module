@@ -29,12 +29,21 @@ export const ActionType = {
 export type ActionType = (typeof ActionType)[keyof typeof ActionType]
 
 
-export const ItemIdentitySource = {
+export const PayloadMappingField = {
+  ItemId: 'ItemId',
+  Rating: 'Rating',
+  Review: 'Review'
+} as const
+
+export type PayloadMappingField = (typeof PayloadMappingField)[keyof typeof PayloadMappingField]
+
+
+export const PayloadMappingSource = {
   request_body: 'request_body',
   request_url: 'request_url'
 } as const
 
-export type ItemIdentitySource = (typeof ItemIdentitySource)[keyof typeof ItemIdentitySource]
+export type PayloadMappingSource = (typeof PayloadMappingSource)[keyof typeof PayloadMappingSource]
 
 
 export const UserIdentitySource = {

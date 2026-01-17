@@ -107,7 +107,7 @@ model TrackingRule {
   ActionType ActionType?
 
   Events          Event[]
-  ItemIdentities  ItemIdentity[]
+  PayloadMappings PayloadMapping[]
 }
 
 // model TriggerEvent {
@@ -208,20 +208,41 @@ model EventType {
 //   TrackingRuleId Int
 //   TrackingRule   TrackingRule @relation(fields: [TrackingRuleId], references: [Id])
 // }
-enum ItemIdentitySource {
+// enum ItemIdentitySource {
+//   request_body
+//   request_url
+// }
+
+// model ItemIdentity {
+//   Id Int @id @default(autoincrement())
+
+//   Source ItemIdentitySource
+
+//   TrackingRuleId Int
+//   TrackingRule   TrackingRule @relation(fields: [TrackingRuleId], references: [Id])
+
+//   RequestConfig Json?
+// }
+
+enum PayloadMappingField {
+  ItemId
+  Rating
+  Review
+}
+
+enum PayloadMappingSource {
   request_body
   request_url
 }
 
-model ItemIdentity {
+model PayloadMapping {
   Id Int @id @default(autoincrement())
-
-  Source ItemIdentitySource
+  Field PayloadMappingField
+  Source PayloadMappingSource
+  Config Json
 
   TrackingRuleId Int
-  TrackingRule   TrackingRule @relation(fields: [TrackingRuleId], references: [Id])
-
-  RequestConfig Json?
+  TrackingRule TrackingRule @relation(fields: [TrackingRuleId], references: [Id])
 }
 
 enum UserIdentitySource {
