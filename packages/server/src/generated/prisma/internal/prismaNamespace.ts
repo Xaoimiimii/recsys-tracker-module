@@ -389,7 +389,7 @@ export const ModelName = {
   ReturnMethod: 'ReturnMethod',
   TrackingRule: 'TrackingRule',
   EventType: 'EventType',
-  ItemIdentity: 'ItemIdentity',
+  PayloadMapping: 'PayloadMapping',
   UserIdentity: 'UserIdentity',
   Operator: 'Operator',
   Event: 'Event',
@@ -419,7 +419,7 @@ export type TypeMap<ExtArgs extends runtime.Types.Extensions.InternalArgs = runt
     omit: GlobalOmitOptions
   }
   meta: {
-    modelProps: "ternant" | "domain" | "returnMethod" | "trackingRule" | "eventType" | "itemIdentity" | "userIdentity" | "operator" | "event" | "searchKeywordConfig" | "category" | "itemCategory" | "item" | "model" | "itemFactor" | "user" | "userFactor" | "predict" | "rating" | "interaction"
+    modelProps: "ternant" | "domain" | "returnMethod" | "trackingRule" | "eventType" | "payloadMapping" | "userIdentity" | "operator" | "event" | "searchKeywordConfig" | "category" | "itemCategory" | "item" | "model" | "itemFactor" | "user" | "userFactor" | "predict" | "rating" | "interaction"
     txIsolationLevel: TransactionIsolationLevel
   }
   model: {
@@ -793,77 +793,77 @@ export type TypeMap<ExtArgs extends runtime.Types.Extensions.InternalArgs = runt
         }
       }
     }
-    ItemIdentity: {
-      payload: Prisma.$ItemIdentityPayload<ExtArgs>
-      fields: Prisma.ItemIdentityFieldRefs
+    PayloadMapping: {
+      payload: Prisma.$PayloadMappingPayload<ExtArgs>
+      fields: Prisma.PayloadMappingFieldRefs
       operations: {
         findUnique: {
-          args: Prisma.ItemIdentityFindUniqueArgs<ExtArgs>
-          result: runtime.Types.Utils.PayloadToResult<Prisma.$ItemIdentityPayload> | null
+          args: Prisma.PayloadMappingFindUniqueArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$PayloadMappingPayload> | null
         }
         findUniqueOrThrow: {
-          args: Prisma.ItemIdentityFindUniqueOrThrowArgs<ExtArgs>
-          result: runtime.Types.Utils.PayloadToResult<Prisma.$ItemIdentityPayload>
+          args: Prisma.PayloadMappingFindUniqueOrThrowArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$PayloadMappingPayload>
         }
         findFirst: {
-          args: Prisma.ItemIdentityFindFirstArgs<ExtArgs>
-          result: runtime.Types.Utils.PayloadToResult<Prisma.$ItemIdentityPayload> | null
+          args: Prisma.PayloadMappingFindFirstArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$PayloadMappingPayload> | null
         }
         findFirstOrThrow: {
-          args: Prisma.ItemIdentityFindFirstOrThrowArgs<ExtArgs>
-          result: runtime.Types.Utils.PayloadToResult<Prisma.$ItemIdentityPayload>
+          args: Prisma.PayloadMappingFindFirstOrThrowArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$PayloadMappingPayload>
         }
         findMany: {
-          args: Prisma.ItemIdentityFindManyArgs<ExtArgs>
-          result: runtime.Types.Utils.PayloadToResult<Prisma.$ItemIdentityPayload>[]
+          args: Prisma.PayloadMappingFindManyArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$PayloadMappingPayload>[]
         }
         create: {
-          args: Prisma.ItemIdentityCreateArgs<ExtArgs>
-          result: runtime.Types.Utils.PayloadToResult<Prisma.$ItemIdentityPayload>
+          args: Prisma.PayloadMappingCreateArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$PayloadMappingPayload>
         }
         createMany: {
-          args: Prisma.ItemIdentityCreateManyArgs<ExtArgs>
+          args: Prisma.PayloadMappingCreateManyArgs<ExtArgs>
           result: BatchPayload
         }
         createManyAndReturn: {
-          args: Prisma.ItemIdentityCreateManyAndReturnArgs<ExtArgs>
-          result: runtime.Types.Utils.PayloadToResult<Prisma.$ItemIdentityPayload>[]
+          args: Prisma.PayloadMappingCreateManyAndReturnArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$PayloadMappingPayload>[]
         }
         delete: {
-          args: Prisma.ItemIdentityDeleteArgs<ExtArgs>
-          result: runtime.Types.Utils.PayloadToResult<Prisma.$ItemIdentityPayload>
+          args: Prisma.PayloadMappingDeleteArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$PayloadMappingPayload>
         }
         update: {
-          args: Prisma.ItemIdentityUpdateArgs<ExtArgs>
-          result: runtime.Types.Utils.PayloadToResult<Prisma.$ItemIdentityPayload>
+          args: Prisma.PayloadMappingUpdateArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$PayloadMappingPayload>
         }
         deleteMany: {
-          args: Prisma.ItemIdentityDeleteManyArgs<ExtArgs>
+          args: Prisma.PayloadMappingDeleteManyArgs<ExtArgs>
           result: BatchPayload
         }
         updateMany: {
-          args: Prisma.ItemIdentityUpdateManyArgs<ExtArgs>
+          args: Prisma.PayloadMappingUpdateManyArgs<ExtArgs>
           result: BatchPayload
         }
         updateManyAndReturn: {
-          args: Prisma.ItemIdentityUpdateManyAndReturnArgs<ExtArgs>
-          result: runtime.Types.Utils.PayloadToResult<Prisma.$ItemIdentityPayload>[]
+          args: Prisma.PayloadMappingUpdateManyAndReturnArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$PayloadMappingPayload>[]
         }
         upsert: {
-          args: Prisma.ItemIdentityUpsertArgs<ExtArgs>
-          result: runtime.Types.Utils.PayloadToResult<Prisma.$ItemIdentityPayload>
+          args: Prisma.PayloadMappingUpsertArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$PayloadMappingPayload>
         }
         aggregate: {
-          args: Prisma.ItemIdentityAggregateArgs<ExtArgs>
-          result: runtime.Types.Utils.Optional<Prisma.AggregateItemIdentity>
+          args: Prisma.PayloadMappingAggregateArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.AggregatePayloadMapping>
         }
         groupBy: {
-          args: Prisma.ItemIdentityGroupByArgs<ExtArgs>
-          result: runtime.Types.Utils.Optional<Prisma.ItemIdentityGroupByOutputType>[]
+          args: Prisma.PayloadMappingGroupByArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.PayloadMappingGroupByOutputType>[]
         }
         count: {
-          args: Prisma.ItemIdentityCountArgs<ExtArgs>
-          result: runtime.Types.Utils.Optional<Prisma.ItemIdentityCountAggregateOutputType> | number
+          args: Prisma.PayloadMappingCountArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.PayloadMappingCountAggregateOutputType> | number
         }
       }
     }
@@ -2000,14 +2000,15 @@ export const EventTypeScalarFieldEnum = {
 export type EventTypeScalarFieldEnum = (typeof EventTypeScalarFieldEnum)[keyof typeof EventTypeScalarFieldEnum]
 
 
-export const ItemIdentityScalarFieldEnum = {
+export const PayloadMappingScalarFieldEnum = {
   Id: 'Id',
+  Field: 'Field',
   Source: 'Source',
-  TrackingRuleId: 'TrackingRuleId',
-  RequestConfig: 'RequestConfig'
+  Config: 'Config',
+  TrackingRuleId: 'TrackingRuleId'
 } as const
 
-export type ItemIdentityScalarFieldEnum = (typeof ItemIdentityScalarFieldEnum)[keyof typeof ItemIdentityScalarFieldEnum]
+export type PayloadMappingScalarFieldEnum = (typeof PayloadMappingScalarFieldEnum)[keyof typeof PayloadMappingScalarFieldEnum]
 
 
 export const UserIdentityScalarFieldEnum = {
@@ -2185,6 +2186,13 @@ export const NullableJsonNullValueInput = {
 export type NullableJsonNullValueInput = (typeof NullableJsonNullValueInput)[keyof typeof NullableJsonNullValueInput]
 
 
+export const JsonNullValueInput = {
+  JsonNull: JsonNull
+} as const
+
+export type JsonNullValueInput = (typeof JsonNullValueInput)[keyof typeof JsonNullValueInput]
+
+
 export const QueryMode = {
   default: 'default',
   insensitive: 'insensitive'
@@ -2315,16 +2323,30 @@ export type ListEnumActionTypeFieldRefInput<$PrismaModel> = FieldRefInputType<$P
 
 
 /**
- * Reference to a field of type 'ItemIdentitySource'
+ * Reference to a field of type 'PayloadMappingField'
  */
-export type EnumItemIdentitySourceFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'ItemIdentitySource'>
+export type EnumPayloadMappingFieldFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'PayloadMappingField'>
     
 
 
 /**
- * Reference to a field of type 'ItemIdentitySource[]'
+ * Reference to a field of type 'PayloadMappingField[]'
  */
-export type ListEnumItemIdentitySourceFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'ItemIdentitySource[]'>
+export type ListEnumPayloadMappingFieldFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'PayloadMappingField[]'>
+    
+
+
+/**
+ * Reference to a field of type 'PayloadMappingSource'
+ */
+export type EnumPayloadMappingSourceFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'PayloadMappingSource'>
+    
+
+
+/**
+ * Reference to a field of type 'PayloadMappingSource[]'
+ */
+export type ListEnumPayloadMappingSourceFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'PayloadMappingSource[]'>
     
 
 
@@ -2448,7 +2470,7 @@ export type GlobalOmitConfig = {
   returnMethod?: Prisma.ReturnMethodOmit
   trackingRule?: Prisma.TrackingRuleOmit
   eventType?: Prisma.EventTypeOmit
-  itemIdentity?: Prisma.ItemIdentityOmit
+  payloadMapping?: Prisma.PayloadMappingOmit
   userIdentity?: Prisma.UserIdentityOmit
   operator?: Prisma.OperatorOmit
   event?: Prisma.EventOmit

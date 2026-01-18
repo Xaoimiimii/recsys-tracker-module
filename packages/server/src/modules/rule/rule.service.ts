@@ -1,6 +1,7 @@
 import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateRuleDto } from './dto';
+import { Prisma } from 'src/generated/prisma/client';
 
 @Injectable()
 export class RuleService {
@@ -47,14 +48,18 @@ export class RuleService {
             },
         });
 
-        await this.prisma.itemIdentity.create({
-            data: {
-                Source: rule.ItemIdentity.Source,
-                TrackingRuleId: createdRule.Id,
-                RequestConfig: rule.ItemIdentity.RequestConfig as any
-            }
-        })
-
+        for (const payloadMapping of rule.PayloadMappings)
+        {
+            await this.prisma.payloadMapping.create({
+                data: {
+                    Field: payloadMapping.Field,
+                    Source: payloadMapping.Source,
+                    TrackingRuleId: createdRule.Id,
+                    Config: payloadMapping.Config as Prisma.InputJsonValue
+                }
+            })
+        }
+        
         return createdRule;
     }
 

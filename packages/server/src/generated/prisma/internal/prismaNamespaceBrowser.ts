@@ -56,7 +56,7 @@ export const ModelName = {
   ReturnMethod: 'ReturnMethod',
   TrackingRule: 'TrackingRule',
   EventType: 'EventType',
-  ItemIdentity: 'ItemIdentity',
+  PayloadMapping: 'PayloadMapping',
   UserIdentity: 'UserIdentity',
   Operator: 'Operator',
   Event: 'Event',
@@ -147,14 +147,15 @@ export const EventTypeScalarFieldEnum = {
 export type EventTypeScalarFieldEnum = (typeof EventTypeScalarFieldEnum)[keyof typeof EventTypeScalarFieldEnum]
 
 
-export const ItemIdentityScalarFieldEnum = {
+export const PayloadMappingScalarFieldEnum = {
   Id: 'Id',
+  Field: 'Field',
   Source: 'Source',
-  TrackingRuleId: 'TrackingRuleId',
-  RequestConfig: 'RequestConfig'
+  Config: 'Config',
+  TrackingRuleId: 'TrackingRuleId'
 } as const
 
-export type ItemIdentityScalarFieldEnum = (typeof ItemIdentityScalarFieldEnum)[keyof typeof ItemIdentityScalarFieldEnum]
+export type PayloadMappingScalarFieldEnum = (typeof PayloadMappingScalarFieldEnum)[keyof typeof PayloadMappingScalarFieldEnum]
 
 
 export const UserIdentityScalarFieldEnum = {
@@ -330,6 +331,13 @@ export const NullableJsonNullValueInput = {
 } as const
 
 export type NullableJsonNullValueInput = (typeof NullableJsonNullValueInput)[keyof typeof NullableJsonNullValueInput]
+
+
+export const JsonNullValueInput = {
+  JsonNull: 'JsonNull'
+} as const
+
+export type JsonNullValueInput = (typeof JsonNullValueInput)[keyof typeof JsonNullValueInput]
 
 
 export const QueryMode = {

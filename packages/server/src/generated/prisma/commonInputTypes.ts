@@ -276,21 +276,89 @@ export type EnumActionTypeNullableWithAggregatesFilter<$PrismaModel = never> = {
   _max?: Prisma.NestedEnumActionTypeNullableFilter<$PrismaModel>
 }
 
-export type EnumItemIdentitySourceFilter<$PrismaModel = never> = {
-  equals?: $Enums.ItemIdentitySource | Prisma.EnumItemIdentitySourceFieldRefInput<$PrismaModel>
-  in?: $Enums.ItemIdentitySource[] | Prisma.ListEnumItemIdentitySourceFieldRefInput<$PrismaModel>
-  notIn?: $Enums.ItemIdentitySource[] | Prisma.ListEnumItemIdentitySourceFieldRefInput<$PrismaModel>
-  not?: Prisma.NestedEnumItemIdentitySourceFilter<$PrismaModel> | $Enums.ItemIdentitySource
+export type EnumPayloadMappingFieldFilter<$PrismaModel = never> = {
+  equals?: $Enums.PayloadMappingField | Prisma.EnumPayloadMappingFieldFieldRefInput<$PrismaModel>
+  in?: $Enums.PayloadMappingField[] | Prisma.ListEnumPayloadMappingFieldFieldRefInput<$PrismaModel>
+  notIn?: $Enums.PayloadMappingField[] | Prisma.ListEnumPayloadMappingFieldFieldRefInput<$PrismaModel>
+  not?: Prisma.NestedEnumPayloadMappingFieldFilter<$PrismaModel> | $Enums.PayloadMappingField
 }
 
-export type EnumItemIdentitySourceWithAggregatesFilter<$PrismaModel = never> = {
-  equals?: $Enums.ItemIdentitySource | Prisma.EnumItemIdentitySourceFieldRefInput<$PrismaModel>
-  in?: $Enums.ItemIdentitySource[] | Prisma.ListEnumItemIdentitySourceFieldRefInput<$PrismaModel>
-  notIn?: $Enums.ItemIdentitySource[] | Prisma.ListEnumItemIdentitySourceFieldRefInput<$PrismaModel>
-  not?: Prisma.NestedEnumItemIdentitySourceWithAggregatesFilter<$PrismaModel> | $Enums.ItemIdentitySource
+export type EnumPayloadMappingSourceFilter<$PrismaModel = never> = {
+  equals?: $Enums.PayloadMappingSource | Prisma.EnumPayloadMappingSourceFieldRefInput<$PrismaModel>
+  in?: $Enums.PayloadMappingSource[] | Prisma.ListEnumPayloadMappingSourceFieldRefInput<$PrismaModel>
+  notIn?: $Enums.PayloadMappingSource[] | Prisma.ListEnumPayloadMappingSourceFieldRefInput<$PrismaModel>
+  not?: Prisma.NestedEnumPayloadMappingSourceFilter<$PrismaModel> | $Enums.PayloadMappingSource
+}
+
+export type JsonFilter<$PrismaModel = never> =
+| Prisma.PatchUndefined<
+    Prisma.Either<Required<JsonFilterBase<$PrismaModel>>, Exclude<keyof Required<JsonFilterBase<$PrismaModel>>, 'path'>>,
+    Required<JsonFilterBase<$PrismaModel>>
+  >
+| Prisma.OptionalFlat<Omit<Required<JsonFilterBase<$PrismaModel>>, 'path'>>
+
+export type JsonFilterBase<$PrismaModel = never> = {
+  equals?: runtime.InputJsonValue | Prisma.JsonFieldRefInput<$PrismaModel> | Prisma.JsonNullValueFilter
+  path?: string[]
+  mode?: Prisma.QueryMode | Prisma.EnumQueryModeFieldRefInput<$PrismaModel>
+  string_contains?: string | Prisma.StringFieldRefInput<$PrismaModel>
+  string_starts_with?: string | Prisma.StringFieldRefInput<$PrismaModel>
+  string_ends_with?: string | Prisma.StringFieldRefInput<$PrismaModel>
+  array_starts_with?: runtime.InputJsonValue | Prisma.JsonFieldRefInput<$PrismaModel> | null
+  array_ends_with?: runtime.InputJsonValue | Prisma.JsonFieldRefInput<$PrismaModel> | null
+  array_contains?: runtime.InputJsonValue | Prisma.JsonFieldRefInput<$PrismaModel> | null
+  lt?: runtime.InputJsonValue | Prisma.JsonFieldRefInput<$PrismaModel>
+  lte?: runtime.InputJsonValue | Prisma.JsonFieldRefInput<$PrismaModel>
+  gt?: runtime.InputJsonValue | Prisma.JsonFieldRefInput<$PrismaModel>
+  gte?: runtime.InputJsonValue | Prisma.JsonFieldRefInput<$PrismaModel>
+  not?: runtime.InputJsonValue | Prisma.JsonFieldRefInput<$PrismaModel> | Prisma.JsonNullValueFilter
+}
+
+export type EnumPayloadMappingFieldWithAggregatesFilter<$PrismaModel = never> = {
+  equals?: $Enums.PayloadMappingField | Prisma.EnumPayloadMappingFieldFieldRefInput<$PrismaModel>
+  in?: $Enums.PayloadMappingField[] | Prisma.ListEnumPayloadMappingFieldFieldRefInput<$PrismaModel>
+  notIn?: $Enums.PayloadMappingField[] | Prisma.ListEnumPayloadMappingFieldFieldRefInput<$PrismaModel>
+  not?: Prisma.NestedEnumPayloadMappingFieldWithAggregatesFilter<$PrismaModel> | $Enums.PayloadMappingField
   _count?: Prisma.NestedIntFilter<$PrismaModel>
-  _min?: Prisma.NestedEnumItemIdentitySourceFilter<$PrismaModel>
-  _max?: Prisma.NestedEnumItemIdentitySourceFilter<$PrismaModel>
+  _min?: Prisma.NestedEnumPayloadMappingFieldFilter<$PrismaModel>
+  _max?: Prisma.NestedEnumPayloadMappingFieldFilter<$PrismaModel>
+}
+
+export type EnumPayloadMappingSourceWithAggregatesFilter<$PrismaModel = never> = {
+  equals?: $Enums.PayloadMappingSource | Prisma.EnumPayloadMappingSourceFieldRefInput<$PrismaModel>
+  in?: $Enums.PayloadMappingSource[] | Prisma.ListEnumPayloadMappingSourceFieldRefInput<$PrismaModel>
+  notIn?: $Enums.PayloadMappingSource[] | Prisma.ListEnumPayloadMappingSourceFieldRefInput<$PrismaModel>
+  not?: Prisma.NestedEnumPayloadMappingSourceWithAggregatesFilter<$PrismaModel> | $Enums.PayloadMappingSource
+  _count?: Prisma.NestedIntFilter<$PrismaModel>
+  _min?: Prisma.NestedEnumPayloadMappingSourceFilter<$PrismaModel>
+  _max?: Prisma.NestedEnumPayloadMappingSourceFilter<$PrismaModel>
+}
+
+export type JsonWithAggregatesFilter<$PrismaModel = never> =
+| Prisma.PatchUndefined<
+    Prisma.Either<Required<JsonWithAggregatesFilterBase<$PrismaModel>>, Exclude<keyof Required<JsonWithAggregatesFilterBase<$PrismaModel>>, 'path'>>,
+    Required<JsonWithAggregatesFilterBase<$PrismaModel>>
+  >
+| Prisma.OptionalFlat<Omit<Required<JsonWithAggregatesFilterBase<$PrismaModel>>, 'path'>>
+
+export type JsonWithAggregatesFilterBase<$PrismaModel = never> = {
+  equals?: runtime.InputJsonValue | Prisma.JsonFieldRefInput<$PrismaModel> | Prisma.JsonNullValueFilter
+  path?: string[]
+  mode?: Prisma.QueryMode | Prisma.EnumQueryModeFieldRefInput<$PrismaModel>
+  string_contains?: string | Prisma.StringFieldRefInput<$PrismaModel>
+  string_starts_with?: string | Prisma.StringFieldRefInput<$PrismaModel>
+  string_ends_with?: string | Prisma.StringFieldRefInput<$PrismaModel>
+  array_starts_with?: runtime.InputJsonValue | Prisma.JsonFieldRefInput<$PrismaModel> | null
+  array_ends_with?: runtime.InputJsonValue | Prisma.JsonFieldRefInput<$PrismaModel> | null
+  array_contains?: runtime.InputJsonValue | Prisma.JsonFieldRefInput<$PrismaModel> | null
+  lt?: runtime.InputJsonValue | Prisma.JsonFieldRefInput<$PrismaModel>
+  lte?: runtime.InputJsonValue | Prisma.JsonFieldRefInput<$PrismaModel>
+  gt?: runtime.InputJsonValue | Prisma.JsonFieldRefInput<$PrismaModel>
+  gte?: runtime.InputJsonValue | Prisma.JsonFieldRefInput<$PrismaModel>
+  not?: runtime.InputJsonValue | Prisma.JsonFieldRefInput<$PrismaModel> | Prisma.JsonNullValueFilter
+  _count?: Prisma.NestedIntFilter<$PrismaModel>
+  _min?: Prisma.NestedJsonFilter<$PrismaModel>
+  _max?: Prisma.NestedJsonFilter<$PrismaModel>
 }
 
 export type EnumUserIdentitySourceFilter<$PrismaModel = never> = {
@@ -587,21 +655,62 @@ export type NestedEnumActionTypeNullableWithAggregatesFilter<$PrismaModel = neve
   _max?: Prisma.NestedEnumActionTypeNullableFilter<$PrismaModel>
 }
 
-export type NestedEnumItemIdentitySourceFilter<$PrismaModel = never> = {
-  equals?: $Enums.ItemIdentitySource | Prisma.EnumItemIdentitySourceFieldRefInput<$PrismaModel>
-  in?: $Enums.ItemIdentitySource[] | Prisma.ListEnumItemIdentitySourceFieldRefInput<$PrismaModel>
-  notIn?: $Enums.ItemIdentitySource[] | Prisma.ListEnumItemIdentitySourceFieldRefInput<$PrismaModel>
-  not?: Prisma.NestedEnumItemIdentitySourceFilter<$PrismaModel> | $Enums.ItemIdentitySource
+export type NestedEnumPayloadMappingFieldFilter<$PrismaModel = never> = {
+  equals?: $Enums.PayloadMappingField | Prisma.EnumPayloadMappingFieldFieldRefInput<$PrismaModel>
+  in?: $Enums.PayloadMappingField[] | Prisma.ListEnumPayloadMappingFieldFieldRefInput<$PrismaModel>
+  notIn?: $Enums.PayloadMappingField[] | Prisma.ListEnumPayloadMappingFieldFieldRefInput<$PrismaModel>
+  not?: Prisma.NestedEnumPayloadMappingFieldFilter<$PrismaModel> | $Enums.PayloadMappingField
 }
 
-export type NestedEnumItemIdentitySourceWithAggregatesFilter<$PrismaModel = never> = {
-  equals?: $Enums.ItemIdentitySource | Prisma.EnumItemIdentitySourceFieldRefInput<$PrismaModel>
-  in?: $Enums.ItemIdentitySource[] | Prisma.ListEnumItemIdentitySourceFieldRefInput<$PrismaModel>
-  notIn?: $Enums.ItemIdentitySource[] | Prisma.ListEnumItemIdentitySourceFieldRefInput<$PrismaModel>
-  not?: Prisma.NestedEnumItemIdentitySourceWithAggregatesFilter<$PrismaModel> | $Enums.ItemIdentitySource
+export type NestedEnumPayloadMappingSourceFilter<$PrismaModel = never> = {
+  equals?: $Enums.PayloadMappingSource | Prisma.EnumPayloadMappingSourceFieldRefInput<$PrismaModel>
+  in?: $Enums.PayloadMappingSource[] | Prisma.ListEnumPayloadMappingSourceFieldRefInput<$PrismaModel>
+  notIn?: $Enums.PayloadMappingSource[] | Prisma.ListEnumPayloadMappingSourceFieldRefInput<$PrismaModel>
+  not?: Prisma.NestedEnumPayloadMappingSourceFilter<$PrismaModel> | $Enums.PayloadMappingSource
+}
+
+export type NestedEnumPayloadMappingFieldWithAggregatesFilter<$PrismaModel = never> = {
+  equals?: $Enums.PayloadMappingField | Prisma.EnumPayloadMappingFieldFieldRefInput<$PrismaModel>
+  in?: $Enums.PayloadMappingField[] | Prisma.ListEnumPayloadMappingFieldFieldRefInput<$PrismaModel>
+  notIn?: $Enums.PayloadMappingField[] | Prisma.ListEnumPayloadMappingFieldFieldRefInput<$PrismaModel>
+  not?: Prisma.NestedEnumPayloadMappingFieldWithAggregatesFilter<$PrismaModel> | $Enums.PayloadMappingField
   _count?: Prisma.NestedIntFilter<$PrismaModel>
-  _min?: Prisma.NestedEnumItemIdentitySourceFilter<$PrismaModel>
-  _max?: Prisma.NestedEnumItemIdentitySourceFilter<$PrismaModel>
+  _min?: Prisma.NestedEnumPayloadMappingFieldFilter<$PrismaModel>
+  _max?: Prisma.NestedEnumPayloadMappingFieldFilter<$PrismaModel>
+}
+
+export type NestedEnumPayloadMappingSourceWithAggregatesFilter<$PrismaModel = never> = {
+  equals?: $Enums.PayloadMappingSource | Prisma.EnumPayloadMappingSourceFieldRefInput<$PrismaModel>
+  in?: $Enums.PayloadMappingSource[] | Prisma.ListEnumPayloadMappingSourceFieldRefInput<$PrismaModel>
+  notIn?: $Enums.PayloadMappingSource[] | Prisma.ListEnumPayloadMappingSourceFieldRefInput<$PrismaModel>
+  not?: Prisma.NestedEnumPayloadMappingSourceWithAggregatesFilter<$PrismaModel> | $Enums.PayloadMappingSource
+  _count?: Prisma.NestedIntFilter<$PrismaModel>
+  _min?: Prisma.NestedEnumPayloadMappingSourceFilter<$PrismaModel>
+  _max?: Prisma.NestedEnumPayloadMappingSourceFilter<$PrismaModel>
+}
+
+export type NestedJsonFilter<$PrismaModel = never> =
+| Prisma.PatchUndefined<
+    Prisma.Either<Required<NestedJsonFilterBase<$PrismaModel>>, Exclude<keyof Required<NestedJsonFilterBase<$PrismaModel>>, 'path'>>,
+    Required<NestedJsonFilterBase<$PrismaModel>>
+  >
+| Prisma.OptionalFlat<Omit<Required<NestedJsonFilterBase<$PrismaModel>>, 'path'>>
+
+export type NestedJsonFilterBase<$PrismaModel = never> = {
+  equals?: runtime.InputJsonValue | Prisma.JsonFieldRefInput<$PrismaModel> | Prisma.JsonNullValueFilter
+  path?: string[]
+  mode?: Prisma.QueryMode | Prisma.EnumQueryModeFieldRefInput<$PrismaModel>
+  string_contains?: string | Prisma.StringFieldRefInput<$PrismaModel>
+  string_starts_with?: string | Prisma.StringFieldRefInput<$PrismaModel>
+  string_ends_with?: string | Prisma.StringFieldRefInput<$PrismaModel>
+  array_starts_with?: runtime.InputJsonValue | Prisma.JsonFieldRefInput<$PrismaModel> | null
+  array_ends_with?: runtime.InputJsonValue | Prisma.JsonFieldRefInput<$PrismaModel> | null
+  array_contains?: runtime.InputJsonValue | Prisma.JsonFieldRefInput<$PrismaModel> | null
+  lt?: runtime.InputJsonValue | Prisma.JsonFieldRefInput<$PrismaModel>
+  lte?: runtime.InputJsonValue | Prisma.JsonFieldRefInput<$PrismaModel>
+  gt?: runtime.InputJsonValue | Prisma.JsonFieldRefInput<$PrismaModel>
+  gte?: runtime.InputJsonValue | Prisma.JsonFieldRefInput<$PrismaModel>
+  not?: runtime.InputJsonValue | Prisma.JsonFieldRefInput<$PrismaModel> | Prisma.JsonNullValueFilter
 }
 
 export type NestedEnumUserIdentitySourceFilter<$PrismaModel = never> = {
