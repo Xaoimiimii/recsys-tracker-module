@@ -177,7 +177,10 @@ export class RatingPlugin extends BasePlugin {
 
     this.tracker.track({
       eventType: eventId,
-      eventData: payload,
+      eventData: {
+        ...payload,
+        actionType: rule.actionType || null
+      },
       timestamp: Date.now(),
       url: window.location.href,
       metadata: {

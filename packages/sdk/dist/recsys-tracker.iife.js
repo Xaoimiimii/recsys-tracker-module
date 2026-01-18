@@ -646,12 +646,12 @@ var RecSysTracker = (function (exports) {
             const payloadObject = {
                 Timestamp: event.timestamp,
                 EventTypeId: event.eventTypeId,
+                ActionType: event.actionType || null,
                 TrackingRuleId: event.trackingRuleId,
                 DomainKey: event.domainKey,
                 AnonymousId: event.anonymousId,
                 ...(event.userId && { UserId: event.userId }),
-                ItemField: event.itemField,
-                ItemValue: event.itemValue,
+                ...(event.itemId && { ItemId: event.itemId }),
                 ...(event.ratingValue !== undefined && { RatingValue: event.ratingValue }),
                 ...(event.ratingReview !== undefined && { RatingReview: event.ratingReview })
             };
@@ -2238,19 +2238,16 @@ var RecSysTracker = (function (exports) {
                 return;
             }
             // Get values from collectedData
-            const userField = collectedData.UserId ? 'UserId' : (collectedData.Username ? 'Username' : (collectedData.AnonymousId ? 'AnonymousId' : 'UserId'));
-            const userValue = collectedData.UserId || collectedData.Username || collectedData.AnonymousId || 'guest';
-            const itemField = collectedData.ItemId ? 'ItemId' : (collectedData.ItemTitle ? 'ItemTitle' : 'ItemId');
-            const itemValue = collectedData.ItemId || collectedData.ItemTitle || '';
+            const userId = collectedData.UserId || collectedData.Username || undefined;
+            const itemId = collectedData.ItemId || collectedData.ItemTitle || undefined;
             const value = collectedData.Value || '';
             // Construct payload
             const payload = {
                 eventTypeId: Number(eventId),
+                actionType: rule.actionType || null,
                 trackingRuleId: Number(rule.id),
-                userField,
-                userValue,
-                itemField,
-                itemValue,
+                userId,
+                itemId,
                 ratingValue: eventId === 2 ? Number(value) : undefined,
                 ratingReview: eventId === 3 ? value : undefined,
             };
@@ -2533,7 +2530,10 @@ var RecSysTracker = (function (exports) {
                 return;
             this.tracker.track({
                 eventType: eventId,
-                eventData: payload,
+                eventData: {
+                    ...payload,
+                    actionType: rule.actionType || null
+                },
                 timestamp: Date.now(),
                 url: window.location.href,
                 metadata: {
@@ -2740,7 +2740,10 @@ var RecSysTracker = (function (exports) {
                 return;
             this.tracker.track({
                 eventType: eventId,
-                eventData: payload,
+                eventData: {
+                    ...payload,
+                    actionType: rule.actionType || null
+                },
                 timestamp: Date.now(),
                 url: window.location.href,
                 metadata: {
@@ -4437,7 +4440,10 @@ var RecSysTracker = (function (exports) {
                 return;
             this.tracker.track({
                 eventType: eventId,
-                eventData: payload,
+                eventData: {
+                    ...payload,
+                    actionType: rule.actionType || null
+                },
                 timestamp: Date.now(),
                 url: window.location.href,
                 metadata: {
@@ -4590,20 +4596,14 @@ var RecSysTracker = (function (exports) {
                     payload.userId || payload.UserId ||
                     payload.username || payload.Username ||
                     payload.userValue || payload.UserValue;
-                // Item field - try multiple variants
-                const itemValue = payload.itemId || payload.ItemId ||
+                // Item ID - try multiple variants
+                const itemId = payload.itemId || payload.ItemId ||
                     payload.itemTitle || payload.ItemTitle ||
                     payload.itemValue || payload.ItemValue ||
-                    '';
-                // Determine field names for tracking
-                let itemField = 'itemId';
-                if (payload.ItemId || payload.itemId)
-                    itemField = 'ItemId';
-                else if (payload.ItemTitle || payload.itemTitle)
-                    itemField = 'ItemTitle';
+                    undefined;
                 // Check for duplicate event (fingerprint-based deduplication)
-                if (ruleId && userValue && itemValue) {
-                    const isDuplicate = this.eventDeduplicator.isDuplicate(eventData.eventType, ruleId, userValue, itemValue);
+                if (ruleId && userValue && itemId) {
+                    const isDuplicate = this.eventDeduplicator.isDuplicate(eventData.eventType, ruleId, userValue, itemId);
                     if (isDuplicate) {
                         return;
                     }
@@ -4621,13 +4621,12 @@ var RecSysTracker = (function (exports) {
                     id: this.metadataNormalizer.generateEventId(),
                     timestamp: new Date(eventData.timestamp),
                     eventTypeId: eventData.eventType,
+                    actionType: payload.actionType || null,
                     trackingRuleId: Number(ruleId) || 0,
                     domainKey: this.config.domainKey,
-                    // Thêm user identity field - ưu tiên userId, fallback về anonymousId
-                    userId: userInfo.field === 'UserId' ? userInfo.value : undefined,
                     anonymousId: userInfo.field === 'AnonymousId' ? userInfo.value : getOrCreateAnonymousId(),
-                    itemField: itemField,
-                    itemValue: itemValue,
+                    ...(userInfo.field === 'UserId' && userInfo.value && { userId: userInfo.value }),
+                    ...(itemId && { itemId }),
                     ...(ratingValue !== undefined && {
                         ratingValue: ratingValue
                     }),

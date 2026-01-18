@@ -167,20 +167,17 @@ export abstract class BasePlugin implements IPlugin {
     }
     
     // Get values from collectedData
-    const userField = collectedData.UserId ? 'UserId' : (collectedData.Username ? 'Username' : (collectedData.AnonymousId ? 'AnonymousId' : 'UserId'));
-    const userValue = collectedData.UserId || collectedData.Username || collectedData.AnonymousId || 'guest';
-    const itemField = collectedData.ItemId ? 'ItemId' : (collectedData.ItemTitle ? 'ItemTitle' : 'ItemId');
-    const itemValue = collectedData.ItemId || collectedData.ItemTitle || '';
+    const userId = collectedData.UserId || collectedData.Username || undefined;
+    const itemId = collectedData.ItemId || collectedData.ItemTitle || undefined;
     const value = collectedData.Value || '';
 
     // Construct payload
     const payload: any = {
       eventTypeId: Number(eventId),
+      actionType: rule.actionType || null,
       trackingRuleId: Number(rule.id),
-      userField,
-      userValue,
-      itemField,
-      itemValue,
+      userId,
+      itemId,
       ratingValue: eventId === 2 ? Number(value) : undefined,
       ratingReview: eventId === 3 ? value : undefined,
     };

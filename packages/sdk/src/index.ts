@@ -197,24 +197,19 @@ export class RecSysTracker {
                        payload.username || payload.Username ||
                        payload.userValue || payload.UserValue;
       
-      // Item field - try multiple variants
-      const itemValue = payload.itemId || payload.ItemId ||
-                       payload.itemTitle || payload.ItemTitle ||
-                       payload.itemValue || payload.ItemValue ||
-                       '';
-      
-      // Determine field names for tracking
-      let itemField = 'itemId';
-      if (payload.ItemId || payload.itemId) itemField = 'ItemId';
-      else if (payload.ItemTitle || payload.itemTitle) itemField = 'ItemTitle';
+      // Item ID - try multiple variants
+      const itemId = payload.itemId || payload.ItemId ||
+                     payload.itemTitle || payload.ItemTitle ||
+                     payload.itemValue || payload.ItemValue ||
+                     undefined;
 
       // Check for duplicate event (fingerprint-based deduplication)
-      if (ruleId && userValue && itemValue) {
+      if (ruleId && userValue && itemId) {
         const isDuplicate = this.eventDeduplicator.isDuplicate(
           eventData.eventType,
           ruleId,
           userValue,
-          itemValue
+          itemId
         );
 
         if (isDuplicate) {
@@ -237,13 +232,12 @@ export class RecSysTracker {
         id: this.metadataNormalizer.generateEventId(),
         timestamp: new Date(eventData.timestamp),
         eventTypeId: eventData.eventType,
+        actionType: payload.actionType || null,
         trackingRuleId: Number(ruleId) || 0,
         domainKey: this.config.domainKey,
-        // Thêm user identity field - ưu tiên userId, fallback về anonymousId
-        userId: userInfo.field === 'UserId' ? userInfo.value : undefined,
         anonymousId: userInfo.field === 'AnonymousId' ? userInfo.value : getOrCreateAnonymousId(),
-        itemField: itemField,
-        itemValue: itemValue,
+        ...(userInfo.field === 'UserId' && userInfo.value && { userId: userInfo.value }),
+        ...(itemId && { itemId }),
         ...(ratingValue !== undefined && { 
           ratingValue: ratingValue 
         }),
