@@ -19,7 +19,6 @@
 import { TrackingRule, PayloadMapping } from '../../types';
 import { RuleExecutionContextManager } from '../execution/rule-execution-context';
 import { NetworkObserver, getNetworkObserver } from '../network/network-observer';
-import { getCachedUserInfo, getOrCreateAnonymousId } from '../plugins/utils/plugin-utils';
 
 /**
  * Các source types
@@ -93,79 +92,8 @@ export class PayloadBuilder {
       this.recManager.collectField(context.executionId, field, value);
     }
 
-    // 4.5 Thu thập User Info (UserValue/AnonymousId) từ async mappings
-    this.collectUserInfoFromAsyncMappings(context.executionId, asyncMappings);
-
     // 5. Register rule với NetworkObserver để bắt async data
     this.networkObserver.registerRule(rule);
-  }
-
-  /**
-   * Thu thập User Info từ async mappings
-   * 
-   * LOGIC ĐƠN GIẢN:
-   * 1. NetworkObserver đã cache user info vào localStorage (nếu match request)
-   * 2. Đọc localStorage: recsys_cached_user_info
-   *    - CÓ → Dùng userField và userValue từ cache
-   *    - KHÔNG → Fallback AnonymousId ngay
-   * 
-   * Không đợi network data vì:
-   * - Nếu có data thì đã được cache rồi (từ lần đăng nhập/refresh)
-   * - Nếu không có cache nghĩa là không bắt được → fallback ngay
-   */
-  private collectUserInfoFromAsyncMappings(
-    executionId: string,
-    asyncMappings: PayloadMapping[]
-  ): void {
-    console.log('[PayloadBuilder] collectUserInfoFromAsyncMappings - executionId:', executionId);
-    console.log('[PayloadBuilder] Async mappings:', asyncMappings.map(m => ({ field: m.field, source: m.source })));
-    
-    // Tìm xem có mapping nào cho UserId/Username không
-    const userMapping = asyncMappings.find(m => 
-      m.field === 'UserId' || 
-      m.field === 'Username'
-    );
-
-    if (!userMapping) {
-      console.log('[PayloadBuilder] No user mapping found in async mappings');
-      return; // Không cần user info
-    }
-    
-    console.log('[PayloadBuilder] Found user mapping for field:', userMapping.field);
-
-    // Check localStorage: recsys_cached_user_info
-    const cachedInfo = getCachedUserInfo();
-    console.log('[PayloadBuilder] Checking localStorage cache:', cachedInfo);
-    
-    if (cachedInfo && cachedInfo.userValue) {
-      // ✅ CÓ CACHE - Dùng userField và userValue từ cache
-      console.log('[PayloadBuilder] ✅ Using cached user info');
-      console.log('[PayloadBuilder] Field:', cachedInfo.userField, 'Value:', cachedInfo.userValue);
-      
-      // Thay thế required field nếu cần
-      // VD: Mapping yêu cầu UserId nhưng cache có Username
-      if (userMapping.field !== cachedInfo.userField) {
-        console.log('[PayloadBuilder] Replacing required field:', userMapping.field, '→', cachedInfo.userField);
-        this.recManager.replaceRequiredField(executionId, userMapping.field, cachedInfo.userField);
-      }
-      
-      // Collect cached value
-      this.recManager.collectField(executionId, cachedInfo.userField, cachedInfo.userValue);
-      return;
-    }
-
-    // ❌ KHÔNG CÓ CACHE - Fallback AnonymousId ngay
-    console.log('[PayloadBuilder] ⚠️ No cached user info found');
-    console.log('[PayloadBuilder] Fallback to AnonymousId immediately');
-    
-    // Thay thế required field: UserId/Username → AnonymousId
-    console.log('[PayloadBuilder] Replacing required field:', userMapping.field, '→ AnonymousId');
-    this.recManager.replaceRequiredField(executionId, userMapping.field, 'AnonymousId');
-    
-    // Collect AnonymousId ngay
-    const anonId = getOrCreateAnonymousId();
-    console.log('[PayloadBuilder] Collecting AnonymousId:', anonId);
-    this.recManager.collectField(executionId, 'AnonymousId', anonId);
   }
 
   /**
@@ -261,13 +189,8 @@ export class PayloadBuilder {
       case 'sessionstorage':
         return this.extractFromSessionStorage(mapping);
       
-      case 'url':
-      case 'pageurl':
-      case 'page_url':
-        return this.extractFromPageUrl(mapping);
-      
       case 'static':
-        return mapping.value;
+        return mapping.config?.Value;
       
       case 'login_detector':
         return this.extractFromLoginDetector(mapping);
@@ -286,7 +209,7 @@ export class PayloadBuilder {
       return null;
     }
 
-    const selector = mapping.value;
+    const selector = mapping.config?.SelectorPattern;
     if (!selector) {
       return null;
     }
@@ -354,7 +277,7 @@ export class PayloadBuilder {
    * Extract từ cookie
    */
   private extractFromCookie(mapping: PayloadMapping): any {
-    const cookieName = mapping.value;
+    const cookieName = mapping.config?.Value;
     if (!cookieName) return null;
 
     const cookies = document.cookie.split(';');
@@ -372,7 +295,7 @@ export class PayloadBuilder {
    * Extract từ localStorage
    */
   private extractFromLocalStorage(mapping: PayloadMapping): any {
-    const key = mapping.value;
+    const key = mapping.config?.Value;
     if (!key) return null;
 
     try {
@@ -394,7 +317,7 @@ export class PayloadBuilder {
    * Extract từ sessionStorage
    */
   private extractFromSessionStorage(mapping: PayloadMapping): any {
-    const key = mapping.value;
+    const key = mapping.config?.Value;
     if (!key) return null;
 
     try {
@@ -409,33 +332,6 @@ export class PayloadBuilder {
       }
     } catch (error) {
       return null;
-    }
-  }
-
-  /**
-   * Extract từ page URL
-   */
-  private extractFromPageUrl(mapping: PayloadMapping): any {
-    const url = new URL(window.location.href);
-    const urlPart = (mapping.urlPart || '').toLowerCase();
-
-    switch (urlPart) {
-      case 'query':
-      case 'queryparam':
-        const paramName = mapping.urlPartValue || mapping.value;
-        return url.searchParams.get(paramName);
-      
-      case 'path':
-        return url.pathname;
-      
-      case 'hash':
-        return url.hash.substring(1);
-      
-      case 'hostname':
-        return url.hostname;
-      
-      default:
-        return url.href;
     }
   }
 

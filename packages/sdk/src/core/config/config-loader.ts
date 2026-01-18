@@ -146,12 +146,7 @@ export class ConfigLoader {
       id: payload.Id || payload.id,
       field: payload.Field || payload.field,
       source: payload.Source || payload.source,
-      value: payload.Value || payload.value,
-      requestUrlPattern: payload.RequestUrlPattern || payload.requestUrlPattern || null,
-      requestMethod: payload.RequestMethod || payload.requestMethod || null,
-      requestBodyPath: payload.RequestBodyPath || payload.requestBodyPath || null,
-      urlPart: payload.UrlPart || payload.urlPart || null,
-      urlPartValue: payload.UrlPartValue || payload.urlPartValue || null,
+      config: payload.Config || payload.config || {},
       trackingRuleId: payload.TrackingRuleId || payload.trackingRuleId,
     }));
   }

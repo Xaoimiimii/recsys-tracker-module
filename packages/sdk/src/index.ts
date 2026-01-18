@@ -14,7 +14,8 @@ import { PayloadBuilder } from './core/payload/payload-builder';
 import { EventDeduplicator } from './core/utils/event-deduplicator';
 import { LoopGuard } from './core/utils/loop-guard';
 import { getNetworkObserver } from './core/network/network-observer';
-import { getOrCreateAnonymousId, getCachedUserInfo } from './core/plugins/utils/plugin-utils';
+import { getOrCreateAnonymousId } from './core/plugins/utils/plugin-utils';
+import { UserIdentityManager } from './core/user';
 
 // RecSysTracker - Main SDK class
 export class RecSysTracker {
@@ -32,6 +33,7 @@ export class RecSysTracker {
   public payloadBuilder: PayloadBuilder;
   public eventDeduplicator: EventDeduplicator;
   public loopGuard: LoopGuard;
+  public userIdentityManager: UserIdentityManager;
 
   constructor() {
     this.configLoader = new ConfigLoader();
@@ -42,6 +44,7 @@ export class RecSysTracker {
     this.payloadBuilder = new PayloadBuilder();
     this.eventDeduplicator = new EventDeduplicator(3000); // 3 second window
     this.loopGuard = new LoopGuard({ maxRequestsPerSecond: 5 });
+    this.userIdentityManager = new UserIdentityManager();
   }
 
   // Khởi tạo SDK - tự động gọi khi tải script
@@ -61,6 +64,12 @@ export class RecSysTracker {
         return;
       }
 
+      // Initialize UserIdentityManager
+      await this.userIdentityManager.initialize(this.config.domainKey);
+      
+      // Connect UserIdentityManager with NetworkObserver
+      networkObserver.setUserIdentityManager(this.userIdentityManager);
+
       // Khởi tạo EventDispatcher
       const baseUrl = process.env.API_URL || DEFAULT_API_URL;
       this.eventDispatcher = new EventDispatcher({
@@ -78,11 +87,6 @@ export class RecSysTracker {
         }
 
         console.log(this.config);
-
-        // Register user info mappings với NetworkObserver để smart caching
-        if (this.config.trackingRules && this.config.trackingRules.length > 0) {
-          networkObserver.registerUserInfoMappings(this.config.trackingRules);
-        }
 
         // Khởi tạo Display Manager nếu có returnMethods
         if (this.config.returnMethods && this.config.returnMethods.length > 0) {
@@ -202,24 +206,14 @@ export class RecSysTracker {
       const payload = eventData.eventData || {};
       const ruleId = payload.ruleId || payload.RuleId;
       
-      // 1. Luôn lấy anonymousId từ localStorage (hoặc tạo mới nếu chưa có)
-      const anonymousId = getOrCreateAnonymousId();
+      // Lấy user info từ UserIdentityManager
+      const userInfo = this.userIdentityManager.getUserInfo();
       
-      // 2. Kiểm tra userId từ cached user info trong localStorage
-      const cachedUserInfo = getCachedUserInfo();
-      let userId: string | undefined = undefined;
-      
-      if (cachedUserInfo && cachedUserInfo.userValue) {
-        // Có cached user info - sử dụng
-        userId = cachedUserInfo.userValue;
-      }
-      
-      // User field cho deduplication - ưu tiên userId, fallback về anonymousId
-      const userValue = userId || 
+      // User field cho deduplication - sử dụng user info từ UserIdentityManager
+      const userValue = userInfo.value || 
                        payload.userId || payload.UserId || 
                        payload.username || payload.Username ||
-                       payload.userValue || payload.UserValue ||
-                       anonymousId;
+                       payload.userValue || payload.UserValue;
       
       // Item field - try multiple variants
       const itemValue = payload.itemId || payload.ItemId ||
@@ -263,8 +257,9 @@ export class RecSysTracker {
         eventTypeId: eventData.eventType,
         trackingRuleId: Number(ruleId) || 0,
         domainKey: this.config.domainKey,
-        anonymousId: anonymousId,
-        ...(userId && { userId }), // Chỉ thêm userId nếu có
+        // Thêm user identity field - ưu tiên userId, fallback về anonymousId
+        userId: userInfo.field === 'UserId' ? userInfo.value : undefined,
+        anonymousId: userInfo.field === 'AnonymousId' ? userInfo.value : getOrCreateAnonymousId(),
         itemField: itemField,
         itemValue: itemValue,
         ...(ratingValue !== undefined && { 
