@@ -39,10 +39,6 @@ export declare class ClickPlugin extends BasePlugin {
      */
     private isInteractiveElement;
     /**
-     * Check conditions
-     */
-    private checkConditions;
-    /**
      * Dispatch tracking event
      */
     private dispatchEvent;

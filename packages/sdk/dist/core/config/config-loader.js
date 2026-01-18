@@ -52,6 +52,89 @@ export class ConfigLoader {
             return null;
         }
     }
+    // Mock data cho 3 config responses
+    getMockConfigResponses() {
+        return [
+            {
+                "Id": 23,
+                "Name": "Click Play Button",
+                "DomainID": 11,
+                "EventTypeID": 1,
+                "ActionType": "View",
+                "PayloadMapping": [
+                    {
+                        "Field": "ItemId",
+                        "Source": "request_url",
+                        "Config": {
+                            "RequestUrlPattern": "/api/song/:id/player",
+                            "RequestMethod": "GET",
+                            "Value": "3",
+                            "ExtractType": "pathname"
+                        }
+                    }
+                ],
+                "TrackingTarget": ".play-button"
+            },
+            {
+                "Id": 17,
+                "Name": "Get Rating",
+                "DomainID": 11,
+                "EventTypeID": 2,
+                "ActionType": null,
+                "PayloadMapping": [
+                    {
+                        "Field": "ItemId",
+                        "Source": "request_url",
+                        "Config": {
+                            "RequestUrlPattern": "/api/rating/:id/add-review",
+                            "RequestMethod": "POST",
+                            "Value": "3",
+                            "ExtractType": "pathname"
+                        }
+                    },
+                    {
+                        "Field": "Rating",
+                        "Source": "request_body",
+                        "Config": {
+                            "RequestUrlPattern": "/api/rating/{id}/add-review",
+                            "RequestMethod": "POST",
+                            "Value": "rating"
+                        }
+                    }
+                ],
+                "TrackingTarget": ".submit-rating-btn"
+            },
+            {
+                "Id": 18,
+                "Name": "Get Review",
+                "DomainID": 11,
+                "EventTypeID": 3,
+                "ActionType": null,
+                "PayloadMapping": [
+                    {
+                        "Field": "ItemId",
+                        "Source": "request_url",
+                        "Config": {
+                            "RequestUrlPattern": "api/rating/:id/add-review",
+                            "RequestMethod": "POST",
+                            "Value": "3",
+                            "ExtractType": "pathname"
+                        }
+                    },
+                    {
+                        "Field": "Review",
+                        "Source": "request_body",
+                        "Config": {
+                            "RequestUrlPattern": "/api/rating/{id}/add-review",
+                            "RequestMethod": "POST",
+                            "Value": "comment"
+                        }
+                    }
+                ],
+                "TrackingTarget": ".submit-rating-btn"
+            }
+        ];
+    }
     // Lấy cấu hình từ server (remote)
     async fetchRemoteConfig() {
         if (!this.domainKey) {
@@ -59,10 +142,10 @@ export class ConfigLoader {
         }
         const baseUrl = process.env.API_URL || DEFAULT_API_URL;
         try {
-            // Bước 1: Gọi 4 API song song để lấy domain, list rules cơ bản, return methods và event types
-            const [domainResponse, rulesListResponse, returnMethodsResponse, eventTypesResponse] = await Promise.all([
+            // Bước 1: Gọi 3 API song song để lấy domain, return methods và event types
+            // Rules sẽ dùng mock data
+            const [domainResponse, returnMethodsResponse, eventTypesResponse] = await Promise.all([
                 fetch(`${baseUrl}${DEFAULT_CONFIG_ENDPOINT_PATH}/${this.domainKey}`),
-                fetch(`${baseUrl}/rule/domain/${this.domainKey}`),
                 fetch(`${baseUrl}/return-method/${this.domainKey}`),
                 fetch(`${baseUrl}/rule/event-type`)
             ]);
@@ -72,7 +155,7 @@ export class ConfigLoader {
             }
             // Parse responses
             const domainData = domainResponse.ok ? await domainResponse.json() : null;
-            const rulesListData = rulesListResponse.ok ? await rulesListResponse.json() : [];
+            const rulesListData = this.getMockConfigResponses(); // Sử dụng mock data cho rules
             const returnMethodsData = returnMethodsResponse.ok ? await returnMethodsResponse.json() : [];
             const eventTypesData = eventTypesResponse.ok ? await eventTypesResponse.json() : [];
             // Cập nhật config với data từ server
@@ -112,24 +195,11 @@ export class ConfigLoader {
                 name: rule.Name || rule.name,
                 domainId: rule.DomainID || rule.domainId,
                 eventTypeId: rule.EventTypeID || rule.eventTypeId,
-                trackingTargetId: rule.TrackingTargetId || rule.trackingTargetId,
-                payloadMappings: this.transformPayloadMappings(rule.PayloadMappings || rule.payloadMappings || []),
-                conditions: this.transformConditions(rule.Conditions || rule.conditions || []),
-                trackingTarget: this.transformTrackingTarget(rule.TrackingTarget || rule.trackingTarget),
+                actionType: rule.ActionType || rule.actionType || null,
+                payloadMappings: this.transformPayloadMappings(rule.PayloadMapping || rule.PayloadMappings || rule.payloadMappings || []),
+                trackingTarget: this.transformTrackingTargetToString(rule.TrackingTarget || rule.trackingTarget),
             });
         });
-    }
-    // Transform conditions từ server format sang SDK format
-    transformConditions(conditionsData) {
-        if (!Array.isArray(conditionsData))
-            return [];
-        return conditionsData.map(condition => ({
-            id: condition.Id || condition.id,
-            value: condition.Value || condition.value,
-            trackingRuleId: condition.TrackingRuleID || condition.trackingRuleId,
-            patternId: condition.PatternId || condition.patternId,
-            operatorId: condition.OperatorID || condition.operatorId,
-        }));
     }
     // Transform payload mappings từ server format sang SDK format
     transformPayloadMappings(payloadData) {
@@ -139,31 +209,21 @@ export class ConfigLoader {
             id: payload.Id || payload.id,
             field: payload.Field || payload.field,
             source: payload.Source || payload.source,
-            value: payload.Value || payload.value,
-            requestUrlPattern: payload.RequestUrlPattern || payload.requestUrlPattern || null,
-            requestMethod: payload.RequestMethod || payload.requestMethod || null,
-            requestBodyPath: payload.RequestBodyPath || payload.requestBodyPath || null,
-            urlPart: payload.UrlPart || payload.urlPart || null,
-            urlPartValue: payload.UrlPartValue || payload.urlPartValue || null,
+            config: payload.Config || payload.config || {},
             trackingRuleId: payload.TrackingRuleId || payload.trackingRuleId,
         }));
     }
-    // Transform tracking target từ server format sang SDK format
-    transformTrackingTarget(targetData) {
+    // Transform tracking target từ server format sang SDK format (trả về string)
+    transformTrackingTargetToString(targetData) {
         if (!targetData) {
-            return {
-                id: 0,
-                value: '',
-                patternId: 0,
-                operatorId: 0,
-            };
+            return '';
         }
-        return {
-            id: targetData.Id || targetData.id || 0,
-            value: targetData.Value || targetData.value || '',
-            patternId: targetData.PatternId || targetData.patternId || 0,
-            operatorId: targetData.OperatorId || targetData.operatorId || 0,
-        };
+        // Nếu targetData là string (CSS selector), trả về trực tiếp
+        if (typeof targetData === 'string') {
+            return targetData;
+        }
+        // Nếu targetData là object, lấy value
+        return targetData.Value || targetData.value || '';
     }
     // Transform return methods từ server format sang SDK format
     transformReturnMethods(returnMethodsData) {
@@ -172,7 +232,6 @@ export class ConfigLoader {
         return returnMethodsData.map(method => ({
             id: method.Id || method.id,
             domainId: method.DomainID || method.domainId,
-            operatorId: method.OperatorID || method.operatorId,
             returnType: method.ReturnType || method.returnType,
             value: method.Value || method.value || '',
             configurationName: method.ConfigurationName || method.configurationName,

@@ -3,11 +3,11 @@ export declare class ConfigLoader {
     private config;
     private domainKey;
     loadFromWindow(): TrackerConfig | null;
+    private getMockConfigResponses;
     fetchRemoteConfig(): Promise<TrackerConfig | null>;
     private transformRules;
-    private transformConditions;
     private transformPayloadMappings;
-    private transformTrackingTarget;
+    private transformTrackingTargetToString;
     private transformReturnMethods;
     private transformEventTypes;
     getConfig(): TrackerConfig | null;

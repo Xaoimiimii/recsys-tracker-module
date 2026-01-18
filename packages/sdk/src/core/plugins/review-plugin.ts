@@ -116,7 +116,7 @@ export class ReviewPlugin extends BasePlugin {
    * Find element matching rule selector
    */
   private findMatchingElement(target: Element, rule: TrackingRule): Element | null {
-    const selector = rule.trackingTarget?.value;
+    const selector = rule.trackingTarget;
     if (!selector) return null;
 
     try {

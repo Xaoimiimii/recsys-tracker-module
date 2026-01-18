@@ -33,20 +33,6 @@ export declare class PayloadBuilder {
      */
     handleTrigger(rule: TrackingRule, triggerContext: any, onComplete: (payload: Record<string, any>) => void): void;
     /**
-     * Thu thập User Info từ async mappings
-     *
-     * LOGIC ĐƠN GIẢN:
-     * 1. NetworkObserver đã cache user info vào localStorage (nếu match request)
-     * 2. Đọc localStorage: recsys_cached_user_info
-     *    - CÓ → Dùng userField và userValue từ cache
-     *    - KHÔNG → Fallback AnonymousId ngay
-     *
-     * Không đợi network data vì:
-     * - Nếu có data thì đã được cache rồi (từ lần đăng nhập/refresh)
-     * - Nếu không có cache nghĩa là không bắt được → fallback ngay
-     */
-    private collectUserInfoFromAsyncMappings;
-    /**
      * Phân loại mappings thành sync và async
      */
     private classifyMappings;
@@ -67,10 +53,6 @@ export declare class PayloadBuilder {
      */
     private extractFromElement;
     /**
-     * Get value từ element (text, value, attribute)
-     */
-    private getElementValue;
-    /**
      * Extract từ cookie
      */
     private extractFromCookie;
@@ -82,10 +64,6 @@ export declare class PayloadBuilder {
      * Extract từ sessionStorage
      */
     private extractFromSessionStorage;
-    /**
-     * Extract từ page URL
-     */
-    private extractFromPageUrl;
     /**
      * Extract từ LoginDetector (custom integration)
      */

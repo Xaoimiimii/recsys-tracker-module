@@ -11,6 +11,14 @@
 import { UserIdentityConfig } from '../../types';
 import { saveCachedUserInfo, getCachedUserInfo, getOrCreateAnonymousId } from '../plugins/utils/plugin-utils';
 import { PathMatcher } from '../utils/path-matcher';
+import {
+  extractFromCookie,
+  extractFromLocalStorage,
+  extractFromSessionStorage,
+  parseBody,
+  extractByPath,
+  extractFromUrl
+} from '../utils/data-extractors';
 
 export class UserIdentityManager {
   private userIdentityConfig: UserIdentityConfig | null = null;
@@ -56,11 +64,11 @@ export class UserIdentityManager {
     const mockConfig: UserIdentityConfig = {
       id: 1,
       source: 'request_body',
-      domainId: 20,
+      domainId: 11,
       requestConfig: {
-        RequestUrlPattern: '/api/user/profile',
+        RequestUrlPattern: '/api/auth/me',
         RequestMethod: 'GET',
-        Value: 'data.userId'
+        Value: 'username'
       },
       field: 'UserId'
     };
@@ -82,15 +90,15 @@ export class UserIdentityManager {
     try {
       switch (source) {
         case 'local_storage':
-          extractedValue = localStorage.getItem(value || '');
+          extractedValue = extractFromLocalStorage(value || '');
           break;
 
         case 'session_storage':
-          extractedValue = sessionStorage.getItem(value || '');
+          extractedValue = extractFromSessionStorage(value || '');
           break;
 
         case 'cookie':
-          extractedValue = this.getCookie(value || '');
+          extractedValue = extractFromCookie(value || '');
           break;
 
         case 'element':
@@ -115,17 +123,7 @@ export class UserIdentityManager {
     }
   }
 
-  /**
-   * Get cookie value by name
-   */
-  private getCookie(name: string): string | null {
-    const value = `; ${document.cookie}`;
-    const parts = value.split(`; ${name}=`);
-    if (parts.length === 2) {
-      return parts.pop()?.split(';').shift() || null;
-    }
-    return null;
-  }
+
 
   /**
    * Check if source is network-based
@@ -175,10 +173,10 @@ export class UserIdentityManager {
       if (source === 'request_body') {
         // Extract từ response body (for GET) or request body (for POST/PUT)
         const body = method.toUpperCase() === 'GET' ? responseBody : requestBody;
-        extractedValue = this.extractByPath(this.parseBody(body), Value);
+        extractedValue = extractByPath(parseBody(body), Value);
       } else if (source === 'request_url') {
         // Extract từ URL
-        extractedValue = this.extractFromUrl(url, Value, ExtractType);
+        extractedValue = extractFromUrl(url, Value, ExtractType, requestConfig.RequestUrlPattern);
       }
 
       if (extractedValue) {
@@ -190,66 +188,7 @@ export class UserIdentityManager {
     }
   }
 
-  /**
-   * Extract value từ URL (pathname or query)
-   */
-  private extractFromUrl(url: string, value: string, extractType?: string): any {
-    try {
-      const urlObj = new URL(url, window.location.origin);
 
-      if (extractType === 'query') {
-        return urlObj.searchParams.get(value);
-      } else if (extractType === 'pathname') {
-        // Extract từ pathname segments
-        const segments = urlObj.pathname.split('/').filter(s => s);
-        const index = parseInt(value, 10);
-        if (!isNaN(index) && index >= 0 && index < segments.length) {
-          return segments[index];
-        }
-      }
-
-      return null;
-    } catch (error) {
-      console.error('[UserIdentityManager] Error extracting from URL:', error);
-      return null;
-    }
-  }
-
-  /**
-   * Parse body (JSON or text)
-   */
-  private parseBody(body: any): any {
-    if (!body) return null;
-
-    if (typeof body === 'string') {
-      try {
-        return JSON.parse(body);
-      } catch {
-        return body;
-      }
-    }
-
-    return body;
-  }
-
-  /**
-   * Extract value by path (e.g., "data.user.id")
-   */
-  private extractByPath(obj: any, path: string): any {
-    if (!path || !obj) return null;
-
-    const parts = path.split('.');
-    let current = obj;
-
-    for (const part of parts) {
-      if (current === null || current === undefined) {
-        return null;
-      }
-      current = current[part];
-    }
-
-    return current;
-  }
 
   /**
    * Get current user info để gửi với event

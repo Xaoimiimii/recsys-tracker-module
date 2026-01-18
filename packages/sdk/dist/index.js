@@ -4,7 +4,8 @@ import { PayloadBuilder } from './core/payload/payload-builder';
 import { EventDeduplicator } from './core/utils/event-deduplicator';
 import { LoopGuard } from './core/utils/loop-guard';
 import { getNetworkObserver } from './core/network/network-observer';
-import { getOrCreateAnonymousId, getCachedUserInfo } from './core/plugins/utils/plugin-utils';
+import { getOrCreateAnonymousId } from './core/plugins/utils/plugin-utils';
+import { UserIdentityManager } from './core/user';
 // RecSysTracker - Main SDK class
 export class RecSysTracker {
     constructor() {
@@ -22,6 +23,7 @@ export class RecSysTracker {
         this.payloadBuilder = new PayloadBuilder();
         this.eventDeduplicator = new EventDeduplicator(3000); // 3 second window
         this.loopGuard = new LoopGuard({ maxRequestsPerSecond: 5 });
+        this.userIdentityManager = new UserIdentityManager();
     }
     // Khởi tạo SDK - tự động gọi khi tải script
     async init() {
@@ -37,6 +39,10 @@ export class RecSysTracker {
             if (!this.config) {
                 return;
             }
+            // Initialize UserIdentityManager
+            await this.userIdentityManager.initialize(this.config.domainKey);
+            // Connect UserIdentityManager with NetworkObserver
+            networkObserver.setUserIdentityManager(this.userIdentityManager);
             // Khởi tạo EventDispatcher
             const baseUrl = process.env.API_URL || DEFAULT_API_URL;
             this.eventDispatcher = new EventDispatcher({
@@ -51,10 +57,6 @@ export class RecSysTracker {
                     this.eventDispatcher.setDomainUrl(this.config.domainUrl);
                 }
                 console.log(this.config);
-                // Register user info mappings với NetworkObserver để smart caching
-                if (this.config.trackingRules && this.config.trackingRules.length > 0) {
-                    networkObserver.registerUserInfoMappings(this.config.trackingRules);
-                }
                 // Khởi tạo Display Manager nếu có returnMethods
                 if (this.config.returnMethods && this.config.returnMethods.length > 0) {
                     const apiBaseUrl = process.env.API_URL || 'https://recsys-tracker-module.onrender.com';
@@ -89,14 +91,10 @@ export class RecSysTracker {
         const clickId = this.getEventTypeId('Click') || 1;
         const rateId = this.getEventTypeId('Rating') || 2;
         const reviewId = this.getEventTypeId('Review') || 3;
-        const pageViewId = this.getEventTypeId('Page View') || 4;
-        const scrollId = this.getEventTypeId('Scroll') || 6;
         // Check specific rules (chỉ check nếu tìm thấy ID)
         const hasClickRules = clickId ? this.config.trackingRules.some(rule => rule.eventTypeId === clickId) : false;
         const hasRateRules = rateId ? this.config.trackingRules.some(rule => rule.eventTypeId === rateId) : false;
         const hasReviewRules = reviewId ? this.config.trackingRules.some(rule => rule.eventTypeId === reviewId) : false;
-        const hasPageViewRules = pageViewId ? this.config.trackingRules.some(rule => rule.eventTypeId === pageViewId) : false;
-        const hasScrollRules = scrollId ? this.config.trackingRules.some(rule => rule.eventTypeId === scrollId) : false;
         // Chỉ tự động đăng ký nếu chưa có plugin nào được đăng ký
         if (this.pluginManager.getPluginNames().length === 0) {
             const pluginPromises = [];
@@ -118,18 +116,6 @@ export class RecSysTracker {
                 });
                 pluginPromises.push(reviewPromise);
             }
-            if (hasPageViewRules) {
-                const pageViewPromise = import('./core/plugins/page-view-plugin').then(({ PageViewPlugin }) => {
-                    this.use(new PageViewPlugin());
-                });
-                pluginPromises.push(pageViewPromise);
-            }
-            if (hasScrollRules) {
-                const scrollPromise = import('./core/plugins/scroll-plugin').then(({ ScrollPlugin }) => {
-                    this.use(new ScrollPlugin());
-                });
-                pluginPromises.push(scrollPromise);
-            }
             // Chờ tất cả plugin được đăng ký trước khi khởi động
             if (pluginPromises.length > 0) {
                 await Promise.all(pluginPromises);
@@ -149,21 +135,13 @@ export class RecSysTracker {
             // Support both camelCase and PascalCase field names
             const payload = eventData.eventData || {};
             const ruleId = payload.ruleId || payload.RuleId;
-            // 1. Luôn lấy anonymousId từ localStorage (hoặc tạo mới nếu chưa có)
-            const anonymousId = getOrCreateAnonymousId();
-            // 2. Kiểm tra userId từ cached user info trong localStorage
-            const cachedUserInfo = getCachedUserInfo();
-            let userId = undefined;
-            if (cachedUserInfo && cachedUserInfo.userValue) {
-                // Có cached user info - sử dụng
-                userId = cachedUserInfo.userValue;
-            }
-            // User field cho deduplication - ưu tiên userId, fallback về anonymousId
-            const userValue = userId ||
+            // Lấy user info từ UserIdentityManager
+            const userInfo = this.userIdentityManager.getUserInfo();
+            // User field cho deduplication - sử dụng user info từ UserIdentityManager
+            const userValue = userInfo.value ||
                 payload.userId || payload.UserId ||
                 payload.username || payload.Username ||
-                payload.userValue || payload.UserValue ||
-                anonymousId;
+                payload.userValue || payload.UserValue;
             // Item field - try multiple variants
             const itemValue = payload.itemId || payload.ItemId ||
                 payload.itemTitle || payload.ItemTitle ||
@@ -197,8 +175,9 @@ export class RecSysTracker {
                 eventTypeId: eventData.eventType,
                 trackingRuleId: Number(ruleId) || 0,
                 domainKey: this.config.domainKey,
-                anonymousId: anonymousId,
-                ...(userId && { userId }), // Chỉ thêm userId nếu có
+                // Thêm user identity field - ưu tiên userId, fallback về anonymousId
+                userId: userInfo.field === 'UserId' ? userInfo.value : undefined,
+                anonymousId: userInfo.field === 'AnonymousId' ? userInfo.value : getOrCreateAnonymousId(),
                 itemField: itemField,
                 itemValue: itemValue,
                 ...(ratingValue !== undefined && {
@@ -376,8 +355,6 @@ export { LoopGuard } from './core/utils/loop-guard';
 export { BasePlugin } from './core/plugins/base-plugin';
 // Export built-in plugins
 export { ClickPlugin } from './core/plugins/click-plugin';
-export { PageViewPlugin } from './core/plugins/page-view-plugin';
 export { RatingPlugin } from './core/plugins/rating-plugin';
-export { ScrollPlugin } from './core/plugins/scroll-plugin';
 export { ReviewPlugin } from './core/plugins/review-plugin';
 //# sourceMappingURL=index.js.map

@@ -61,10 +61,6 @@ export class ClickPlugin extends BasePlugin {
             if (!matchedElement) {
                 continue;
             }
-            // Check conditions
-            if (!this.checkConditions(matchedElement, rule)) {
-                continue;
-            }
             // Create trigger context
             const triggerContext = {
                 element: matchedElement,
@@ -86,8 +82,7 @@ export class ClickPlugin extends BasePlugin {
      * Find element matching rule selector
      */
     findMatchingElement(clickedElement, rule) {
-        var _a;
-        const selector = (_a = rule.trackingTarget) === null || _a === void 0 ? void 0 : _a.value;
+        const selector = rule.trackingTarget;
         if (!selector)
             return null;
         try {
@@ -166,25 +161,6 @@ export class ClickPlugin extends BasePlugin {
             return true;
         }
         return false;
-    }
-    /**
-     * Check conditions
-     */
-    checkConditions(_element, rule) {
-        const conditions = rule.conditions;
-        if (!conditions || conditions.length === 0) {
-            return true;
-        }
-        for (const cond of conditions) {
-            // Pattern ID 2 = URL, Operator ID 1 = CONTAINS
-            if (cond.patternId === 2 && cond.operatorId === 1) {
-                if (!window.location.href.includes(cond.value)) {
-                    return false;
-                }
-            }
-            // Add more condition types as needed
-        }
-        return true;
     }
     /**
      * Dispatch tracking event

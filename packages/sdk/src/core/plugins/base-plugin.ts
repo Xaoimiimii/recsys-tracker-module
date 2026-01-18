@@ -1,6 +1,5 @@
 import { RecSysTracker } from '../..';
 import { ErrorBoundary } from '../error-handling/error-boundary';
-import { TrackerInit } from '../tracker-init';
 
 export interface IPlugin {
   readonly name: string;
@@ -169,7 +168,7 @@ export abstract class BasePlugin implements IPlugin {
     
     // Get values from collectedData
     const userField = collectedData.UserId ? 'UserId' : (collectedData.Username ? 'Username' : (collectedData.AnonymousId ? 'AnonymousId' : 'UserId'));
-    const userValue = collectedData.UserId || collectedData.Username || collectedData.AnonymousId || TrackerInit.getUsername() || 'guest';
+    const userValue = collectedData.UserId || collectedData.Username || collectedData.AnonymousId || 'guest';
     const itemField = collectedData.ItemId ? 'ItemId' : (collectedData.ItemTitle ? 'ItemTitle' : 'ItemId');
     const itemValue = collectedData.ItemId || collectedData.ItemTitle || '';
     const value = collectedData.Value || '';
@@ -190,55 +189,4 @@ export abstract class BasePlugin implements IPlugin {
     this.tracker.track(payload);
   }
 
-  /**
-   * DEPRECATED: Legacy method - not used by v2 plugins
-   * V2 plugins call PayloadBuilder.handleTrigger() directly
-   * 
-   * Phương thức xây dựng và theo dõi payload
-   * New Flow: Plugin detects trigger → calls payloadBuilder with callback → 
-   * payloadBuilder processes and calls back → buildAndTrack constructs and tracks → 
-   * add to buffer → event dispatch
-   * 
-   * @param context - Context for extraction (HTMLElement, NetworkContext, etc.)
-   * @param rule - Tracking rule with payload mappings
-   * @param eventId - Event type ID
-   * @param additionalFields - Optional additional fields (ratingValue, reviewValue, metadata, etc.)
-   */
-  protected buildAndTrack(
-    context: any,
-    rule: any,
-    eventId: number
-  ): void {
-    // For legacy plugins that still use this method, provide minimal support
-    if (!this.tracker) {
-      return;
-    }
-
-    // Fallback: use TrackerInit for simple payload extraction
-    const element = context instanceof HTMLElement ? context : null;
-    const mappedData = TrackerInit.handleMapping(rule, element);
-    
-    const userField = mappedData.UserId ? 'UserId' : 'userId';
-    const userValue = mappedData.UserId || TrackerInit.getUsername() || 'guest';
-    const itemField = mappedData.ItemId ? 'ItemId' : 'itemId';
-    const itemValue = mappedData.ItemId || '';
-
-    this.tracker.track({
-      eventType: Number(eventId),
-      eventData: {
-        ruleId: rule.id,
-        userField,
-        userValue,
-        itemField,
-        itemValue,
-        ...mappedData
-      },
-      timestamp: Date.now(),
-      url: window.location.href,
-      metadata: {
-        plugin: this.name,
-        deprecatedMethod: true
-      }
-    });
-  }
 }

@@ -18,10 +18,9 @@ export interface TrackingRule {
   name: string;
   domainId: number;
   eventTypeId: number; 
-  trackingTargetId: number;
+  actionType?: string | null;
   payloadMappings: PayloadMapping[];
-  conditions: Condition[];
-  trackingTarget: TrackingTarget;
+  trackingTarget: string;
 }
 
 export interface PayloadMapping {
@@ -64,25 +63,9 @@ export interface UserIdentityRequestConfig {
   ExtractType?: 'pathname' | 'query'; // Only for request_url
 }
 
-export interface Condition {
-  id: number;
-  value: string;
-  trackingRuleId: number;
-  patternId: number;
-  operatorId: number;
-}
-
-export interface TrackingTarget {
-  id: number;
-  value: string;
-  patternId: number;
-  operatorId: number;
-}
-
 export interface ReturnMethod {
   id: number;
   domainId: number;
-  operatorId: number;
   returnType: string;
   value: string;
   configurationName: string;
@@ -93,16 +76,6 @@ export interface TrackerOptions {
   batchSize?: number;
   batchDelay?: number; // ms
   offlineStorage?: boolean;
-}
-
-// Plugin-related types (đồng bộ với plugin interfaces)
-export type RuleSource = 'ai_detect' | 'regex_group';
-
-export interface PayloadExtractor {
-  source: RuleSource;
-  eventKey: string;
-  pattern?: string;
-  groupIndex?: number;
 }
 
 // Window declaration for domain key

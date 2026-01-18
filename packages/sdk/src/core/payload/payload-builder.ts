@@ -19,6 +19,12 @@
 import { TrackingRule, PayloadMapping } from '../../types';
 import { RuleExecutionContextManager } from '../execution/rule-execution-context';
 import { NetworkObserver, getNetworkObserver } from '../network/network-observer';
+import {
+  extractFromCookie,
+  extractFromLocalStorage,
+  extractFromSessionStorage,
+  getElementValue
+} from '../utils/data-extractors';
 
 /**
  * Các source types
@@ -233,44 +239,10 @@ export class PayloadBuilder {
       }
 
       // Extract value từ element
-      return this.getElementValue(targetElement);
+      return getElementValue(targetElement);
     } catch (error) {
       return null;
     }
-  }
-
-  /**
-   * Get value từ element (text, value, attribute)
-   */
-  private getElementValue(element: Element): any {
-    // Input elements
-    if (element instanceof HTMLInputElement) {
-      if (element.type === 'checkbox' || element.type === 'radio') {
-        return element.checked;
-      }
-      return element.value;
-    }
-
-    // Textarea
-    if (element instanceof HTMLTextAreaElement) {
-      return element.value;
-    }
-
-    // Select
-    if (element instanceof HTMLSelectElement) {
-      return element.value;
-    }
-
-    // Data attributes
-    if (element.hasAttribute('data-value')) {
-      return element.getAttribute('data-value');
-    }
-    if (element.hasAttribute('data-id')) {
-      return element.getAttribute('data-id');
-    }
-
-    // Text content
-    return element.textContent?.trim() || null;
   }
 
   /**
@@ -280,15 +252,7 @@ export class PayloadBuilder {
     const cookieName = mapping.config?.Value;
     if (!cookieName) return null;
 
-    const cookies = document.cookie.split(';');
-    for (const cookie of cookies) {
-      const [name, value] = cookie.split('=').map(s => s.trim());
-      if (name === cookieName) {
-        return decodeURIComponent(value);
-      }
-    }
-    
-    return null;
+    return extractFromCookie(cookieName);
   }
 
   /**
@@ -298,19 +262,7 @@ export class PayloadBuilder {
     const key = mapping.config?.Value;
     if (!key) return null;
 
-    try {
-      const value = localStorage.getItem(key);
-      if (value === null) return null;
-      
-      // Try parse JSON
-      try {
-        return JSON.parse(value);
-      } catch {
-        return value;
-      }
-    } catch (error) {
-      return null;
-    }
+    return extractFromLocalStorage(key);
   }
 
   /**
@@ -320,19 +272,7 @@ export class PayloadBuilder {
     const key = mapping.config?.Value;
     if (!key) return null;
 
-    try {
-      const value = sessionStorage.getItem(key);
-      if (value === null) return null;
-      
-      // Try parse JSON
-      try {
-        return JSON.parse(value);
-      } catch {
-        return value;
-      }
-    } catch (error) {
-      return null;
-    }
+    return extractFromSessionStorage(key);
   }
 
   /**

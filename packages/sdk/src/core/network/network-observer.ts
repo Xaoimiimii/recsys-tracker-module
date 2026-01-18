@@ -14,6 +14,11 @@ import { RuleExecutionContextManager, RuleExecutionContext } from '../execution/
 import { PathMatcher } from '../utils/path-matcher';
 import { TrackingRule } from '../../types';
 import { UserIdentityManager } from '../user';
+import {
+  parseBody,
+  extractByPath,
+  extractFromUrl
+} from '../utils/data-extractors';
 
 interface NetworkRequestInfo {
   url: string;
@@ -431,7 +436,7 @@ export class NetworkObserver {
     console.log('[NetworkObserver] extractFromRequestBody');
     console.log('[NetworkObserver] Raw request body:', requestInfo.requestBody);
     
-    const body = this.parseBody(requestInfo.requestBody);
+    const body = parseBody(requestInfo.requestBody);
     console.log('[NetworkObserver] Parsed request body:', body);
     
     if (!body) {
@@ -442,7 +447,7 @@ export class NetworkObserver {
     const path = mapping.config?.Value;
     console.log('[NetworkObserver] Extracting by path:', path);
     
-    const result = this.extractByPath(body, path);
+    const result = extractByPath(body, path);
     console.log('[NetworkObserver] Extract result:', result);
     
     return result;
@@ -455,7 +460,7 @@ export class NetworkObserver {
     console.log('[NetworkObserver] extractFromResponseBody');
     console.log('[NetworkObserver] Raw response body:', requestInfo.responseBody?.substring?.(0, 500));
     
-    const body = this.parseBody(requestInfo.responseBody);
+    const body = parseBody(requestInfo.responseBody);
     console.log('[NetworkObserver] Parsed response body:', body);
     
     if (!body) {
@@ -466,7 +471,7 @@ export class NetworkObserver {
     const path = mapping.config?.Value;
     console.log('[NetworkObserver] Extracting by path:', path);
     
-    const result = this.extractByPath(body, path);
+    const result = extractByPath(body, path);
     console.log('[NetworkObserver] Extract result:', result);
     
     return result;
@@ -476,64 +481,8 @@ export class NetworkObserver {
    * Extract từ request URL
    */
   private extractFromRequestUrl(mapping: any, requestInfo: NetworkRequestInfo): any {
-    const url = new URL(requestInfo.url, window.location.origin);
     const { ExtractType, Value, RequestUrlPattern } = mapping.config;
-    
-    if (ExtractType === 'query' && Value) {
-      // Extract query parameter
-      return url.searchParams.get(Value);
-    } else if (ExtractType === 'pathname' && Value && RequestUrlPattern) {
-      // Extract pathname segment using pattern matching
-      const index = parseInt(Value, 10);
-      
-      if (!isNaN(index)) {
-        // Value is segment index - extract by index
-        const segments = url.pathname.split('/').filter(s => s);
-        return segments[index] || null;
-      } else {
-        // Value is param name - extract using pattern
-        const params = PathMatcher.extractParams(requestInfo.url, RequestUrlPattern);
-        return params[Value] || null;
-      }
-    }
-    
-    return null;
-  }
-
-  /**
-   * Parse body (JSON or text)
-   */
-  private parseBody(body: any): any {
-    if (!body) return null;
-    
-    if (typeof body === 'string') {
-      try {
-        return JSON.parse(body);
-      } catch {
-        return body;
-      }
-    }
-    
-    return body;
-  }
-
-  /**
-   * Extract value by path (e.g., "data.user.id")
-   */
-  private extractByPath(obj: any, path: string): any {
-    if (!path || !obj) return null;
-
-    const parts = path.split('.');
-    let current = obj;
-
-    for (const part of parts) {
-      if (current === null || current === undefined) {
-        return null;
-      }
-      current = current[part];
-    }
-
-    return current;
+    return extractFromUrl(requestInfo.url, Value, ExtractType, RequestUrlPattern);
   }
 
   /**

@@ -128,15 +128,11 @@ export class RecSysTracker {
     const clickId = this.getEventTypeId('Click') || 1;
     const rateId = this.getEventTypeId('Rating') || 2;
     const reviewId = this.getEventTypeId('Review') || 3;
-    const pageViewId = this.getEventTypeId('Page View') || 4;
-    const scrollId = this.getEventTypeId('Scroll') || 6;
 
     // Check specific rules (chỉ check nếu tìm thấy ID)
     const hasClickRules = clickId ? this.config.trackingRules.some(rule => rule.eventTypeId === clickId) : false;
     const hasRateRules = rateId ? this.config.trackingRules.some(rule => rule.eventTypeId === rateId) : false;
     const hasReviewRules = reviewId ? this.config.trackingRules.some(rule => rule.eventTypeId === reviewId) : false;
-    const hasPageViewRules = pageViewId ? this.config.trackingRules.some(rule => rule.eventTypeId === pageViewId) : false;
-    const hasScrollRules = scrollId ? this.config.trackingRules.some(rule => rule.eventTypeId === scrollId) : false;
 
     // Chỉ tự động đăng ký nếu chưa có plugin nào được đăng ký
     if (this.pluginManager.getPluginNames().length === 0) {
@@ -161,20 +157,6 @@ export class RecSysTracker {
           this.use(new ReviewPlugin());
         });
         pluginPromises.push(reviewPromise);
-      }
-
-      if (hasPageViewRules) {
-        const pageViewPromise = import('./core/plugins/page-view-plugin').then(({ PageViewPlugin }) => {
-          this.use(new PageViewPlugin());
-        });
-        pluginPromises.push(pageViewPromise);
-      }
-
-      if (hasScrollRules) {
-        const scrollPromise = import('./core/plugins/scroll-plugin').then(({ ScrollPlugin }) => {
-          this.use(new ScrollPlugin());
-        });
-        pluginPromises.push(scrollPromise);
       }
 
       // Chờ tất cả plugin được đăng ký trước khi khởi động
@@ -468,9 +450,7 @@ export { IPlugin, BasePlugin } from './core/plugins/base-plugin';
 
 // Export built-in plugins
 export { ClickPlugin } from './core/plugins/click-plugin';
-export { PageViewPlugin } from './core/plugins/page-view-plugin';
 export { RatingPlugin } from './core/plugins/rating-plugin';
-export { ScrollPlugin } from './core/plugins/scroll-plugin';
 export { ReviewPlugin } from './core/plugins/review-plugin';
 
 

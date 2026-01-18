@@ -7,9 +7,11 @@
  * 3. Chỉ xử lý request khi có REC phù hợp
  * 4. KHÔNG dispatch event (chỉ collect data vào REC)
  * 5. Passive - không can thiệp vào logic nghiệp vụ
+ * 6. Tích hợp với UserIdentityManager để handle user identity
  */
 import { RuleExecutionContextManager } from '../execution/rule-execution-context';
 import { TrackingRule } from '../../types';
+import { UserIdentityManager } from '../user';
 /**
  * NetworkObserver - Singleton passive listener
  */
@@ -20,18 +22,17 @@ export declare class NetworkObserver {
     private originalXhrSend;
     private isActive;
     private recManager;
+    private userIdentityManager;
     private registeredRules;
-    private userInfoMappings;
     private constructor();
     /**
      * Get singleton instance
      */
     static getInstance(): NetworkObserver;
     /**
-     * Register user info mappings từ config
-     * Được gọi bởi ConfigLoader sau khi parse rules
+     * Set UserIdentityManager reference
      */
-    registerUserInfoMappings(rules: TrackingRule[]): void;
+    setUserIdentityManager(userIdentityManager: UserIdentityManager): void;
     /**
      * Initialize observer với REC manager
      * PHẢI GỌI KHI SDK INIT
@@ -56,23 +57,14 @@ export declare class NetworkObserver {
     private hookXHR;
     /**
      * Xử lý request đã intercept
-     * SECURITY: Chỉ process và log khi request match với rule patterns
-     * SMART: Cache user info dựa trên registered user info mappings từ config
+     * Chỉ process và log khi request match với rule patterns
+     * Delegate user info extraction to UserIdentityManager
      */
     private handleRequest;
     /**
      * Process payload mappings của rule và extract data vào REC
      */
     private processRuleMappings;
-    /**
-     * SMART USER INFO CACHING
-     *
-     * Cache user info dựa trên registered user info mappings từ config
-     * Chỉ cache khi request match với patterns đã đăng ký
-     *
-     * @returns true nếu đã cache user info
-     */
-    private smartUserInfoCaching;
     /**
      * SECURITY: Tìm rules có thể match với request này
      * Check URL pattern và method TRƯỚC KHI parse body
@@ -107,14 +99,6 @@ export declare class NetworkObserver {
      * Extract từ request URL
      */
     private extractFromRequestUrl;
-    /**
-     * Parse body (JSON or text)
-     */
-    private parseBody;
-    /**
-     * Extract value by path (e.g., "data.user.id")
-     */
-    private extractByPath;
     /**
      * Restore original functions (for cleanup/testing)
      */

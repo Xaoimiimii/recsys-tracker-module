@@ -186,6 +186,89 @@ class ConfigLoader {
             return null;
         }
     }
+    // Mock data cho 3 config responses
+    getMockConfigResponses() {
+        return [
+            {
+                "Id": 23,
+                "Name": "Click Play Button",
+                "DomainID": 11,
+                "EventTypeID": 1,
+                "ActionType": "View",
+                "PayloadMapping": [
+                    {
+                        "Field": "ItemId",
+                        "Source": "request_url",
+                        "Config": {
+                            "RequestUrlPattern": "/api/song/:id/player",
+                            "RequestMethod": "GET",
+                            "Value": "3",
+                            "ExtractType": "pathname"
+                        }
+                    }
+                ],
+                "TrackingTarget": ".play-button"
+            },
+            {
+                "Id": 17,
+                "Name": "Get Rating",
+                "DomainID": 11,
+                "EventTypeID": 2,
+                "ActionType": null,
+                "PayloadMapping": [
+                    {
+                        "Field": "ItemId",
+                        "Source": "request_url",
+                        "Config": {
+                            "RequestUrlPattern": "/api/rating/:id/add-review",
+                            "RequestMethod": "POST",
+                            "Value": "3",
+                            "ExtractType": "pathname"
+                        }
+                    },
+                    {
+                        "Field": "Rating",
+                        "Source": "request_body",
+                        "Config": {
+                            "RequestUrlPattern": "/api/rating/{id}/add-review",
+                            "RequestMethod": "POST",
+                            "Value": "rating"
+                        }
+                    }
+                ],
+                "TrackingTarget": ".submit-rating-btn"
+            },
+            {
+                "Id": 18,
+                "Name": "Get Review",
+                "DomainID": 11,
+                "EventTypeID": 3,
+                "ActionType": null,
+                "PayloadMapping": [
+                    {
+                        "Field": "ItemId",
+                        "Source": "request_url",
+                        "Config": {
+                            "RequestUrlPattern": "api/rating/:id/add-review",
+                            "RequestMethod": "POST",
+                            "Value": "3",
+                            "ExtractType": "pathname"
+                        }
+                    },
+                    {
+                        "Field": "Review",
+                        "Source": "request_body",
+                        "Config": {
+                            "RequestUrlPattern": "/api/rating/{id}/add-review",
+                            "RequestMethod": "POST",
+                            "Value": "comment"
+                        }
+                    }
+                ],
+                "TrackingTarget": ".submit-rating-btn"
+            }
+        ];
+    }
     // Lấy cấu hình từ server (remote)
     async fetchRemoteConfig() {
         if (!this.domainKey) {
@@ -193,10 +276,10 @@ class ConfigLoader {
         }
         const baseUrl = "https://recsys-tracker-module.onrender.com";
         try {
-            // Bước 1: Gọi 4 API song song để lấy domain, list rules cơ bản, return methods và event types
-            const [domainResponse, rulesListResponse, returnMethodsResponse, eventTypesResponse] = await Promise.all([
+            // Bước 1: Gọi 3 API song song để lấy domain, return methods và event types
+            // Rules sẽ dùng mock data
+            const [domainResponse, returnMethodsResponse, eventTypesResponse] = await Promise.all([
                 fetch(`${baseUrl}${DEFAULT_CONFIG_ENDPOINT_PATH}/${this.domainKey}`),
-                fetch(`${baseUrl}/rule/domain/${this.domainKey}`),
                 fetch(`${baseUrl}/return-method/${this.domainKey}`),
                 fetch(`${baseUrl}/rule/event-type`)
             ]);
@@ -206,7 +289,7 @@ class ConfigLoader {
             }
             // Parse responses
             const domainData = domainResponse.ok ? await domainResponse.json() : null;
-            const rulesListData = rulesListResponse.ok ? await rulesListResponse.json() : [];
+            const rulesListData = this.getMockConfigResponses(); // Sử dụng mock data cho rules
             const returnMethodsData = returnMethodsResponse.ok ? await returnMethodsResponse.json() : [];
             const eventTypesData = eventTypesResponse.ok ? await eventTypesResponse.json() : [];
             // Cập nhật config với data từ server
@@ -246,24 +329,11 @@ class ConfigLoader {
                 name: rule.Name || rule.name,
                 domainId: rule.DomainID || rule.domainId,
                 eventTypeId: rule.EventTypeID || rule.eventTypeId,
-                trackingTargetId: rule.TrackingTargetId || rule.trackingTargetId,
-                payloadMappings: this.transformPayloadMappings(rule.PayloadMappings || rule.payloadMappings || []),
-                conditions: this.transformConditions(rule.Conditions || rule.conditions || []),
-                trackingTarget: this.transformTrackingTarget(rule.TrackingTarget || rule.trackingTarget),
+                actionType: rule.ActionType || rule.actionType || null,
+                payloadMappings: this.transformPayloadMappings(rule.PayloadMapping || rule.PayloadMappings || rule.payloadMappings || []),
+                trackingTarget: this.transformTrackingTargetToString(rule.TrackingTarget || rule.trackingTarget),
             });
         });
-    }
-    // Transform conditions từ server format sang SDK format
-    transformConditions(conditionsData) {
-        if (!Array.isArray(conditionsData))
-            return [];
-        return conditionsData.map(condition => ({
-            id: condition.Id || condition.id,
-            value: condition.Value || condition.value,
-            trackingRuleId: condition.TrackingRuleID || condition.trackingRuleId,
-            patternId: condition.PatternId || condition.patternId,
-            operatorId: condition.OperatorID || condition.operatorId,
-        }));
     }
     // Transform payload mappings từ server format sang SDK format
     transformPayloadMappings(payloadData) {
@@ -273,31 +343,21 @@ class ConfigLoader {
             id: payload.Id || payload.id,
             field: payload.Field || payload.field,
             source: payload.Source || payload.source,
-            value: payload.Value || payload.value,
-            requestUrlPattern: payload.RequestUrlPattern || payload.requestUrlPattern || null,
-            requestMethod: payload.RequestMethod || payload.requestMethod || null,
-            requestBodyPath: payload.RequestBodyPath || payload.requestBodyPath || null,
-            urlPart: payload.UrlPart || payload.urlPart || null,
-            urlPartValue: payload.UrlPartValue || payload.urlPartValue || null,
+            config: payload.Config || payload.config || {},
             trackingRuleId: payload.TrackingRuleId || payload.trackingRuleId,
         }));
     }
-    // Transform tracking target từ server format sang SDK format
-    transformTrackingTarget(targetData) {
+    // Transform tracking target từ server format sang SDK format (trả về string)
+    transformTrackingTargetToString(targetData) {
         if (!targetData) {
-            return {
-                id: 0,
-                value: '',
-                patternId: 0,
-                operatorId: 0,
-            };
+            return '';
         }
-        return {
-            id: targetData.Id || targetData.id || 0,
-            value: targetData.Value || targetData.value || '',
-            patternId: targetData.PatternId || targetData.patternId || 0,
-            operatorId: targetData.OperatorId || targetData.operatorId || 0,
-        };
+        // Nếu targetData là string (CSS selector), trả về trực tiếp
+        if (typeof targetData === 'string') {
+            return targetData;
+        }
+        // Nếu targetData là object, lấy value
+        return targetData.Value || targetData.value || '';
     }
     // Transform return methods từ server format sang SDK format
     transformReturnMethods(returnMethodsData) {
@@ -306,7 +366,6 @@ class ConfigLoader {
         return returnMethodsData.map(method => ({
             id: method.Id || method.id,
             domainId: method.DomainID || method.domainId,
-            operatorId: method.OperatorID || method.operatorId,
             returnType: method.ReturnType || method.returnType,
             value: method.Value || method.value || '',
             configurationName: method.ConfigurationName || method.configurationName,
@@ -2067,82 +2126,6 @@ class DisplayManager {
     }
 }
 
-class TrackerCore {
-    static findScope(targetElement, rootSelector) {
-        if (!targetElement)
-            return document;
-        if (rootSelector) {
-            const scope = targetElement.closest(rootSelector);
-            if (scope)
-                return scope;
-        }
-        return targetElement.parentElement || document;
-    }
-    static resolveElementValue(selector, scope = document) {
-        var _a;
-        if (!scope || !(scope instanceof HTMLElement))
-            return null;
-        if (scope.hasAttribute(selector)) {
-            return scope.getAttribute(selector);
-        }
-        const el = scope.querySelector(selector);
-        if (el) {
-            return ((_a = el.textContent) === null || _a === void 0 ? void 0 : _a.trim()) || null;
-        }
-        if (selector.startsWith("[") && selector.endsWith("]")) {
-            const attrName = selector.slice(1, -1);
-            const elWithAttr = scope.querySelector(selector);
-            return elWithAttr ? elWithAttr.getAttribute(attrName) : null;
-        }
-        return null;
-    }
-}
-
-class TrackerInit {
-    static getUsername() {
-        var _a;
-        if (this.usernameCache !== null) {
-            return this.usernameCache;
-        }
-        // @ts-ignore
-        const user = (_a = window.LoginDetector) === null || _a === void 0 ? void 0 : _a.getCurrentUser();
-        return this.usernameCache = user !== null && user !== void 0 ? user : "guest";
-    }
-    // static init(): void {
-    //     console.log("✅ [TrackerInit] Static system initialized");
-    // }
-    static handleMapping(rule, target = null) {
-        var _a;
-        const payload = {
-            ruleId: rule.id,
-            eventTypeId: rule.eventTypeId
-        };
-        const scope = TrackerCore.findScope(target, ((_a = rule.trackingTarget) === null || _a === void 0 ? void 0 : _a.value) || null);
-        const mappings = rule.payloadMappings || [];
-        mappings.forEach((map) => {
-            const field = map.field;
-            const source = map.source;
-            const value = map.value;
-            if (source === 'element') {
-                payload[field] = TrackerCore.resolveElementValue(value, scope);
-            }
-            else if (source === 'static') {
-                payload[field] = value;
-            }
-            else if (source === 'login_detector' || field.toLowerCase() === 'userid') {
-                payload[field] = this.getUsername();
-            }
-        });
-        return payload;
-    }
-    static checkConditions(conditions) {
-        if (!conditions || conditions.length === 0)
-            return true;
-        return true;
-    }
-}
-TrackerInit.usernameCache = null;
-
 class BasePlugin {
     constructor() {
         this.tracker = null;
@@ -2253,7 +2236,7 @@ class BasePlugin {
         }
         // Get values from collectedData
         const userField = collectedData.UserId ? 'UserId' : (collectedData.Username ? 'Username' : (collectedData.AnonymousId ? 'AnonymousId' : 'UserId'));
-        const userValue = collectedData.UserId || collectedData.Username || collectedData.AnonymousId || TrackerInit.getUsername() || 'guest';
+        const userValue = collectedData.UserId || collectedData.Username || collectedData.AnonymousId || 'guest';
         const itemField = collectedData.ItemId ? 'ItemId' : (collectedData.ItemTitle ? 'ItemTitle' : 'ItemId');
         const itemValue = collectedData.ItemId || collectedData.ItemTitle || '';
         const value = collectedData.Value || '';
@@ -2270,50 +2253,6 @@ class BasePlugin {
         };
         // Track the event
         this.tracker.track(payload);
-    }
-    /**
-     * DEPRECATED: Legacy method - not used by v2 plugins
-     * V2 plugins call PayloadBuilder.handleTrigger() directly
-     *
-     * Phương thức xây dựng và theo dõi payload
-     * New Flow: Plugin detects trigger → calls payloadBuilder with callback →
-     * payloadBuilder processes and calls back → buildAndTrack constructs and tracks →
-     * add to buffer → event dispatch
-     *
-     * @param context - Context for extraction (HTMLElement, NetworkContext, etc.)
-     * @param rule - Tracking rule with payload mappings
-     * @param eventId - Event type ID
-     * @param additionalFields - Optional additional fields (ratingValue, reviewValue, metadata, etc.)
-     */
-    buildAndTrack(context, rule, eventId) {
-        // For legacy plugins that still use this method, provide minimal support
-        if (!this.tracker) {
-            return;
-        }
-        // Fallback: use TrackerInit for simple payload extraction
-        const element = context instanceof HTMLElement ? context : null;
-        const mappedData = TrackerInit.handleMapping(rule, element);
-        const userField = mappedData.UserId ? 'UserId' : 'userId';
-        const userValue = mappedData.UserId || TrackerInit.getUsername() || 'guest';
-        const itemField = mappedData.ItemId ? 'ItemId' : 'itemId';
-        const itemValue = mappedData.ItemId || '';
-        this.tracker.track({
-            eventType: Number(eventId),
-            eventData: {
-                ruleId: rule.id,
-                userField,
-                userValue,
-                itemField,
-                itemValue,
-                ...mappedData
-            },
-            timestamp: Date.now(),
-            url: window.location.href,
-            metadata: {
-                plugin: this.name,
-                deprecatedMethod: true
-            }
-        });
     }
 }
 
@@ -2482,10 +2421,6 @@ class ClickPlugin extends BasePlugin {
             if (!matchedElement) {
                 continue;
             }
-            // Check conditions
-            if (!this.checkConditions(matchedElement, rule)) {
-                continue;
-            }
             // Create trigger context
             const triggerContext = {
                 element: matchedElement,
@@ -2507,8 +2442,7 @@ class ClickPlugin extends BasePlugin {
      * Find element matching rule selector
      */
     findMatchingElement(clickedElement, rule) {
-        var _a;
-        const selector = (_a = rule.trackingTarget) === null || _a === void 0 ? void 0 : _a.value;
+        const selector = rule.trackingTarget;
         if (!selector)
             return null;
         try {
@@ -2589,25 +2523,6 @@ class ClickPlugin extends BasePlugin {
         return false;
     }
     /**
-     * Check conditions
-     */
-    checkConditions(_element, rule) {
-        const conditions = rule.conditions;
-        if (!conditions || conditions.length === 0) {
-            return true;
-        }
-        for (const cond of conditions) {
-            // Pattern ID 2 = URL, Operator ID 1 = CONTAINS
-            if (cond.patternId === 2 && cond.operatorId === 1) {
-                if (!window.location.href.includes(cond.value)) {
-                    return false;
-                }
-            }
-            // Add more condition types as needed
-        }
-        return true;
-    }
-    /**
      * Dispatch tracking event
      */
     dispatchEvent(payload, rule, eventId) {
@@ -2630,197 +2545,6 @@ class ClickPlugin extends BasePlugin {
 var clickPlugin = /*#__PURE__*/Object.freeze({
     __proto__: null,
     ClickPlugin: ClickPlugin
-});
-
-const STORAGE_KEYS = {
-    ANON_USER_ID: 'recsys_anon_id',
-    USER_ID: 'recsys_user_id',
-    SESSION_ID: 'recsys_session',
-    IDENTIFIERS: 'recsys_identifiers',
-    LAST_USER_ID: 'recsys_last_user_id',
-    CACHED_USER_INFO: 'recsys_cached_user_info' // Lưu user info đã bắt được
-};
-function log(...args) {
-}
-/**
- * Lưu user info vào localStorage khi bắt được từ rule
- * @param userField - UserId hoặc Username
- * @param userValue - Giá trị user đã bắt được
- */
-function saveCachedUserInfo(userField, userValue) {
-    console.log('[plugin-utils] saveCachedUserInfo called - field:', userField, 'value:', userValue);
-    // Chỉ lưu nếu userValue valid (không phải AnonymousId, guest, empty)
-    if (!userValue ||
-        userValue === 'guest' ||
-        userValue.startsWith('anon_') ||
-        userField === 'AnonymousId') {
-        console.log('[plugin-utils] Skipping save - invalid user value or AnonymousId');
-        return;
-    }
-    try {
-        const cachedInfo = {
-            userField,
-            userValue,
-            timestamp: Date.now()
-        };
-        localStorage.setItem(STORAGE_KEYS.CACHED_USER_INFO, JSON.stringify(cachedInfo));
-        console.log('[plugin-utils] Successfully saved cached user info:', cachedInfo);
-        log('Saved cached user info:', cachedInfo);
-    }
-    catch (error) {
-        console.error('[plugin-utils] Failed to save cached user info:', error);
-    }
-}
-/**
- * Lấy cached user info từ localStorage
- * @returns CachedUserInfo hoặc null nếu không có
- */
-function getCachedUserInfo() {
-    try {
-        const cached = localStorage.getItem(STORAGE_KEYS.CACHED_USER_INFO);
-        console.log('[plugin-utils] getCachedUserInfo - raw cached value:', cached);
-        if (!cached) {
-            console.log('[plugin-utils] No cached user info found');
-            return null;
-        }
-        const userInfo = JSON.parse(cached);
-        console.log('[plugin-utils] Parsed cached user info:', userInfo);
-        // Validate cached data
-        if (userInfo.userField && userInfo.userValue && userInfo.timestamp) {
-            console.log('[plugin-utils] Valid cached user info:', userInfo);
-            log('Retrieved cached user info:', userInfo);
-            return userInfo;
-        }
-        console.log('[plugin-utils] Invalid cached user info structure');
-        return null;
-    }
-    catch (error) {
-        console.error('[plugin-utils] Error reading cached user info:', error);
-        return null;
-    }
-}
-/**
- * Khởi tạo và lấy Anonymous ID từ localStorage
- * Tự động tạo mới nếu chưa tồn tại
- */
-function getOrCreateAnonymousId() {
-    try {
-        let anonId = localStorage.getItem(STORAGE_KEYS.ANON_USER_ID);
-        console.log('[plugin-utils] getOrCreateAnonymousId - existing anonId:', anonId);
-        if (!anonId) {
-            // Generate new anonymous ID: anon_timestamp_randomstring
-            const timestamp = Date.now();
-            const randomStr = Math.random().toString(36).substring(2, 10);
-            anonId = `anon_${timestamp}_${randomStr}`;
-            localStorage.setItem(STORAGE_KEYS.ANON_USER_ID, anonId);
-            console.log('[plugin-utils] Created new anonymous ID:', anonId);
-            log('Created new anonymous ID:', anonId);
-        }
-        else {
-            console.log('[plugin-utils] Using existing anonymous ID:', anonId);
-        }
-        return anonId;
-    }
-    catch (error) {
-        console.error('[plugin-utils] Error accessing localStorage for anonId:', error);
-        // Fallback nếu localStorage không available
-        const fallbackId = `anon_${Date.now()}_${Math.random().toString(36).substring(2, 10)}`;
-        console.log('[plugin-utils] Using fallback anonymous ID:', fallbackId);
-        return fallbackId;
-    }
-}
-const CUSTOM_ROUTE_EVENT = "recsys_route_change";
-
-class PageViewPlugin extends BasePlugin {
-    constructor() {
-        super(...arguments);
-        this.name = 'PageViewPlugin';
-    }
-    init(tracker) {
-        this.errorBoundary.execute(() => {
-            super.init(tracker);
-            console.log(`[PageViewPlugin] initialized.`);
-        }, 'PageViewPlugin.init');
-    }
-    start() {
-        this.errorBoundary.execute(() => {
-            if (!this.ensureInitialized())
-                return;
-            const wrappedHandler = this.wrapHandler(this.handlePageChange.bind(this), 'handlePageChange');
-            window.addEventListener("popstate", wrappedHandler);
-            {
-                window.addEventListener(CUSTOM_ROUTE_EVENT, wrappedHandler);
-            }
-            this.trackCurrentPage(window.location.href);
-            this.active = true;
-        }, 'PageViewPlugin.start');
-    }
-    stop() {
-        this.errorBoundary.execute(() => {
-            const wrappedHandler = this.wrapHandler(this.handlePageChange.bind(this), 'handlePageChange');
-            window.removeEventListener("popstate", wrappedHandler);
-            {
-                window.removeEventListener(CUSTOM_ROUTE_EVENT, wrappedHandler);
-            }
-            super.stop();
-        }, 'PageViewPlugin.stop');
-    }
-    handlePageChange() {
-        setTimeout(() => {
-            this.trackCurrentPage(window.location.href);
-        }, 0);
-    }
-    trackCurrentPage(currentUrl) {
-        var _a, _b;
-        if (!this.tracker)
-            return;
-        const urlObject = new URL(currentUrl);
-        const pathname = urlObject.pathname;
-        const eventId = this.tracker.getEventTypeId('Page View');
-        if (!eventId) {
-            return;
-        }
-        const config = this.tracker.getConfig();
-        const pageViewRules = (_a = config === null || config === void 0 ? void 0 : config.trackingRules) === null || _a === void 0 ? void 0 : _a.filter(r => r.eventTypeId === eventId);
-        if (!pageViewRules || pageViewRules.length === 0) {
-            return;
-        }
-        // Loop qua tất cả rules và tìm rule phù hợp
-        for (const rule of pageViewRules) {
-            let matchFound = false;
-            const selector = ((_b = rule.trackingTarget) === null || _b === void 0 ? void 0 : _b.value) || '';
-            // Determine payload extractor logic from rule
-            const isRegex = selector.startsWith('^');
-            // Regex-based matching (URL pattern)
-            if (isRegex) {
-                const pattern = new RegExp(selector);
-                const match = pathname.match(pattern);
-                if (match) {
-                    matchFound = true;
-                }
-            }
-            // DOM selector matching (Checking presence of element on page)
-            else if (selector && selector !== 'body') {
-                if (document.querySelector(selector)) {
-                    matchFound = true;
-                }
-            }
-            // Default body matching
-            else if (selector === 'body') {
-                matchFound = true;
-            }
-            if (matchFound) {
-                // Use centralized build and track
-                this.buildAndTrack(document.body, rule, eventId);
-                return;
-            }
-        }
-    }
-}
-
-var pageViewPlugin = /*#__PURE__*/Object.freeze({
-    __proto__: null,
-    PageViewPlugin: PageViewPlugin
 });
 
 /**
@@ -2921,8 +2645,7 @@ class ReviewPlugin extends BasePlugin {
      * Find element matching rule selector
      */
     findMatchingElement(target, rule) {
-        var _a;
-        const selector = (_a = rule.trackingTarget) === null || _a === void 0 ? void 0 : _a.value;
+        const selector = rule.trackingTarget;
         if (!selector)
             return null;
         try {
@@ -3029,315 +2752,6 @@ class ReviewPlugin extends BasePlugin {
 var reviewPlugin = /*#__PURE__*/Object.freeze({
     __proto__: null,
     ReviewPlugin: ReviewPlugin
-});
-
-// CONDITION PATTERNS
-const CONDITION_PATTERN = { CSS_SELECTOR: 1, URL: 2, DATA_ATTRIBUTE: 3 };
-// OPERATORS
-const TARGET_OPERATOR = { CONTAINS: 1, EQUALS: 2, STARTS_WITH: 3, ENDS_WITH: 4 };
-class ScrollPlugin extends BasePlugin {
-    constructor() {
-        super(...arguments);
-        this.name = 'ScrollPlugin';
-        // --- STATE MANAGEMENT ---
-        this.milestones = [25, 50, 75, 100];
-        this.sentMilestones = new Set();
-        this.maxScrollDepth = 0;
-        this.startTime = Date.now();
-        this.totalActiveTime = 0;
-        this.isTabVisible = true;
-        this.currentItemContext = null;
-        this.activeRule = null;
-        this.targetScrollElement = null;
-        this.lastScrollProcessTime = 0;
-        this.THROTTLE_MS = 200;
-        this.handleScrollBound = this.handleScroll.bind(this);
-        this.handleVisibilityChangeBound = this.handleVisibilityChange.bind(this);
-        this.handleUnloadBound = this.handleUnload.bind(this);
-    }
-    init(tracker) {
-        this.errorBoundary.execute(() => {
-            super.init(tracker);
-            console.log(`[ScrollPlugin] initialized.`);
-        }, 'ScrollPlugin.init');
-    }
-    start() {
-        this.errorBoundary.execute(() => {
-            if (!this.ensureInitialized())
-                return;
-            this.resetState();
-            const isResolved = this.resolveContextFromRules();
-            if (isResolved) {
-                const target = this.targetScrollElement || window;
-                target.addEventListener('scroll', this.handleScrollBound, { passive: true });
-                document.addEventListener('visibilitychange', this.handleVisibilityChangeBound);
-                window.addEventListener('beforeunload', this.handleUnloadBound);
-                this.active = true;
-            }
-        }, 'ScrollPlugin.start');
-    }
-    stop() {
-        this.errorBoundary.execute(() => {
-            const target = this.targetScrollElement || window;
-            target.removeEventListener('scroll', this.handleScrollBound);
-            document.removeEventListener('visibilitychange', this.handleVisibilityChangeBound);
-            window.removeEventListener('beforeunload', this.handleUnloadBound);
-            super.stop();
-        }, 'ScrollPlugin.stop');
-    }
-    resetState() {
-        this.sentMilestones.clear();
-        this.maxScrollDepth = 0;
-        this.startTime = Date.now();
-        this.totalActiveTime = 0;
-        this.isTabVisible = document.visibilityState === 'visible';
-        this.currentItemContext = null;
-        this.activeRule = null;
-        this.targetScrollElement = null;
-    }
-    resolveContextFromRules() {
-        var _a;
-        if (!this.tracker)
-            return false;
-        const eventId = this.tracker.getEventTypeId('Scroll') || 4;
-        const config = this.tracker.getConfig();
-        const scrollRules = ((_a = config === null || config === void 0 ? void 0 : config.trackingRules) === null || _a === void 0 ? void 0 : _a.filter(r => r.eventTypeId === eventId)) || [];
-        if (scrollRules.length === 0)
-            return false;
-        for (const rule of scrollRules) {
-            const element = this.findTargetElement(rule);
-            if (element) {
-                const representativeEl = (element instanceof Window) ? document.body : element;
-                if (this.checkConditions(representativeEl, rule)) {
-                    this.activeRule = rule;
-                    this.targetScrollElement = (element instanceof Window) ? null : element;
-                    this.detectContextForItem(representativeEl);
-                    return true;
-                }
-            }
-        }
-        return false;
-    }
-    findTargetElement(rule) {
-        const target = rule.targetElement || rule.TargetElement;
-        if (!target || !target.targetElementValue || target.targetElementValue === 'document' || target.targetElementValue === 'window') {
-            return window;
-        }
-        const selector = target.targetElementValue || target.Value;
-        try {
-            const el = document.querySelector(selector);
-            return el;
-        }
-        catch {
-            return null;
-        }
-    }
-    detectContextForItem(element) {
-        const contextInfo = this.scanSurroundingContext(element);
-        if (contextInfo.id) {
-            this.currentItemContext = {
-                id: contextInfo.id,
-                name: contextInfo.name || 'Unknown Item',
-                type: contextInfo.type || 'item',
-                confidence: 1,
-                source: contextInfo.source,
-                context: 'dom_context'
-            };
-        }
-        else {
-            this.currentItemContext = this.createSyntheticItem();
-        }
-    }
-    checkConditions(element, rule) {
-        const conditions = rule.Conditions || rule.conditions;
-        if (!conditions || conditions.length === 0)
-            return true;
-        for (const condition of conditions) {
-            const patternId = condition.EventPatternID || condition.eventPatternId || 1;
-            const operatorId = condition.OperatorID || condition.operatorId || 5;
-            const expectedValue = condition.Value || condition.value || '';
-            let actualValue = null;
-            let isMet = false;
-            switch (patternId) {
-                case CONDITION_PATTERN.URL:
-                    const urlParams = new URLSearchParams(window.location.search);
-                    if (urlParams.has(expectedValue))
-                        actualValue = urlParams.get(expectedValue);
-                    else
-                        actualValue = window.location.href;
-                    break;
-                case CONDITION_PATTERN.CSS_SELECTOR:
-                    try {
-                        isMet = element.matches(expectedValue);
-                        if (!isMet)
-                            return false;
-                        continue;
-                    }
-                    catch {
-                        return false;
-                    }
-                case CONDITION_PATTERN.DATA_ATTRIBUTE:
-                    actualValue = element.getAttribute(expectedValue);
-                    break;
-                default: actualValue = '';
-            }
-            isMet = this.compareValues(actualValue, expectedValue, operatorId);
-            if (!isMet)
-                return false;
-        }
-        return true;
-    }
-    compareValues(actual, expected, operatorId) {
-        if (actual === null)
-            actual = '';
-        switch (operatorId) {
-            case TARGET_OPERATOR.EQUALS: return actual === expected;
-            case TARGET_OPERATOR.CONTAINS: return actual.includes(expected);
-            case TARGET_OPERATOR.STARTS_WITH: return actual.startsWith(expected);
-            case TARGET_OPERATOR.ENDS_WITH: return actual.endsWith(expected);
-            default: return actual === expected;
-        }
-    }
-    scanSurroundingContext(element) {
-        const getAttrs = (el) => {
-            if (!el)
-                return null;
-            const id = el.getAttribute('data-item-id') || el.getAttribute('data-product-id') || el.getAttribute('data-id');
-            if (id)
-                return { id, name: el.getAttribute('data-item-name') || undefined, type: el.getAttribute('data-item-type') || undefined };
-            return null;
-        };
-        const ancestor = element.closest('[data-item-id], [data-product-id], [data-id]');
-        const ancestorData = getAttrs(ancestor);
-        if (ancestorData)
-            return { ...ancestorData, source: 'ancestor' };
-        let currentParent = element.parentElement;
-        let levels = 0;
-        while (currentParent && levels < 5) {
-            const candidates = currentParent.querySelectorAll('[data-item-id], [data-product-id], [data-id]');
-            if (candidates.length > 0) {
-                for (let i = 0; i < candidates.length; i++) {
-                    const candidate = candidates[i];
-                    if (!element.contains(candidate)) {
-                        const data = getAttrs(candidate);
-                        if (data)
-                            return { ...data, source: `scope_level_${levels + 1}` };
-                    }
-                }
-            }
-            currentParent = currentParent.parentElement;
-            levels++;
-        }
-        const urlParams = new URLSearchParams(window.location.search);
-        const urlId = urlParams.get('id') || urlParams.get('productId');
-        if (urlId)
-            return { id: urlId, source: 'url_param' };
-        return { id: undefined, source: 'none' };
-    }
-    handleScroll() {
-        const now = Date.now();
-        if (now - this.lastScrollProcessTime < this.THROTTLE_MS)
-            return;
-        this.lastScrollProcessTime = now;
-        let scrollTop, docHeight, clientHeight;
-        if (this.targetScrollElement instanceof HTMLElement) {
-            scrollTop = this.targetScrollElement.scrollTop;
-            docHeight = this.targetScrollElement.scrollHeight;
-            clientHeight = this.targetScrollElement.clientHeight;
-        }
-        else {
-            scrollTop = window.scrollY || document.documentElement.scrollTop;
-            docHeight = document.documentElement.scrollHeight;
-            clientHeight = window.innerHeight;
-        }
-        const currentPercent = Math.min(100, Math.round(((scrollTop + clientHeight) / docHeight) * 100));
-        if (currentPercent > this.maxScrollDepth)
-            this.maxScrollDepth = currentPercent;
-        this.milestones.forEach(milestone => {
-            if (currentPercent >= milestone && !this.sentMilestones.has(milestone)) {
-                this.sendScrollEvent(milestone);
-                this.sentMilestones.add(milestone);
-            }
-        });
-    }
-    sendScrollEvent(depth) {
-        if (!this.tracker)
-            return;
-        const rule = this.activeRule || this.createDefaultRule('default-scroll', 'Default Scroll');
-        const currentActiveSeconds = this.calculateActiveTime();
-        // Use buildAndTrack (legacy fallback)
-        const context = {
-            ...this.currentItemContext,
-            metadata: {
-                depth_percentage: depth,
-                time_on_page: currentActiveSeconds,
-                url: window.location.href
-            }
-        };
-        this.buildAndTrack(context, rule, rule.eventTypeId || 4);
-    }
-    handleUnload() {
-        if (!this.tracker)
-            return;
-        if (this.isTabVisible)
-            this.totalActiveTime += Date.now() - this.startTime;
-        const finalTime = parseFloat((this.totalActiveTime / 1000).toFixed(1));
-        if (finalTime < 1)
-            return;
-        const rule = this.activeRule || this.createDefaultRule('summary', 'Page Summary');
-        if (!this.currentItemContext)
-            this.currentItemContext = this.createSyntheticItem();
-        // Use buildAndTrack (legacy fallback)
-        const context = {
-            ...this.currentItemContext,
-            metadata: {
-                total_active_time: finalTime,
-                url: window.location.href,
-                max_scroll_depth: this.maxScrollDepth,
-                is_bounce: this.maxScrollDepth < 25 && finalTime < 5,
-                event: 'page_summary'
-            }
-        };
-        this.buildAndTrack(context, rule, rule.eventTypeId || 4);
-    }
-    handleVisibilityChange() {
-        if (document.visibilityState === 'hidden') {
-            this.totalActiveTime += Date.now() - this.startTime;
-            this.isTabVisible = false;
-        }
-        else {
-            this.startTime = Date.now();
-            this.isTabVisible = true;
-        }
-    }
-    calculateActiveTime() {
-        let currentSessionTime = 0;
-        if (this.isTabVisible)
-            currentSessionTime = Date.now() - this.startTime;
-        const totalMs = this.totalActiveTime + currentSessionTime;
-        return parseFloat((totalMs / 1000).toFixed(1));
-    }
-    createSyntheticItem() {
-        return {
-            id: 'page_scroll_' + Date.now(),
-            name: document.title || 'General Page',
-            type: 'page_view',
-            confidence: 1,
-            source: 'synthetic_page'
-        };
-    }
-    createDefaultRule(id, name) {
-        return {
-            id, name, eventTypeId: 4,
-            targetElement: { targetElementValue: 'document', targetEventPatternId: 1, targetOperatorId: 5 },
-            conditions: [], payloadMappings: [] // Empty mappings
-        };
-    }
-}
-
-var scrollPlugin = /*#__PURE__*/Object.freeze({
-    __proto__: null,
-    ScrollPlugin: ScrollPlugin
 });
 
 /**
@@ -3585,6 +2999,10 @@ class RuleExecutionContextManager {
 class PathMatcher {
     /**
      * Parse pattern like '/api/user/:id' or '/api/cart/{itemId}' into regex and segment config
+     * Supports flexible patterns:
+     * - "/api/product/:id/details" or "/api/product/{id}/details"
+     * - "api/product/:id/details" (without leading slash)
+     * - "product/:id" (partial path)
      */
     static compile(pattern) {
         const keys = [];
@@ -3606,6 +3024,17 @@ class PathMatcher {
             keys
         };
     }
+    /**
+     * Match URL against pattern with flexible matching
+     * Supports:
+     * - Full path matching: "/api/product/:id/details" matches "/api/product/123/details"
+     * - Partial path matching: "product/:id" matches "/api/product/123/details"
+     * - Pattern with or without leading slash
+     *
+     * @param url - Full URL or path to match
+     * @param pattern - Pattern to match against (can be partial)
+     * @returns true if URL matches pattern
+     */
     static match(url, pattern) {
         // Normalize Path from URL
         let path = url.split('?')[0];
@@ -3619,14 +3048,113 @@ class PathMatcher {
         // Ensure path starts with /
         if (!path.startsWith('/'))
             path = '/' + path;
-        // Compile Pattern
-        // If pattern is not absolute URL, ensure it starts with / for consistency with path
-        let effectivePattern = pattern;
+        // Normalize pattern
+        let effectivePattern = pattern.trim();
+        // If pattern doesn't start with http or /, prepend /
         if (!effectivePattern.startsWith('http') && !effectivePattern.startsWith('/')) {
             effectivePattern = '/' + effectivePattern;
         }
+        // Try exact match first
         const { regex } = PathMatcher.compile(effectivePattern);
-        return regex.test(path);
+        if (regex.test(path)) {
+            return true;
+        }
+        // Try partial match - check if pattern segments exist in path
+        // This allows "product/:id" to match "/api/product/123/details"
+        return PathMatcher.matchPartialPath(path, effectivePattern);
+    }
+    /**
+     * Match partial path segments
+     * Example: "product/:id" matches "/api/product/123/details"
+     */
+    static matchPartialPath(path, pattern) {
+        const pathSegments = path.split('/').filter(Boolean);
+        const patternSegments = pattern.split('/').filter(Boolean);
+        // Pattern must have at least one segment
+        if (patternSegments.length === 0) {
+            return false;
+        }
+        // Find if pattern segments exist as a subsequence in path
+        let patternIdx = 0;
+        let pathIdx = 0;
+        while (pathIdx < pathSegments.length && patternIdx < patternSegments.length) {
+            const patternSeg = patternSegments[patternIdx];
+            const pathSeg = pathSegments[pathIdx];
+            // Check if segment matches (literal or dynamic)
+            if (this.segmentMatches(pathSeg, patternSeg)) {
+                patternIdx++;
+            }
+            pathIdx++;
+        }
+        // All pattern segments found in path
+        return patternIdx === patternSegments.length;
+    }
+    /**
+     * Check if a path segment matches a pattern segment
+     * Pattern segment can be:
+     * - Literal: "product" matches "product"
+     * - Dynamic: ":id" or "{id}" matches any non-empty value
+     */
+    static segmentMatches(pathSegment, patternSegment) {
+        // Dynamic segment - matches anything
+        if (patternSegment.startsWith(':') ||
+            (patternSegment.startsWith('{') && patternSegment.endsWith('}'))) {
+            return pathSegment.length > 0;
+        }
+        // Literal segment - must match exactly
+        return pathSegment === patternSegment;
+    }
+    /**
+     * Extract dynamic values from URL based on pattern
+     * Example: extractParams("/api/product/123/details", "/api/product/:id/details")
+     * Returns: { id: "123" }
+     */
+    static extractParams(url, pattern) {
+        let path = url.split('?')[0];
+        try {
+            if (path.startsWith('http')) {
+                const urlObj = new URL(path);
+                path = urlObj.pathname;
+            }
+        }
+        catch { }
+        if (!path.startsWith('/'))
+            path = '/' + path;
+        let effectivePattern = pattern.trim();
+        if (!effectivePattern.startsWith('http') && !effectivePattern.startsWith('/')) {
+            effectivePattern = '/' + effectivePattern;
+        }
+        const { regex, keys } = PathMatcher.compile(effectivePattern);
+        const match = path.match(regex);
+        if (!match) {
+            return {};
+        }
+        const params = {};
+        keys.forEach((key, index) => {
+            params[key] = match[index + 1];
+        });
+        return params;
+    }
+    /**
+     * Extract value by segment index from URL
+     * @param url - URL to extract from
+     * @param pattern - Pattern to match (must match first)
+     * @param segmentIndex - 0-based index of segment to extract
+     */
+    static extractByIndex(url, pattern, segmentIndex) {
+        if (!PathMatcher.match(url, pattern)) {
+            return null;
+        }
+        let path = url.split('?')[0];
+        try {
+            if (path.startsWith('http')) {
+                const urlObj = new URL(path);
+                path = urlObj.pathname;
+            }
+        }
+        catch { }
+        const segments = path.split('/').filter(Boolean);
+        return segments[segmentIndex] || null;
     }
     // Logic specifically from tracker.js (optional, but robust)
     static matchStaticSegments(url, pattern) {
@@ -3643,6 +3171,181 @@ class PathMatcher {
 }
 
 /**
+ * Shared Data Extraction Utilities
+ *
+ * Common extraction logic used across:
+ * - UserIdentityManager
+ * - PayloadBuilder
+ * - NetworkObserver
+ *
+ * Purpose: Eliminate code duplication and ensure consistent behavior
+ */
+/**
+ * Extract value from cookie by name
+ */
+function extractFromCookie(cookieName) {
+    if (!cookieName)
+        return null;
+    const cookies = document.cookie.split(';');
+    for (const cookie of cookies) {
+        const [name, value] = cookie.split('=').map(s => s.trim());
+        if (name === cookieName) {
+            return decodeURIComponent(value);
+        }
+    }
+    return null;
+}
+/**
+ * Extract value from localStorage
+ * Automatically parses JSON if possible
+ */
+function extractFromLocalStorage(key) {
+    if (!key)
+        return null;
+    try {
+        const value = localStorage.getItem(key);
+        if (value === null)
+            return null;
+        // Try parse JSON
+        try {
+            return JSON.parse(value);
+        }
+        catch {
+            return value;
+        }
+    }
+    catch (error) {
+        return null;
+    }
+}
+/**
+ * Extract value from sessionStorage
+ * Automatically parses JSON if possible
+ */
+function extractFromSessionStorage(key) {
+    if (!key)
+        return null;
+    try {
+        const value = sessionStorage.getItem(key);
+        if (value === null)
+            return null;
+        // Try parse JSON
+        try {
+            return JSON.parse(value);
+        }
+        catch {
+            return value;
+        }
+    }
+    catch (error) {
+        return null;
+    }
+}
+/**
+ * Parse body (JSON or text)
+ * Used for request/response body parsing
+ */
+function parseBody(body) {
+    if (!body)
+        return null;
+    if (typeof body === 'string') {
+        try {
+            return JSON.parse(body);
+        }
+        catch {
+            return body;
+        }
+    }
+    return body;
+}
+/**
+ * Extract value by path (e.g., "data.user.id")
+ * Safely navigates nested object properties
+ */
+function extractByPath(obj, path) {
+    if (!path || !obj)
+        return null;
+    const parts = path.split('.');
+    let current = obj;
+    for (const part of parts) {
+        if (current === null || current === undefined) {
+            return null;
+        }
+        current = current[part];
+    }
+    return current;
+}
+/**
+ * Extract value from URL (pathname or query parameter)
+ *
+ * @param url - Full URL string
+ * @param value - Param name (for query) or segment index (for pathname)
+ * @param extractType - 'query' or 'pathname'
+ * @param requestUrlPattern - Optional pattern for param extraction (e.g., '/api/user/:id')
+ */
+function extractFromUrl(url, value, extractType, requestUrlPattern) {
+    try {
+        const urlObj = new URL(url, typeof window !== 'undefined' ? window.location.origin : 'http://localhost');
+        if (extractType === 'query') {
+            // Extract query parameter
+            return urlObj.searchParams.get(value);
+        }
+        else if (extractType === 'pathname') {
+            // Extract pathname segment by index
+            const index = parseInt(value, 10) - 1;
+            if (!isNaN(index)) {
+                // Value is numeric index - extract by position
+                const segments = urlObj.pathname.split('/').filter(s => s.length > 0);
+                return segments[index] || null;
+            }
+            else if (requestUrlPattern) {
+                // Value is param name - extract using pattern matching
+                // This requires PathMatcher utility
+                const { PathMatcher } = require('./path-matcher');
+                const params = PathMatcher.extractParams(url, requestUrlPattern);
+                return params[value] || null;
+            }
+        }
+        return null;
+    }
+    catch (error) {
+        console.error('[DataExtractors] Error extracting from URL:', error);
+        return null;
+    }
+}
+/**
+ * Get value from HTML element
+ * Handles input, textarea, select, data attributes, and text content
+ */
+function getElementValue(element) {
+    var _a;
+    // Input elements
+    if (element instanceof HTMLInputElement) {
+        if (element.type === 'checkbox' || element.type === 'radio') {
+            return element.checked;
+        }
+        return element.value;
+    }
+    // Textarea
+    if (element instanceof HTMLTextAreaElement) {
+        return element.value;
+    }
+    // Select
+    if (element instanceof HTMLSelectElement) {
+        return element.value;
+    }
+    // Data attributes
+    if (element.hasAttribute('data-value')) {
+        return element.getAttribute('data-value');
+    }
+    if (element.hasAttribute('data-id')) {
+        return element.getAttribute('data-id');
+    }
+    // Text content
+    return ((_a = element.textContent) === null || _a === void 0 ? void 0 : _a.trim()) || null;
+}
+
+/**
  * NetworkObserver - Passive Network Listener
  *
  * NGUYÊN TẮC:
@@ -3651,6 +3354,7 @@ class PathMatcher {
  * 3. Chỉ xử lý request khi có REC phù hợp
  * 4. KHÔNG dispatch event (chỉ collect data vào REC)
  * 5. Passive - không can thiệp vào logic nghiệp vụ
+ * 6. Tích hợp với UserIdentityManager để handle user identity
  */
 /**
  * NetworkObserver - Singleton passive listener
@@ -3660,10 +3364,10 @@ class NetworkObserver {
         this.isActive = false;
         // Reference to REC manager
         this.recManager = null;
+        // Reference to UserIdentityManager
+        this.userIdentityManager = null;
         // Registered rules that need network data
         this.registeredRules = new Map();
-        // User info mappings được extract từ config để smart caching
-        this.userInfoMappings = [];
         this.originalFetch = window.fetch;
         this.originalXhrOpen = XMLHttpRequest.prototype.open;
         this.originalXhrSend = XMLHttpRequest.prototype.send;
@@ -3678,47 +3382,11 @@ class NetworkObserver {
         return NetworkObserver.instance;
     }
     /**
-     * Register user info mappings từ config
-     * Được gọi bởi ConfigLoader sau khi parse rules
+     * Set UserIdentityManager reference
      */
-    registerUserInfoMappings(rules) {
-        console.log('[NetworkObserver] Scanning rules for user info mappings...');
-        this.userInfoMappings = [];
-        for (const rule of rules) {
-            if (!rule.payloadMappings)
-                continue;
-            for (const mapping of rule.payloadMappings) {
-                // Chỉ quan tâm UserId hoặc Username
-                if (mapping.field !== 'UserId' && mapping.field !== 'Username') {
-                    continue;
-                }
-                const source = (mapping.source || '').toLowerCase();
-                // Chỉ quan tâm network sources
-                const networkSources = ['requestbody', 'request_body', 'responsebody', 'response_body'];
-                if (!networkSources.includes(source)) {
-                    continue;
-                }
-                // Phải có pattern và method
-                if (!mapping.requestUrlPattern || !mapping.requestMethod) {
-                    continue;
-                }
-                // Thêm vào danh sách
-                this.userInfoMappings.push({
-                    field: mapping.field,
-                    source: mapping.source || '',
-                    requestUrlPattern: mapping.requestUrlPattern,
-                    requestMethod: mapping.requestMethod,
-                    requestBodyPath: mapping.requestBodyPath || mapping.value || ''
-                });
-                console.log('[NetworkObserver] ✅ Registered user info mapping:', {
-                    field: mapping.field,
-                    pattern: mapping.requestUrlPattern,
-                    method: mapping.requestMethod,
-                    path: mapping.requestBodyPath || mapping.value
-                });
-            }
-        }
-        console.log('[NetworkObserver] Total user info mappings registered:', this.userInfoMappings.length);
+    setUserIdentityManager(userIdentityManager) {
+        this.userIdentityManager = userIdentityManager;
+        console.log('[NetworkObserver] UserIdentityManager set');
     }
     /**
      * Initialize observer với REC manager
@@ -3807,23 +3475,42 @@ class NetworkObserver {
     }
     /**
      * Xử lý request đã intercept
-     * SECURITY: Chỉ process và log khi request match với rule patterns
-     * SMART: Cache user info dựa trên registered user info mappings từ config
+     * Chỉ process và log khi request match với rule patterns
+     * Delegate user info extraction to UserIdentityManager
      */
     async handleRequest(requestInfo) {
         if (!this.recManager) {
             return;
         }
-        // STEP 1: SMART USER INFO CACHING
-        // Chỉ cache nếu có user info mappings đã đăng ký từ config
-        const userInfoCached = await this.smartUserInfoCaching(requestInfo);
-        if (userInfoCached) {
-            // Đã cache user info, log ngắn gọn
-            console.log('[NetworkObserver] 💾 User info cached from:', requestInfo.url);
+        // STEP 1: USER IDENTITY HANDLING
+        // Delegate to UserIdentityManager nếu có
+        if (this.userIdentityManager) {
+            const matchesUserIdentity = this.userIdentityManager.matchesUserIdentityRequest(requestInfo.url, requestInfo.method);
+            if (matchesUserIdentity) {
+                console.log('[NetworkObserver] 💾 User identity request matched:', requestInfo.url);
+                // Parse response body nếu cần
+                let responseBodyText = null;
+                if (requestInfo.responseBody) {
+                    if (typeof requestInfo.responseBody === 'string') {
+                        responseBodyText = requestInfo.responseBody;
+                    }
+                    else {
+                        try {
+                            responseBodyText = await requestInfo.responseBody.text();
+                            requestInfo.responseBody = responseBodyText;
+                        }
+                        catch (error) {
+                            console.error('[NetworkObserver] Failed to parse response for user identity:', error);
+                        }
+                    }
+                }
+                // Extract user info
+                this.userIdentityManager.extractFromNetworkRequest(requestInfo.url, requestInfo.method, requestInfo.requestBody, responseBodyText);
+            }
         }
         // STEP 2: SECURITY CHECK - Có registered rules không?
         if (this.registeredRules.size === 0) {
-            // Không có rules để track events, nhưng vẫn có thể đã cache user info ở trên
+            // Không có rules để track events
             return;
         }
         // STEP 3: SECURITY CHECK - Request này có khả năng match với rule nào không?
@@ -3852,7 +3539,7 @@ class NetworkObserver {
             // Tìm REC phù hợp cho rule này
             const context = this.recManager.findMatchingContext(rule.id, requestInfo.timestamp);
             if (!context) {
-                console.log('[NetworkObserver] No active context for rule:', rule.id, '(but user info may have been cached)');
+                console.log('[NetworkObserver] No active context for rule:', rule.id);
                 continue;
             }
             console.log('[NetworkObserver] ✅ Processing rule with active context:', context.executionId);
@@ -3864,6 +3551,7 @@ class NetworkObserver {
      * Process payload mappings của rule và extract data vào REC
      */
     processRuleMappings(rule, context, requestInfo) {
+        var _a, _b;
         console.log('[NetworkObserver] processRuleMappings for rule:', rule.id);
         if (!rule.payloadMappings) {
             console.log('[NetworkObserver] No payload mappings');
@@ -3879,7 +3567,7 @@ class NetworkObserver {
                 continue;
             }
             console.log('[NetworkObserver] Is network source, checking pattern match');
-            console.log('[NetworkObserver] Mapping pattern:', mapping.requestUrlPattern, 'Method:', mapping.requestMethod);
+            console.log('[NetworkObserver] Mapping pattern:', (_a = mapping.config) === null || _a === void 0 ? void 0 : _a.RequestUrlPattern, 'Method:', (_b = mapping.config) === null || _b === void 0 ? void 0 : _b.RequestMethod);
             console.log('[NetworkObserver] Request URL:', requestInfo.url, 'Method:', requestInfo.method);
             // Check pattern match
             if (!this.matchesPattern(mapping, requestInfo)) {
@@ -3899,82 +3587,6 @@ class NetworkObserver {
                 console.log('[NetworkObserver] ⚠️ Extracted value is null/undefined');
             }
         }
-    }
-    /**
-     * SMART USER INFO CACHING
-     *
-     * Cache user info dựa trên registered user info mappings từ config
-     * Chỉ cache khi request match với patterns đã đăng ký
-     *
-     * @returns true nếu đã cache user info
-     */
-    async smartUserInfoCaching(requestInfo) {
-        if (this.userInfoMappings.length === 0) {
-            return false; // Không có user info mappings đăng ký
-        }
-        // Tìm mapping phù hợp với request này
-        for (const mapping of this.userInfoMappings) {
-            // Check method
-            if (mapping.requestMethod.toUpperCase() !== requestInfo.method) {
-                continue;
-            }
-            // Check URL pattern
-            if (!PathMatcher.match(requestInfo.url, mapping.requestUrlPattern)) {
-                continue;
-            }
-            console.log('[NetworkObserver] 🎯 Matched user info mapping:', {
-                field: mapping.field,
-                pattern: mapping.requestUrlPattern,
-                url: requestInfo.url
-            });
-            // Parse response body nếu cần
-            let responseBodyText = null;
-            if (requestInfo.responseBody) {
-                if (typeof requestInfo.responseBody === 'string') {
-                    responseBodyText = requestInfo.responseBody;
-                }
-                else {
-                    try {
-                        responseBodyText = await requestInfo.responseBody.text();
-                        requestInfo.responseBody = responseBodyText;
-                    }
-                    catch (error) {
-                        console.error('[NetworkObserver] Failed to parse response:', error);
-                        continue;
-                    }
-                }
-            }
-            if (!responseBodyText) {
-                console.log('[NetworkObserver] No response body to extract from');
-                continue;
-            }
-            // Parse JSON
-            let responseData;
-            try {
-                responseData = JSON.parse(responseBodyText);
-            }
-            catch {
-                console.log('[NetworkObserver] Response is not JSON');
-                continue;
-            }
-            // Extract value theo path trong mapping
-            const path = mapping.requestBodyPath;
-            if (!path) {
-                console.log('[NetworkObserver] No path specified in mapping');
-                continue;
-            }
-            const value = this.extractByPath(responseData, path);
-            if (value) {
-                console.log('[NetworkObserver] ✅ Extracted user value:', value, 'from path:', path);
-                console.log('[NetworkObserver] 💾 Caching to localStorage as', mapping.field);
-                saveCachedUserInfo(mapping.field, String(value));
-                return true;
-            }
-            else {
-                console.log('[NetworkObserver] ⚠️ Could not extract value from path:', path);
-            }
-        }
-        return false;
     }
     /**
      * SECURITY: Tìm rules có thể match với request này
@@ -4017,16 +3629,19 @@ class NetworkObserver {
      * Check nếu request match với pattern trong mapping
      */
     matchesPattern(mapping, requestInfo) {
+        var _a, _b;
+        const requestMethod = (_a = mapping.config) === null || _a === void 0 ? void 0 : _a.RequestMethod;
+        const requestUrlPattern = (_b = mapping.config) === null || _b === void 0 ? void 0 : _b.RequestUrlPattern;
         // Check method
-        if (mapping.requestMethod) {
-            const expectedMethod = mapping.requestMethod.toUpperCase();
+        if (requestMethod) {
+            const expectedMethod = requestMethod.toUpperCase();
             if (requestInfo.method !== expectedMethod) {
                 return false;
             }
         }
         // Check URL pattern
-        if (mapping.requestUrlPattern) {
-            if (!PathMatcher.match(requestInfo.url, mapping.requestUrlPattern)) {
+        if (requestUrlPattern) {
+            if (!PathMatcher.match(requestInfo.url, requestUrlPattern)) {
                 return false;
             }
         }
@@ -4068,17 +3683,18 @@ class NetworkObserver {
      * Extract từ request body
      */
     extractFromRequestBody(mapping, requestInfo) {
+        var _a;
         console.log('[NetworkObserver] extractFromRequestBody');
         console.log('[NetworkObserver] Raw request body:', requestInfo.requestBody);
-        const body = this.parseBody(requestInfo.requestBody);
+        const body = parseBody(requestInfo.requestBody);
         console.log('[NetworkObserver] Parsed request body:', body);
         if (!body) {
             console.log('[NetworkObserver] Request body is empty/null');
             return null;
         }
-        const path = mapping.value || mapping.requestBodyPath;
+        const path = (_a = mapping.config) === null || _a === void 0 ? void 0 : _a.Value;
         console.log('[NetworkObserver] Extracting by path:', path);
-        const result = this.extractByPath(body, path);
+        const result = extractByPath(body, path);
         console.log('[NetworkObserver] Extract result:', result);
         return result;
     }
@@ -4086,18 +3702,18 @@ class NetworkObserver {
      * Extract từ response body
      */
     extractFromResponseBody(mapping, requestInfo) {
-        var _a, _b;
+        var _a, _b, _c;
         console.log('[NetworkObserver] extractFromResponseBody');
         console.log('[NetworkObserver] Raw response body:', (_b = (_a = requestInfo.responseBody) === null || _a === void 0 ? void 0 : _a.substring) === null || _b === void 0 ? void 0 : _b.call(_a, 0, 500));
-        const body = this.parseBody(requestInfo.responseBody);
+        const body = parseBody(requestInfo.responseBody);
         console.log('[NetworkObserver] Parsed response body:', body);
         if (!body) {
             console.log('[NetworkObserver] Response body is empty/null');
             return null;
         }
-        const path = mapping.value || mapping.requestBodyPath;
+        const path = (_c = mapping.config) === null || _c === void 0 ? void 0 : _c.Value;
         console.log('[NetworkObserver] Extracting by path:', path);
-        const result = this.extractByPath(body, path);
+        const result = extractByPath(body, path);
         console.log('[NetworkObserver] Extract result:', result);
         return result;
     }
@@ -4105,72 +3721,8 @@ class NetworkObserver {
      * Extract từ request URL
      */
     extractFromRequestUrl(mapping, requestInfo) {
-        var _a;
-        const url = new URL(requestInfo.url, window.location.origin);
-        const urlPart = (_a = mapping.urlPart) === null || _a === void 0 ? void 0 : _a.toLowerCase();
-        switch (urlPart) {
-            case 'query':
-            case 'queryparam':
-                const paramName = mapping.urlPartValue || mapping.value;
-                return url.searchParams.get(paramName);
-            case 'path':
-            case 'pathsegment':
-                // Extract path segment by index or pattern
-                const pathValue = mapping.urlPartValue || mapping.value;
-                if (pathValue && !isNaN(Number(pathValue))) {
-                    const segments = url.pathname.split('/').filter(s => s);
-                    // Convert from user view (1-based) to dev view (0-based)
-                    const index = Number(pathValue) - 1;
-                    const result = segments[index] || null;
-                    return result;
-                }
-                return url.pathname;
-            case 'hash':
-                return url.hash.substring(1); // Remove #
-            default:
-                // If no urlPart specified, try to extract from value
-                // Check if value is a number (path segment index)
-                const segments = url.pathname.split('/').filter(s => s);
-                if (mapping.value && !isNaN(Number(mapping.value))) {
-                    // Convert from user view (1-based) to dev view (0-based)
-                    const index = Number(mapping.value) - 1;
-                    const result = segments[index] || null;
-                    return result;
-                }
-                return url.href;
-        }
-    }
-    /**
-     * Parse body (JSON or text)
-     */
-    parseBody(body) {
-        if (!body)
-            return null;
-        if (typeof body === 'string') {
-            try {
-                return JSON.parse(body);
-            }
-            catch {
-                return body;
-            }
-        }
-        return body;
-    }
-    /**
-     * Extract value by path (e.g., "data.user.id")
-     */
-    extractByPath(obj, path) {
-        if (!path || !obj)
-            return null;
-        const parts = path.split('.');
-        let current = obj;
-        for (const part of parts) {
-            if (current === null || current === undefined) {
-                return null;
-            }
-            current = current[part];
-        }
-        return current;
+        const { ExtractType, Value, RequestUrlPattern } = mapping.config;
+        return extractFromUrl(requestInfo.url, Value, ExtractType, RequestUrlPattern);
     }
     /**
      * Restore original functions (for cleanup/testing)
@@ -4275,62 +3827,8 @@ class PayloadBuilder {
         for (const [field, value] of Object.entries(syncPayload)) {
             this.recManager.collectField(context.executionId, field, value);
         }
-        // 4.5 Thu thập User Info (UserValue/AnonymousId) từ async mappings
-        this.collectUserInfoFromAsyncMappings(context.executionId, asyncMappings);
         // 5. Register rule với NetworkObserver để bắt async data
         this.networkObserver.registerRule(rule);
-    }
-    /**
-     * Thu thập User Info từ async mappings
-     *
-     * LOGIC ĐƠN GIẢN:
-     * 1. NetworkObserver đã cache user info vào localStorage (nếu match request)
-     * 2. Đọc localStorage: recsys_cached_user_info
-     *    - CÓ → Dùng userField và userValue từ cache
-     *    - KHÔNG → Fallback AnonymousId ngay
-     *
-     * Không đợi network data vì:
-     * - Nếu có data thì đã được cache rồi (từ lần đăng nhập/refresh)
-     * - Nếu không có cache nghĩa là không bắt được → fallback ngay
-     */
-    collectUserInfoFromAsyncMappings(executionId, asyncMappings) {
-        console.log('[PayloadBuilder] collectUserInfoFromAsyncMappings - executionId:', executionId);
-        console.log('[PayloadBuilder] Async mappings:', asyncMappings.map(m => ({ field: m.field, source: m.source })));
-        // Tìm xem có mapping nào cho UserId/Username không
-        const userMapping = asyncMappings.find(m => m.field === 'UserId' ||
-            m.field === 'Username');
-        if (!userMapping) {
-            console.log('[PayloadBuilder] No user mapping found in async mappings');
-            return; // Không cần user info
-        }
-        console.log('[PayloadBuilder] Found user mapping for field:', userMapping.field);
-        // Check localStorage: recsys_cached_user_info
-        const cachedInfo = getCachedUserInfo();
-        console.log('[PayloadBuilder] Checking localStorage cache:', cachedInfo);
-        if (cachedInfo && cachedInfo.userValue) {
-            // ✅ CÓ CACHE - Dùng userField và userValue từ cache
-            console.log('[PayloadBuilder] ✅ Using cached user info');
-            console.log('[PayloadBuilder] Field:', cachedInfo.userField, 'Value:', cachedInfo.userValue);
-            // Thay thế required field nếu cần
-            // VD: Mapping yêu cầu UserId nhưng cache có Username
-            if (userMapping.field !== cachedInfo.userField) {
-                console.log('[PayloadBuilder] Replacing required field:', userMapping.field, '→', cachedInfo.userField);
-                this.recManager.replaceRequiredField(executionId, userMapping.field, cachedInfo.userField);
-            }
-            // Collect cached value
-            this.recManager.collectField(executionId, cachedInfo.userField, cachedInfo.userValue);
-            return;
-        }
-        // ❌ KHÔNG CÓ CACHE - Fallback AnonymousId ngay
-        console.log('[PayloadBuilder] ⚠️ No cached user info found');
-        console.log('[PayloadBuilder] Fallback to AnonymousId immediately');
-        // Thay thế required field: UserId/Username → AnonymousId
-        console.log('[PayloadBuilder] Replacing required field:', userMapping.field, '→ AnonymousId');
-        this.recManager.replaceRequiredField(executionId, userMapping.field, 'AnonymousId');
-        // Collect AnonymousId ngay
-        const anonId = getOrCreateAnonymousId();
-        console.log('[PayloadBuilder] Collecting AnonymousId:', anonId);
-        this.recManager.collectField(executionId, 'AnonymousId', anonId);
     }
     /**
      * Phân loại mappings thành sync và async
@@ -4393,6 +3891,7 @@ class PayloadBuilder {
      * Resolve một sync mapping
      */
     resolveSyncMapping(mapping, context) {
+        var _a;
         const source = (mapping.source || '').toLowerCase();
         switch (source) {
             case 'element':
@@ -4403,12 +3902,8 @@ class PayloadBuilder {
                 return this.extractFromLocalStorage(mapping);
             case 'sessionstorage':
                 return this.extractFromSessionStorage(mapping);
-            case 'url':
-            case 'pageurl':
-            case 'page_url':
-                return this.extractFromPageUrl(mapping);
             case 'static':
-                return mapping.value;
+                return (_a = mapping.config) === null || _a === void 0 ? void 0 : _a.Value;
             case 'login_detector':
                 return this.extractFromLoginDetector(mapping);
             default:
@@ -4419,11 +3914,12 @@ class PayloadBuilder {
      * Extract từ element
      */
     extractFromElement(mapping, context) {
+        var _a;
         const element = context.element || context.target;
         if (!element) {
             return null;
         }
-        const selector = mapping.value;
+        const selector = (_a = mapping.config) === null || _a === void 0 ? void 0 : _a.SelectorPattern;
         if (!selector) {
             return null;
         }
@@ -4442,124 +3938,41 @@ class PayloadBuilder {
                 return null;
             }
             // Extract value từ element
-            return this.getElementValue(targetElement);
+            return getElementValue(targetElement);
         }
         catch (error) {
             return null;
         }
-    }
-    /**
-     * Get value từ element (text, value, attribute)
-     */
-    getElementValue(element) {
-        var _a;
-        // Input elements
-        if (element instanceof HTMLInputElement) {
-            if (element.type === 'checkbox' || element.type === 'radio') {
-                return element.checked;
-            }
-            return element.value;
-        }
-        // Textarea
-        if (element instanceof HTMLTextAreaElement) {
-            return element.value;
-        }
-        // Select
-        if (element instanceof HTMLSelectElement) {
-            return element.value;
-        }
-        // Data attributes
-        if (element.hasAttribute('data-value')) {
-            return element.getAttribute('data-value');
-        }
-        if (element.hasAttribute('data-id')) {
-            return element.getAttribute('data-id');
-        }
-        // Text content
-        return ((_a = element.textContent) === null || _a === void 0 ? void 0 : _a.trim()) || null;
     }
     /**
      * Extract từ cookie
      */
     extractFromCookie(mapping) {
-        const cookieName = mapping.value;
+        var _a;
+        const cookieName = (_a = mapping.config) === null || _a === void 0 ? void 0 : _a.Value;
         if (!cookieName)
             return null;
-        const cookies = document.cookie.split(';');
-        for (const cookie of cookies) {
-            const [name, value] = cookie.split('=').map(s => s.trim());
-            if (name === cookieName) {
-                return decodeURIComponent(value);
-            }
-        }
-        return null;
+        return extractFromCookie(cookieName);
     }
     /**
      * Extract từ localStorage
      */
     extractFromLocalStorage(mapping) {
-        const key = mapping.value;
+        var _a;
+        const key = (_a = mapping.config) === null || _a === void 0 ? void 0 : _a.Value;
         if (!key)
             return null;
-        try {
-            const value = localStorage.getItem(key);
-            if (value === null)
-                return null;
-            // Try parse JSON
-            try {
-                return JSON.parse(value);
-            }
-            catch {
-                return value;
-            }
-        }
-        catch (error) {
-            return null;
-        }
+        return extractFromLocalStorage(key);
     }
     /**
      * Extract từ sessionStorage
      */
     extractFromSessionStorage(mapping) {
-        const key = mapping.value;
+        var _a;
+        const key = (_a = mapping.config) === null || _a === void 0 ? void 0 : _a.Value;
         if (!key)
             return null;
-        try {
-            const value = sessionStorage.getItem(key);
-            if (value === null)
-                return null;
-            // Try parse JSON
-            try {
-                return JSON.parse(value);
-            }
-            catch {
-                return value;
-            }
-        }
-        catch (error) {
-            return null;
-        }
-    }
-    /**
-     * Extract từ page URL
-     */
-    extractFromPageUrl(mapping) {
-        const url = new URL(window.location.href);
-        const urlPart = (mapping.urlPart || '').toLowerCase();
-        switch (urlPart) {
-            case 'query':
-            case 'queryparam':
-                const paramName = mapping.urlPartValue || mapping.value;
-                return url.searchParams.get(paramName);
-            case 'path':
-                return url.pathname;
-            case 'hash':
-                return url.hash.substring(1);
-            case 'hostname':
-                return url.hostname;
-            default:
-                return url.href;
-        }
+        return extractFromSessionStorage(key);
     }
     /**
      * Extract từ LoginDetector (custom integration)
@@ -4592,6 +4005,278 @@ class PayloadBuilder {
      */
     getActiveContextsCount() {
         return this.recManager.getActiveCount();
+    }
+}
+
+const STORAGE_KEYS = {
+    ANON_USER_ID: 'recsys_anon_id',
+    USER_ID: 'recsys_user_id',
+    SESSION_ID: 'recsys_session',
+    IDENTIFIERS: 'recsys_identifiers',
+    LAST_USER_ID: 'recsys_last_user_id',
+    CACHED_USER_INFO: 'recsys_cached_user_info' // Lưu user info đã bắt được
+};
+function log(...args) {
+}
+/**
+ * Lưu user info vào localStorage khi bắt được từ rule
+ * @param userField - UserId hoặc Username
+ * @param userValue - Giá trị user đã bắt được
+ */
+function saveCachedUserInfo(userField, userValue) {
+    console.log('[plugin-utils] saveCachedUserInfo called - field:', userField, 'value:', userValue);
+    // Chỉ lưu nếu userValue valid (không phải AnonymousId, guest, empty)
+    if (!userValue ||
+        userValue === 'guest' ||
+        userValue.startsWith('anon_') ||
+        userField === 'AnonymousId') {
+        console.log('[plugin-utils] Skipping save - invalid user value or AnonymousId');
+        return;
+    }
+    try {
+        const cachedInfo = {
+            userField,
+            userValue,
+            timestamp: Date.now()
+        };
+        localStorage.setItem(STORAGE_KEYS.CACHED_USER_INFO, JSON.stringify(cachedInfo));
+        console.log('[plugin-utils] Successfully saved cached user info:', cachedInfo);
+        log('Saved cached user info:', cachedInfo);
+    }
+    catch (error) {
+        console.error('[plugin-utils] Failed to save cached user info:', error);
+    }
+}
+/**
+ * Lấy cached user info từ localStorage
+ * @returns CachedUserInfo hoặc null nếu không có
+ */
+function getCachedUserInfo() {
+    try {
+        const cached = localStorage.getItem(STORAGE_KEYS.CACHED_USER_INFO);
+        console.log('[plugin-utils] getCachedUserInfo - raw cached value:', cached);
+        if (!cached) {
+            console.log('[plugin-utils] No cached user info found');
+            return null;
+        }
+        const userInfo = JSON.parse(cached);
+        console.log('[plugin-utils] Parsed cached user info:', userInfo);
+        // Validate cached data
+        if (userInfo.userField && userInfo.userValue && userInfo.timestamp) {
+            console.log('[plugin-utils] Valid cached user info:', userInfo);
+            log('Retrieved cached user info:', userInfo);
+            return userInfo;
+        }
+        console.log('[plugin-utils] Invalid cached user info structure');
+        return null;
+    }
+    catch (error) {
+        console.error('[plugin-utils] Error reading cached user info:', error);
+        return null;
+    }
+}
+/**
+ * Khởi tạo và lấy Anonymous ID từ localStorage
+ * Tự động tạo mới nếu chưa tồn tại
+ */
+function getOrCreateAnonymousId() {
+    try {
+        let anonId = localStorage.getItem(STORAGE_KEYS.ANON_USER_ID);
+        console.log('[plugin-utils] getOrCreateAnonymousId - existing anonId:', anonId);
+        if (!anonId) {
+            // Generate new anonymous ID: anon_timestamp_randomstring
+            const timestamp = Date.now();
+            const randomStr = Math.random().toString(36).substring(2, 10);
+            anonId = `anon_${timestamp}_${randomStr}`;
+            localStorage.setItem(STORAGE_KEYS.ANON_USER_ID, anonId);
+            console.log('[plugin-utils] Created new anonymous ID:', anonId);
+            log('Created new anonymous ID:', anonId);
+        }
+        else {
+            console.log('[plugin-utils] Using existing anonymous ID:', anonId);
+        }
+        return anonId;
+    }
+    catch (error) {
+        console.error('[plugin-utils] Error accessing localStorage for anonId:', error);
+        // Fallback nếu localStorage không available
+        const fallbackId = `anon_${Date.now()}_${Math.random().toString(36).substring(2, 10)}`;
+        console.log('[plugin-utils] Using fallback anonymous ID:', fallbackId);
+        return fallbackId;
+    }
+}
+
+/**
+ * UserIdentityManager - Quản lý User Identity riêng biệt
+ *
+ * TRÁCH NHIỆM:
+ * 1. Load UserIdentity config từ API
+ * 2. Extract user info từ các nguồn khác nhau (request_body, request_url, localStorage, etc.)
+ * 3. Cache user info vào localStorage
+ * 4. Provide user info khi cần gửi event
+ */
+class UserIdentityManager {
+    constructor() {
+        this.userIdentityConfig = null;
+        this.isInitialized = false;
+    }
+    /**
+     * Initialize và load user identity config
+     * @param domainKey - Domain key để load config
+     */
+    async initialize(domainKey) {
+        if (this.isInitialized) {
+            return;
+        }
+        console.log('[UserIdentityManager] Initializing for domain:', domainKey);
+        // Load user identity config
+        this.userIdentityConfig = await this.loadUserIdentityConfig(domainKey);
+        if (this.userIdentityConfig) {
+            console.log('[UserIdentityManager] Config loaded:', this.userIdentityConfig);
+            // Nếu source là network (request_body/request_url), đăng ký với NetworkObserver
+            if (this.isNetworkSource(this.userIdentityConfig.source)) {
+                console.log('[UserIdentityManager] Network source detected, will be handled by NetworkObserver');
+            }
+            else {
+                // Nếu source là static (localStorage, cookie, etc.), extract ngay
+                this.extractAndCacheUserInfo();
+            }
+        }
+        this.isInitialized = true;
+    }
+    /**
+     * Load user identity config từ API (mock for now)
+     * TODO: Replace with real API call when available
+     */
+    async loadUserIdentityConfig(_domainKey) {
+        console.log('[UserIdentityManager] Loading user identity config (MOCK)');
+        // MOCK DATA
+        const mockConfig = {
+            id: 1,
+            source: 'request_body',
+            domainId: 11,
+            requestConfig: {
+                RequestUrlPattern: '/api/auth/me',
+                RequestMethod: 'GET',
+                Value: 'username'
+            },
+            field: 'UserId'
+        };
+        return mockConfig;
+    }
+    /**
+     * Extract và cache user info từ static sources (localStorage, cookie, etc.)
+     */
+    extractAndCacheUserInfo() {
+        if (!this.userIdentityConfig) {
+            return;
+        }
+        const { source, value, field } = this.userIdentityConfig;
+        let extractedValue = null;
+        try {
+            switch (source) {
+                case 'local_storage':
+                    extractedValue = extractFromLocalStorage(value || '');
+                    break;
+                case 'session_storage':
+                    extractedValue = extractFromSessionStorage(value || '');
+                    break;
+                case 'cookie':
+                    extractedValue = extractFromCookie(value || '');
+                    break;
+                case 'element':
+                    // Extract từ element trên page (ít dùng cho user identity)
+                    if (value) {
+                        const element = document.querySelector(value);
+                        extractedValue = (element === null || element === void 0 ? void 0 : element.textContent) || null;
+                    }
+                    break;
+                default:
+                    console.warn('[UserIdentityManager] Unsupported static source:', source);
+                    return;
+            }
+            if (extractedValue) {
+                console.log('[UserIdentityManager] Extracted user info from', source, ':', extractedValue);
+                saveCachedUserInfo(field, extractedValue);
+            }
+        }
+        catch (error) {
+            console.error('[UserIdentityManager] Error extracting user info:', error);
+        }
+    }
+    /**
+     * Check if source is network-based
+     */
+    isNetworkSource(source) {
+        return source === 'request_body' || source === 'request_url';
+    }
+    /**
+     * Check if a network request matches the user identity config
+     * Called by NetworkObserver
+     */
+    matchesUserIdentityRequest(url, method) {
+        if (!this.userIdentityConfig || !this.userIdentityConfig.requestConfig) {
+            return false;
+        }
+        const { RequestUrlPattern, RequestMethod } = this.userIdentityConfig.requestConfig;
+        if (RequestMethod.toUpperCase() !== method.toUpperCase()) {
+            return false;
+        }
+        return PathMatcher.match(url, RequestUrlPattern);
+    }
+    /**
+     * Extract user info từ network request
+     * Called by NetworkObserver khi match được request
+     */
+    extractFromNetworkRequest(url, method, requestBody, responseBody) {
+        if (!this.userIdentityConfig || !this.userIdentityConfig.requestConfig) {
+            return;
+        }
+        const { source, field, requestConfig } = this.userIdentityConfig;
+        const { Value, ExtractType } = requestConfig;
+        let extractedValue = null;
+        try {
+            if (source === 'request_body') {
+                // Extract từ response body (for GET) or request body (for POST/PUT)
+                const body = method.toUpperCase() === 'GET' ? responseBody : requestBody;
+                extractedValue = extractByPath(parseBody(body), Value);
+            }
+            else if (source === 'request_url') {
+                // Extract từ URL
+                extractedValue = extractFromUrl(url, Value, ExtractType, requestConfig.RequestUrlPattern);
+            }
+            if (extractedValue) {
+                console.log('[UserIdentityManager] Extracted user info from network:', extractedValue);
+                saveCachedUserInfo(field, String(extractedValue));
+            }
+        }
+        catch (error) {
+            console.error('[UserIdentityManager] Error extracting from network:', error);
+        }
+    }
+    /**
+     * Get current user info để gửi với event
+     * Trả về cached user info hoặc AnonymousId
+     */
+    getUserInfo() {
+        const cached = getCachedUserInfo();
+        if (cached && cached.userValue) {
+            return {
+                field: cached.userField,
+                value: cached.userValue
+            };
+        }
+        // Fallback to AnonymousId
+        return {
+            field: 'AnonymousId',
+            value: getOrCreateAnonymousId()
+        };
+    }
+    /**
+     * Get user identity config (for debugging)
+     */
+    getConfig() {
+        return this.userIdentityConfig;
     }
 }
 
@@ -4696,8 +4381,7 @@ class RatingPlugin extends BasePlugin {
      * Find element matching rule selector
      */
     findMatchingElement(target, rule) {
-        var _a;
-        const selector = (_a = rule.trackingTarget) === null || _a === void 0 ? void 0 : _a.value;
+        const selector = rule.trackingTarget;
         if (!selector)
             return null;
         try {
@@ -4784,6 +4468,7 @@ class RecSysTracker {
         this.payloadBuilder = new PayloadBuilder();
         this.eventDeduplicator = new EventDeduplicator(3000); // 3 second window
         this.loopGuard = new LoopGuard({ maxRequestsPerSecond: 5 });
+        this.userIdentityManager = new UserIdentityManager();
     }
     // Khởi tạo SDK - tự động gọi khi tải script
     async init() {
@@ -4799,6 +4484,10 @@ class RecSysTracker {
             if (!this.config) {
                 return;
             }
+            // Initialize UserIdentityManager
+            await this.userIdentityManager.initialize(this.config.domainKey);
+            // Connect UserIdentityManager with NetworkObserver
+            networkObserver.setUserIdentityManager(this.userIdentityManager);
             // Khởi tạo EventDispatcher
             const baseUrl = "https://recsys-tracker-module.onrender.com";
             this.eventDispatcher = new EventDispatcher({
@@ -4813,10 +4502,6 @@ class RecSysTracker {
                     this.eventDispatcher.setDomainUrl(this.config.domainUrl);
                 }
                 console.log(this.config);
-                // Register user info mappings với NetworkObserver để smart caching
-                if (this.config.trackingRules && this.config.trackingRules.length > 0) {
-                    networkObserver.registerUserInfoMappings(this.config.trackingRules);
-                }
                 // Khởi tạo Display Manager nếu có returnMethods
                 if (this.config.returnMethods && this.config.returnMethods.length > 0) {
                     const apiBaseUrl = "https://recsys-tracker-module.onrender.com";
@@ -4851,14 +4536,10 @@ class RecSysTracker {
         const clickId = this.getEventTypeId('Click') || 1;
         const rateId = this.getEventTypeId('Rating') || 2;
         const reviewId = this.getEventTypeId('Review') || 3;
-        const pageViewId = this.getEventTypeId('Page View') || 4;
-        const scrollId = this.getEventTypeId('Scroll') || 6;
         // Check specific rules (chỉ check nếu tìm thấy ID)
         const hasClickRules = this.config.trackingRules.some(rule => rule.eventTypeId === clickId) ;
         const hasRateRules = this.config.trackingRules.some(rule => rule.eventTypeId === rateId) ;
         const hasReviewRules = this.config.trackingRules.some(rule => rule.eventTypeId === reviewId) ;
-        const hasPageViewRules = this.config.trackingRules.some(rule => rule.eventTypeId === pageViewId) ;
-        const hasScrollRules = this.config.trackingRules.some(rule => rule.eventTypeId === scrollId) ;
         // Chỉ tự động đăng ký nếu chưa có plugin nào được đăng ký
         if (this.pluginManager.getPluginNames().length === 0) {
             const pluginPromises = [];
@@ -4880,18 +4561,6 @@ class RecSysTracker {
                 });
                 pluginPromises.push(reviewPromise);
             }
-            if (hasPageViewRules) {
-                const pageViewPromise = Promise.resolve().then(function () { return pageViewPlugin; }).then(({ PageViewPlugin }) => {
-                    this.use(new PageViewPlugin());
-                });
-                pluginPromises.push(pageViewPromise);
-            }
-            if (hasScrollRules) {
-                const scrollPromise = Promise.resolve().then(function () { return scrollPlugin; }).then(({ ScrollPlugin }) => {
-                    this.use(new ScrollPlugin());
-                });
-                pluginPromises.push(scrollPromise);
-            }
             // Chờ tất cả plugin được đăng ký trước khi khởi động
             if (pluginPromises.length > 0) {
                 await Promise.all(pluginPromises);
@@ -4911,21 +4580,13 @@ class RecSysTracker {
             // Support both camelCase and PascalCase field names
             const payload = eventData.eventData || {};
             const ruleId = payload.ruleId || payload.RuleId;
-            // 1. Luôn lấy anonymousId từ localStorage (hoặc tạo mới nếu chưa có)
-            const anonymousId = getOrCreateAnonymousId();
-            // 2. Kiểm tra userId từ cached user info trong localStorage
-            const cachedUserInfo = getCachedUserInfo();
-            let userId = undefined;
-            if (cachedUserInfo && cachedUserInfo.userValue) {
-                // Có cached user info - sử dụng
-                userId = cachedUserInfo.userValue;
-            }
-            // User field cho deduplication - ưu tiên userId, fallback về anonymousId
-            const userValue = userId ||
+            // Lấy user info từ UserIdentityManager
+            const userInfo = this.userIdentityManager.getUserInfo();
+            // User field cho deduplication - sử dụng user info từ UserIdentityManager
+            const userValue = userInfo.value ||
                 payload.userId || payload.UserId ||
                 payload.username || payload.Username ||
-                payload.userValue || payload.UserValue ||
-                anonymousId;
+                payload.userValue || payload.UserValue;
             // Item field - try multiple variants
             const itemValue = payload.itemId || payload.ItemId ||
                 payload.itemTitle || payload.ItemTitle ||
@@ -4959,8 +4620,9 @@ class RecSysTracker {
                 eventTypeId: eventData.eventType,
                 trackingRuleId: Number(ruleId) || 0,
                 domainKey: this.config.domainKey,
-                anonymousId: anonymousId,
-                ...(userId && { userId }), // Chỉ thêm userId nếu có
+                // Thêm user identity field - ưu tiên userId, fallback về anonymousId
+                userId: userInfo.field === 'UserId' ? userInfo.value : undefined,
+                anonymousId: userInfo.field === 'AnonymousId' ? userInfo.value : getOrCreateAnonymousId(),
                 itemField: itemField,
                 itemValue: itemValue,
                 ...(ratingValue !== undefined && {
@@ -5128,5 +4790,5 @@ if (typeof window !== 'undefined') {
     }
 }
 
-export { BasePlugin, ClickPlugin, ConfigLoader, DisplayManager, EventDeduplicator, LoopGuard, PageViewPlugin, PluginManager, RatingPlugin, RecSysTracker, ReviewPlugin, ScrollPlugin, RecSysTracker as default };
+export { BasePlugin, ClickPlugin, ConfigLoader, DisplayManager, EventDeduplicator, LoopGuard, PluginManager, RatingPlugin, RecSysTracker, ReviewPlugin, RecSysTracker as default };
 //# sourceMappingURL=recsys-tracker.esm.js.map
