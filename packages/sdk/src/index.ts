@@ -217,14 +217,13 @@ export class RecSysTracker {
         }
       }
 
-      // Extract rating value (try multiple field names)
-      const ratingValue = payload.ratingValue !== undefined ? payload.ratingValue :
+      // Extract rating value
+      const ratingValue = payload.Rating !== undefined ? payload.Rating :
                          (eventData.eventType === this.getEventTypeId('Rating') && payload.Value !== undefined) ? payload.Value :
                          undefined;
       
-      // Extract review text (try multiple field names)
-      const reviewText = payload.reviewText !== undefined ? payload.reviewText :
-                        payload.reviewValue !== undefined ? payload.reviewValue :
+      // Extract review text
+      const reviewText = payload.Review !== undefined ? payload.Review :
                         (eventData.eventType === this.getEventTypeId('Review') && payload.Value !== undefined) ? payload.Value :
                         undefined;
 

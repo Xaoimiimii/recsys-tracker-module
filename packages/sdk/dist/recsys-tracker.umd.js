@@ -2569,6 +2569,7 @@
         constructor() {
             super(...arguments);
             this.name = 'ReviewPlugin';
+            this.handleClickBound = this.handleClick.bind(this);
             this.handleSubmitBound = this.handleSubmit.bind(this);
         }
         init(tracker) {
@@ -2581,23 +2582,38 @@
             this.errorBoundary.execute(() => {
                 if (!this.ensureInitialized())
                     return;
-                document.addEventListener('submit', this.handleSubmitBound, { capture: true });
+                // Listen for both click and submit events
+                document.addEventListener('click', this.handleClickBound, true);
+                document.addEventListener('submit', this.handleSubmitBound, true);
                 this.active = true;
             }, 'ReviewPlugin.start');
         }
         stop() {
             this.errorBoundary.execute(() => {
                 if (this.tracker) {
-                    document.removeEventListener('submit', this.handleSubmitBound, { capture: true });
+                    document.removeEventListener('click', this.handleClickBound, true);
+                    document.removeEventListener('submit', this.handleSubmitBound, true);
                 }
                 super.stop();
             }, 'ReviewPlugin.stop');
         }
         /**
-         * Handle submit event - TRIGGER PHASE
-         * NOTE: This is now mainly a fallback. Rating Plugin handles most review detection.
+         * Handle click event (button clicks)
+         */
+        handleClick(event) {
+            this.handleInteraction(event, 'click');
+        }
+        /**
+         * Handle submit event (form submits)
          */
         handleSubmit(event) {
+            this.handleInteraction(event, 'submit');
+        }
+        /**
+         * Main interaction handler - TRIGGER PHASE
+         * NOTE: This processes review-specific rules only (eventTypeId = 3)
+         */
+        handleInteraction(event, _eventType) {
             var _a;
             if (!this.tracker)
                 return;
@@ -4611,15 +4627,14 @@
                         return;
                     }
                 }
-                // Extract rating value (try multiple field names)
-                const ratingValue = payload.ratingValue !== undefined ? payload.ratingValue :
+                // Extract rating value
+                const ratingValue = payload.Rating !== undefined ? payload.Rating :
                     (eventData.eventType === this.getEventTypeId('Rating') && payload.Value !== undefined) ? payload.Value :
                         undefined;
-                // Extract review text (try multiple field names)
-                const reviewText = payload.reviewText !== undefined ? payload.reviewText :
-                    payload.reviewValue !== undefined ? payload.reviewValue :
-                        (eventData.eventType === this.getEventTypeId('Review') && payload.Value !== undefined) ? payload.Value :
-                            undefined;
+                // Extract review text
+                const reviewText = payload.Review !== undefined ? payload.Review :
+                    (eventData.eventType === this.getEventTypeId('Review') && payload.Value !== undefined) ? payload.Value :
+                        undefined;
                 const trackedEvent = {
                     id: this.metadataNormalizer.generateEventId(),
                     timestamp: new Date(eventData.timestamp),

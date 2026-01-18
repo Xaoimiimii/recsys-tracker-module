@@ -18,6 +18,7 @@ import { TrackingRule } from '../../types';
 export class ReviewPlugin extends BasePlugin {
   public readonly name = 'ReviewPlugin';
   
+  private handleClickBound = this.handleClick.bind(this);
   private handleSubmitBound = this.handleSubmit.bind(this);
 
   public init(tracker: RecSysTracker): void {
@@ -31,7 +32,9 @@ export class ReviewPlugin extends BasePlugin {
     this.errorBoundary.execute(() => {
       if (!this.ensureInitialized()) return;
       
-      document.addEventListener('submit', this.handleSubmitBound, { capture: true });
+      // Listen for both click and submit events
+      document.addEventListener('click', this.handleClickBound, true);
+      document.addEventListener('submit', this.handleSubmitBound, true);
       this.active = true;
       
     }, 'ReviewPlugin.start');
@@ -40,17 +43,32 @@ export class ReviewPlugin extends BasePlugin {
   public stop(): void {
     this.errorBoundary.execute(() => {
       if (this.tracker) {
-        document.removeEventListener('submit', this.handleSubmitBound, { capture: true });
+        document.removeEventListener('click', this.handleClickBound, true);
+        document.removeEventListener('submit', this.handleSubmitBound, true);
       }
       super.stop();
     }, 'ReviewPlugin.stop');
   }
 
   /**
-   * Handle submit event - TRIGGER PHASE
-   * NOTE: This is now mainly a fallback. Rating Plugin handles most review detection.
+   * Handle click event (button clicks)
+   */
+  private handleClick(event: MouseEvent): void {
+    this.handleInteraction(event, 'click');
+  }
+
+  /**
+   * Handle submit event (form submits)
    */
   private handleSubmit(event: Event): void {
+    this.handleInteraction(event, 'submit');
+  }
+
+  /**
+   * Main interaction handler - TRIGGER PHASE
+   * NOTE: This processes review-specific rules only (eventTypeId = 3)
+   */
+  private handleInteraction(event: Event, _eventType: 'click' | 'submit'): void {
     if (!this.tracker) return;
 
     const target = event.target as Element;
