@@ -85,7 +85,8 @@ export class RuleService {
                 DomainID: domain.Id,
             },
             include: {
-                EventType: true
+                // EventType: true
+                PayloadMappings: true
             },
         });
         return rules;

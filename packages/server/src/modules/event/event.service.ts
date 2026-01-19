@@ -131,7 +131,6 @@ export class EventService {
         if (!item) throw new NotFoundException(`Item with id ${event.ItemId} does not exist in domain ${domain.Id}`);
 
 
-
         // let targetItemIds: number[] = [];
         // if (event.ItemField === ItemField.ITEM_ID) {
             // const item = await this.prisma.item.findUnique({
@@ -160,6 +159,7 @@ export class EventService {
             data: {
                 EventTypeId: event.EventTypeId,
                 UserId: event.UserId ? event.UserId : null,
+                ItemId: event.ItemId,
                 AnonymousId: event.AnonymousId,
                 RatingValue: event.RatingValue,
                 ReviewValue: event.RatingReview,

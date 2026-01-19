@@ -11,6 +11,6 @@ export class TaskService {
     @Cron(CronExpression.EVERY_HOUR)
     trainModels() {
         this.recommendationService.triggerTrainModels();
-        this.logger.debug('Trigger training models');
+        this.logger.log('Trigger training models');
     }
 }
