@@ -138,7 +138,6 @@
     }
 
     const DEFAULT_TRACK_ENDPOINT_PATH = '/event';
-    const DEFAULT_CONFIG_ENDPOINT_PATH = '/domain';
 
     // Luồng hoạt động
     // 1. SDK khởi tạo
@@ -192,89 +191,6 @@
                 return null;
             }
         }
-        // Mock data cho 3 config responses
-        getMockConfigResponses() {
-            return [
-                {
-                    "Id": 23,
-                    "Name": "Click Play Button",
-                    "DomainID": 11,
-                    "EventTypeID": 1,
-                    "ActionType": "View",
-                    "PayloadMapping": [
-                        {
-                            "Field": "ItemId",
-                            "Source": "request_url",
-                            "Config": {
-                                "RequestUrlPattern": "/api/song/:id/player",
-                                "RequestMethod": "GET",
-                                "Value": "3",
-                                "ExtractType": "pathname"
-                            }
-                        }
-                    ],
-                    "TrackingTarget": ".play-button"
-                },
-                {
-                    "Id": 17,
-                    "Name": "Get Rating",
-                    "DomainID": 11,
-                    "EventTypeID": 2,
-                    "ActionType": null,
-                    "PayloadMapping": [
-                        {
-                            "Field": "ItemId",
-                            "Source": "request_url",
-                            "Config": {
-                                "RequestUrlPattern": "/api/rating/:id/add-review",
-                                "RequestMethod": "POST",
-                                "Value": "3",
-                                "ExtractType": "pathname"
-                            }
-                        },
-                        {
-                            "Field": "Rating",
-                            "Source": "request_body",
-                            "Config": {
-                                "RequestUrlPattern": "/api/rating/{id}/add-review",
-                                "RequestMethod": "POST",
-                                "Value": "rating"
-                            }
-                        }
-                    ],
-                    "TrackingTarget": ".submit-rating-btn"
-                },
-                {
-                    "Id": 18,
-                    "Name": "Get Review",
-                    "DomainID": 11,
-                    "EventTypeID": 3,
-                    "ActionType": null,
-                    "PayloadMapping": [
-                        {
-                            "Field": "ItemId",
-                            "Source": "request_url",
-                            "Config": {
-                                "RequestUrlPattern": "api/rating/:id/add-review",
-                                "RequestMethod": "POST",
-                                "Value": "3",
-                                "ExtractType": "pathname"
-                            }
-                        },
-                        {
-                            "Field": "Review",
-                            "Source": "request_body",
-                            "Config": {
-                                "RequestUrlPattern": "/api/rating/{id}/add-review",
-                                "RequestMethod": "POST",
-                                "Value": "comment"
-                            }
-                        }
-                    ],
-                    "TrackingTarget": ".submit-rating-btn"
-                }
-            ];
-        }
         // Lấy cấu hình từ server (remote)
         async fetchRemoteConfig() {
             if (!this.domainKey) {
@@ -284,8 +200,9 @@
             try {
                 // Bước 1: Gọi 3 API song song để lấy domain, return methods và event types
                 // Rules sẽ dùng mock data
-                const [domainResponse, returnMethodsResponse, eventTypesResponse] = await Promise.all([
-                    fetch(`${baseUrl}${DEFAULT_CONFIG_ENDPOINT_PATH}/${this.domainKey}`),
+                const [domainResponse, rulesListResponse, returnMethodsResponse, eventTypesResponse] = await Promise.all([
+                    fetch(`${baseUrl}/domain/${this.domainKey}`),
+                    fetch(`${baseUrl}/rule/domain/${this.domainKey}`),
                     fetch(`${baseUrl}/return-method/${this.domainKey}`),
                     fetch(`${baseUrl}/rule/event-type`)
                 ]);
@@ -295,7 +212,7 @@
                 }
                 // Parse responses
                 const domainData = domainResponse.ok ? await domainResponse.json() : null;
-                const rulesListData = this.getMockConfigResponses(); // Sử dụng mock data cho rules
+                const rulesListData = rulesListResponse.ok ? await rulesListResponse.json() : [];
                 const returnMethodsData = returnMethodsResponse.ok ? await returnMethodsResponse.json() : [];
                 const eventTypesData = eventTypesResponse.ok ? await eventTypesResponse.json() : [];
                 // Cập nhật config với data từ server

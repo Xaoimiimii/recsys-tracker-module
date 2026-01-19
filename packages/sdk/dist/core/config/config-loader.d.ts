@@ -3,7 +3,6 @@ export declare class ConfigLoader {
     private config;
     private domainKey;
     loadFromWindow(): TrackerConfig | null;
-    private getMockConfigResponses;
     fetchRemoteConfig(): Promise<TrackerConfig | null>;
     private transformRules;
     private transformPayloadMappings;

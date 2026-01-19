@@ -15,6 +15,3 @@
     : "recsys-tracker.iife.js";
   d.head.appendChild(s);
 })(document, window);
-
-  // <script>window.__RECSYS_DOMAIN_KEY__ = "";</script>
-  // <script src="https://tracking-sdk.s3-ap-southeast-2.amazonaws.com/dist/loader.js"></script>
