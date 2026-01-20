@@ -14,6 +14,8 @@ export declare class InlineDisplay {
     private setupObserver;
     private processContainer;
     private fetchRecommendations;
+    private getTokenColor;
+    private getTokenRadius;
     private getWidgetStyles;
     private renderItemContent;
     private renderWidget;

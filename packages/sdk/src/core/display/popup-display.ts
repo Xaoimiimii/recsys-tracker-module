@@ -1,48 +1,43 @@
-import { PopupConfig } from '../../types';
+import { PopupConfig, StyleJson, LayoutJson } from '../../types';
 import { RecommendationItem } from '../recommendation';
 
 
 const MOCK_ITEMS: RecommendationItem[] = 
 [
   {
-    "id": 460, "domainItemId": "444", "title": "Tình Yêu Xanh Lá (juju)", "description": "",
-    "img": "https://i.pinimg.com/736x/38/9a/5e/389a5e34f5880fb86115e87561372908.jpg"
+    "id": 460, "DomainItemId": "444", "Title": "Tình Yêu Xanh Lá (juju)", "Description": "Nhạc chill",
+    "ImageUrl": "https://www.postposmo.com/wp-content/uploads/2024/01/gatito.jpg",
+    "Categories": ["Indie", "V-Pop"], "TestCustomAttribute": 95
   },
   {
-    "id": 131, "domainItemId": "107", "title": "How Long", "description": "",
-    "img": "https://i.pinimg.com/736x/38/9a/5e/389a5e34f5880fb86115e87561372908.jpg"
+    "id": 131, "DomainItemId": "107", "Title": "How Long", "Description": "Charlie Puth",
+    "ImageUrl": "https://www.postposmo.com/wp-content/uploads/2024/01/gatito.jpg",
+    "Categories": ["US-UK", "Pop"], "TestCustomAttribute": 88
   },
   {
-    "id": 644, "domainItemId": "629", "title": "Break Free", "description": "",
-    "img": "https://i.pinimg.com/736x/38/9a/5e/389a5e34f5880fb86115e87561372908.jpg"
+    "id": 644, "DomainItemId": "629", "Title": "Break Free", "Description": "Ariana Grande",
+    "ImageUrl": "https://www.postposmo.com/wp-content/uploads/2024/01/gatito.jpg",
+    "Categories": ["Pop", "Dance"], "TestCustomAttribute": 92
   },
   {
-    "id": 194, "domainItemId": "172", "title": "Đẹp Nhất Là Em(Between us)","description": "",
-    "img": "https://i.pinimg.com/736x/38/9a/5e/389a5e34f5880fb86115e87561372908.jpg"
+    "id": 194, "DomainItemId": "172", "Title": "Đẹp Nhất Là Em", "Description": "Soobin",
+    "ImageUrl": "https://www.postposmo.com/wp-content/uploads/2024/01/gatito.jpg",
+    "Categories": ["Ballad", "V-Pop"], "TestCustomAttribute": 85
   },
   {
-    "id": 68, "domainItemId": "22", "title": "Cho Tôi Lang Thang", "description": "",
-    "img": "https://i.pinimg.com/736x/38/9a/5e/389a5e34f5880fb86115e87561372908.jpg"
+    "id": 68, "DomainItemId": "22", "Title": "Cho Tôi Lang Thang", "Description": "Đen Vâu",
+    "ImageUrl": "https://www.postposmo.com/wp-content/uploads/2024/01/gatito.jpg",
+    "Categories": ["Rap", "Indie"], "TestCustomAttribute": 90
   },
   {
-    "id": 383, "domainItemId": "364", "title": "Nonsense", "description": "",
-    "img": "https://i.pinimg.com/736x/38/9a/5e/389a5e34f5880fb86115e87561372908.jpg"
+    "id": 383, "DomainItemId": "364", "Title": "Nonsense", "Description": "Sabrina Carpenter",
+    "ImageUrl": "https://www.postposmo.com/wp-content/uploads/2024/01/gatito.jpg",
+    "Categories": ["Pop"], "TestCustomAttribute": 78
   },
   {
-    "id": 84, "domainItemId": "38", "title": "một triệu like", "description": "",
-    "img": "https://i.pinimg.com/736x/38/9a/5e/389a5e34f5880fb86115e87561372908.jpg"
-  },
-  {
-    "id": 622, "domainItemId": "607", "title": "Bang Bang", "description": "",
-    "img": "https://i.pinimg.com/736x/38/9a/5e/389a5e34f5880fb86115e87561372908.jpg"
-  },
-  {
-    "id": 604, "domainItemId": "589", "title": "After Hours", "description": "",
-    "img": "https://i.pinimg.com/736x/38/9a/5e/389a5e34f5880fb86115e87561372908.jpg"
-  },
-  {
-    "id": 813, "domainItemId": "799", "title": "Bâng Khuâng", "description": "",
-    "img": "https://i.pinimg.com/736x/38/9a/5e/389a5e34f5880fb86115e87561372908.jpg"
+    "Id": 723, "DomainItemId": "709", "Title": "Helium", "Description": "Sia", 
+    "ImageUrl": "https://www.postposmo.com/wp-content/uploads/2024/01/gatito.jpg", // Null trong ví dụ, nhưng để ảnh demo cho đẹp
+    "Categories": ["Alt-Pop", "Âu Mỹ"], "TestCustomAttribute": 50 
   }
 ];
 
@@ -163,6 +158,8 @@ export class PopupDisplay {
     const currentUrl = window.location.pathname; 
     const targetUrl = trigger.targetValue;
 
+    if (targetUrl === '/' && currentUrl !== '/') return false;
+
     return currentUrl.includes(targetUrl);
   }
 
@@ -196,193 +193,314 @@ export class PopupDisplay {
   //   } catch { return []; }
   // }
 
+
   // --- LOGIC 2: DYNAMIC CSS GENERATOR ---
+  // --- DYNAMIC CSS GENERATOR (FINAL CLEAN VERSION) ---
   private getDynamicStyles(): string {
-    const style = this.config.styleJson || {};
-    const layout = this.config.layoutJson || {};
-    const tokens = style.tokens || {};
-    const colors = tokens.colors || {};
-    const typo = tokens.typography || {};
+    const style = this.config.styleJson || {} as StyleJson;
+    const layout = this.config.layoutJson || {} as LayoutJson;
     
-    // Position Logic
-    const popupWrapper: any = layout.wrapper?.popup || {};
-    let posCSS = 'bottom: 24px; right: 24px;';
+    // 1. Unpack Configs
+    const tokens = style.tokens || {} as any;
+    const components = style.components || {} as any;
+    const size = style.size || 'md';
+    const density = tokens.densityBySize?.[size] || {}; 
+    
+    // --- Helper Getters ---
+    const getColor = (tokenName: string) => (tokens.colors as any)?.[tokenName] || tokenName || 'transparent';
+    const getRadius = (tokenName: string) => {
+        const r = (tokens.radius as any)?.[tokenName];
+        return r !== undefined ? `${r}px` : '4px';
+    };
+    const getShadow = (tokenName: string) => (tokens.shadow as any)?.[tokenName] || 'none';
 
-    if (popupWrapper.position === 'center') {
-        posCSS = 'top: 50%; left: 50%; transform: translate(-50%, -50%);';
-    } else if (popupWrapper.position === 'bottom-left') {
-        posCSS = 'bottom: 24px; left: 24px;';
-    } else if (popupWrapper.position === 'top-center') {
-        posCSS = 'top: 24px; left: 50%; transform: translateX(-50%);';
+    // 2. Setup Dimensions
+    const contentMode = layout.contentMode || 'grid'; 
+    const modeConfig = layout.modes?.[contentMode as keyof typeof layout.modes] || {} as any;
+    
+    // Image Size logic
+    const imgLayout = layout.card?.image?.sizeByMode?.[contentMode as 'grid' | 'list' | 'carousel'] || {};
+    const imgHeightRaw = imgLayout.height || density.imageHeight || 140; 
+    
+    // [FIX] Carousel ưu tiên width từ config (96px) thay vì 100% để giống preview
+    let imgWidthRaw = '100%';
+    if (contentMode === 'list') imgWidthRaw = (imgLayout as any).width || 96;
+    if (contentMode === 'carousel' && (imgLayout as any).width) imgWidthRaw = (imgLayout as any).width;
+
+    const imgHeight = typeof imgHeightRaw === 'number' ? `${imgHeightRaw}px` : imgHeightRaw;
+    const imgWidth = typeof imgWidthRaw === 'number' ? `${imgWidthRaw}px` : imgWidthRaw;
+
+    // Popup Wrapper logic
+    const popupWrapper = layout.wrapper?.popup || {} as any;
+    //const popupWidth = popupWrapper.width ? `${popupWrapper.width}px` : '340px';
+    const popupWidth = '340px';
+    
+    // Xử lý Height từ Config (Nếu JSON có height thì dùng, ko thì max-height)
+    const popupHeightCSS = popupWrapper.height 
+        ? `height: ${popupWrapper.height}px;` 
+        : `height: auto; max-height: 80vh;`;
+
+    let posCSS = 'bottom: 20px; right: 20px;';
+    switch (popupWrapper.position) {
+        case 'bottom-left': posCSS = 'bottom: 20px; left: 20px;'; break;
+        case 'top-center': posCSS = 'top: 20px; left: 50%; transform: translateX(-50%);'; break;
+        case 'center': posCSS = 'top: 50%; left: 50%; transform: translate(-50%, -50%);'; break;
     }
 
-    // const width = popupWrapper.width ? `${popupWrapper.width}px` : '340px';
-    const width = '340px';
+    // 3. Container Logic
+    let containerCSS = '';
+    let itemDir = 'column';
+    let itemAlign = 'stretch';
 
-    const contentMode = layout.contentMode || 'carousel'; // carousel, grid, list
-
-    // CSS cho phần body (nơi chứa items)
-    let bodyLayoutCSS = '';
-    
     if (contentMode === 'grid') {
-        const gridGap = layout.modes?.grid?.gap || '10px';
-        bodyLayoutCSS = `
-            display: grid; 
-            grid-template-columns: repeat(2, 1fr); /* Popup nhỏ nên mặc định 2 cột */
-            gap: ${gridGap};
-            padding: 16px;
-            overflow-y: auto;
-            max-height: 200px; /* Giới hạn chiều cao nếu nhiều item */
-        `;
+        const cols = modeConfig.columns || 2;
+        const gapPx = tokens.spacingScale?.[modeConfig.gap || 'md'] || 12;
+        containerCSS = `display: grid; grid-template-columns: repeat(${cols}, 1fr); gap: ${gapPx}px; padding: ${density.cardPadding || 16}px;`;
     } else if (contentMode === 'list') {
-        const listGap = layout.modes?.list?.gap || '10px';
-        bodyLayoutCSS = `
-            display: flex;
-            flex-direction: column;
-            gap: ${listGap};
-            padding: 16px;
-            overflow-y: auto;
-            max-height: 200px;
-        `;
+        itemDir = 'row';
+        itemAlign = 'flex-start';
+        const gapPx = tokens.spacingScale?.[modeConfig.rowGap || 'md'] || 12;
+        containerCSS = `display: flex; flex-direction: column; gap: ${gapPx}px; padding: ${density.cardPadding || 16}px;`;
     } else {
-        bodyLayoutCSS = `width: 100%; padding: 16px;`;
+        containerCSS = 'padding: 0;'; 
     }
+
+    // 4. Styles Mapping
+    const cardComp = components.card || {};
+    const modeOverride = style.modeOverrides?.[contentMode as keyof typeof style.modeOverrides] || {};
+    
+    // Colors
+    const colorTitle = getColor('textPrimary');
+    const colorBody = getColor('textSecondary');
+    const colorPrimary = getColor('primary'); // <--- ĐÃ KHAI BÁO LẠI ĐỂ DÙNG
+
+    // Card Specifics
+    const cardBg = getColor(cardComp.backgroundToken || 'surface');
+    const cardBorder = cardComp.border ? `1px solid ${getColor(cardComp.borderColorToken)}` : 'none';
+    const cardRadius = getRadius(cardComp.radiusToken || 'card');
+    const cardShadow = getShadow(cardComp.shadowToken);
+    const cardPadding = modeOverride.card?.paddingFromDensity 
+        ? (density[modeOverride.card.paddingFromDensity as keyof typeof density] || 12) 
+        : (density.cardPadding || 12);
+    
+    const btnBg = getColor('surface');
 
     return `
-      :host { all: initial; font-family: inherit; }
+      :host { all: initial; font-family: inherit; box-sizing: border-box; }
       * { box-sizing: border-box; }
 
       .recsys-popup {
-        position: fixed;
-        ${posCSS}
-        width: ${width};
-        background: ${colors.surface || '#fff'};
-        border-radius: ${tokens.radius?.card || 8}px;
-        box-shadow: ${tokens.shadow?.card || '0 4px 12px rgba(0,0,0,0.15)'};
-        z-index: 2147483647;
-        overflow: hidden;
-        display: flex;
-        flex-direction: column;
-        border: 1px solid ${colors.border || '#eee'};
-        animation: fadeIn 0.3s ease;
+        position: fixed; ${posCSS} width: ${popupWidth}; ${popupHeightCSS}
+        background: ${getColor(components.canvas?.backgroundToken || 'background')};
+        color: ${colorTitle};
+        border-radius: ${getRadius('card')}; 
+        box-shadow: ${tokens.shadow?.cardHover};
+        border: 1px solid ${getColor('border')};
+        display: flex; flex-direction: column; z-index: 999999; overflow: hidden;
+        animation: slideIn 0.3s ease-out;
       }
-
-      @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+      @keyframes slideIn { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
 
       .recsys-header {
-        background: ${colors.surface || '#fff'};
-        color: ${colors.textPrimary || '#333'};
-        padding: 12px 16px;
-        border-bottom: 1px solid ${colors.border || '#eee'};
+        padding: 12px 16px; border-bottom: 1px solid ${getColor('border')};
         display: flex; justify-content: space-between; align-items: center;
+        background: ${getColor('surface')};
+        flex-shrink: 0; /* Header không bị co lại khi scroll body */
       }
-      
       .recsys-header-title {
-         font-size: ${typo.title?.fontSize || 16}px;
-         font-weight: ${typo.title?.fontWeight || 600};
+          font-size: ${tokens.typography?.title?.fontSize || 16}px;
+          font-weight: ${tokens.typography?.title?.fontWeight || 600};
+          color: ${colorTitle};
+      }
+      .recsys-close { background: none; border: none; color: ${colorBody}; cursor: pointer; font-size: 18px; }
+
+      .recsys-body {
+        position: relative; flex-grow: 0; overflow-y: auto;
+        scrollbar-width: thin; scrollbar-color: ${getColor('border')} transparent;
+      }
+      .recsys-container { ${containerCSS} }
+
+      .recsys-item {
+         display: flex; flex-direction: ${itemDir}; align-items: ${itemAlign};
+         gap: ${tokens.spacingScale?.sm || 8}px;
+         background: ${cardBg}; border: ${cardBorder}; border-radius: ${cardRadius};
+         box-shadow: ${cardShadow}; padding: ${cardPadding}px;
+         cursor: pointer; transition: all 0.2s;
+         width: 100%;
       }
 
-      .recsys-close {
-        background: none; border: none; cursor: pointer; font-size: 20px;
-        color: ${colors.textSecondary || '#999'}; padding: 0;
+      /* SỬ DỤNG colorPrimary Ở ĐÂY */
+      .recsys-item:hover .recsys-name {
+          color: ${colorPrimary}; 
       }
 
-      .recsys-body { position: relative; padding: 0; background: ${colors.surface || '#fff'}; }
+      ${cardComp.hover?.enabled ? `
+      .recsys-item:hover {
+         transform: translateY(-${cardComp.hover.liftPx || 2}px);
+         box-shadow: ${getShadow(cardComp.hover.shadowToken || 'cardHover')};
+         /* Optional: border-color: ${colorPrimary}; */
+      }
+      ` : ''}
 
-      /* Nút điều hướng Carousel */
+      .recsys-img-box {
+         width: ${imgWidth}; height: ${imgHeight};
+         border-radius: ${getRadius(components.image?.radiusFollowsCard ? cardComp.radiusToken : 'image')};
+         overflow: hidden; background: ${getColor('muted')}; flex-shrink: 0; display: flex;
+      }
+      .recsys-img-box img { width: 100%; height: 100%; object-fit: ${components.image?.objectFit || 'cover'}; }
+
+      .recsys-info { display: flex; flex-direction: column; gap: 4px; flex: 1; min-width: 0; }
+
+      .recsys-badges { display: flex; flex-wrap: wrap; gap: 4px; margin-top: auto; }
+      .recsys-badge { 
+         font-size: 10px; 
+         background: ${getColor(components.badge?.backgroundToken || 'primary')}; 
+         color: ${components.badge?.textColor || '#fff'};
+         padding: 2px 6px; border-radius: ${getRadius('badge')};
+      }
+
       .recsys-nav {
-        position: absolute; top: 50%; transform: translateY(-50%);
-        width: 32px; height: 32px; border-radius: 50%;
-        background: rgba(255,255,255,0.9); border: 1px solid ${colors.border || '#ddd'};
-        color: ${colors.textPrimary || '#333'};
-        cursor: pointer; z-index: 2; display: flex; align-items: center; justify-content: center;
+         position: absolute; top: 50%; transform: translateY(-50%);
+         width: 32px; height: 32px; /* To hơn */
+         border-radius: 50%;
+         background: ${btnBg}; /* Màu nền theo theme */
+         border: 1px solid ${getColor('border')};
+         display: flex; align-items: center; justify-content: center;
+         z-index: 10; cursor: pointer; color: ${colorTitle};
+         box-shadow: 0 2px 8px rgba(0,0,0,0.15); /* Đổ bóng */
+         font-size: 18px; padding-bottom: 2px;
+         opacity: 0.9;
+         transition: opacity 0.2s;
       }
-      .recsys-prev { left: 8px; }
-      .recsys-next { right: 8px; }
-
-      .recsys-slide { width: 100%; padding: 16px; }
-
-      .recsys-item { display: flex; flex-direction: column; gap: 8px; text-align: center; align-items: center;}
-
-      .recsys-img { 
-         width: 100%; height: 180px; object-fit: cover; 
-         border-radius: ${tokens.radius?.image || 4}px; 
-      }
-
-      /* Style cho các field động */
-      .recsys-field { margin-bottom: 2px; }
-      .recsys-field-product_name, .recsys-field-name {
-         font-size: ${typo.body?.fontSize || 14}px;
-         font-weight: ${typo.body?.fontWeight || 600}; color: ${colors.textPrimary || '#333'};
-         display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;
-      }
-      .recsys-field-price {
-         color: ${colors.primary || '#d32f2f'}; font-weight: bold; font-size: 14px;
-      }
-      .recsys-field-rating { color: #f59e0b; font-size: 12px; }
-      .recsys-field-description {
-         font-size: 12px; color: ${colors.textSecondary || '#666'};
-         display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;
-      }
-      .recsys-container {
-         ${bodyLayoutCSS}
-      }
-      
-      /* Ẩn nút nav nếu không phải carousel */
-      .recsys-nav {
-         display: ${contentMode === 'carousel' ? 'flex' : 'none'};
-      }
-      
-      /* Chỉnh sửa item layout nếu là list */
-      .recsys-item { 
+      .recsys-nav:hover { opacity: 1; }
+      .recsys-prev { left: 12px; } /* Căn sát mép hơn */
+      .recsys-next { right: 12px; }
+      .recsys-slide { 
+         padding: 12px 48px; /* Padding trái phải lớn để chừa chỗ cho nút */
          display: flex; 
-         flex-direction: ${contentMode === 'list' ? 'row' : 'column'}; 
-         gap: 8px; 
-         text-align: ${contentMode === 'list' ? 'left' : 'center'};
-         border: ${contentMode === 'list' ? '1px solid #eee' : 'none'};
-         padding: ${contentMode === 'list' ? '8px' : '0'};
-         border-radius: 4px;
-      }
-      
-      /* Chỉnh ảnh nhỏ lại nếu là list */
-      .recsys-img { 
-         width: ${contentMode === 'list' ? '60px' : '100%'}; 
-         height: ${contentMode === 'list' ? '60px' : '180px'}; 
+         justify-content: center;
       }
     `;
   }
 
   // --- LOGIC 3: DYNAMIC HTML RENDERER ---
+  // --- LOGIC 3: DYNAMIC HTML RENDERER (UPDATED) ---
   private renderItemContent(item: RecommendationItem): string {
-    // Lấy field config và sort theo position
-    const fields = this.config.customizingFields?.fields || [];
-    const activeFields = fields
-        .filter(f => f.isEnabled)
-        .sort((a, b) => a.position - b.position);
+    const customizingFields = this.config.customizingFields?.fields || [];
+    const activeFields = customizingFields.filter(f => f.isEnabled).sort((a,b) => a.position - b.position);
+    
+    // 1. Lấy Config Style & Colors
+    const styleJson = this.config.styleJson || {} as any;
+    const fieldOverrides = styleJson.components?.fieldRow?.overrides || {};
+    const colors = styleJson.tokens?.colors || {}; // <--- Lấy bảng màu
 
-    let html = '';
-    activeFields.forEach(field => {
-        const key = field.key;
+    // Helper: Lấy giá trị item (Giữ nguyên)
+    const getValue = (obj: any, configKey: string) => {
+        if (!obj) return '';
+        if (obj[configKey] !== undefined) return obj[configKey];
+        const pascalKey = configKey.replace(/(_\w)/g, m => m[1].toUpperCase()).replace(/^\w/, c => c.toUpperCase());
+        if (obj[pascalKey] !== undefined) return obj[pascalKey];
+        const camelKey = configKey.replace(/(_\w)/g, m => m[1].toUpperCase());
+        if (obj[camelKey] !== undefined) return obj[camelKey];
+        if (obj[configKey.toUpperCase()] !== undefined) return obj[configKey.toUpperCase()];
+        const lowerKey = configKey.toLowerCase();
+        if (['title', 'name', 'product_name', 'item_name'].includes(lowerKey)) 
+            return obj['Title'] || obj['title'] || obj['Name'] || obj['name'];
+        if (['image', 'img', 'image_url', 'avatar'].includes(lowerKey)) 
+            return obj['ImageUrl'] || obj['imageUrl'] || obj['Img'] || obj['img'] || obj['Image'] || obj['image'];
+        return '';
+    };
+
+    // Helper mới: Tính toán Style cuối cùng (Kết hợp Default Theme + Manual Override)
+    const getFinalStyle = (fieldKey: string) => {
+        const key = fieldKey.toLowerCase();
+        const override = (fieldOverrides as Record<string, any>)[fieldKey] || {};
         
-        // 1. Xử lý ảnh
-        if (key === 'image' || key === 'img') {
-            if (item.img) html += `<img src="${item.img}" class="recsys-img" />`;
-            return;
+        // A. XÁC ĐỊNH MÀU MẶC ĐỊNH DỰA THEO LOẠI FIELD (Mapping logic)
+        let defaultColor = colors.textSecondary; // Mặc định là màu phụ
+        let defaultWeight = '400';
+        let defaultSize = 12;
+
+        if (['title', 'name', 'product_name', 'item_name'].includes(key)) {
+            defaultColor = colors.textPrimary;
+            defaultWeight = '600';
+            defaultSize = 14;
+        } else if (key.includes('price')) {
+            defaultColor = colors.primary; // Hoặc colors.warning tùy theme
+            defaultWeight = '700';
+            defaultSize = 14;
+        } else if (key.includes('rating')) {
+            defaultColor = colors.warning;
+        } else if (key.includes('category') || key.includes('categories')) {
+            defaultColor = colors.primary;
+            defaultSize = 11;
         }
 
-        // 2. Mapping Key từ Config -> Item Data
-        let value: any = '';
-        if (key === 'product_name' || key === 'name') value = item.title;
-        else if (key === 'description') value = item.description;
-        else value = (item as any)[key]; // Các trường khác (price, rating...)
+        // B. LẤY GIÁ TRỊ CUỐI CÙNG (Ưu tiên Override nếu có)
+        const finalColor = override.color || defaultColor;
+        const finalSize = override.fontSize || defaultSize;
+        const finalWeight = override.fontWeight || defaultWeight;
 
-        // 3. Render Text
-        if (value) {
-            html += `<div class="recsys-field recsys-field-${key}">${value}</div>`;
+        // C. TẠO CHUỖI CSS
+        let style = '';
+        if (finalColor) style += `color: ${finalColor} !important; `;
+        if (finalSize) style += `font-size: ${finalSize}px !important; `;
+        if (finalWeight) style += `font-weight: ${finalWeight} !important; `;
+        
+        return style;
+    };
+
+    // 2. Render Title & Image
+    const titleFieldConfig = activeFields.find(f => ['title', 'name', 'product_name', 'item_name'].includes(f.key.toLowerCase()));
+    const titleValue = titleFieldConfig ? getValue(item, titleFieldConfig.key) : getValue(item, 'title');
+    
+    // Áp dụng style cho Title
+    const titleStyle = titleFieldConfig ? getFinalStyle(titleFieldConfig.key) : `color: ${colors.textPrimary}; font-weight: 600;`;
+
+    const imageFieldConfig = activeFields.find(f => ['image', 'img', 'image_url', 'imageurl'].includes(f.key.toLowerCase()));
+    const imgSrc = imageFieldConfig ? getValue(item, imageFieldConfig.key) : getValue(item, 'image');
+
+    // 3. Render Khung
+    let html = `
+       <div class="recsys-item">
+          ${imgSrc ? `
+          <div class="recsys-img-box">
+             <img src="${imgSrc}" alt="${titleValue || ''}" />
+          </div>` : ''}
+          
+          <div class="recsys-info">
+             <div class="recsys-name" title="${titleValue}" style="${titleStyle}">
+                ${titleValue || ''}
+             </div>
+    `;
+
+    // 4. Render các field còn lại
+    activeFields.forEach(field => {
+        const key = field.key.toLowerCase();
+        if (['image', 'img', 'image_url', 'title', 'name', 'product_name', 'item_name'].includes(key)) return;
+
+        let value = getValue(item, field.key);
+        if (value === undefined || value === null || value === '') return;
+
+        let rawValue = getValue(item, field.key);
+        if (rawValue === undefined || rawValue === null || rawValue === '') return;
+
+        // [SỬA ĐỔI] Xử lý mảng: Nối thành chuỗi (Pop, Ballad) thay vì render Badge
+        let displayValue = rawValue;
+        if (Array.isArray(rawValue)) {
+            displayValue = rawValue.join(', ');
         }
+
+        // Lấy style (Category sẽ tự lấy màu Primary từ hàm getFinalStyle)
+        const valueStyle = getFinalStyle(field.key);
+
+        html += `<div class="recsys-field-row">
+            <span class="recsys-value" style="${valueStyle}">${displayValue}</span>
+        </div>`;
     });
 
-    return `<div class="recsys-item" data-id="${item.id}">${html}</div>`;
+    html += `</div></div>`; 
+    return html;
   }
 
   private renderPopup(items: RecommendationItem[]): void {
@@ -432,13 +550,7 @@ export class PopupDisplay {
   private renderStaticItems(shadow: ShadowRoot, items: RecommendationItem[]): void {
      const container = shadow.querySelector('.recsys-container');
      if (!container) return;
-     
-     let html = '';
-     // Giới hạn số lượng hiển thị nếu là popup tĩnh (vd: tối đa 4 cái)
-     items.forEach(item => {
-         html += this.renderItemContent(item);
-     });
-     container.innerHTML = html;
+     container.innerHTML = items.map(item => this.renderItemContent(item)).join('');
   }
 
   private setupCarousel(shadow: ShadowRoot, items: RecommendationItem[]): void {
@@ -492,3 +604,4 @@ export class PopupDisplay {
     this.autoSlideTimeout = null;
   }
 }
+

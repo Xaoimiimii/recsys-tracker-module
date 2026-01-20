@@ -248,11 +248,7 @@ export interface StyleTokens {
         cardHover: string;
     };
     typography: {
-        fontFamily: string;
         title: TypographyConfig;
-        body: TypographyConfig;
-        meta: TypographyConfig;
-        label: TypographyConfig;
     };
     spacingScale: Record<string, number>; // xs, sm, md...
     densityBySize: Record<string, DensityConfig>; // sm, md, lg
@@ -312,6 +308,7 @@ export interface ComponentStyles {
             truncate: boolean;
         };
         rowGapToken: string;
+        overrides?: Record<string, FieldStyleOverride>;
     };
     actions: {
         button: {
@@ -373,6 +370,12 @@ export interface FieldConfig {
 
 export interface CustomizingFields {
     fields: FieldConfig[];
+}
+
+export interface FieldStyleOverride {
+    fontSize?: number;
+    fontWeight?: number;
+    color?: string;
 }
 
 

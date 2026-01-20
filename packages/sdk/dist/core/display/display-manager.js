@@ -14,6 +14,7 @@ export class DisplayManager {
     }
     // Khởi tạo display methods dựa trên danh sách config
     async initialize(returnMethods) {
+        this.destroy();
         if (!returnMethods || !Array.isArray(returnMethods) || returnMethods.length === 0) {
             console.warn('[DisplayManager] No return methods provided for initialization.');
             return;
@@ -79,6 +80,10 @@ export class DisplayManager {
     // }
     initializePopup(slotName, config) {
         try {
+            if (this.popupDisplay) {
+                this.popupDisplay.stop();
+                this.popupDisplay = null;
+            }
             this.popupDisplay = new PopupDisplay(this.domainKey, slotName, this.apiBaseUrl, config);
             this.popupDisplay.start();
         }
@@ -89,6 +94,10 @@ export class DisplayManager {
     // Khởi tạo Inline Display với Config đầy đủ
     initializeInline(slotName, config) {
         try {
+            if (this.inlineDisplay) {
+                this.inlineDisplay.stop();
+                this.inlineDisplay = null;
+            }
             if (!config.selector)
                 return;
             this.inlineDisplay = new InlineDisplay(this.domainKey, slotName, config.selector, this.apiBaseUrl, config, // Truyền object config

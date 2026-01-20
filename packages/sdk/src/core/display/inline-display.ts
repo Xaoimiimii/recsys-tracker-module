@@ -1,4 +1,4 @@
-import { InlineConfig } from '../../types';
+import { InlineConfig, StyleJson, LayoutJson } from '../../types';
 import { RecommendationItem } from '../recommendation';
 
 export class InlineDisplay {
@@ -84,86 +84,199 @@ export class InlineDisplay {
     } catch { return []; }
   }
 
+  private getTokenColor(tokenName: string, tokens: any): string {
+    return tokens?.colors?.[tokenName] || tokenName || 'transparent';
+  }
+
+  private getTokenRadius(tokenName: string, tokens: any): string {
+    const val = tokens?.radius?.[tokenName];
+    return val !== undefined ? `${val}px` : '0px';
+  }
+
   // --- DYNAMIC CSS INLINE ---
   private getWidgetStyles(): string {
-    const style = this.config.styleJson || {} as any;
-    const tokens = style.tokens || {};
-    const contentMode = this.config.layoutJson?.contentMode || 'grid';
-    const colors = tokens.colors || {};
-    const typo = tokens.typography || {};
+    const style = this.config.styleJson || {} as StyleJson;
+    const layout = this.config.layoutJson || {} as LayoutJson;
     
-    // Grid settings
-    const gridMode = this.config.layoutJson?.modes?.grid || {};
-    const listMode: any = this.config.layoutJson?.modes?.list || {};
+    const tokens = style.tokens || {};
+    const components = style.components || {};
+    const contentMode = layout.contentMode || 'grid'; // grid | list
+    const currentModeConfig = layout.modes?.[contentMode as keyof typeof layout.modes] || {};
+    
+    // Override cho mode hiện tại (nếu có)
+    const modeOverride = style.modeOverrides?.[contentMode as keyof typeof style.modeOverrides] || {};
 
-    const gridCSS = `
-        display: grid;
-        grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
-        gap: ${gridMode.gap || '16px'};
-    `;
-    const listCSS = `
-        display: flex;
-        flex-direction: column;
-        gap: ${listMode.gap || '12px'};
-    `;
+    // 1. Base Styles & Grid/List Setup
+    let containerCSS = '';
+    if (contentMode === 'grid') {
+        const gridConfig = currentModeConfig as any;
+        const gap = gridConfig.gap || '16px';
+        const cols = gridConfig.columns || 4;
+        containerCSS = `
+            display: grid;
+            grid-template-columns: repeat(${cols}, 1fr);
+            gap: ${style.tokens?.spacingScale?.[gap] || 12}px;
+        `;
+        // Responsive (Example logic based on breakpoints provided in JSON)
+        if (gridConfig.responsive) {
+             // Logic media query simple
+             containerCSS += `
+                @media (max-width: 768px) { grid-template-columns: repeat(2, 1fr); }
+                @media (max-width: 480px) { grid-template-columns: 1fr; }
+             `;
+        }
+    } else { // List
+        const listConfig = currentModeConfig as any;
+        const gap = listConfig.rowGap || '12px';
+        containerCSS = `
+            display: flex;
+            flex-direction: column;
+            gap: ${style.tokens?.spacingScale?.[gap] || 12}px;
+        `;
+    }
 
-    const wrapperCSS = contentMode === 'list' ? listCSS : gridCSS;
-    const itemDirection = contentMode === 'list' ? 'row' : 'column';
-    const imgWidth = contentMode === 'list' ? '120px' : '100%';
-    const imgHeight = contentMode === 'list' ? 'auto' : '100%';
-    const imgPos = contentMode === 'list' ? 'relative' : 'absolute';
-    const imgBoxPadding = contentMode === 'list' ? '0' : '100%';
+    // 2. Card Styles
+    const cardComp = { ...components.card, ...modeOverride.card };
+    const cardBg = this.getTokenColor(cardComp.backgroundToken, tokens);
+    const cardBorderColor = this.getTokenColor(cardComp.borderColorToken, tokens);
+    const cardRadius = this.getTokenRadius(cardComp.radiusToken, tokens);
+    const cardShadow = (tokens.shadow as any)?.[cardComp.shadowToken] || 'none';
+    const cardPadding = style.tokens?.densityBySize?.[style.size || 'md']?.cardPadding || 12;
+
+    // 3. Image Styles
+    const imgComp = { ...components.image, ...modeOverride.image };
+    const imgLayout = layout.card.image || {};
+    const imgSize = (imgLayout.sizeByMode as any)?.[contentMode] || {};
+    
+    // Image Layout logic
+    let imgContainerCSS = '';
+    let itemFlexDir = 'column';
+    let itemAlignItems = 'stretch';
+    
+    if (contentMode === 'list') {
+        itemFlexDir = 'row'; // List thì ảnh bên trái
+        itemAlignItems = 'flex-start';
+        imgContainerCSS = `
+            width: ${imgSize.width || 96}px;
+            height: ${imgSize.height || 96}px;
+            flex-shrink: 0;
+        `;
+    } else {
+        // Grid
+        imgContainerCSS = `
+            width: 100%;
+            height: ${imgSize.height || 140}px;
+        `;
+    }
+
+    // 4. Typography & Colors
+    const typo = tokens.typography || {};
+    const textColor = this.getTokenColor(components.fieldRow?.value?.colorToken || 'textPrimary', tokens);
+    //const labelColor = this.getTokenColor(components.fieldRow?.label?.colorToken || 'textSecondary', tokens);
 
     return `
-      :host { all: initial; font-family: ${typo.fontFamily || 'Arial, sans-serif'}; width: 100%; display: block; }
+      :host { 
+          all: initial; 
+          font-family: inherit; 
+          width: 100%; 
+          display: block; 
+          box-sizing: border-box;
+      }
       * { box-sizing: border-box; }
 
       .recsys-wrapper {
-        ${wrapperCSS}
+        ${containerCSS}
         padding: 16px 0;
       }
 
       .recsys-item {
-        background: ${colors.surface || '#fff'};
-        border: 1px solid ${colors.border || '#eee'};
-        border-radius: ${tokens.radius?.card || 8}px;
+        background: ${cardBg};
+        border: ${cardComp.border ? `1px solid ${cardBorderColor}` : 'none'};
+        border-radius: ${cardRadius};
+        box-shadow: ${cardShadow};
         overflow: hidden;
         cursor: pointer;
+        display: flex;
+        flex-direction: ${itemFlexDir}; 
+        align-items: ${itemAlignItems};
         transition: transform 0.2s, box-shadow 0.2s;
-        display: flex; 
-        flex-direction: ${itemDirection}; /* Dynamic direction */
-        height: 100%;
-        min-height: ${contentMode === 'list' ? '100px' : 'auto'};
+        padding: ${cardPadding}px;
+        gap: 12px; /* Gap giữa ảnh và nội dung text */
       }
 
+      ${cardComp.hover?.enabled ? `
       .recsys-item:hover {
-        transform: translateY(-2px);
-        box-shadow: ${tokens.shadow?.cardHover || '0 4px 12px rgba(0,0,0,0.1)'};
+        transform: translateY(-${cardComp.hover.liftPx || 0}px);
+        box-shadow: ${(tokens.shadow as any)?.[cardComp.hover.shadowToken]|| 'none'};
       }
+      ` : ''}
 
       .recsys-img-box {
-        width: ${imgWidth}; 
-        padding-top: ${imgBoxPadding}; 
-        position: relative; 
-        background: #f9f9f9;
-        flex-shrink: 0; /* Không bị co lại trong list view */
+        ${imgContainerCSS}
+        border-radius: ${imgComp.radiusFollowsCard ? cardRadius : '4px'};
+        overflow: hidden;
+        background: ${this.getTokenColor('muted', tokens)};
+        position: relative;
       }
-      
+
       .recsys-img-box img {
-        position: ${imgPos}; top: 0; left: 0; width: 100%; height: ${imgHeight}; object-fit: cover;
+        width: 100%; height: 100%; 
+        object-fit: ${imgComp.objectFit || 'cover'};
+        display: block;
       }
 
-      .recsys-info { padding: 12px; display: flex; flex-direction: column; flex-grow: 1; gap: 4px; justify-content: center; }
-
-      /* Styles giữ nguyên... */
-      .recsys-field-product_name {
-        font-size: 14px; font-weight: 600; color: ${colors.textPrimary || '#333'};
-        display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;
+      .recsys-info {
+        flex: 1;
+        display: flex;
+        flex-direction: column;
+        gap: ${tokens.spacingScale?.[components.fieldRow?.rowGapToken] || 4}px;
+        justify-content: center;
+        min-width: 0; /* Fix flex overflow text */
       }
-      .recsys-field-price { color: ${colors.primary || '#d32f2f'}; font-weight: bold; }
-      .recsys-field-description {
-        font-size: 12px; color: ${colors.textSecondary || '#666'};
-        display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;
+
+      /* Field Styling */
+      
+      .recsys-title {
+          font-size: ${typo.title?.fontSize || 16}px;
+          font-weight: ${typo.title?.fontWeight || 600};
+          color: ${this.getTokenColor('textPrimary', tokens)};
+          margin-bottom: 4px;
+          display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;
+      }
+
+      .recsys-value {
+          color: ${textColor};
+          white-space: nowrap; 
+          overflow: hidden; 
+          text-overflow: ellipsis;
+      }
+
+      /* Categories / Array Badges */
+      .recsys-badges {
+          display: flex; gap: 4px; flex-wrap: wrap;
+      }
+      .recsys-badge {
+          font-size: 10px;
+          padding: 2px 6px;
+          border-radius: ${this.getTokenRadius((tokens.radius as any)?.badge || 'badge', tokens)};
+          background: ${this.getTokenColor(components.badge?.backgroundToken || 'primary', tokens)};
+          color: ${components.badge?.textColor || '#fff'};
+      }
+
+      /* Button / Actions */
+      .recsys-actions {
+          margin-top: auto;
+          display: flex;
+          justify-content: flex-end;
+      }
+      .recsys-btn {
+          background: ${this.getTokenColor('primary', tokens)};
+          color: #fff;
+          border: none;
+          padding: 6px 12px;
+          border-radius: ${this.getTokenRadius((tokens.radius as any)?.button || 'button', tokens)};
+          font-size: 12px;
+          cursor: pointer;
       }
     `;
   }
