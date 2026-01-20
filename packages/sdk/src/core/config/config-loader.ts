@@ -62,13 +62,13 @@ export class ConfigLoader {
     const baseUrl = process.env.API_URL || DEFAULT_API_URL;
 
     try {
-      // Bước 1: Gọi 3 API song song để lấy domain, return methods và event types
-      // Rules sẽ dùng mock data
-      const [domainResponse, rulesListResponse, returnMethodsResponse, eventTypesResponse] = await Promise.all([
+      // Bước 1: Gọi các API song song để lấy domain, return methods, event types và search keyword config
+      const [domainResponse, rulesListResponse, returnMethodsResponse, eventTypesResponse, searchKeywordResponse] = await Promise.all([
         fetch(`${baseUrl}/domain/${this.domainKey}`),
         fetch(`${baseUrl}/rule/domain/${this.domainKey}`),
         fetch(`${baseUrl}/return-method/${this.domainKey}`),
-        fetch(`${baseUrl}/rule/event-type`)
+        fetch(`${baseUrl}/rule/event-type`),
+        fetch(`${baseUrl}/search-keyword-config?domainKey=${this.domainKey}`)
       ]);
 
       // Kiểm tra response
@@ -81,6 +81,7 @@ export class ConfigLoader {
       const rulesListData = rulesListResponse.ok ? await rulesListResponse.json() : [];
       const returnMethodsData = returnMethodsResponse.ok ? await returnMethodsResponse.json() : [];
       const eventTypesData = eventTypesResponse.ok ? await eventTypesResponse.json() : [];
+      const searchKeywordData = searchKeywordResponse.ok ? await searchKeywordResponse.json() : [];
 
       // Cập nhật config với data từ server
       if (this.config) {
@@ -91,6 +92,7 @@ export class ConfigLoader {
           trackingRules: this.transformRules(rulesListData),
           returnMethods: this.transformReturnMethods(returnMethodsData),
           eventTypes: this.transformEventTypes(eventTypesData),
+          searchKeywordConfig: searchKeywordData && searchKeywordData.length > 0 ? searchKeywordData[0] : undefined,
         };
 
         // Verify origin sau khi có domainUrl từ server

@@ -6,6 +6,10 @@ import { LoopGuard } from './core/utils/loop-guard';
 import { getNetworkObserver } from './core/network/network-observer';
 import { getOrCreateAnonymousId } from './core/plugins/utils/plugin-utils';
 import { UserIdentityManager } from './core/user';
+import { ClickPlugin } from './core/plugins/click-plugin';
+import { RatingPlugin } from './core/plugins/rating-plugin';
+import { ReviewPlugin } from './core/plugins/review-plugin';
+import { SearchKeywordPlugin } from './core/plugins/search-keyword-plugin';
 // RecSysTracker - Main SDK class
 export class RecSysTracker {
     constructor() {
@@ -97,29 +101,17 @@ export class RecSysTracker {
         const hasReviewRules = reviewId ? this.config.trackingRules.some(rule => rule.eventTypeId === reviewId) : false;
         // Chỉ tự động đăng ký nếu chưa có plugin nào được đăng ký
         if (this.pluginManager.getPluginNames().length === 0) {
-            const pluginPromises = [];
             if (hasClickRules && this.config) {
-                const clickPromise = import('./core/plugins/click-plugin').then(({ ClickPlugin }) => {
-                    this.use(new ClickPlugin());
-                });
-                pluginPromises.push(clickPromise);
+                this.use(new ClickPlugin());
             }
             if (hasRateRules) {
-                const ratingPromise = import('./core/plugins/rating-plugin').then(({ RatingPlugin }) => {
-                    this.use(new RatingPlugin());
-                });
-                pluginPromises.push(ratingPromise);
+                this.use(new RatingPlugin());
             }
             if (hasReviewRules) {
-                const reviewPromise = import('./core/plugins/review-plugin').then(({ ReviewPlugin }) => {
-                    this.use(new ReviewPlugin());
-                });
-                pluginPromises.push(reviewPromise);
+                this.use(new ReviewPlugin());
             }
-            // Chờ tất cả plugin được đăng ký trước khi khởi động
-            if (pluginPromises.length > 0) {
-                await Promise.all(pluginPromises);
-            }
+            // Always load SearchKeywordPlugin to check for search keyword config
+            this.use(new SearchKeywordPlugin());
             if (this.pluginManager.getPluginNames().length > 0) {
                 this.startPlugins();
             }

@@ -38,4 +38,5 @@ export { IPlugin, BasePlugin } from './plugins/base-plugin';
 export { PluginManager } from './plugins/plugin-manager';
 export { ClickPlugin } from './plugins/click-plugin';
 export { ReviewPlugin } from './plugins/review-plugin';
+export { SearchKeywordPlugin } from './plugins/search-keyword-plugin';
 

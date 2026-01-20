@@ -5,6 +5,7 @@ export interface TrackerConfig {
   trackingRules?: TrackingRule[];
   returnMethods?: ReturnMethod[];
   eventTypes?: EventType[];
+  searchKeywordConfig?: SearchKeywordConfig;
   options?: TrackerOptions;
 }
 
@@ -69,6 +70,13 @@ export interface ReturnMethod {
   returnType: string;
   value: string;
   configurationName: string;
+}
+
+export interface SearchKeywordConfig {
+  Id: number;
+  DomainID: number;
+  ConfigurationName: string;
+  InputSelector: string;
 }
 
 export interface TrackerOptions {

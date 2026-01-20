@@ -196,13 +196,13 @@ class ConfigLoader {
         }
         const baseUrl = "https://recsys-tracker-module.onrender.com";
         try {
-            // Bước 1: Gọi 3 API song song để lấy domain, return methods và event types
-            // Rules sẽ dùng mock data
-            const [domainResponse, rulesListResponse, returnMethodsResponse, eventTypesResponse] = await Promise.all([
+            // Bước 1: Gọi các API song song để lấy domain, return methods, event types và search keyword config
+            const [domainResponse, rulesListResponse, returnMethodsResponse, eventTypesResponse, searchKeywordResponse] = await Promise.all([
                 fetch(`${baseUrl}/domain/${this.domainKey}`),
                 fetch(`${baseUrl}/rule/domain/${this.domainKey}`),
                 fetch(`${baseUrl}/return-method/${this.domainKey}`),
-                fetch(`${baseUrl}/rule/event-type`)
+                fetch(`${baseUrl}/rule/event-type`),
+                fetch(`${baseUrl}/search-keyword-config?domainKey=${this.domainKey}`)
             ]);
             // Kiểm tra response
             if (!domainResponse.ok) {
@@ -213,6 +213,7 @@ class ConfigLoader {
             const rulesListData = rulesListResponse.ok ? await rulesListResponse.json() : [];
             const returnMethodsData = returnMethodsResponse.ok ? await returnMethodsResponse.json() : [];
             const eventTypesData = eventTypesResponse.ok ? await eventTypesResponse.json() : [];
+            const searchKeywordData = searchKeywordResponse.ok ? await searchKeywordResponse.json() : [];
             // Cập nhật config với data từ server
             if (this.config) {
                 this.config = {
@@ -222,6 +223,7 @@ class ConfigLoader {
                     trackingRules: this.transformRules(rulesListData),
                     returnMethods: this.transformReturnMethods(returnMethodsData),
                     eventTypes: this.transformEventTypes(eventTypesData),
+                    searchKeywordConfig: searchKeywordData && searchKeywordData.length > 0 ? searchKeywordData[0] : undefined,
                 };
                 // Verify origin sau khi có domainUrl từ server
                 if (this.config.domainUrl) {
@@ -2463,11 +2465,6 @@ class ClickPlugin extends BasePlugin {
     }
 }
 
-var clickPlugin = /*#__PURE__*/Object.freeze({
-    __proto__: null,
-    ClickPlugin: ClickPlugin
-});
-
 /**
  * ReviewPlugin - UI Trigger Layer
  *
@@ -2689,10 +2686,165 @@ class ReviewPlugin extends BasePlugin {
     }
 }
 
-var reviewPlugin = /*#__PURE__*/Object.freeze({
-    __proto__: null,
-    ReviewPlugin: ReviewPlugin
-});
+/**
+ * SearchKeywordPlugin - Search Keyword Tracking
+ *
+ * 1. Lấy search keyword configuration từ tracker config
+ * 2. Theo dõi input events trên input selector
+ * 3. Log search keyword khi người dùng nhập (với debounce)
+ *
+ * FLOW:
+ * init → get config from tracker → attach listeners → log keywords
+ */
+class SearchKeywordPlugin extends BasePlugin {
+    constructor() {
+        super(...arguments);
+        this.name = 'SearchKeywordPlugin';
+        this.inputElement = null;
+        this.handleInputBound = this.handleInput.bind(this);
+        this.handleKeyPressBound = this.handleKeyPress.bind(this);
+        this.debounceTimer = null;
+        this.debounceDelay = 400; // 400ms debounce
+    }
+    init(tracker) {
+        this.errorBoundary.execute(() => {
+            super.init(tracker);
+            console.log('[SearchKeywordPlugin] Initialized');
+        }, 'SearchKeywordPlugin.init');
+    }
+    start() {
+        this.errorBoundary.execute(() => {
+            if (!this.ensureInitialized())
+                return;
+            const config = this.tracker.getConfig();
+            const searchKeywordConfig = config === null || config === void 0 ? void 0 : config.searchKeywordConfig;
+            if (!searchKeywordConfig) {
+                return;
+            }
+            // Attach listeners
+            this.attachListeners(searchKeywordConfig.InputSelector);
+            this.active = true;
+        }, 'SearchKeywordPlugin.start');
+    }
+    stop() {
+        this.errorBoundary.execute(() => {
+            // Clear debounce timer
+            if (this.debounceTimer !== null) {
+                clearTimeout(this.debounceTimer);
+                this.debounceTimer = null;
+            }
+            this.removeListeners();
+            super.stop();
+        }, 'SearchKeywordPlugin.stop');
+    }
+    /**
+     * Attach event listeners to input element
+     */
+    attachListeners(selector) {
+        // Tìm input element
+        this.inputElement = this.findInputElement(selector);
+        if (!this.inputElement) {
+            // Retry sau một khoảng thời gian (DOM có thể chưa load xong)
+            setTimeout(() => {
+                this.inputElement = this.findInputElement(selector);
+                if (this.inputElement) {
+                    this.addEventListeners();
+                }
+            }, 1000);
+            return;
+        }
+        this.addEventListeners();
+    }
+    /**
+     * Find input element with fallback strategies
+     * 1. Direct querySelector
+     * 2. Find element with class containing selector, then find input inside
+     * 3. Find element with class containing selector, check if it's an input
+     */
+    findInputElement(selector) {
+        // Strategy 1: Direct querySelector
+        let element = document.querySelector(selector);
+        if (element) {
+            return element;
+        }
+        // Strategy 2 & 3: Contains match for class names
+        // Remove leading dot if present (e.g., ".search-bar" -> "search-bar")
+        const cleanSelector = selector.startsWith('.') ? selector.slice(1) : selector;
+        // Find all elements with class containing the selector
+        const allElements = Array.from(document.querySelectorAll('[class]'));
+        for (const el of allElements) {
+            const classList = el.className;
+            if (typeof classList === 'string' && classList.includes(cleanSelector)) {
+                // Check if this element itself is an input
+                if (el.tagName === 'INPUT') {
+                    return el;
+                }
+                // Try to find input inside this element
+                const inputInside = el.querySelector('input');
+                if (inputInside) {
+                    return inputInside;
+                }
+            }
+        }
+        return null;
+    }
+    /**
+     * Add event listeners to input element
+     */
+    addEventListeners() {
+        if (!this.inputElement)
+            return;
+        // Listen for input events (khi user nhập)
+        this.inputElement.addEventListener('input', this.handleInputBound);
+        // Listen for keypress events (khi user nhấn Enter)
+        this.inputElement.addEventListener('keypress', this.handleKeyPressBound);
+    }
+    /**
+     * Remove event listeners
+     */
+    removeListeners() {
+        if (this.inputElement) {
+            this.inputElement.removeEventListener('input', this.handleInputBound);
+            this.inputElement.removeEventListener('keypress', this.handleKeyPressBound);
+            this.inputElement = null;
+        }
+    }
+    /**
+     * Handle input event - log với debounce 400ms
+     */
+    handleInput(event) {
+        // Clear existing timer
+        if (this.debounceTimer !== null) {
+            clearTimeout(this.debounceTimer);
+        }
+        const target = event.target;
+        const searchKeyword = target.value.trim();
+        // Set new timer
+        this.debounceTimer = window.setTimeout(() => {
+            if (searchKeyword) {
+                console.log('[SearchKeywordPlugin] Search keyword (input):', searchKeyword);
+            }
+            this.debounceTimer = null;
+        }, this.debounceDelay);
+    }
+    /**
+     * Handle keypress event - log khi user nhấn Enter (không debounce)
+     */
+    handleKeyPress(event) {
+        if (event.key === 'Enter') {
+            // Clear debounce timer khi nhấn Enter
+            if (this.debounceTimer !== null) {
+                clearTimeout(this.debounceTimer);
+                this.debounceTimer = null;
+            }
+            const target = event.target;
+            const searchKeyword = target.value.trim();
+            if (searchKeyword) {
+                console.log('[SearchKeywordPlugin] Search keyword (Enter pressed):', searchKeyword);
+            }
+        }
+    }
+}
 
 /**
  * RuleExecutionContext (REC)
@@ -4389,11 +4541,6 @@ class RatingPlugin extends BasePlugin {
     }
 }
 
-var ratingPlugin = /*#__PURE__*/Object.freeze({
-    __proto__: null,
-    RatingPlugin: RatingPlugin
-});
-
 // RecSysTracker - Main SDK class
 class RecSysTracker {
     constructor() {
@@ -4485,29 +4632,17 @@ class RecSysTracker {
         const hasReviewRules = this.config.trackingRules.some(rule => rule.eventTypeId === reviewId) ;
         // Chỉ tự động đăng ký nếu chưa có plugin nào được đăng ký
         if (this.pluginManager.getPluginNames().length === 0) {
-            const pluginPromises = [];
             if (hasClickRules && this.config) {
-                const clickPromise = Promise.resolve().then(function () { return clickPlugin; }).then(({ ClickPlugin }) => {
-                    this.use(new ClickPlugin());
-                });
-                pluginPromises.push(clickPromise);
+                this.use(new ClickPlugin());
             }
             if (hasRateRules) {
-                const ratingPromise = Promise.resolve().then(function () { return ratingPlugin; }).then(({ RatingPlugin }) => {
-                    this.use(new RatingPlugin());
-                });
-                pluginPromises.push(ratingPromise);
+                this.use(new RatingPlugin());
             }
             if (hasReviewRules) {
-                const reviewPromise = Promise.resolve().then(function () { return reviewPlugin; }).then(({ ReviewPlugin }) => {
-                    this.use(new ReviewPlugin());
-                });
-                pluginPromises.push(reviewPromise);
+                this.use(new ReviewPlugin());
             }
-            // Chờ tất cả plugin được đăng ký trước khi khởi động
-            if (pluginPromises.length > 0) {
-                await Promise.all(pluginPromises);
-            }
+            // Always load SearchKeywordPlugin to check for search keyword config
+            this.use(new SearchKeywordPlugin());
             if (this.pluginManager.getPluginNames().length > 0) {
                 this.startPlugins();
             }

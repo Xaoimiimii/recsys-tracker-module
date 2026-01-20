@@ -1,0 +1,190 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Search Keyword Tracking Test</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      max-width: 800px;
+      margin: 50px auto;
+      padding: 20px;
+      background-color: #f5f5f5;
+    }
+    
+    .container {
+      background: white;
+      padding: 30px;
+      border-radius: 8px;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
+    
+    h1 {
+      color: #333;
+      margin-bottom: 20px;
+    }
+    
+    .search-container {
+      margin: 30px 0;
+    }
+    
+    label {
+      display: block;
+      margin-bottom: 10px;
+      font-weight: bold;
+      color: #555;
+    }
+    
+    .search-bar {
+      width: 100%;
+      padding: 12px 15px;
+      font-size: 16px;
+      border: 2px solid #ddd;
+      border-radius: 4px;
+      box-sizing: border-box;
+      transition: border-color 0.3s;
+    }
+    
+    .search-bar:focus {
+      outline: none;
+      border-color: #4CAF50;
+    }
+    
+    .instructions {
+      background-color: #e8f5e9;
+      padding: 15px;
+      border-radius: 4px;
+      margin-top: 20px;
+    }
+    
+    .instructions h3 {
+      margin-top: 0;
+      color: #2e7d32;
+    }
+    
+    .instructions ul {
+      margin: 10px 0;
+      padding-left: 20px;
+    }
+    
+    .instructions li {
+      margin: 5px 0;
+    }
+    
+    .console-output {
+      background-color: #f5f5f5;
+      border: 1px solid #ddd;
+      border-radius: 4px;
+      padding: 15px;
+      margin-top: 20px;
+      font-family: 'Courier New', monospace;
+      font-size: 14px;
+      max-height: 300px;
+      overflow-y: auto;
+    }
+    
+    .console-output h3 {
+      margin-top: 0;
+      font-family: Arial, sans-serif;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>🔍 Search Keyword Tracking Test</h1>
+    
+    <div class="search-container">
+      <label for="searchInput">Search Input (tracked by SDK):</label>
+      <input 
+        type="text" 
+        id="searchInput" 
+        class="search-bar" 
+        placeholder="Nhập từ khóa tìm kiếm và xem console log..."
+      />
+    </div>
+    
+    <div class="instructions">
+      <h3>📋 Hướng dẫn test:</h3>
+      <ul>
+        <li>Mở Console (F12) để xem logs</li>
+        <li>Nhập text vào ô search phía trên</li>
+        <li>Mỗi khi bạn nhập, search keyword sẽ được log ra console</li>
+        <li>Nhấn Enter để xem log đặc biệt khi submit search</li>
+        <li>Plugin sẽ tự động fetch config từ API: <code>/search-keyword-config?domainKey=</code></li>
+      </ul>
+    </div>
+    
+    <div class="console-output">
+      <h3>Console Output Preview:</h3>
+      <div id="consolePreview" style="color: #666;">
+        <p><em>Console logs sẽ xuất hiện trong DevTools Console...</em></p>
+      </div>
+    </div>
+  </div>
+
+  <!-- SDK Configuration -->
+  <script>
+    // Set domain key for SDK
+    window.__RECSYS_DOMAIN_KEY__ = 'e2e41ee860fd6f0859c8386c680d3350d9dae3ecda97e80e602403a7f8ed2c50'; // Thay bằng domain key thực tế của bạn
+    
+    // Override console.log to show in page (for demo purposes)
+    const originalLog = console.log;
+    const consolePreview = document.getElementById('consolePreview');
+    
+    console.log = function(...args) {
+      originalLog.apply(console, args);
+      
+      // Show in page preview
+      const message = args.map(arg => {
+        if (typeof arg === 'object') {
+          return JSON.stringify(arg, null, 2);
+        }
+        return String(arg);
+      }).join(' ');
+      
+      if (message.includes('SearchKeywordPlugin')) {
+        const div = document.createElement('div');
+        div.style.marginBottom = '5px';
+        div.style.padding = '5px';
+        div.style.borderLeft = '3px solid #4CAF50';
+        div.style.paddingLeft = '10px';
+        
+        // Color code different types of messages
+        if (message.includes('Search keyword')) {
+          div.style.color = '#d32f2f';
+          div.style.fontWeight = 'bold';
+        } else if (message.includes('Started tracking')) {
+          div.style.color = '#1976d2';
+        }
+        
+        div.textContent = message;
+        consolePreview.appendChild(div);
+        
+        // Auto scroll to bottom
+        consolePreview.scrollTop = consolePreview.scrollHeight;
+        
+        // Keep only last 20 messages
+        while (consolePreview.children.length > 20) {
+          consolePreview.removeChild(consolePreview.firstChild);
+        }
+      }
+    };
+  </script>
+
+  <!-- Load RecSys Tracker SDK -->
+  <script src="http://localhost:3000/dist/loader.js"></script>
+  
+  <script>
+    // Initialize SDK
+    if (window.RecSysTracker) {
+      const tracker = new window.RecSysTracker.RecSysTracker();
+      tracker.init().then(() => {
+        console.log('✅ SDK initialized successfully');
+      }).catch(error => {
+        console.error('❌ SDK initialization failed:', error);
+      });
+    }
+  </script>
+</body>
+</html>
