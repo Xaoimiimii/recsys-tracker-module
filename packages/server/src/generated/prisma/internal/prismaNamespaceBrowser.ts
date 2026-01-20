@@ -164,7 +164,7 @@ export const UserIdentityScalarFieldEnum = {
   DomainId: 'DomainId',
   RequestConfig: 'RequestConfig',
   Value: 'Value',
-  IsActivated: 'IsActivated'
+  Field: 'Field'
 } as const
 
 export type UserIdentityScalarFieldEnum = (typeof UserIdentityScalarFieldEnum)[keyof typeof UserIdentityScalarFieldEnum]

@@ -57,6 +57,14 @@ export const UserIdentitySource = {
 export type UserIdentitySource = (typeof UserIdentitySource)[keyof typeof UserIdentitySource]
 
 
+export const UserIdentityField = {
+  UserId: 'UserId',
+  AnonymousId: 'AnonymousId'
+} as const
+
+export type UserIdentityField = (typeof UserIdentityField)[keyof typeof UserIdentityField]
+
+
 export const EventUserField = {
   UserId: 'UserId',
   Username: 'Username',

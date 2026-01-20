@@ -253,6 +253,11 @@ enum UserIdentitySource {
   element
 }
 
+enum UserIdentityField {
+  UserId
+  AnonymousId
+}
+
 model UserIdentity {
   Id Int @id @default(autoincrement())
 
@@ -263,7 +268,8 @@ model UserIdentity {
 
   RequestConfig Json?
   Value         String?
-  IsActivated Boolean @default(false)
+  // IsActivated Boolean @default(false)
+  Field UserIdentityField?
 }
 
 model Operator {
