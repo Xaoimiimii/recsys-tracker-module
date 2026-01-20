@@ -1,4 +1,4 @@
-import { Body, Controller, Get, Param, ParseIntPipe, Post } from '@nestjs/common';
+import { Body, Controller, Get, Param, ParseIntPipe, Post, Query } from '@nestjs/common';
 import { DomainService } from './domain.service';
 import { CreateDomainDto } from './dto/create-domain.dto';
 import { ApiOperation, ApiTags } from '@nestjs/swagger';
@@ -31,5 +31,12 @@ export class DomainController {
     @ApiOperation({ summary: 'Get all return methods' })
     async getAllReturnMethods() {
         return this.domainService.getAllReturnMethods();
+    }
+
+    @Get("/user-identity")
+    async getUserIdentity(
+        @Query('key') key: string
+    ) {
+        return this.domainService.getUserIdentity(key);
     }
 }
