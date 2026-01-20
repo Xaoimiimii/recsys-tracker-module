@@ -2017,7 +2017,7 @@ export const UserIdentityScalarFieldEnum = {
   DomainId: 'DomainId',
   RequestConfig: 'RequestConfig',
   Value: 'Value',
-  IsActivated: 'IsActivated'
+  Field: 'Field'
 } as const
 
 export type UserIdentityScalarFieldEnum = (typeof UserIdentityScalarFieldEnum)[keyof typeof UserIdentityScalarFieldEnum]
@@ -2365,9 +2365,16 @@ export type ListEnumUserIdentitySourceFieldRefInput<$PrismaModel> = FieldRefInpu
 
 
 /**
- * Reference to a field of type 'Boolean'
+ * Reference to a field of type 'UserIdentityField'
  */
-export type BooleanFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'Boolean'>
+export type EnumUserIdentityFieldFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'UserIdentityField'>
+    
+
+
+/**
+ * Reference to a field of type 'UserIdentityField[]'
+ */
+export type ListEnumUserIdentityFieldFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'UserIdentityField[]'>
     
 
 /**

@@ -41,7 +41,7 @@ export type UserIdentityMinAggregateOutputType = {
   Source: $Enums.UserIdentitySource | null
   DomainId: number | null
   Value: string | null
-  IsActivated: boolean | null
+  Field: $Enums.UserIdentityField | null
 }
 
 export type UserIdentityMaxAggregateOutputType = {
@@ -49,7 +49,7 @@ export type UserIdentityMaxAggregateOutputType = {
   Source: $Enums.UserIdentitySource | null
   DomainId: number | null
   Value: string | null
-  IsActivated: boolean | null
+  Field: $Enums.UserIdentityField | null
 }
 
 export type UserIdentityCountAggregateOutputType = {
@@ -58,7 +58,7 @@ export type UserIdentityCountAggregateOutputType = {
   DomainId: number
   RequestConfig: number
   Value: number
-  IsActivated: number
+  Field: number
   _all: number
 }
 
@@ -78,7 +78,7 @@ export type UserIdentityMinAggregateInputType = {
   Source?: true
   DomainId?: true
   Value?: true
-  IsActivated?: true
+  Field?: true
 }
 
 export type UserIdentityMaxAggregateInputType = {
@@ -86,7 +86,7 @@ export type UserIdentityMaxAggregateInputType = {
   Source?: true
   DomainId?: true
   Value?: true
-  IsActivated?: true
+  Field?: true
 }
 
 export type UserIdentityCountAggregateInputType = {
@@ -95,7 +95,7 @@ export type UserIdentityCountAggregateInputType = {
   DomainId?: true
   RequestConfig?: true
   Value?: true
-  IsActivated?: true
+  Field?: true
   _all?: true
 }
 
@@ -191,7 +191,7 @@ export type UserIdentityGroupByOutputType = {
   DomainId: number
   RequestConfig: runtime.JsonValue | null
   Value: string | null
-  IsActivated: boolean
+  Field: $Enums.UserIdentityField | null
   _count: UserIdentityCountAggregateOutputType | null
   _avg: UserIdentityAvgAggregateOutputType | null
   _sum: UserIdentitySumAggregateOutputType | null
@@ -223,7 +223,7 @@ export type UserIdentityWhereInput = {
   DomainId?: Prisma.IntFilter<"UserIdentity"> | number
   RequestConfig?: Prisma.JsonNullableFilter<"UserIdentity">
   Value?: Prisma.StringNullableFilter<"UserIdentity"> | string | null
-  IsActivated?: Prisma.BoolFilter<"UserIdentity"> | boolean
+  Field?: Prisma.EnumUserIdentityFieldNullableFilter<"UserIdentity"> | $Enums.UserIdentityField | null
   Domain?: Prisma.XOR<Prisma.DomainScalarRelationFilter, Prisma.DomainWhereInput>
 }
 
@@ -233,7 +233,7 @@ export type UserIdentityOrderByWithRelationInput = {
   DomainId?: Prisma.SortOrder
   RequestConfig?: Prisma.SortOrderInput | Prisma.SortOrder
   Value?: Prisma.SortOrderInput | Prisma.SortOrder
-  IsActivated?: Prisma.SortOrder
+  Field?: Prisma.SortOrderInput | Prisma.SortOrder
   Domain?: Prisma.DomainOrderByWithRelationInput
 }
 
@@ -246,7 +246,7 @@ export type UserIdentityWhereUniqueInput = Prisma.AtLeast<{
   DomainId?: Prisma.IntFilter<"UserIdentity"> | number
   RequestConfig?: Prisma.JsonNullableFilter<"UserIdentity">
   Value?: Prisma.StringNullableFilter<"UserIdentity"> | string | null
-  IsActivated?: Prisma.BoolFilter<"UserIdentity"> | boolean
+  Field?: Prisma.EnumUserIdentityFieldNullableFilter<"UserIdentity"> | $Enums.UserIdentityField | null
   Domain?: Prisma.XOR<Prisma.DomainScalarRelationFilter, Prisma.DomainWhereInput>
 }, "Id">
 
@@ -256,7 +256,7 @@ export type UserIdentityOrderByWithAggregationInput = {
   DomainId?: Prisma.SortOrder
   RequestConfig?: Prisma.SortOrderInput | Prisma.SortOrder
   Value?: Prisma.SortOrderInput | Prisma.SortOrder
-  IsActivated?: Prisma.SortOrder
+  Field?: Prisma.SortOrderInput | Prisma.SortOrder
   _count?: Prisma.UserIdentityCountOrderByAggregateInput
   _avg?: Prisma.UserIdentityAvgOrderByAggregateInput
   _max?: Prisma.UserIdentityMaxOrderByAggregateInput
@@ -273,14 +273,14 @@ export type UserIdentityScalarWhereWithAggregatesInput = {
   DomainId?: Prisma.IntWithAggregatesFilter<"UserIdentity"> | number
   RequestConfig?: Prisma.JsonNullableWithAggregatesFilter<"UserIdentity">
   Value?: Prisma.StringNullableWithAggregatesFilter<"UserIdentity"> | string | null
-  IsActivated?: Prisma.BoolWithAggregatesFilter<"UserIdentity"> | boolean
+  Field?: Prisma.EnumUserIdentityFieldNullableWithAggregatesFilter<"UserIdentity"> | $Enums.UserIdentityField | null
 }
 
 export type UserIdentityCreateInput = {
   Source: $Enums.UserIdentitySource
   RequestConfig?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   Value?: string | null
-  IsActivated?: boolean
+  Field?: $Enums.UserIdentityField | null
   Domain: Prisma.DomainCreateNestedOneWithoutUserIdentitiesInput
 }
 
@@ -290,14 +290,14 @@ export type UserIdentityUncheckedCreateInput = {
   DomainId: number
   RequestConfig?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   Value?: string | null
-  IsActivated?: boolean
+  Field?: $Enums.UserIdentityField | null
 }
 
 export type UserIdentityUpdateInput = {
   Source?: Prisma.EnumUserIdentitySourceFieldUpdateOperationsInput | $Enums.UserIdentitySource
   RequestConfig?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   Value?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  IsActivated?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  Field?: Prisma.NullableEnumUserIdentityFieldFieldUpdateOperationsInput | $Enums.UserIdentityField | null
   Domain?: Prisma.DomainUpdateOneRequiredWithoutUserIdentitiesNestedInput
 }
 
@@ -307,7 +307,7 @@ export type UserIdentityUncheckedUpdateInput = {
   DomainId?: Prisma.IntFieldUpdateOperationsInput | number
   RequestConfig?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   Value?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  IsActivated?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  Field?: Prisma.NullableEnumUserIdentityFieldFieldUpdateOperationsInput | $Enums.UserIdentityField | null
 }
 
 export type UserIdentityCreateManyInput = {
@@ -316,14 +316,14 @@ export type UserIdentityCreateManyInput = {
   DomainId: number
   RequestConfig?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   Value?: string | null
-  IsActivated?: boolean
+  Field?: $Enums.UserIdentityField | null
 }
 
 export type UserIdentityUpdateManyMutationInput = {
   Source?: Prisma.EnumUserIdentitySourceFieldUpdateOperationsInput | $Enums.UserIdentitySource
   RequestConfig?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   Value?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  IsActivated?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  Field?: Prisma.NullableEnumUserIdentityFieldFieldUpdateOperationsInput | $Enums.UserIdentityField | null
 }
 
 export type UserIdentityUncheckedUpdateManyInput = {
@@ -332,7 +332,7 @@ export type UserIdentityUncheckedUpdateManyInput = {
   DomainId?: Prisma.IntFieldUpdateOperationsInput | number
   RequestConfig?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   Value?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  IsActivated?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  Field?: Prisma.NullableEnumUserIdentityFieldFieldUpdateOperationsInput | $Enums.UserIdentityField | null
 }
 
 export type UserIdentityListRelationFilter = {
@@ -351,7 +351,7 @@ export type UserIdentityCountOrderByAggregateInput = {
   DomainId?: Prisma.SortOrder
   RequestConfig?: Prisma.SortOrder
   Value?: Prisma.SortOrder
-  IsActivated?: Prisma.SortOrder
+  Field?: Prisma.SortOrder
 }
 
 export type UserIdentityAvgOrderByAggregateInput = {
@@ -364,7 +364,7 @@ export type UserIdentityMaxOrderByAggregateInput = {
   Source?: Prisma.SortOrder
   DomainId?: Prisma.SortOrder
   Value?: Prisma.SortOrder
-  IsActivated?: Prisma.SortOrder
+  Field?: Prisma.SortOrder
 }
 
 export type UserIdentityMinOrderByAggregateInput = {
@@ -372,7 +372,7 @@ export type UserIdentityMinOrderByAggregateInput = {
   Source?: Prisma.SortOrder
   DomainId?: Prisma.SortOrder
   Value?: Prisma.SortOrder
-  IsActivated?: Prisma.SortOrder
+  Field?: Prisma.SortOrder
 }
 
 export type UserIdentitySumOrderByAggregateInput = {
@@ -426,15 +426,15 @@ export type EnumUserIdentitySourceFieldUpdateOperationsInput = {
   set?: $Enums.UserIdentitySource
 }
 
-export type BoolFieldUpdateOperationsInput = {
-  set?: boolean
+export type NullableEnumUserIdentityFieldFieldUpdateOperationsInput = {
+  set?: $Enums.UserIdentityField | null
 }
 
 export type UserIdentityCreateWithoutDomainInput = {
   Source: $Enums.UserIdentitySource
   RequestConfig?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   Value?: string | null
-  IsActivated?: boolean
+  Field?: $Enums.UserIdentityField | null
 }
 
 export type UserIdentityUncheckedCreateWithoutDomainInput = {
@@ -442,7 +442,7 @@ export type UserIdentityUncheckedCreateWithoutDomainInput = {
   Source: $Enums.UserIdentitySource
   RequestConfig?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   Value?: string | null
-  IsActivated?: boolean
+  Field?: $Enums.UserIdentityField | null
 }
 
 export type UserIdentityCreateOrConnectWithoutDomainInput = {
@@ -480,7 +480,7 @@ export type UserIdentityScalarWhereInput = {
   DomainId?: Prisma.IntFilter<"UserIdentity"> | number
   RequestConfig?: Prisma.JsonNullableFilter<"UserIdentity">
   Value?: Prisma.StringNullableFilter<"UserIdentity"> | string | null
-  IsActivated?: Prisma.BoolFilter<"UserIdentity"> | boolean
+  Field?: Prisma.EnumUserIdentityFieldNullableFilter<"UserIdentity"> | $Enums.UserIdentityField | null
 }
 
 export type UserIdentityCreateManyDomainInput = {
@@ -488,14 +488,14 @@ export type UserIdentityCreateManyDomainInput = {
   Source: $Enums.UserIdentitySource
   RequestConfig?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   Value?: string | null
-  IsActivated?: boolean
+  Field?: $Enums.UserIdentityField | null
 }
 
 export type UserIdentityUpdateWithoutDomainInput = {
   Source?: Prisma.EnumUserIdentitySourceFieldUpdateOperationsInput | $Enums.UserIdentitySource
   RequestConfig?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   Value?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  IsActivated?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  Field?: Prisma.NullableEnumUserIdentityFieldFieldUpdateOperationsInput | $Enums.UserIdentityField | null
 }
 
 export type UserIdentityUncheckedUpdateWithoutDomainInput = {
@@ -503,7 +503,7 @@ export type UserIdentityUncheckedUpdateWithoutDomainInput = {
   Source?: Prisma.EnumUserIdentitySourceFieldUpdateOperationsInput | $Enums.UserIdentitySource
   RequestConfig?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   Value?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  IsActivated?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  Field?: Prisma.NullableEnumUserIdentityFieldFieldUpdateOperationsInput | $Enums.UserIdentityField | null
 }
 
 export type UserIdentityUncheckedUpdateManyWithoutDomainInput = {
@@ -511,7 +511,7 @@ export type UserIdentityUncheckedUpdateManyWithoutDomainInput = {
   Source?: Prisma.EnumUserIdentitySourceFieldUpdateOperationsInput | $Enums.UserIdentitySource
   RequestConfig?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   Value?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  IsActivated?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  Field?: Prisma.NullableEnumUserIdentityFieldFieldUpdateOperationsInput | $Enums.UserIdentityField | null
 }
 
 
@@ -522,7 +522,7 @@ export type UserIdentitySelect<ExtArgs extends runtime.Types.Extensions.Internal
   DomainId?: boolean
   RequestConfig?: boolean
   Value?: boolean
-  IsActivated?: boolean
+  Field?: boolean
   Domain?: boolean | Prisma.DomainDefaultArgs<ExtArgs>
 }, ExtArgs["result"]["userIdentity"]>
 
@@ -532,7 +532,7 @@ export type UserIdentitySelectCreateManyAndReturn<ExtArgs extends runtime.Types.
   DomainId?: boolean
   RequestConfig?: boolean
   Value?: boolean
-  IsActivated?: boolean
+  Field?: boolean
   Domain?: boolean | Prisma.DomainDefaultArgs<ExtArgs>
 }, ExtArgs["result"]["userIdentity"]>
 
@@ -542,7 +542,7 @@ export type UserIdentitySelectUpdateManyAndReturn<ExtArgs extends runtime.Types.
   DomainId?: boolean
   RequestConfig?: boolean
   Value?: boolean
-  IsActivated?: boolean
+  Field?: boolean
   Domain?: boolean | Prisma.DomainDefaultArgs<ExtArgs>
 }, ExtArgs["result"]["userIdentity"]>
 
@@ -552,10 +552,10 @@ export type UserIdentitySelectScalar = {
   DomainId?: boolean
   RequestConfig?: boolean
   Value?: boolean
-  IsActivated?: boolean
+  Field?: boolean
 }
 
-export type UserIdentityOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"Id" | "Source" | "DomainId" | "RequestConfig" | "Value" | "IsActivated", ExtArgs["result"]["userIdentity"]>
+export type UserIdentityOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"Id" | "Source" | "DomainId" | "RequestConfig" | "Value" | "Field", ExtArgs["result"]["userIdentity"]>
 export type UserIdentityInclude<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   Domain?: boolean | Prisma.DomainDefaultArgs<ExtArgs>
 }
@@ -577,7 +577,7 @@ export type $UserIdentityPayload<ExtArgs extends runtime.Types.Extensions.Intern
     DomainId: number
     RequestConfig: runtime.JsonValue | null
     Value: string | null
-    IsActivated: boolean
+    Field: $Enums.UserIdentityField | null
   }, ExtArgs["result"]["userIdentity"]>
   composites: {}
 }
@@ -1007,7 +1007,7 @@ export interface UserIdentityFieldRefs {
   readonly DomainId: Prisma.FieldRef<"UserIdentity", 'Int'>
   readonly RequestConfig: Prisma.FieldRef<"UserIdentity", 'Json'>
   readonly Value: Prisma.FieldRef<"UserIdentity", 'String'>
-  readonly IsActivated: Prisma.FieldRef<"UserIdentity", 'Boolean'>
+  readonly Field: Prisma.FieldRef<"UserIdentity", 'UserIdentityField'>
 }
     
 
