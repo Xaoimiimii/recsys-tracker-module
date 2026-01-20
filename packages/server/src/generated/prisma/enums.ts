@@ -29,48 +29,40 @@ export const ActionType = {
 export type ActionType = (typeof ActionType)[keyof typeof ActionType]
 
 
-export const PayloadField = {
-  UserId: 'UserId',
-  Username: 'Username',
+export const PayloadMappingField = {
   ItemId: 'ItemId',
-  ItemTitle: 'ItemTitle',
-  Value: 'Value',
+  Rating: 'Rating',
+  Review: 'Review'
+} as const
+
+export type PayloadMappingField = (typeof PayloadMappingField)[keyof typeof PayloadMappingField]
+
+
+export const PayloadMappingSource = {
+  request_body: 'request_body',
+  request_url: 'request_url'
+} as const
+
+export type PayloadMappingSource = (typeof PayloadMappingSource)[keyof typeof PayloadMappingSource]
+
+
+export const UserIdentitySource = {
+  request_body: 'request_body',
+  local_storage: 'local_storage',
+  session_storage: 'session_storage',
+  cookie: 'cookie',
+  element: 'element'
+} as const
+
+export type UserIdentitySource = (typeof UserIdentitySource)[keyof typeof UserIdentitySource]
+
+
+export const UserIdentityField = {
+  UserId: 'UserId',
   AnonymousId: 'AnonymousId'
 } as const
 
-export type PayloadField = (typeof PayloadField)[keyof typeof PayloadField]
-
-
-export const PayloadSource = {
-  RequestBody: 'RequestBody',
-  Element: 'Element',
-  Cookie: 'Cookie',
-  LocalStorage: 'LocalStorage',
-  SessionStorage: 'SessionStorage',
-  Url: 'Url',
-  RequestUrl: 'RequestUrl'
-} as const
-
-export type PayloadSource = (typeof PayloadSource)[keyof typeof PayloadSource]
-
-
-export const PayloadRequestMethod = {
-  GET: 'GET',
-  POST: 'POST',
-  PUT: 'PUT',
-  PATCH: 'PATCH'
-} as const
-
-export type PayloadRequestMethod = (typeof PayloadRequestMethod)[keyof typeof PayloadRequestMethod]
-
-
-export const PayloadUrlPart = {
-  QueryParam: 'QueryParam',
-  PathName: 'PathName',
-  Hash: 'Hash'
-} as const
-
-export type PayloadUrlPart = (typeof PayloadUrlPart)[keyof typeof PayloadUrlPart]
+export type UserIdentityField = (typeof UserIdentityField)[keyof typeof UserIdentityField]
 
 
 export const EventUserField = {
@@ -80,11 +72,3 @@ export const EventUserField = {
 } as const
 
 export type EventUserField = (typeof EventUserField)[keyof typeof EventUserField]
-
-
-export const EventItemField = {
-  ItemId: 'ItemId',
-  ItemTitle: 'ItemTitle'
-} as const
-
-export type EventItemField = (typeof EventItemField)[keyof typeof EventItemField]

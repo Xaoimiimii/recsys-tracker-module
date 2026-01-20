@@ -16,45 +16,37 @@ export interface TrackingRule {
     name: string;
     domainId: number;
     eventTypeId: number;
-    trackingTargetId: number;
+    actionType?: string | null;
     payloadMappings: PayloadMapping[];
-    conditions: Condition[];
-    trackingTarget: TrackingTarget;
+    trackingTarget: string;
 }
 export interface PayloadMapping {
-    id: number;
+    id?: number;
     field: string;
     source: string;
-    value: string;
-    requestUrlPattern?: string | null;
-    requestMethod?: string | null;
-    requestBodyPath?: string | null;
-    urlPart?: string | null;
-    urlPartValue?: string | null;
-    trackingRuleId: number;
+    config: PayloadMappingConfig;
+    trackingRuleId?: number;
 }
-export interface PayloadConfig {
-    field: string;
-    source: string;
-    value?: string;
-    requestUrlPattern?: string;
-    requestMethod?: string;
-    requestBodyPath?: string;
-    urlPart?: string;
-    urlPartValue?: string;
+export interface PayloadMappingConfig {
+    RequestUrlPattern?: string;
+    RequestMethod?: string;
+    Value?: string;
+    ExtractType?: 'pathname' | 'query';
+    SelectorPattern?: string;
 }
-export interface Condition {
-    id: number;
-    value: string;
-    trackingRuleId: number;
-    patternId: number;
-    operatorId: number;
+export interface UserIdentityConfig {
+    id?: number;
+    source: 'request_body' | 'request_url' | 'local_storage' | 'session_storage' | 'cookie' | 'element';
+    domainId: number;
+    requestConfig?: UserIdentityRequestConfig | null;
+    value?: string | null;
+    field: 'UserId' | 'AnonymousId';
 }
-export interface TrackingTarget {
-    id: number;
-    value: string;
-    patternId: number;
-    operatorId: number;
+export interface UserIdentityRequestConfig {
+    RequestUrlPattern: string;
+    RequestMethod: string;
+    Value: string;
+    ExtractType?: 'pathname' | 'query';
 }
 export interface ReturnMethod {
     Key: string;

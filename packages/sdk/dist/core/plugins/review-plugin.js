@@ -15,6 +15,7 @@ export class ReviewPlugin extends BasePlugin {
     constructor() {
         super(...arguments);
         this.name = 'ReviewPlugin';
+        this.handleClickBound = this.handleClick.bind(this);
         this.handleSubmitBound = this.handleSubmit.bind(this);
     }
     init(tracker) {
@@ -27,23 +28,38 @@ export class ReviewPlugin extends BasePlugin {
         this.errorBoundary.execute(() => {
             if (!this.ensureInitialized())
                 return;
-            document.addEventListener('submit', this.handleSubmitBound, { capture: true });
+            // Listen for both click and submit events
+            document.addEventListener('click', this.handleClickBound, true);
+            document.addEventListener('submit', this.handleSubmitBound, true);
             this.active = true;
         }, 'ReviewPlugin.start');
     }
     stop() {
         this.errorBoundary.execute(() => {
             if (this.tracker) {
-                document.removeEventListener('submit', this.handleSubmitBound, { capture: true });
+                document.removeEventListener('click', this.handleClickBound, true);
+                document.removeEventListener('submit', this.handleSubmitBound, true);
             }
             super.stop();
         }, 'ReviewPlugin.stop');
     }
     /**
-     * Handle submit event - TRIGGER PHASE
-     * NOTE: This is now mainly a fallback. Rating Plugin handles most review detection.
+     * Handle click event (button clicks)
+     */
+    handleClick(event) {
+        this.handleInteraction(event, 'click');
+    }
+    /**
+     * Handle submit event (form submits)
      */
     handleSubmit(event) {
+        this.handleInteraction(event, 'submit');
+    }
+    /**
+     * Main interaction handler - TRIGGER PHASE
+     * NOTE: This processes review-specific rules only (eventTypeId = 3)
+     */
+    handleInteraction(event, _eventType) {
         var _a;
         if (!this.tracker)
             return;
@@ -97,8 +113,7 @@ export class ReviewPlugin extends BasePlugin {
      * Find element matching rule selector
      */
     findMatchingElement(target, rule) {
-        var _a;
-        const selector = (_a = rule.trackingTarget) === null || _a === void 0 ? void 0 : _a.value;
+        const selector = rule.trackingTarget;
         if (!selector)
             return null;
         try {
@@ -190,7 +205,10 @@ export class ReviewPlugin extends BasePlugin {
             return;
         this.tracker.track({
             eventType: eventId,
-            eventData: payload,
+            eventData: {
+                ...payload,
+                actionType: rule.actionType || null
+            },
             timestamp: Date.now(),
             url: window.location.href,
             metadata: {

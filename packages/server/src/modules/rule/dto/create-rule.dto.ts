@@ -1,45 +1,7 @@
-import { IsArray, IsInt, IsNotEmpty, IsOptional, IsString, ValidateNested } from "class-validator";
-import { Type } from "class-transformer";
+import { ActionType } from './../../../generated/prisma/enums';
+import { IsArray, IsEnum, IsInt, IsNotEmpty, IsOptional, IsString } from "class-validator";
 import { ApiProperty } from "@nestjs/swagger";
-import { ConditionDto } from "./condition.dto";
-import { PayloadMappingDto } from "./payload-mapping.dto";
-import { TrackingTargetDto } from "./tracking-target.dto";
-
-// export class CreateRuleDto {
-//     @IsString()
-//     @IsNotEmpty()
-//     name: string;
-
-//     @IsString()
-//     @IsNotEmpty()
-//     domainKey: string;
-
-//     @IsInt()
-//     @IsNotEmpty()
-//     triggerEventId: number;
-
-//     @IsInt()
-//     @IsNotEmpty()
-//     targetEventPatternId: number;
-
-//     @IsInt()
-//     @IsNotEmpty()
-//     targetOperatorId: number;
-
-//     @IsString()
-//     @IsNotEmpty()
-//     targetElementValue: string;
-
-//     @IsArray()
-//     @ValidateNested({ each: true })
-//     @Type(() => ConditionDto)
-//     conditions: ConditionDto[];
-
-//     @IsArray()
-//     @ValidateNested({ each: true })
-//     @Type(() => PayloadConfigDto)
-//     payloadConfigs: PayloadConfigDto[];
-// }
+import { PayloadMappingDto } from './payload-mapping.dto';
 
 export class CreateRuleDto {
     @ApiProperty({ example: "Rule Name" })
@@ -57,22 +19,18 @@ export class CreateRuleDto {
     @IsNotEmpty()
     EventTypeId: number;
 
-    @ApiProperty({ example: "ConditionDto[]" })
+    @ApiProperty({ description: "Payload mappings" })
+    @IsNotEmpty()
     @IsArray()
-    @IsOptional()
-    @ValidateNested({ each: true })
-    @Type(() => ConditionDto)
-    Conditions: ConditionDto[];
-
-    @ApiProperty({ example: "PayloadMappingDto[]" })
-    @IsArray()
-    @IsOptional()
-    @ValidateNested({ each: true })
-    @Type(() => PayloadMappingDto)
-    PayloadMappings: PayloadMappingDto[];
+    PayloadMappings: PayloadMappingDto[]
 
     @ApiProperty({ example: "" })
     @IsNotEmpty()
-    @Type(() => TrackingTargetDto)
-    TrackingTarget: TrackingTargetDto;
+    @IsString()
+    TrackingTarget: string;
+
+    @ApiProperty({ example: ActionType.View, enum: ActionType })
+    @IsOptional()     
+    @IsEnum(ActionType)
+    ActionType: ActionType;
 }

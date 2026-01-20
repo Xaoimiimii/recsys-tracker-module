@@ -14,15 +14,24 @@ import { BasePlugin } from './base-plugin';
 import { RecSysTracker } from '../..';
 export declare class ReviewPlugin extends BasePlugin {
     readonly name = "ReviewPlugin";
+    private handleClickBound;
     private handleSubmitBound;
     init(tracker: RecSysTracker): void;
     start(): void;
     stop(): void;
     /**
-     * Handle submit event - TRIGGER PHASE
-     * NOTE: This is now mainly a fallback. Rating Plugin handles most review detection.
+     * Handle click event (button clicks)
+     */
+    private handleClick;
+    /**
+     * Handle submit event (form submits)
      */
     private handleSubmit;
+    /**
+     * Main interaction handler - TRIGGER PHASE
+     * NOTE: This processes review-specific rules only (eventTypeId = 3)
+     */
+    private handleInteraction;
     /**
      * Find element matching rule selector
      */

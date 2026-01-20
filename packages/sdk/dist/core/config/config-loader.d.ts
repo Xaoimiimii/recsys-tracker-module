@@ -5,9 +5,8 @@ export declare class ConfigLoader {
     loadFromWindow(): TrackerConfig | null;
     fetchRemoteConfig(): Promise<TrackerConfig | null>;
     private transformRules;
-    private transformConditions;
     private transformPayloadMappings;
-    private transformTrackingTarget;
+    private transformTrackingTargetToString;
     private transformReturnMethods;
     private transformEventTypes;
     getConfig(): TrackerConfig | null;

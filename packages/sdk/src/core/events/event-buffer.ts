@@ -10,12 +10,12 @@ export interface TrackedEvent {
   id: string;
   timestamp: string | Date;
   eventTypeId: number;
+  actionType?: string | null;
   trackingRuleId: number;
   domainKey: string;
-  userId?: string;
   anonymousId: string;
-  itemField: string;
-  itemValue: string;
+  userId?: string;
+  itemId?: string;
   ratingValue?: number;
   ratingReview?: string;
   retryCount?: number; // Cho logic SDK retry

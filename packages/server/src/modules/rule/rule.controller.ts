@@ -17,13 +17,6 @@ import { ApiOperation } from '@nestjs/swagger';
 export class RuleController {
     constructor(private ruleService: RuleService) { }
 
-    @Get('pattern')
-    @ApiOperation({ summary: 'Get all patterns (CSS, ...)' })
-    async getPatterns() {
-        const patterns = await this.ruleService.getPatterns();
-        return patterns;
-    }
-
     @Get('operators')
     @ApiOperation({ summary: 'Get all operators (Contains, Equals, ...)' })
     async getOperators() {

@@ -126,39 +126,4 @@ export function throttle(fn, delay) {
         }
     };
 }
-export function checkRuleCondition(url, condition) {
-    if (condition.patternId === 0) {
-        return true;
-    }
-    let urlPath;
-    try {
-        urlPath = new URL(url).pathname;
-    }
-    catch (e) {
-        urlPath = "";
-    }
-    if (condition.patternId === 2 &&
-        condition.operatorId === 5 &&
-        condition.value) {
-        return urlPath === condition.value;
-    }
-    return true;
-}
-export const CUSTOM_ROUTE_EVENT = "recsys_route_change";
-export function setupSPARouterWrapper() {
-    const history = window.history;
-    if (!history)
-        return;
-    ["pushState", "replaceState"].forEach((method) => {
-        if (typeof history[method] === "function") {
-            const originalMethod = history[method];
-            history[method] = function (...args) {
-                const result = originalMethod.apply(history, args);
-                const customEvent = new Event(CUSTOM_ROUTE_EVENT);
-                window.dispatchEvent(customEvent);
-                return result;
-            };
-        }
-    });
-}
 //# sourceMappingURL=plugin-utils.js.map

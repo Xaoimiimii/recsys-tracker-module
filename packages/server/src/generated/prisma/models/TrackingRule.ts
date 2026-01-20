@@ -30,14 +30,12 @@ export type TrackingRuleAvgAggregateOutputType = {
   Id: number | null
   DomainID: number | null
   EventTypeID: number | null
-  TrackingTargetId: number | null
 }
 
 export type TrackingRuleSumAggregateOutputType = {
   Id: number | null
   DomainID: number | null
   EventTypeID: number | null
-  TrackingTargetId: number | null
 }
 
 export type TrackingRuleMinAggregateOutputType = {
@@ -45,7 +43,7 @@ export type TrackingRuleMinAggregateOutputType = {
   Name: string | null
   DomainID: number | null
   EventTypeID: number | null
-  TrackingTargetId: number | null
+  TrackingTarget: string | null
   ActionType: $Enums.ActionType | null
 }
 
@@ -54,7 +52,7 @@ export type TrackingRuleMaxAggregateOutputType = {
   Name: string | null
   DomainID: number | null
   EventTypeID: number | null
-  TrackingTargetId: number | null
+  TrackingTarget: string | null
   ActionType: $Enums.ActionType | null
 }
 
@@ -63,7 +61,7 @@ export type TrackingRuleCountAggregateOutputType = {
   Name: number
   DomainID: number
   EventTypeID: number
-  TrackingTargetId: number
+  TrackingTarget: number
   ActionType: number
   _all: number
 }
@@ -73,14 +71,12 @@ export type TrackingRuleAvgAggregateInputType = {
   Id?: true
   DomainID?: true
   EventTypeID?: true
-  TrackingTargetId?: true
 }
 
 export type TrackingRuleSumAggregateInputType = {
   Id?: true
   DomainID?: true
   EventTypeID?: true
-  TrackingTargetId?: true
 }
 
 export type TrackingRuleMinAggregateInputType = {
@@ -88,7 +84,7 @@ export type TrackingRuleMinAggregateInputType = {
   Name?: true
   DomainID?: true
   EventTypeID?: true
-  TrackingTargetId?: true
+  TrackingTarget?: true
   ActionType?: true
 }
 
@@ -97,7 +93,7 @@ export type TrackingRuleMaxAggregateInputType = {
   Name?: true
   DomainID?: true
   EventTypeID?: true
-  TrackingTargetId?: true
+  TrackingTarget?: true
   ActionType?: true
 }
 
@@ -106,7 +102,7 @@ export type TrackingRuleCountAggregateInputType = {
   Name?: true
   DomainID?: true
   EventTypeID?: true
-  TrackingTargetId?: true
+  TrackingTarget?: true
   ActionType?: true
   _all?: true
 }
@@ -202,7 +198,7 @@ export type TrackingRuleGroupByOutputType = {
   Name: string
   DomainID: number
   EventTypeID: number
-  TrackingTargetId: number
+  TrackingTarget: string | null
   ActionType: $Enums.ActionType | null
   _count: TrackingRuleCountAggregateOutputType | null
   _avg: TrackingRuleAvgAggregateOutputType | null
@@ -234,14 +230,12 @@ export type TrackingRuleWhereInput = {
   Name?: Prisma.StringFilter<"TrackingRule"> | string
   DomainID?: Prisma.IntFilter<"TrackingRule"> | number
   EventTypeID?: Prisma.IntFilter<"TrackingRule"> | number
-  TrackingTargetId?: Prisma.IntFilter<"TrackingRule"> | number
+  TrackingTarget?: Prisma.StringNullableFilter<"TrackingRule"> | string | null
   ActionType?: Prisma.EnumActionTypeNullableFilter<"TrackingRule"> | $Enums.ActionType | null
   Domain?: Prisma.XOR<Prisma.DomainScalarRelationFilter, Prisma.DomainWhereInput>
   EventType?: Prisma.XOR<Prisma.EventTypeScalarRelationFilter, Prisma.EventTypeWhereInput>
-  TrackingTarget?: Prisma.XOR<Prisma.TrackingTargetScalarRelationFilter, Prisma.TrackingTargetWhereInput>
-  Conditions?: Prisma.ConditionListRelationFilter
-  PayloadMappings?: Prisma.PayloadMappingListRelationFilter
   Events?: Prisma.EventListRelationFilter
+  PayloadMappings?: Prisma.PayloadMappingListRelationFilter
 }
 
 export type TrackingRuleOrderByWithRelationInput = {
@@ -249,14 +243,12 @@ export type TrackingRuleOrderByWithRelationInput = {
   Name?: Prisma.SortOrder
   DomainID?: Prisma.SortOrder
   EventTypeID?: Prisma.SortOrder
-  TrackingTargetId?: Prisma.SortOrder
+  TrackingTarget?: Prisma.SortOrderInput | Prisma.SortOrder
   ActionType?: Prisma.SortOrderInput | Prisma.SortOrder
   Domain?: Prisma.DomainOrderByWithRelationInput
   EventType?: Prisma.EventTypeOrderByWithRelationInput
-  TrackingTarget?: Prisma.TrackingTargetOrderByWithRelationInput
-  Conditions?: Prisma.ConditionOrderByRelationAggregateInput
-  PayloadMappings?: Prisma.PayloadMappingOrderByRelationAggregateInput
   Events?: Prisma.EventOrderByRelationAggregateInput
+  PayloadMappings?: Prisma.PayloadMappingOrderByRelationAggregateInput
 }
 
 export type TrackingRuleWhereUniqueInput = Prisma.AtLeast<{
@@ -267,14 +259,12 @@ export type TrackingRuleWhereUniqueInput = Prisma.AtLeast<{
   Name?: Prisma.StringFilter<"TrackingRule"> | string
   DomainID?: Prisma.IntFilter<"TrackingRule"> | number
   EventTypeID?: Prisma.IntFilter<"TrackingRule"> | number
-  TrackingTargetId?: Prisma.IntFilter<"TrackingRule"> | number
+  TrackingTarget?: Prisma.StringNullableFilter<"TrackingRule"> | string | null
   ActionType?: Prisma.EnumActionTypeNullableFilter<"TrackingRule"> | $Enums.ActionType | null
   Domain?: Prisma.XOR<Prisma.DomainScalarRelationFilter, Prisma.DomainWhereInput>
   EventType?: Prisma.XOR<Prisma.EventTypeScalarRelationFilter, Prisma.EventTypeWhereInput>
-  TrackingTarget?: Prisma.XOR<Prisma.TrackingTargetScalarRelationFilter, Prisma.TrackingTargetWhereInput>
-  Conditions?: Prisma.ConditionListRelationFilter
-  PayloadMappings?: Prisma.PayloadMappingListRelationFilter
   Events?: Prisma.EventListRelationFilter
+  PayloadMappings?: Prisma.PayloadMappingListRelationFilter
 }, "Id">
 
 export type TrackingRuleOrderByWithAggregationInput = {
@@ -282,7 +272,7 @@ export type TrackingRuleOrderByWithAggregationInput = {
   Name?: Prisma.SortOrder
   DomainID?: Prisma.SortOrder
   EventTypeID?: Prisma.SortOrder
-  TrackingTargetId?: Prisma.SortOrder
+  TrackingTarget?: Prisma.SortOrderInput | Prisma.SortOrder
   ActionType?: Prisma.SortOrderInput | Prisma.SortOrder
   _count?: Prisma.TrackingRuleCountOrderByAggregateInput
   _avg?: Prisma.TrackingRuleAvgOrderByAggregateInput
@@ -299,19 +289,18 @@ export type TrackingRuleScalarWhereWithAggregatesInput = {
   Name?: Prisma.StringWithAggregatesFilter<"TrackingRule"> | string
   DomainID?: Prisma.IntWithAggregatesFilter<"TrackingRule"> | number
   EventTypeID?: Prisma.IntWithAggregatesFilter<"TrackingRule"> | number
-  TrackingTargetId?: Prisma.IntWithAggregatesFilter<"TrackingRule"> | number
+  TrackingTarget?: Prisma.StringNullableWithAggregatesFilter<"TrackingRule"> | string | null
   ActionType?: Prisma.EnumActionTypeNullableWithAggregatesFilter<"TrackingRule"> | $Enums.ActionType | null
 }
 
 export type TrackingRuleCreateInput = {
   Name: string
+  TrackingTarget?: string | null
   ActionType?: $Enums.ActionType | null
   Domain: Prisma.DomainCreateNestedOneWithoutTrackingRulesInput
   EventType: Prisma.EventTypeCreateNestedOneWithoutTrackingRulesInput
-  TrackingTarget: Prisma.TrackingTargetCreateNestedOneWithoutTrackingRulesInput
-  Conditions?: Prisma.ConditionCreateNestedManyWithoutTrackingRuleInput
-  PayloadMappings?: Prisma.PayloadMappingCreateNestedManyWithoutTrackingRuleInput
   Events?: Prisma.EventCreateNestedManyWithoutTrackingRuleInput
+  PayloadMappings?: Prisma.PayloadMappingCreateNestedManyWithoutTrackingRuleInput
 }
 
 export type TrackingRuleUncheckedCreateInput = {
@@ -319,22 +308,20 @@ export type TrackingRuleUncheckedCreateInput = {
   Name: string
   DomainID: number
   EventTypeID: number
-  TrackingTargetId: number
+  TrackingTarget?: string | null
   ActionType?: $Enums.ActionType | null
-  Conditions?: Prisma.ConditionUncheckedCreateNestedManyWithoutTrackingRuleInput
-  PayloadMappings?: Prisma.PayloadMappingUncheckedCreateNestedManyWithoutTrackingRuleInput
   Events?: Prisma.EventUncheckedCreateNestedManyWithoutTrackingRuleInput
+  PayloadMappings?: Prisma.PayloadMappingUncheckedCreateNestedManyWithoutTrackingRuleInput
 }
 
 export type TrackingRuleUpdateInput = {
   Name?: Prisma.StringFieldUpdateOperationsInput | string
+  TrackingTarget?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   ActionType?: Prisma.NullableEnumActionTypeFieldUpdateOperationsInput | $Enums.ActionType | null
   Domain?: Prisma.DomainUpdateOneRequiredWithoutTrackingRulesNestedInput
   EventType?: Prisma.EventTypeUpdateOneRequiredWithoutTrackingRulesNestedInput
-  TrackingTarget?: Prisma.TrackingTargetUpdateOneRequiredWithoutTrackingRulesNestedInput
-  Conditions?: Prisma.ConditionUpdateManyWithoutTrackingRuleNestedInput
-  PayloadMappings?: Prisma.PayloadMappingUpdateManyWithoutTrackingRuleNestedInput
   Events?: Prisma.EventUpdateManyWithoutTrackingRuleNestedInput
+  PayloadMappings?: Prisma.PayloadMappingUpdateManyWithoutTrackingRuleNestedInput
 }
 
 export type TrackingRuleUncheckedUpdateInput = {
@@ -342,11 +329,10 @@ export type TrackingRuleUncheckedUpdateInput = {
   Name?: Prisma.StringFieldUpdateOperationsInput | string
   DomainID?: Prisma.IntFieldUpdateOperationsInput | number
   EventTypeID?: Prisma.IntFieldUpdateOperationsInput | number
-  TrackingTargetId?: Prisma.IntFieldUpdateOperationsInput | number
+  TrackingTarget?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   ActionType?: Prisma.NullableEnumActionTypeFieldUpdateOperationsInput | $Enums.ActionType | null
-  Conditions?: Prisma.ConditionUncheckedUpdateManyWithoutTrackingRuleNestedInput
-  PayloadMappings?: Prisma.PayloadMappingUncheckedUpdateManyWithoutTrackingRuleNestedInput
   Events?: Prisma.EventUncheckedUpdateManyWithoutTrackingRuleNestedInput
+  PayloadMappings?: Prisma.PayloadMappingUncheckedUpdateManyWithoutTrackingRuleNestedInput
 }
 
 export type TrackingRuleCreateManyInput = {
@@ -354,12 +340,13 @@ export type TrackingRuleCreateManyInput = {
   Name: string
   DomainID: number
   EventTypeID: number
-  TrackingTargetId: number
+  TrackingTarget?: string | null
   ActionType?: $Enums.ActionType | null
 }
 
 export type TrackingRuleUpdateManyMutationInput = {
   Name?: Prisma.StringFieldUpdateOperationsInput | string
+  TrackingTarget?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   ActionType?: Prisma.NullableEnumActionTypeFieldUpdateOperationsInput | $Enums.ActionType | null
 }
 
@@ -368,7 +355,7 @@ export type TrackingRuleUncheckedUpdateManyInput = {
   Name?: Prisma.StringFieldUpdateOperationsInput | string
   DomainID?: Prisma.IntFieldUpdateOperationsInput | number
   EventTypeID?: Prisma.IntFieldUpdateOperationsInput | number
-  TrackingTargetId?: Prisma.IntFieldUpdateOperationsInput | number
+  TrackingTarget?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   ActionType?: Prisma.NullableEnumActionTypeFieldUpdateOperationsInput | $Enums.ActionType | null
 }
 
@@ -387,7 +374,7 @@ export type TrackingRuleCountOrderByAggregateInput = {
   Name?: Prisma.SortOrder
   DomainID?: Prisma.SortOrder
   EventTypeID?: Prisma.SortOrder
-  TrackingTargetId?: Prisma.SortOrder
+  TrackingTarget?: Prisma.SortOrder
   ActionType?: Prisma.SortOrder
 }
 
@@ -395,7 +382,6 @@ export type TrackingRuleAvgOrderByAggregateInput = {
   Id?: Prisma.SortOrder
   DomainID?: Prisma.SortOrder
   EventTypeID?: Prisma.SortOrder
-  TrackingTargetId?: Prisma.SortOrder
 }
 
 export type TrackingRuleMaxOrderByAggregateInput = {
@@ -403,7 +389,7 @@ export type TrackingRuleMaxOrderByAggregateInput = {
   Name?: Prisma.SortOrder
   DomainID?: Prisma.SortOrder
   EventTypeID?: Prisma.SortOrder
-  TrackingTargetId?: Prisma.SortOrder
+  TrackingTarget?: Prisma.SortOrder
   ActionType?: Prisma.SortOrder
 }
 
@@ -412,7 +398,7 @@ export type TrackingRuleMinOrderByAggregateInput = {
   Name?: Prisma.SortOrder
   DomainID?: Prisma.SortOrder
   EventTypeID?: Prisma.SortOrder
-  TrackingTargetId?: Prisma.SortOrder
+  TrackingTarget?: Prisma.SortOrder
   ActionType?: Prisma.SortOrder
 }
 
@@ -420,7 +406,6 @@ export type TrackingRuleSumOrderByAggregateInput = {
   Id?: Prisma.SortOrder
   DomainID?: Prisma.SortOrder
   EventTypeID?: Prisma.SortOrder
-  TrackingTargetId?: Prisma.SortOrder
 }
 
 export type TrackingRuleScalarRelationFilter = {
@@ -470,6 +455,10 @@ export type TrackingRuleUncheckedUpdateManyWithoutDomainNestedInput = {
   deleteMany?: Prisma.TrackingRuleScalarWhereInput | Prisma.TrackingRuleScalarWhereInput[]
 }
 
+export type NullableStringFieldUpdateOperationsInput = {
+  set?: string | null
+}
+
 export type NullableEnumActionTypeFieldUpdateOperationsInput = {
   set?: $Enums.ActionType | null
 }
@@ -516,62 +505,6 @@ export type TrackingRuleUncheckedUpdateManyWithoutEventTypeNestedInput = {
   deleteMany?: Prisma.TrackingRuleScalarWhereInput | Prisma.TrackingRuleScalarWhereInput[]
 }
 
-export type TrackingRuleCreateNestedManyWithoutTrackingTargetInput = {
-  create?: Prisma.XOR<Prisma.TrackingRuleCreateWithoutTrackingTargetInput, Prisma.TrackingRuleUncheckedCreateWithoutTrackingTargetInput> | Prisma.TrackingRuleCreateWithoutTrackingTargetInput[] | Prisma.TrackingRuleUncheckedCreateWithoutTrackingTargetInput[]
-  connectOrCreate?: Prisma.TrackingRuleCreateOrConnectWithoutTrackingTargetInput | Prisma.TrackingRuleCreateOrConnectWithoutTrackingTargetInput[]
-  createMany?: Prisma.TrackingRuleCreateManyTrackingTargetInputEnvelope
-  connect?: Prisma.TrackingRuleWhereUniqueInput | Prisma.TrackingRuleWhereUniqueInput[]
-}
-
-export type TrackingRuleUncheckedCreateNestedManyWithoutTrackingTargetInput = {
-  create?: Prisma.XOR<Prisma.TrackingRuleCreateWithoutTrackingTargetInput, Prisma.TrackingRuleUncheckedCreateWithoutTrackingTargetInput> | Prisma.TrackingRuleCreateWithoutTrackingTargetInput[] | Prisma.TrackingRuleUncheckedCreateWithoutTrackingTargetInput[]
-  connectOrCreate?: Prisma.TrackingRuleCreateOrConnectWithoutTrackingTargetInput | Prisma.TrackingRuleCreateOrConnectWithoutTrackingTargetInput[]
-  createMany?: Prisma.TrackingRuleCreateManyTrackingTargetInputEnvelope
-  connect?: Prisma.TrackingRuleWhereUniqueInput | Prisma.TrackingRuleWhereUniqueInput[]
-}
-
-export type TrackingRuleUpdateManyWithoutTrackingTargetNestedInput = {
-  create?: Prisma.XOR<Prisma.TrackingRuleCreateWithoutTrackingTargetInput, Prisma.TrackingRuleUncheckedCreateWithoutTrackingTargetInput> | Prisma.TrackingRuleCreateWithoutTrackingTargetInput[] | Prisma.TrackingRuleUncheckedCreateWithoutTrackingTargetInput[]
-  connectOrCreate?: Prisma.TrackingRuleCreateOrConnectWithoutTrackingTargetInput | Prisma.TrackingRuleCreateOrConnectWithoutTrackingTargetInput[]
-  upsert?: Prisma.TrackingRuleUpsertWithWhereUniqueWithoutTrackingTargetInput | Prisma.TrackingRuleUpsertWithWhereUniqueWithoutTrackingTargetInput[]
-  createMany?: Prisma.TrackingRuleCreateManyTrackingTargetInputEnvelope
-  set?: Prisma.TrackingRuleWhereUniqueInput | Prisma.TrackingRuleWhereUniqueInput[]
-  disconnect?: Prisma.TrackingRuleWhereUniqueInput | Prisma.TrackingRuleWhereUniqueInput[]
-  delete?: Prisma.TrackingRuleWhereUniqueInput | Prisma.TrackingRuleWhereUniqueInput[]
-  connect?: Prisma.TrackingRuleWhereUniqueInput | Prisma.TrackingRuleWhereUniqueInput[]
-  update?: Prisma.TrackingRuleUpdateWithWhereUniqueWithoutTrackingTargetInput | Prisma.TrackingRuleUpdateWithWhereUniqueWithoutTrackingTargetInput[]
-  updateMany?: Prisma.TrackingRuleUpdateManyWithWhereWithoutTrackingTargetInput | Prisma.TrackingRuleUpdateManyWithWhereWithoutTrackingTargetInput[]
-  deleteMany?: Prisma.TrackingRuleScalarWhereInput | Prisma.TrackingRuleScalarWhereInput[]
-}
-
-export type TrackingRuleUncheckedUpdateManyWithoutTrackingTargetNestedInput = {
-  create?: Prisma.XOR<Prisma.TrackingRuleCreateWithoutTrackingTargetInput, Prisma.TrackingRuleUncheckedCreateWithoutTrackingTargetInput> | Prisma.TrackingRuleCreateWithoutTrackingTargetInput[] | Prisma.TrackingRuleUncheckedCreateWithoutTrackingTargetInput[]
-  connectOrCreate?: Prisma.TrackingRuleCreateOrConnectWithoutTrackingTargetInput | Prisma.TrackingRuleCreateOrConnectWithoutTrackingTargetInput[]
-  upsert?: Prisma.TrackingRuleUpsertWithWhereUniqueWithoutTrackingTargetInput | Prisma.TrackingRuleUpsertWithWhereUniqueWithoutTrackingTargetInput[]
-  createMany?: Prisma.TrackingRuleCreateManyTrackingTargetInputEnvelope
-  set?: Prisma.TrackingRuleWhereUniqueInput | Prisma.TrackingRuleWhereUniqueInput[]
-  disconnect?: Prisma.TrackingRuleWhereUniqueInput | Prisma.TrackingRuleWhereUniqueInput[]
-  delete?: Prisma.TrackingRuleWhereUniqueInput | Prisma.TrackingRuleWhereUniqueInput[]
-  connect?: Prisma.TrackingRuleWhereUniqueInput | Prisma.TrackingRuleWhereUniqueInput[]
-  update?: Prisma.TrackingRuleUpdateWithWhereUniqueWithoutTrackingTargetInput | Prisma.TrackingRuleUpdateWithWhereUniqueWithoutTrackingTargetInput[]
-  updateMany?: Prisma.TrackingRuleUpdateManyWithWhereWithoutTrackingTargetInput | Prisma.TrackingRuleUpdateManyWithWhereWithoutTrackingTargetInput[]
-  deleteMany?: Prisma.TrackingRuleScalarWhereInput | Prisma.TrackingRuleScalarWhereInput[]
-}
-
-export type TrackingRuleCreateNestedOneWithoutConditionsInput = {
-  create?: Prisma.XOR<Prisma.TrackingRuleCreateWithoutConditionsInput, Prisma.TrackingRuleUncheckedCreateWithoutConditionsInput>
-  connectOrCreate?: Prisma.TrackingRuleCreateOrConnectWithoutConditionsInput
-  connect?: Prisma.TrackingRuleWhereUniqueInput
-}
-
-export type TrackingRuleUpdateOneRequiredWithoutConditionsNestedInput = {
-  create?: Prisma.XOR<Prisma.TrackingRuleCreateWithoutConditionsInput, Prisma.TrackingRuleUncheckedCreateWithoutConditionsInput>
-  connectOrCreate?: Prisma.TrackingRuleCreateOrConnectWithoutConditionsInput
-  upsert?: Prisma.TrackingRuleUpsertWithoutConditionsInput
-  connect?: Prisma.TrackingRuleWhereUniqueInput
-  update?: Prisma.XOR<Prisma.XOR<Prisma.TrackingRuleUpdateToOneWithWhereWithoutConditionsInput, Prisma.TrackingRuleUpdateWithoutConditionsInput>, Prisma.TrackingRuleUncheckedUpdateWithoutConditionsInput>
-}
-
 export type TrackingRuleCreateNestedOneWithoutPayloadMappingsInput = {
   create?: Prisma.XOR<Prisma.TrackingRuleCreateWithoutPayloadMappingsInput, Prisma.TrackingRuleUncheckedCreateWithoutPayloadMappingsInput>
   connectOrCreate?: Prisma.TrackingRuleCreateOrConnectWithoutPayloadMappingsInput
@@ -602,23 +535,21 @@ export type TrackingRuleUpdateOneRequiredWithoutEventsNestedInput = {
 
 export type TrackingRuleCreateWithoutDomainInput = {
   Name: string
+  TrackingTarget?: string | null
   ActionType?: $Enums.ActionType | null
   EventType: Prisma.EventTypeCreateNestedOneWithoutTrackingRulesInput
-  TrackingTarget: Prisma.TrackingTargetCreateNestedOneWithoutTrackingRulesInput
-  Conditions?: Prisma.ConditionCreateNestedManyWithoutTrackingRuleInput
-  PayloadMappings?: Prisma.PayloadMappingCreateNestedManyWithoutTrackingRuleInput
   Events?: Prisma.EventCreateNestedManyWithoutTrackingRuleInput
+  PayloadMappings?: Prisma.PayloadMappingCreateNestedManyWithoutTrackingRuleInput
 }
 
 export type TrackingRuleUncheckedCreateWithoutDomainInput = {
   Id?: number
   Name: string
   EventTypeID: number
-  TrackingTargetId: number
+  TrackingTarget?: string | null
   ActionType?: $Enums.ActionType | null
-  Conditions?: Prisma.ConditionUncheckedCreateNestedManyWithoutTrackingRuleInput
-  PayloadMappings?: Prisma.PayloadMappingUncheckedCreateNestedManyWithoutTrackingRuleInput
   Events?: Prisma.EventUncheckedCreateNestedManyWithoutTrackingRuleInput
+  PayloadMappings?: Prisma.PayloadMappingUncheckedCreateNestedManyWithoutTrackingRuleInput
 }
 
 export type TrackingRuleCreateOrConnectWithoutDomainInput = {
@@ -655,29 +586,27 @@ export type TrackingRuleScalarWhereInput = {
   Name?: Prisma.StringFilter<"TrackingRule"> | string
   DomainID?: Prisma.IntFilter<"TrackingRule"> | number
   EventTypeID?: Prisma.IntFilter<"TrackingRule"> | number
-  TrackingTargetId?: Prisma.IntFilter<"TrackingRule"> | number
+  TrackingTarget?: Prisma.StringNullableFilter<"TrackingRule"> | string | null
   ActionType?: Prisma.EnumActionTypeNullableFilter<"TrackingRule"> | $Enums.ActionType | null
 }
 
 export type TrackingRuleCreateWithoutEventTypeInput = {
   Name: string
+  TrackingTarget?: string | null
   ActionType?: $Enums.ActionType | null
   Domain: Prisma.DomainCreateNestedOneWithoutTrackingRulesInput
-  TrackingTarget: Prisma.TrackingTargetCreateNestedOneWithoutTrackingRulesInput
-  Conditions?: Prisma.ConditionCreateNestedManyWithoutTrackingRuleInput
-  PayloadMappings?: Prisma.PayloadMappingCreateNestedManyWithoutTrackingRuleInput
   Events?: Prisma.EventCreateNestedManyWithoutTrackingRuleInput
+  PayloadMappings?: Prisma.PayloadMappingCreateNestedManyWithoutTrackingRuleInput
 }
 
 export type TrackingRuleUncheckedCreateWithoutEventTypeInput = {
   Id?: number
   Name: string
   DomainID: number
-  TrackingTargetId: number
+  TrackingTarget?: string | null
   ActionType?: $Enums.ActionType | null
-  Conditions?: Prisma.ConditionUncheckedCreateNestedManyWithoutTrackingRuleInput
-  PayloadMappings?: Prisma.PayloadMappingUncheckedCreateNestedManyWithoutTrackingRuleInput
   Events?: Prisma.EventUncheckedCreateNestedManyWithoutTrackingRuleInput
+  PayloadMappings?: Prisma.PayloadMappingUncheckedCreateNestedManyWithoutTrackingRuleInput
 }
 
 export type TrackingRuleCreateOrConnectWithoutEventTypeInput = {
@@ -706,118 +635,12 @@ export type TrackingRuleUpdateManyWithWhereWithoutEventTypeInput = {
   data: Prisma.XOR<Prisma.TrackingRuleUpdateManyMutationInput, Prisma.TrackingRuleUncheckedUpdateManyWithoutEventTypeInput>
 }
 
-export type TrackingRuleCreateWithoutTrackingTargetInput = {
-  Name: string
-  ActionType?: $Enums.ActionType | null
-  Domain: Prisma.DomainCreateNestedOneWithoutTrackingRulesInput
-  EventType: Prisma.EventTypeCreateNestedOneWithoutTrackingRulesInput
-  Conditions?: Prisma.ConditionCreateNestedManyWithoutTrackingRuleInput
-  PayloadMappings?: Prisma.PayloadMappingCreateNestedManyWithoutTrackingRuleInput
-  Events?: Prisma.EventCreateNestedManyWithoutTrackingRuleInput
-}
-
-export type TrackingRuleUncheckedCreateWithoutTrackingTargetInput = {
-  Id?: number
-  Name: string
-  DomainID: number
-  EventTypeID: number
-  ActionType?: $Enums.ActionType | null
-  Conditions?: Prisma.ConditionUncheckedCreateNestedManyWithoutTrackingRuleInput
-  PayloadMappings?: Prisma.PayloadMappingUncheckedCreateNestedManyWithoutTrackingRuleInput
-  Events?: Prisma.EventUncheckedCreateNestedManyWithoutTrackingRuleInput
-}
-
-export type TrackingRuleCreateOrConnectWithoutTrackingTargetInput = {
-  where: Prisma.TrackingRuleWhereUniqueInput
-  create: Prisma.XOR<Prisma.TrackingRuleCreateWithoutTrackingTargetInput, Prisma.TrackingRuleUncheckedCreateWithoutTrackingTargetInput>
-}
-
-export type TrackingRuleCreateManyTrackingTargetInputEnvelope = {
-  data: Prisma.TrackingRuleCreateManyTrackingTargetInput | Prisma.TrackingRuleCreateManyTrackingTargetInput[]
-  skipDuplicates?: boolean
-}
-
-export type TrackingRuleUpsertWithWhereUniqueWithoutTrackingTargetInput = {
-  where: Prisma.TrackingRuleWhereUniqueInput
-  update: Prisma.XOR<Prisma.TrackingRuleUpdateWithoutTrackingTargetInput, Prisma.TrackingRuleUncheckedUpdateWithoutTrackingTargetInput>
-  create: Prisma.XOR<Prisma.TrackingRuleCreateWithoutTrackingTargetInput, Prisma.TrackingRuleUncheckedCreateWithoutTrackingTargetInput>
-}
-
-export type TrackingRuleUpdateWithWhereUniqueWithoutTrackingTargetInput = {
-  where: Prisma.TrackingRuleWhereUniqueInput
-  data: Prisma.XOR<Prisma.TrackingRuleUpdateWithoutTrackingTargetInput, Prisma.TrackingRuleUncheckedUpdateWithoutTrackingTargetInput>
-}
-
-export type TrackingRuleUpdateManyWithWhereWithoutTrackingTargetInput = {
-  where: Prisma.TrackingRuleScalarWhereInput
-  data: Prisma.XOR<Prisma.TrackingRuleUpdateManyMutationInput, Prisma.TrackingRuleUncheckedUpdateManyWithoutTrackingTargetInput>
-}
-
-export type TrackingRuleCreateWithoutConditionsInput = {
-  Name: string
-  ActionType?: $Enums.ActionType | null
-  Domain: Prisma.DomainCreateNestedOneWithoutTrackingRulesInput
-  EventType: Prisma.EventTypeCreateNestedOneWithoutTrackingRulesInput
-  TrackingTarget: Prisma.TrackingTargetCreateNestedOneWithoutTrackingRulesInput
-  PayloadMappings?: Prisma.PayloadMappingCreateNestedManyWithoutTrackingRuleInput
-  Events?: Prisma.EventCreateNestedManyWithoutTrackingRuleInput
-}
-
-export type TrackingRuleUncheckedCreateWithoutConditionsInput = {
-  Id?: number
-  Name: string
-  DomainID: number
-  EventTypeID: number
-  TrackingTargetId: number
-  ActionType?: $Enums.ActionType | null
-  PayloadMappings?: Prisma.PayloadMappingUncheckedCreateNestedManyWithoutTrackingRuleInput
-  Events?: Prisma.EventUncheckedCreateNestedManyWithoutTrackingRuleInput
-}
-
-export type TrackingRuleCreateOrConnectWithoutConditionsInput = {
-  where: Prisma.TrackingRuleWhereUniqueInput
-  create: Prisma.XOR<Prisma.TrackingRuleCreateWithoutConditionsInput, Prisma.TrackingRuleUncheckedCreateWithoutConditionsInput>
-}
-
-export type TrackingRuleUpsertWithoutConditionsInput = {
-  update: Prisma.XOR<Prisma.TrackingRuleUpdateWithoutConditionsInput, Prisma.TrackingRuleUncheckedUpdateWithoutConditionsInput>
-  create: Prisma.XOR<Prisma.TrackingRuleCreateWithoutConditionsInput, Prisma.TrackingRuleUncheckedCreateWithoutConditionsInput>
-  where?: Prisma.TrackingRuleWhereInput
-}
-
-export type TrackingRuleUpdateToOneWithWhereWithoutConditionsInput = {
-  where?: Prisma.TrackingRuleWhereInput
-  data: Prisma.XOR<Prisma.TrackingRuleUpdateWithoutConditionsInput, Prisma.TrackingRuleUncheckedUpdateWithoutConditionsInput>
-}
-
-export type TrackingRuleUpdateWithoutConditionsInput = {
-  Name?: Prisma.StringFieldUpdateOperationsInput | string
-  ActionType?: Prisma.NullableEnumActionTypeFieldUpdateOperationsInput | $Enums.ActionType | null
-  Domain?: Prisma.DomainUpdateOneRequiredWithoutTrackingRulesNestedInput
-  EventType?: Prisma.EventTypeUpdateOneRequiredWithoutTrackingRulesNestedInput
-  TrackingTarget?: Prisma.TrackingTargetUpdateOneRequiredWithoutTrackingRulesNestedInput
-  PayloadMappings?: Prisma.PayloadMappingUpdateManyWithoutTrackingRuleNestedInput
-  Events?: Prisma.EventUpdateManyWithoutTrackingRuleNestedInput
-}
-
-export type TrackingRuleUncheckedUpdateWithoutConditionsInput = {
-  Id?: Prisma.IntFieldUpdateOperationsInput | number
-  Name?: Prisma.StringFieldUpdateOperationsInput | string
-  DomainID?: Prisma.IntFieldUpdateOperationsInput | number
-  EventTypeID?: Prisma.IntFieldUpdateOperationsInput | number
-  TrackingTargetId?: Prisma.IntFieldUpdateOperationsInput | number
-  ActionType?: Prisma.NullableEnumActionTypeFieldUpdateOperationsInput | $Enums.ActionType | null
-  PayloadMappings?: Prisma.PayloadMappingUncheckedUpdateManyWithoutTrackingRuleNestedInput
-  Events?: Prisma.EventUncheckedUpdateManyWithoutTrackingRuleNestedInput
-}
-
 export type TrackingRuleCreateWithoutPayloadMappingsInput = {
   Name: string
+  TrackingTarget?: string | null
   ActionType?: $Enums.ActionType | null
   Domain: Prisma.DomainCreateNestedOneWithoutTrackingRulesInput
   EventType: Prisma.EventTypeCreateNestedOneWithoutTrackingRulesInput
-  TrackingTarget: Prisma.TrackingTargetCreateNestedOneWithoutTrackingRulesInput
-  Conditions?: Prisma.ConditionCreateNestedManyWithoutTrackingRuleInput
   Events?: Prisma.EventCreateNestedManyWithoutTrackingRuleInput
 }
 
@@ -826,9 +649,8 @@ export type TrackingRuleUncheckedCreateWithoutPayloadMappingsInput = {
   Name: string
   DomainID: number
   EventTypeID: number
-  TrackingTargetId: number
+  TrackingTarget?: string | null
   ActionType?: $Enums.ActionType | null
-  Conditions?: Prisma.ConditionUncheckedCreateNestedManyWithoutTrackingRuleInput
   Events?: Prisma.EventUncheckedCreateNestedManyWithoutTrackingRuleInput
 }
 
@@ -850,11 +672,10 @@ export type TrackingRuleUpdateToOneWithWhereWithoutPayloadMappingsInput = {
 
 export type TrackingRuleUpdateWithoutPayloadMappingsInput = {
   Name?: Prisma.StringFieldUpdateOperationsInput | string
+  TrackingTarget?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   ActionType?: Prisma.NullableEnumActionTypeFieldUpdateOperationsInput | $Enums.ActionType | null
   Domain?: Prisma.DomainUpdateOneRequiredWithoutTrackingRulesNestedInput
   EventType?: Prisma.EventTypeUpdateOneRequiredWithoutTrackingRulesNestedInput
-  TrackingTarget?: Prisma.TrackingTargetUpdateOneRequiredWithoutTrackingRulesNestedInput
-  Conditions?: Prisma.ConditionUpdateManyWithoutTrackingRuleNestedInput
   Events?: Prisma.EventUpdateManyWithoutTrackingRuleNestedInput
 }
 
@@ -863,19 +684,17 @@ export type TrackingRuleUncheckedUpdateWithoutPayloadMappingsInput = {
   Name?: Prisma.StringFieldUpdateOperationsInput | string
   DomainID?: Prisma.IntFieldUpdateOperationsInput | number
   EventTypeID?: Prisma.IntFieldUpdateOperationsInput | number
-  TrackingTargetId?: Prisma.IntFieldUpdateOperationsInput | number
+  TrackingTarget?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   ActionType?: Prisma.NullableEnumActionTypeFieldUpdateOperationsInput | $Enums.ActionType | null
-  Conditions?: Prisma.ConditionUncheckedUpdateManyWithoutTrackingRuleNestedInput
   Events?: Prisma.EventUncheckedUpdateManyWithoutTrackingRuleNestedInput
 }
 
 export type TrackingRuleCreateWithoutEventsInput = {
   Name: string
+  TrackingTarget?: string | null
   ActionType?: $Enums.ActionType | null
   Domain: Prisma.DomainCreateNestedOneWithoutTrackingRulesInput
   EventType: Prisma.EventTypeCreateNestedOneWithoutTrackingRulesInput
-  TrackingTarget: Prisma.TrackingTargetCreateNestedOneWithoutTrackingRulesInput
-  Conditions?: Prisma.ConditionCreateNestedManyWithoutTrackingRuleInput
   PayloadMappings?: Prisma.PayloadMappingCreateNestedManyWithoutTrackingRuleInput
 }
 
@@ -884,9 +703,8 @@ export type TrackingRuleUncheckedCreateWithoutEventsInput = {
   Name: string
   DomainID: number
   EventTypeID: number
-  TrackingTargetId: number
+  TrackingTarget?: string | null
   ActionType?: $Enums.ActionType | null
-  Conditions?: Prisma.ConditionUncheckedCreateNestedManyWithoutTrackingRuleInput
   PayloadMappings?: Prisma.PayloadMappingUncheckedCreateNestedManyWithoutTrackingRuleInput
 }
 
@@ -908,11 +726,10 @@ export type TrackingRuleUpdateToOneWithWhereWithoutEventsInput = {
 
 export type TrackingRuleUpdateWithoutEventsInput = {
   Name?: Prisma.StringFieldUpdateOperationsInput | string
+  TrackingTarget?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   ActionType?: Prisma.NullableEnumActionTypeFieldUpdateOperationsInput | $Enums.ActionType | null
   Domain?: Prisma.DomainUpdateOneRequiredWithoutTrackingRulesNestedInput
   EventType?: Prisma.EventTypeUpdateOneRequiredWithoutTrackingRulesNestedInput
-  TrackingTarget?: Prisma.TrackingTargetUpdateOneRequiredWithoutTrackingRulesNestedInput
-  Conditions?: Prisma.ConditionUpdateManyWithoutTrackingRuleNestedInput
   PayloadMappings?: Prisma.PayloadMappingUpdateManyWithoutTrackingRuleNestedInput
 }
 
@@ -921,9 +738,8 @@ export type TrackingRuleUncheckedUpdateWithoutEventsInput = {
   Name?: Prisma.StringFieldUpdateOperationsInput | string
   DomainID?: Prisma.IntFieldUpdateOperationsInput | number
   EventTypeID?: Prisma.IntFieldUpdateOperationsInput | number
-  TrackingTargetId?: Prisma.IntFieldUpdateOperationsInput | number
+  TrackingTarget?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   ActionType?: Prisma.NullableEnumActionTypeFieldUpdateOperationsInput | $Enums.ActionType | null
-  Conditions?: Prisma.ConditionUncheckedUpdateManyWithoutTrackingRuleNestedInput
   PayloadMappings?: Prisma.PayloadMappingUncheckedUpdateManyWithoutTrackingRuleNestedInput
 }
 
@@ -931,36 +747,34 @@ export type TrackingRuleCreateManyDomainInput = {
   Id?: number
   Name: string
   EventTypeID: number
-  TrackingTargetId: number
+  TrackingTarget?: string | null
   ActionType?: $Enums.ActionType | null
 }
 
 export type TrackingRuleUpdateWithoutDomainInput = {
   Name?: Prisma.StringFieldUpdateOperationsInput | string
+  TrackingTarget?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   ActionType?: Prisma.NullableEnumActionTypeFieldUpdateOperationsInput | $Enums.ActionType | null
   EventType?: Prisma.EventTypeUpdateOneRequiredWithoutTrackingRulesNestedInput
-  TrackingTarget?: Prisma.TrackingTargetUpdateOneRequiredWithoutTrackingRulesNestedInput
-  Conditions?: Prisma.ConditionUpdateManyWithoutTrackingRuleNestedInput
-  PayloadMappings?: Prisma.PayloadMappingUpdateManyWithoutTrackingRuleNestedInput
   Events?: Prisma.EventUpdateManyWithoutTrackingRuleNestedInput
+  PayloadMappings?: Prisma.PayloadMappingUpdateManyWithoutTrackingRuleNestedInput
 }
 
 export type TrackingRuleUncheckedUpdateWithoutDomainInput = {
   Id?: Prisma.IntFieldUpdateOperationsInput | number
   Name?: Prisma.StringFieldUpdateOperationsInput | string
   EventTypeID?: Prisma.IntFieldUpdateOperationsInput | number
-  TrackingTargetId?: Prisma.IntFieldUpdateOperationsInput | number
+  TrackingTarget?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   ActionType?: Prisma.NullableEnumActionTypeFieldUpdateOperationsInput | $Enums.ActionType | null
-  Conditions?: Prisma.ConditionUncheckedUpdateManyWithoutTrackingRuleNestedInput
-  PayloadMappings?: Prisma.PayloadMappingUncheckedUpdateManyWithoutTrackingRuleNestedInput
   Events?: Prisma.EventUncheckedUpdateManyWithoutTrackingRuleNestedInput
+  PayloadMappings?: Prisma.PayloadMappingUncheckedUpdateManyWithoutTrackingRuleNestedInput
 }
 
 export type TrackingRuleUncheckedUpdateManyWithoutDomainInput = {
   Id?: Prisma.IntFieldUpdateOperationsInput | number
   Name?: Prisma.StringFieldUpdateOperationsInput | string
   EventTypeID?: Prisma.IntFieldUpdateOperationsInput | number
-  TrackingTargetId?: Prisma.IntFieldUpdateOperationsInput | number
+  TrackingTarget?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   ActionType?: Prisma.NullableEnumActionTypeFieldUpdateOperationsInput | $Enums.ActionType | null
 }
 
@@ -968,73 +782,34 @@ export type TrackingRuleCreateManyEventTypeInput = {
   Id?: number
   Name: string
   DomainID: number
-  TrackingTargetId: number
+  TrackingTarget?: string | null
   ActionType?: $Enums.ActionType | null
 }
 
 export type TrackingRuleUpdateWithoutEventTypeInput = {
   Name?: Prisma.StringFieldUpdateOperationsInput | string
+  TrackingTarget?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   ActionType?: Prisma.NullableEnumActionTypeFieldUpdateOperationsInput | $Enums.ActionType | null
   Domain?: Prisma.DomainUpdateOneRequiredWithoutTrackingRulesNestedInput
-  TrackingTarget?: Prisma.TrackingTargetUpdateOneRequiredWithoutTrackingRulesNestedInput
-  Conditions?: Prisma.ConditionUpdateManyWithoutTrackingRuleNestedInput
-  PayloadMappings?: Prisma.PayloadMappingUpdateManyWithoutTrackingRuleNestedInput
   Events?: Prisma.EventUpdateManyWithoutTrackingRuleNestedInput
+  PayloadMappings?: Prisma.PayloadMappingUpdateManyWithoutTrackingRuleNestedInput
 }
 
 export type TrackingRuleUncheckedUpdateWithoutEventTypeInput = {
   Id?: Prisma.IntFieldUpdateOperationsInput | number
   Name?: Prisma.StringFieldUpdateOperationsInput | string
   DomainID?: Prisma.IntFieldUpdateOperationsInput | number
-  TrackingTargetId?: Prisma.IntFieldUpdateOperationsInput | number
+  TrackingTarget?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   ActionType?: Prisma.NullableEnumActionTypeFieldUpdateOperationsInput | $Enums.ActionType | null
-  Conditions?: Prisma.ConditionUncheckedUpdateManyWithoutTrackingRuleNestedInput
-  PayloadMappings?: Prisma.PayloadMappingUncheckedUpdateManyWithoutTrackingRuleNestedInput
   Events?: Prisma.EventUncheckedUpdateManyWithoutTrackingRuleNestedInput
+  PayloadMappings?: Prisma.PayloadMappingUncheckedUpdateManyWithoutTrackingRuleNestedInput
 }
 
 export type TrackingRuleUncheckedUpdateManyWithoutEventTypeInput = {
   Id?: Prisma.IntFieldUpdateOperationsInput | number
   Name?: Prisma.StringFieldUpdateOperationsInput | string
   DomainID?: Prisma.IntFieldUpdateOperationsInput | number
-  TrackingTargetId?: Prisma.IntFieldUpdateOperationsInput | number
-  ActionType?: Prisma.NullableEnumActionTypeFieldUpdateOperationsInput | $Enums.ActionType | null
-}
-
-export type TrackingRuleCreateManyTrackingTargetInput = {
-  Id?: number
-  Name: string
-  DomainID: number
-  EventTypeID: number
-  ActionType?: $Enums.ActionType | null
-}
-
-export type TrackingRuleUpdateWithoutTrackingTargetInput = {
-  Name?: Prisma.StringFieldUpdateOperationsInput | string
-  ActionType?: Prisma.NullableEnumActionTypeFieldUpdateOperationsInput | $Enums.ActionType | null
-  Domain?: Prisma.DomainUpdateOneRequiredWithoutTrackingRulesNestedInput
-  EventType?: Prisma.EventTypeUpdateOneRequiredWithoutTrackingRulesNestedInput
-  Conditions?: Prisma.ConditionUpdateManyWithoutTrackingRuleNestedInput
-  PayloadMappings?: Prisma.PayloadMappingUpdateManyWithoutTrackingRuleNestedInput
-  Events?: Prisma.EventUpdateManyWithoutTrackingRuleNestedInput
-}
-
-export type TrackingRuleUncheckedUpdateWithoutTrackingTargetInput = {
-  Id?: Prisma.IntFieldUpdateOperationsInput | number
-  Name?: Prisma.StringFieldUpdateOperationsInput | string
-  DomainID?: Prisma.IntFieldUpdateOperationsInput | number
-  EventTypeID?: Prisma.IntFieldUpdateOperationsInput | number
-  ActionType?: Prisma.NullableEnumActionTypeFieldUpdateOperationsInput | $Enums.ActionType | null
-  Conditions?: Prisma.ConditionUncheckedUpdateManyWithoutTrackingRuleNestedInput
-  PayloadMappings?: Prisma.PayloadMappingUncheckedUpdateManyWithoutTrackingRuleNestedInput
-  Events?: Prisma.EventUncheckedUpdateManyWithoutTrackingRuleNestedInput
-}
-
-export type TrackingRuleUncheckedUpdateManyWithoutTrackingTargetInput = {
-  Id?: Prisma.IntFieldUpdateOperationsInput | number
-  Name?: Prisma.StringFieldUpdateOperationsInput | string
-  DomainID?: Prisma.IntFieldUpdateOperationsInput | number
-  EventTypeID?: Prisma.IntFieldUpdateOperationsInput | number
+  TrackingTarget?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   ActionType?: Prisma.NullableEnumActionTypeFieldUpdateOperationsInput | $Enums.ActionType | null
 }
 
@@ -1044,15 +819,13 @@ export type TrackingRuleUncheckedUpdateManyWithoutTrackingTargetInput = {
  */
 
 export type TrackingRuleCountOutputType = {
-  Conditions: number
-  PayloadMappings: number
   Events: number
+  PayloadMappings: number
 }
 
 export type TrackingRuleCountOutputTypeSelect<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
-  Conditions?: boolean | TrackingRuleCountOutputTypeCountConditionsArgs
-  PayloadMappings?: boolean | TrackingRuleCountOutputTypeCountPayloadMappingsArgs
   Events?: boolean | TrackingRuleCountOutputTypeCountEventsArgs
+  PayloadMappings?: boolean | TrackingRuleCountOutputTypeCountPayloadMappingsArgs
 }
 
 /**
@@ -1068,8 +841,8 @@ export type TrackingRuleCountOutputTypeDefaultArgs<ExtArgs extends runtime.Types
 /**
  * TrackingRuleCountOutputType without action
  */
-export type TrackingRuleCountOutputTypeCountConditionsArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
-  where?: Prisma.ConditionWhereInput
+export type TrackingRuleCountOutputTypeCountEventsArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  where?: Prisma.EventWhereInput
 }
 
 /**
@@ -1079,27 +852,18 @@ export type TrackingRuleCountOutputTypeCountPayloadMappingsArgs<ExtArgs extends 
   where?: Prisma.PayloadMappingWhereInput
 }
 
-/**
- * TrackingRuleCountOutputType without action
- */
-export type TrackingRuleCountOutputTypeCountEventsArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
-  where?: Prisma.EventWhereInput
-}
-
 
 export type TrackingRuleSelect<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetSelect<{
   Id?: boolean
   Name?: boolean
   DomainID?: boolean
   EventTypeID?: boolean
-  TrackingTargetId?: boolean
+  TrackingTarget?: boolean
   ActionType?: boolean
   Domain?: boolean | Prisma.DomainDefaultArgs<ExtArgs>
   EventType?: boolean | Prisma.EventTypeDefaultArgs<ExtArgs>
-  TrackingTarget?: boolean | Prisma.TrackingTargetDefaultArgs<ExtArgs>
-  Conditions?: boolean | Prisma.TrackingRule$ConditionsArgs<ExtArgs>
-  PayloadMappings?: boolean | Prisma.TrackingRule$PayloadMappingsArgs<ExtArgs>
   Events?: boolean | Prisma.TrackingRule$EventsArgs<ExtArgs>
+  PayloadMappings?: boolean | Prisma.TrackingRule$PayloadMappingsArgs<ExtArgs>
   _count?: boolean | Prisma.TrackingRuleCountOutputTypeDefaultArgs<ExtArgs>
 }, ExtArgs["result"]["trackingRule"]>
 
@@ -1108,11 +872,10 @@ export type TrackingRuleSelectCreateManyAndReturn<ExtArgs extends runtime.Types.
   Name?: boolean
   DomainID?: boolean
   EventTypeID?: boolean
-  TrackingTargetId?: boolean
+  TrackingTarget?: boolean
   ActionType?: boolean
   Domain?: boolean | Prisma.DomainDefaultArgs<ExtArgs>
   EventType?: boolean | Prisma.EventTypeDefaultArgs<ExtArgs>
-  TrackingTarget?: boolean | Prisma.TrackingTargetDefaultArgs<ExtArgs>
 }, ExtArgs["result"]["trackingRule"]>
 
 export type TrackingRuleSelectUpdateManyAndReturn<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetSelect<{
@@ -1120,11 +883,10 @@ export type TrackingRuleSelectUpdateManyAndReturn<ExtArgs extends runtime.Types.
   Name?: boolean
   DomainID?: boolean
   EventTypeID?: boolean
-  TrackingTargetId?: boolean
+  TrackingTarget?: boolean
   ActionType?: boolean
   Domain?: boolean | Prisma.DomainDefaultArgs<ExtArgs>
   EventType?: boolean | Prisma.EventTypeDefaultArgs<ExtArgs>
-  TrackingTarget?: boolean | Prisma.TrackingTargetDefaultArgs<ExtArgs>
 }, ExtArgs["result"]["trackingRule"]>
 
 export type TrackingRuleSelectScalar = {
@@ -1132,29 +894,25 @@ export type TrackingRuleSelectScalar = {
   Name?: boolean
   DomainID?: boolean
   EventTypeID?: boolean
-  TrackingTargetId?: boolean
+  TrackingTarget?: boolean
   ActionType?: boolean
 }
 
-export type TrackingRuleOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"Id" | "Name" | "DomainID" | "EventTypeID" | "TrackingTargetId" | "ActionType", ExtArgs["result"]["trackingRule"]>
+export type TrackingRuleOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"Id" | "Name" | "DomainID" | "EventTypeID" | "TrackingTarget" | "ActionType", ExtArgs["result"]["trackingRule"]>
 export type TrackingRuleInclude<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   Domain?: boolean | Prisma.DomainDefaultArgs<ExtArgs>
   EventType?: boolean | Prisma.EventTypeDefaultArgs<ExtArgs>
-  TrackingTarget?: boolean | Prisma.TrackingTargetDefaultArgs<ExtArgs>
-  Conditions?: boolean | Prisma.TrackingRule$ConditionsArgs<ExtArgs>
-  PayloadMappings?: boolean | Prisma.TrackingRule$PayloadMappingsArgs<ExtArgs>
   Events?: boolean | Prisma.TrackingRule$EventsArgs<ExtArgs>
+  PayloadMappings?: boolean | Prisma.TrackingRule$PayloadMappingsArgs<ExtArgs>
   _count?: boolean | Prisma.TrackingRuleCountOutputTypeDefaultArgs<ExtArgs>
 }
 export type TrackingRuleIncludeCreateManyAndReturn<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   Domain?: boolean | Prisma.DomainDefaultArgs<ExtArgs>
   EventType?: boolean | Prisma.EventTypeDefaultArgs<ExtArgs>
-  TrackingTarget?: boolean | Prisma.TrackingTargetDefaultArgs<ExtArgs>
 }
 export type TrackingRuleIncludeUpdateManyAndReturn<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   Domain?: boolean | Prisma.DomainDefaultArgs<ExtArgs>
   EventType?: boolean | Prisma.EventTypeDefaultArgs<ExtArgs>
-  TrackingTarget?: boolean | Prisma.TrackingTargetDefaultArgs<ExtArgs>
 }
 
 export type $TrackingRulePayload<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
@@ -1162,17 +920,15 @@ export type $TrackingRulePayload<ExtArgs extends runtime.Types.Extensions.Intern
   objects: {
     Domain: Prisma.$DomainPayload<ExtArgs>
     EventType: Prisma.$EventTypePayload<ExtArgs>
-    TrackingTarget: Prisma.$TrackingTargetPayload<ExtArgs>
-    Conditions: Prisma.$ConditionPayload<ExtArgs>[]
-    PayloadMappings: Prisma.$PayloadMappingPayload<ExtArgs>[]
     Events: Prisma.$EventPayload<ExtArgs>[]
+    PayloadMappings: Prisma.$PayloadMappingPayload<ExtArgs>[]
   }
   scalars: runtime.Types.Extensions.GetPayloadResult<{
     Id: number
     Name: string
     DomainID: number
     EventTypeID: number
-    TrackingTargetId: number
+    TrackingTarget: string | null
     ActionType: $Enums.ActionType | null
   }, ExtArgs["result"]["trackingRule"]>
   composites: {}
@@ -1570,10 +1326,8 @@ export interface Prisma__TrackingRuleClient<T, Null = never, ExtArgs extends run
   readonly [Symbol.toStringTag]: "PrismaPromise"
   Domain<T extends Prisma.DomainDefaultArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.DomainDefaultArgs<ExtArgs>>): Prisma.Prisma__DomainClient<runtime.Types.Result.GetResult<Prisma.$DomainPayload<ExtArgs>, T, "findUniqueOrThrow", GlobalOmitOptions> | Null, Null, ExtArgs, GlobalOmitOptions>
   EventType<T extends Prisma.EventTypeDefaultArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.EventTypeDefaultArgs<ExtArgs>>): Prisma.Prisma__EventTypeClient<runtime.Types.Result.GetResult<Prisma.$EventTypePayload<ExtArgs>, T, "findUniqueOrThrow", GlobalOmitOptions> | Null, Null, ExtArgs, GlobalOmitOptions>
-  TrackingTarget<T extends Prisma.TrackingTargetDefaultArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.TrackingTargetDefaultArgs<ExtArgs>>): Prisma.Prisma__TrackingTargetClient<runtime.Types.Result.GetResult<Prisma.$TrackingTargetPayload<ExtArgs>, T, "findUniqueOrThrow", GlobalOmitOptions> | Null, Null, ExtArgs, GlobalOmitOptions>
-  Conditions<T extends Prisma.TrackingRule$ConditionsArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.TrackingRule$ConditionsArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$ConditionPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
-  PayloadMappings<T extends Prisma.TrackingRule$PayloadMappingsArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.TrackingRule$PayloadMappingsArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$PayloadMappingPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
   Events<T extends Prisma.TrackingRule$EventsArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.TrackingRule$EventsArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$EventPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
+  PayloadMappings<T extends Prisma.TrackingRule$PayloadMappingsArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.TrackingRule$PayloadMappingsArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$PayloadMappingPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
   /**
    * Attaches callbacks for the resolution and/or rejection of the Promise.
    * @param onfulfilled The callback to execute when the Promise is resolved.
@@ -1607,7 +1361,7 @@ export interface TrackingRuleFieldRefs {
   readonly Name: Prisma.FieldRef<"TrackingRule", 'String'>
   readonly DomainID: Prisma.FieldRef<"TrackingRule", 'Int'>
   readonly EventTypeID: Prisma.FieldRef<"TrackingRule", 'Int'>
-  readonly TrackingTargetId: Prisma.FieldRef<"TrackingRule", 'Int'>
+  readonly TrackingTarget: Prisma.FieldRef<"TrackingRule", 'String'>
   readonly ActionType: Prisma.FieldRef<"TrackingRule", 'ActionType'>
 }
     
@@ -2005,27 +1759,27 @@ export type TrackingRuleDeleteManyArgs<ExtArgs extends runtime.Types.Extensions.
 }
 
 /**
- * TrackingRule.Conditions
+ * TrackingRule.Events
  */
-export type TrackingRule$ConditionsArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+export type TrackingRule$EventsArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   /**
-   * Select specific fields to fetch from the Condition
+   * Select specific fields to fetch from the Event
    */
-  select?: Prisma.ConditionSelect<ExtArgs> | null
+  select?: Prisma.EventSelect<ExtArgs> | null
   /**
-   * Omit specific fields from the Condition
+   * Omit specific fields from the Event
    */
-  omit?: Prisma.ConditionOmit<ExtArgs> | null
+  omit?: Prisma.EventOmit<ExtArgs> | null
   /**
    * Choose, which related nodes to fetch as well
    */
-  include?: Prisma.ConditionInclude<ExtArgs> | null
-  where?: Prisma.ConditionWhereInput
-  orderBy?: Prisma.ConditionOrderByWithRelationInput | Prisma.ConditionOrderByWithRelationInput[]
-  cursor?: Prisma.ConditionWhereUniqueInput
+  include?: Prisma.EventInclude<ExtArgs> | null
+  where?: Prisma.EventWhereInput
+  orderBy?: Prisma.EventOrderByWithRelationInput | Prisma.EventOrderByWithRelationInput[]
+  cursor?: Prisma.EventWhereUniqueInput
   take?: number
   skip?: number
-  distinct?: Prisma.ConditionScalarFieldEnum | Prisma.ConditionScalarFieldEnum[]
+  distinct?: Prisma.EventScalarFieldEnum | Prisma.EventScalarFieldEnum[]
 }
 
 /**
@@ -2050,30 +1804,6 @@ export type TrackingRule$PayloadMappingsArgs<ExtArgs extends runtime.Types.Exten
   take?: number
   skip?: number
   distinct?: Prisma.PayloadMappingScalarFieldEnum | Prisma.PayloadMappingScalarFieldEnum[]
-}
-
-/**
- * TrackingRule.Events
- */
-export type TrackingRule$EventsArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
-  /**
-   * Select specific fields to fetch from the Event
-   */
-  select?: Prisma.EventSelect<ExtArgs> | null
-  /**
-   * Omit specific fields from the Event
-   */
-  omit?: Prisma.EventOmit<ExtArgs> | null
-  /**
-   * Choose, which related nodes to fetch as well
-   */
-  include?: Prisma.EventInclude<ExtArgs> | null
-  where?: Prisma.EventWhereInput
-  orderBy?: Prisma.EventOrderByWithRelationInput | Prisma.EventOrderByWithRelationInput[]
-  cursor?: Prisma.EventWhereUniqueInput
-  take?: number
-  skip?: number
-  distinct?: Prisma.EventScalarFieldEnum | Prisma.EventScalarFieldEnum[]
 }
 
 /**

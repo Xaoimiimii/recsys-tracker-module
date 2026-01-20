@@ -7,12 +7,18 @@
  * 3. Chỉ xử lý request khi có REC phù hợp
  * 4. KHÔNG dispatch event (chỉ collect data vào REC)
  * 5. Passive - không can thiệp vào logic nghiệp vụ
+ * 6. Tích hợp với UserIdentityManager để handle user identity
  */
 
 import { RuleExecutionContextManager, RuleExecutionContext } from '../execution/rule-execution-context';
 import { PathMatcher } from '../utils/path-matcher';
 import { TrackingRule } from '../../types';
-import { saveCachedUserInfo } from '../plugins/utils/plugin-utils';
+import { UserIdentityManager } from '../user';
+import {
+  parseBody,
+  extractByPath,
+  extractFromUrl
+} from '../utils/data-extractors';
 
 interface NetworkRequestInfo {
   url: string;
@@ -36,17 +42,11 @@ export class NetworkObserver {
   // Reference to REC manager
   private recManager: RuleExecutionContextManager | null = null;
   
+  // Reference to UserIdentityManager
+  private userIdentityManager: UserIdentityManager | null = null;
+  
   // Registered rules that need network data
   private registeredRules: Map<number, TrackingRule> = new Map();
-  
-  // User info mappings được extract từ config để smart caching
-  private userInfoMappings: Array<{
-    field: string; // UserId or Username
-    source: string;
-    requestUrlPattern: string;
-    requestMethod: string;
-    requestBodyPath?: string;
-  }> = [];
 
   private constructor() {
     this.originalFetch = window.fetch;
@@ -65,54 +65,11 @@ export class NetworkObserver {
   }
 
   /**
-   * Register user info mappings từ config
-   * Được gọi bởi ConfigLoader sau khi parse rules
+   * Set UserIdentityManager reference
    */
-  registerUserInfoMappings(rules: TrackingRule[]): void {
-    console.log('[NetworkObserver] Scanning rules for user info mappings...');
-    this.userInfoMappings = [];
-    
-    for (const rule of rules) {
-      if (!rule.payloadMappings) continue;
-      
-      for (const mapping of rule.payloadMappings) {
-        // Chỉ quan tâm UserId hoặc Username
-        if (mapping.field !== 'UserId' && mapping.field !== 'Username') {
-          continue;
-        }
-        
-        const source = (mapping.source || '').toLowerCase();
-        
-        // Chỉ quan tâm network sources
-        const networkSources = ['requestbody', 'request_body', 'responsebody', 'response_body'];
-        if (!networkSources.includes(source)) {
-          continue;
-        }
-        
-        // Phải có pattern và method
-        if (!mapping.requestUrlPattern || !mapping.requestMethod) {
-          continue;
-        }
-        
-        // Thêm vào danh sách
-        this.userInfoMappings.push({
-          field: mapping.field,
-          source: mapping.source || '',
-          requestUrlPattern: mapping.requestUrlPattern,
-          requestMethod: mapping.requestMethod,
-          requestBodyPath: mapping.requestBodyPath || mapping.value || ''
-        });
-        
-        console.log('[NetworkObserver] ✅ Registered user info mapping:', {
-          field: mapping.field,
-          pattern: mapping.requestUrlPattern,
-          method: mapping.requestMethod,
-          path: mapping.requestBodyPath || mapping.value
-        });
-      }
-    }
-    
-    console.log('[NetworkObserver] Total user info mappings registered:', this.userInfoMappings.length);
+  setUserIdentityManager(userIdentityManager: UserIdentityManager): void {
+    this.userIdentityManager = userIdentityManager;
+    console.log('[NetworkObserver] UserIdentityManager set');
   }
 
   /**
@@ -217,26 +174,53 @@ export class NetworkObserver {
 
   /**
    * Xử lý request đã intercept
-   * SECURITY: Chỉ process và log khi request match với rule patterns
-   * SMART: Cache user info dựa trên registered user info mappings từ config
+   * Chỉ process và log khi request match với rule patterns
+   * Delegate user info extraction to UserIdentityManager
    */
   private async handleRequest(requestInfo: NetworkRequestInfo): Promise<void> {
     if (!this.recManager) {
       return;
     }
 
-    // STEP 1: SMART USER INFO CACHING
-    // Chỉ cache nếu có user info mappings đã đăng ký từ config
-    const userInfoCached = await this.smartUserInfoCaching(requestInfo);
-    
-    if (userInfoCached) {
-      // Đã cache user info, log ngắn gọn
-      console.log('[NetworkObserver] 💾 User info cached from:', requestInfo.url);
+    // STEP 1: USER IDENTITY HANDLING
+    // Delegate to UserIdentityManager nếu có
+    if (this.userIdentityManager) {
+      const matchesUserIdentity = this.userIdentityManager.matchesUserIdentityRequest(
+        requestInfo.url,
+        requestInfo.method
+      );
+      
+      if (matchesUserIdentity) {
+        console.log('[NetworkObserver] 💾 User identity request matched:', requestInfo.url);
+        
+        // Parse response body nếu cần
+        let responseBodyText: string | null = null;
+        if (requestInfo.responseBody) {
+          if (typeof requestInfo.responseBody === 'string') {
+            responseBodyText = requestInfo.responseBody;
+          } else {
+            try {
+              responseBodyText = await (requestInfo.responseBody as Response).text();
+              requestInfo.responseBody = responseBodyText;
+            } catch (error) {
+              console.error('[NetworkObserver] Failed to parse response for user identity:', error);
+            }
+          }
+        }
+        
+        // Extract user info
+        this.userIdentityManager.extractFromNetworkRequest(
+          requestInfo.url,
+          requestInfo.method,
+          requestInfo.requestBody,
+          responseBodyText
+        );
+      }
     }
 
     // STEP 2: SECURITY CHECK - Có registered rules không?
     if (this.registeredRules.size === 0) {
-      // Không có rules để track events, nhưng vẫn có thể đã cache user info ở trên
+      // Không có rules để track events
       return;
     }
     
@@ -273,7 +257,7 @@ export class NetworkObserver {
       );
 
       if (!context) {
-        console.log('[NetworkObserver] No active context for rule:', rule.id, '(but user info may have been cached)');
+        console.log('[NetworkObserver] No active context for rule:', rule.id);
         continue;
       }
 
@@ -312,7 +296,7 @@ export class NetworkObserver {
       }
 
       console.log('[NetworkObserver] Is network source, checking pattern match');
-      console.log('[NetworkObserver] Mapping pattern:', mapping.requestUrlPattern, 'Method:', mapping.requestMethod);
+      console.log('[NetworkObserver] Mapping pattern:', mapping.config?.RequestUrlPattern, 'Method:', mapping.config?.RequestMethod);
       console.log('[NetworkObserver] Request URL:', requestInfo.url, 'Method:', requestInfo.method);
       
       // Check pattern match
@@ -340,91 +324,6 @@ export class NetworkObserver {
         console.log('[NetworkObserver] ⚠️ Extracted value is null/undefined');
       }
     }
-  }
-
-  /**
-   * SMART USER INFO CACHING
-   * 
-   * Cache user info dựa trên registered user info mappings từ config
-   * Chỉ cache khi request match với patterns đã đăng ký
-   * 
-   * @returns true nếu đã cache user info
-   */
-  private async smartUserInfoCaching(requestInfo: NetworkRequestInfo): Promise<boolean> {
-    if (this.userInfoMappings.length === 0) {
-      return false; // Không có user info mappings đăng ký
-    }
-
-    // Tìm mapping phù hợp với request này
-    for (const mapping of this.userInfoMappings) {
-      // Check method
-      if (mapping.requestMethod.toUpperCase() !== requestInfo.method) {
-        continue;
-      }
-      
-      // Check URL pattern
-      if (!PathMatcher.match(requestInfo.url, mapping.requestUrlPattern)) {
-        continue;
-      }
-      
-      console.log('[NetworkObserver] 🎯 Matched user info mapping:', {
-        field: mapping.field,
-        pattern: mapping.requestUrlPattern,
-        url: requestInfo.url
-      });
-      
-      // Parse response body nếu cần
-      let responseBodyText: string | null = null;
-      
-      if (requestInfo.responseBody) {
-        if (typeof requestInfo.responseBody === 'string') {
-          responseBodyText = requestInfo.responseBody;
-        } else {
-          try {
-            responseBodyText = await (requestInfo.responseBody as Response).text();
-            requestInfo.responseBody = responseBodyText;
-          } catch (error) {
-            console.error('[NetworkObserver] Failed to parse response:', error);
-            continue;
-          }
-        }
-      }
-      
-      if (!responseBodyText) {
-        console.log('[NetworkObserver] No response body to extract from');
-        continue;
-      }
-      
-      // Parse JSON
-      let responseData: any;
-      try {
-        responseData = JSON.parse(responseBodyText);
-      } catch {
-        console.log('[NetworkObserver] Response is not JSON');
-        continue;
-      }
-      
-      // Extract value theo path trong mapping
-      const path = mapping.requestBodyPath;
-      if (!path) {
-        console.log('[NetworkObserver] No path specified in mapping');
-        continue;
-      }
-      
-      const value = this.extractByPath(responseData, path);
-      
-      if (value) {
-        console.log('[NetworkObserver] ✅ Extracted user value:', value, 'from path:', path);
-        console.log('[NetworkObserver] 💾 Caching to localStorage as', mapping.field);
-        
-        saveCachedUserInfo(mapping.field, String(value));
-        return true;
-      } else {
-        console.log('[NetworkObserver] ⚠️ Could not extract value from path:', path);
-      }
-    }
-    
-    return false;
   }
 
   /**
@@ -472,17 +371,20 @@ export class NetworkObserver {
    * Check nếu request match với pattern trong mapping
    */
   private matchesPattern(mapping: any, requestInfo: NetworkRequestInfo): boolean {
+    const requestMethod = mapping.config?.RequestMethod;
+    const requestUrlPattern = mapping.config?.RequestUrlPattern;
+
     // Check method
-    if (mapping.requestMethod) {
-      const expectedMethod = mapping.requestMethod.toUpperCase();
+    if (requestMethod) {
+      const expectedMethod = requestMethod.toUpperCase();
       if (requestInfo.method !== expectedMethod) {
         return false;
       }
     }
 
     // Check URL pattern
-    if (mapping.requestUrlPattern) {
-      if (!PathMatcher.match(requestInfo.url, mapping.requestUrlPattern)) {
+    if (requestUrlPattern) {
+      if (!PathMatcher.match(requestInfo.url, requestUrlPattern)) {
         return false;
       }
     }
@@ -534,7 +436,7 @@ export class NetworkObserver {
     console.log('[NetworkObserver] extractFromRequestBody');
     console.log('[NetworkObserver] Raw request body:', requestInfo.requestBody);
     
-    const body = this.parseBody(requestInfo.requestBody);
+    const body = parseBody(requestInfo.requestBody);
     console.log('[NetworkObserver] Parsed request body:', body);
     
     if (!body) {
@@ -542,10 +444,10 @@ export class NetworkObserver {
       return null;
     }
 
-    const path = mapping.value || mapping.requestBodyPath;
+    const path = mapping.config?.Value;
     console.log('[NetworkObserver] Extracting by path:', path);
     
-    const result = this.extractByPath(body, path);
+    const result = extractByPath(body, path);
     console.log('[NetworkObserver] Extract result:', result);
     
     return result;
@@ -558,7 +460,7 @@ export class NetworkObserver {
     console.log('[NetworkObserver] extractFromResponseBody');
     console.log('[NetworkObserver] Raw response body:', requestInfo.responseBody?.substring?.(0, 500));
     
-    const body = this.parseBody(requestInfo.responseBody);
+    const body = parseBody(requestInfo.responseBody);
     console.log('[NetworkObserver] Parsed response body:', body);
     
     if (!body) {
@@ -566,10 +468,10 @@ export class NetworkObserver {
       return null;
     }
 
-    const path = mapping.value || mapping.requestBodyPath;
+    const path = mapping.config?.Value;
     console.log('[NetworkObserver] Extracting by path:', path);
     
-    const result = this.extractByPath(body, path);
+    const result = extractByPath(body, path);
     console.log('[NetworkObserver] Extract result:', result);
     
     return result;
@@ -579,82 +481,8 @@ export class NetworkObserver {
    * Extract từ request URL
    */
   private extractFromRequestUrl(mapping: any, requestInfo: NetworkRequestInfo): any {
-    const url = new URL(requestInfo.url, window.location.origin);
-    
-    const urlPart = mapping.urlPart?.toLowerCase();
-    
-    switch (urlPart) {
-      case 'query':
-      case 'queryparam':
-        const paramName = mapping.urlPartValue || mapping.value;
-        return url.searchParams.get(paramName);
-      
-      case 'path':
-      case 'pathsegment':
-        // Extract path segment by index or pattern
-        const pathValue = mapping.urlPartValue || mapping.value;
-        
-        if (pathValue && !isNaN(Number(pathValue))) {
-          const segments = url.pathname.split('/').filter(s => s);
-          // Convert from user view (1-based) to dev view (0-based)
-          const index = Number(pathValue) - 1;
-          const result = segments[index] || null;
-          return result;
-        }
-        return url.pathname;
-      
-      case 'hash':
-        return url.hash.substring(1); // Remove #
-      
-      default:
-        // If no urlPart specified, try to extract from value
-        // Check if value is a number (path segment index)
-        const segments = url.pathname.split('/').filter(s => s);
-        
-        if (mapping.value && !isNaN(Number(mapping.value))) {
-          // Convert from user view (1-based) to dev view (0-based)
-          const index = Number(mapping.value) - 1;
-          const result = segments[index] || null;
-          return result;
-        }
-        return url.href;
-    }
-  }
-
-  /**
-   * Parse body (JSON or text)
-   */
-  private parseBody(body: any): any {
-    if (!body) return null;
-    
-    if (typeof body === 'string') {
-      try {
-        return JSON.parse(body);
-      } catch {
-        return body;
-      }
-    }
-    
-    return body;
-  }
-
-  /**
-   * Extract value by path (e.g., "data.user.id")
-   */
-  private extractByPath(obj: any, path: string): any {
-    if (!path || !obj) return null;
-
-    const parts = path.split('.');
-    let current = obj;
-
-    for (const part of parts) {
-      if (current === null || current === undefined) {
-        return null;
-      }
-      current = current[part];
-    }
-
-    return current;
+    const { ExtractType, Value, RequestUrlPattern } = mapping.config;
+    return extractFromUrl(requestInfo.url, Value, ExtractType, RequestUrlPattern);
   }
 
   /**

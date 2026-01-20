@@ -26,12 +26,12 @@ export class EventDispatcher {
         const payloadObject = {
             Timestamp: event.timestamp,
             EventTypeId: event.eventTypeId,
+            ActionType: event.actionType || null,
             TrackingRuleId: event.trackingRuleId,
             DomainKey: event.domainKey,
             AnonymousId: event.anonymousId,
             ...(event.userId && { UserId: event.userId }),
-            ItemField: event.itemField,
-            ItemValue: event.itemValue,
+            ...(event.itemId && { ItemId: event.itemId }),
             ...(event.ratingValue !== undefined && { RatingValue: event.ratingValue }),
             ...(event.ratingReview !== undefined && { RatingReview: event.ratingReview })
         };

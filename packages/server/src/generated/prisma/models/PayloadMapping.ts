@@ -38,29 +38,15 @@ export type PayloadMappingSumAggregateOutputType = {
 
 export type PayloadMappingMinAggregateOutputType = {
   Id: number | null
-  Field: $Enums.PayloadField | null
-  Source: $Enums.PayloadSource | null
-  Value: string | null
-  RequestUrl: string | null
-  RequestUrlPattern: string | null
-  RequestMethod: $Enums.PayloadRequestMethod | null
-  RequestBodyPath: string | null
-  UrlPart: $Enums.PayloadUrlPart | null
-  UrlPartValue: string | null
+  Field: $Enums.PayloadMappingField | null
+  Source: $Enums.PayloadMappingSource | null
   TrackingRuleId: number | null
 }
 
 export type PayloadMappingMaxAggregateOutputType = {
   Id: number | null
-  Field: $Enums.PayloadField | null
-  Source: $Enums.PayloadSource | null
-  Value: string | null
-  RequestUrl: string | null
-  RequestUrlPattern: string | null
-  RequestMethod: $Enums.PayloadRequestMethod | null
-  RequestBodyPath: string | null
-  UrlPart: $Enums.PayloadUrlPart | null
-  UrlPartValue: string | null
+  Field: $Enums.PayloadMappingField | null
+  Source: $Enums.PayloadMappingSource | null
   TrackingRuleId: number | null
 }
 
@@ -68,13 +54,7 @@ export type PayloadMappingCountAggregateOutputType = {
   Id: number
   Field: number
   Source: number
-  Value: number
-  RequestUrl: number
-  RequestUrlPattern: number
-  RequestMethod: number
-  RequestBodyPath: number
-  UrlPart: number
-  UrlPartValue: number
+  Config: number
   TrackingRuleId: number
   _all: number
 }
@@ -94,13 +74,6 @@ export type PayloadMappingMinAggregateInputType = {
   Id?: true
   Field?: true
   Source?: true
-  Value?: true
-  RequestUrl?: true
-  RequestUrlPattern?: true
-  RequestMethod?: true
-  RequestBodyPath?: true
-  UrlPart?: true
-  UrlPartValue?: true
   TrackingRuleId?: true
 }
 
@@ -108,13 +81,6 @@ export type PayloadMappingMaxAggregateInputType = {
   Id?: true
   Field?: true
   Source?: true
-  Value?: true
-  RequestUrl?: true
-  RequestUrlPattern?: true
-  RequestMethod?: true
-  RequestBodyPath?: true
-  UrlPart?: true
-  UrlPartValue?: true
   TrackingRuleId?: true
 }
 
@@ -122,13 +88,7 @@ export type PayloadMappingCountAggregateInputType = {
   Id?: true
   Field?: true
   Source?: true
-  Value?: true
-  RequestUrl?: true
-  RequestUrlPattern?: true
-  RequestMethod?: true
-  RequestBodyPath?: true
-  UrlPart?: true
-  UrlPartValue?: true
+  Config?: true
   TrackingRuleId?: true
   _all?: true
 }
@@ -221,15 +181,9 @@ export type PayloadMappingGroupByArgs<ExtArgs extends runtime.Types.Extensions.I
 
 export type PayloadMappingGroupByOutputType = {
   Id: number
-  Field: $Enums.PayloadField
-  Source: $Enums.PayloadSource
-  Value: string | null
-  RequestUrl: string | null
-  RequestUrlPattern: string | null
-  RequestMethod: $Enums.PayloadRequestMethod | null
-  RequestBodyPath: string | null
-  UrlPart: $Enums.PayloadUrlPart | null
-  UrlPartValue: string | null
+  Field: $Enums.PayloadMappingField
+  Source: $Enums.PayloadMappingSource
+  Config: runtime.JsonValue
   TrackingRuleId: number
   _count: PayloadMappingCountAggregateOutputType | null
   _avg: PayloadMappingAvgAggregateOutputType | null
@@ -258,15 +212,9 @@ export type PayloadMappingWhereInput = {
   OR?: Prisma.PayloadMappingWhereInput[]
   NOT?: Prisma.PayloadMappingWhereInput | Prisma.PayloadMappingWhereInput[]
   Id?: Prisma.IntFilter<"PayloadMapping"> | number
-  Field?: Prisma.EnumPayloadFieldFilter<"PayloadMapping"> | $Enums.PayloadField
-  Source?: Prisma.EnumPayloadSourceFilter<"PayloadMapping"> | $Enums.PayloadSource
-  Value?: Prisma.StringNullableFilter<"PayloadMapping"> | string | null
-  RequestUrl?: Prisma.StringNullableFilter<"PayloadMapping"> | string | null
-  RequestUrlPattern?: Prisma.StringNullableFilter<"PayloadMapping"> | string | null
-  RequestMethod?: Prisma.EnumPayloadRequestMethodNullableFilter<"PayloadMapping"> | $Enums.PayloadRequestMethod | null
-  RequestBodyPath?: Prisma.StringNullableFilter<"PayloadMapping"> | string | null
-  UrlPart?: Prisma.EnumPayloadUrlPartNullableFilter<"PayloadMapping"> | $Enums.PayloadUrlPart | null
-  UrlPartValue?: Prisma.StringNullableFilter<"PayloadMapping"> | string | null
+  Field?: Prisma.EnumPayloadMappingFieldFilter<"PayloadMapping"> | $Enums.PayloadMappingField
+  Source?: Prisma.EnumPayloadMappingSourceFilter<"PayloadMapping"> | $Enums.PayloadMappingSource
+  Config?: Prisma.JsonFilter<"PayloadMapping">
   TrackingRuleId?: Prisma.IntFilter<"PayloadMapping"> | number
   TrackingRule?: Prisma.XOR<Prisma.TrackingRuleScalarRelationFilter, Prisma.TrackingRuleWhereInput>
 }
@@ -275,13 +223,7 @@ export type PayloadMappingOrderByWithRelationInput = {
   Id?: Prisma.SortOrder
   Field?: Prisma.SortOrder
   Source?: Prisma.SortOrder
-  Value?: Prisma.SortOrderInput | Prisma.SortOrder
-  RequestUrl?: Prisma.SortOrderInput | Prisma.SortOrder
-  RequestUrlPattern?: Prisma.SortOrderInput | Prisma.SortOrder
-  RequestMethod?: Prisma.SortOrderInput | Prisma.SortOrder
-  RequestBodyPath?: Prisma.SortOrderInput | Prisma.SortOrder
-  UrlPart?: Prisma.SortOrderInput | Prisma.SortOrder
-  UrlPartValue?: Prisma.SortOrderInput | Prisma.SortOrder
+  Config?: Prisma.SortOrder
   TrackingRuleId?: Prisma.SortOrder
   TrackingRule?: Prisma.TrackingRuleOrderByWithRelationInput
 }
@@ -291,15 +233,9 @@ export type PayloadMappingWhereUniqueInput = Prisma.AtLeast<{
   AND?: Prisma.PayloadMappingWhereInput | Prisma.PayloadMappingWhereInput[]
   OR?: Prisma.PayloadMappingWhereInput[]
   NOT?: Prisma.PayloadMappingWhereInput | Prisma.PayloadMappingWhereInput[]
-  Field?: Prisma.EnumPayloadFieldFilter<"PayloadMapping"> | $Enums.PayloadField
-  Source?: Prisma.EnumPayloadSourceFilter<"PayloadMapping"> | $Enums.PayloadSource
-  Value?: Prisma.StringNullableFilter<"PayloadMapping"> | string | null
-  RequestUrl?: Prisma.StringNullableFilter<"PayloadMapping"> | string | null
-  RequestUrlPattern?: Prisma.StringNullableFilter<"PayloadMapping"> | string | null
-  RequestMethod?: Prisma.EnumPayloadRequestMethodNullableFilter<"PayloadMapping"> | $Enums.PayloadRequestMethod | null
-  RequestBodyPath?: Prisma.StringNullableFilter<"PayloadMapping"> | string | null
-  UrlPart?: Prisma.EnumPayloadUrlPartNullableFilter<"PayloadMapping"> | $Enums.PayloadUrlPart | null
-  UrlPartValue?: Prisma.StringNullableFilter<"PayloadMapping"> | string | null
+  Field?: Prisma.EnumPayloadMappingFieldFilter<"PayloadMapping"> | $Enums.PayloadMappingField
+  Source?: Prisma.EnumPayloadMappingSourceFilter<"PayloadMapping"> | $Enums.PayloadMappingSource
+  Config?: Prisma.JsonFilter<"PayloadMapping">
   TrackingRuleId?: Prisma.IntFilter<"PayloadMapping"> | number
   TrackingRule?: Prisma.XOR<Prisma.TrackingRuleScalarRelationFilter, Prisma.TrackingRuleWhereInput>
 }, "Id">
@@ -308,13 +244,7 @@ export type PayloadMappingOrderByWithAggregationInput = {
   Id?: Prisma.SortOrder
   Field?: Prisma.SortOrder
   Source?: Prisma.SortOrder
-  Value?: Prisma.SortOrderInput | Prisma.SortOrder
-  RequestUrl?: Prisma.SortOrderInput | Prisma.SortOrder
-  RequestUrlPattern?: Prisma.SortOrderInput | Prisma.SortOrder
-  RequestMethod?: Prisma.SortOrderInput | Prisma.SortOrder
-  RequestBodyPath?: Prisma.SortOrderInput | Prisma.SortOrder
-  UrlPart?: Prisma.SortOrderInput | Prisma.SortOrder
-  UrlPartValue?: Prisma.SortOrderInput | Prisma.SortOrder
+  Config?: Prisma.SortOrder
   TrackingRuleId?: Prisma.SortOrder
   _count?: Prisma.PayloadMappingCountOrderByAggregateInput
   _avg?: Prisma.PayloadMappingAvgOrderByAggregateInput
@@ -328,109 +258,61 @@ export type PayloadMappingScalarWhereWithAggregatesInput = {
   OR?: Prisma.PayloadMappingScalarWhereWithAggregatesInput[]
   NOT?: Prisma.PayloadMappingScalarWhereWithAggregatesInput | Prisma.PayloadMappingScalarWhereWithAggregatesInput[]
   Id?: Prisma.IntWithAggregatesFilter<"PayloadMapping"> | number
-  Field?: Prisma.EnumPayloadFieldWithAggregatesFilter<"PayloadMapping"> | $Enums.PayloadField
-  Source?: Prisma.EnumPayloadSourceWithAggregatesFilter<"PayloadMapping"> | $Enums.PayloadSource
-  Value?: Prisma.StringNullableWithAggregatesFilter<"PayloadMapping"> | string | null
-  RequestUrl?: Prisma.StringNullableWithAggregatesFilter<"PayloadMapping"> | string | null
-  RequestUrlPattern?: Prisma.StringNullableWithAggregatesFilter<"PayloadMapping"> | string | null
-  RequestMethod?: Prisma.EnumPayloadRequestMethodNullableWithAggregatesFilter<"PayloadMapping"> | $Enums.PayloadRequestMethod | null
-  RequestBodyPath?: Prisma.StringNullableWithAggregatesFilter<"PayloadMapping"> | string | null
-  UrlPart?: Prisma.EnumPayloadUrlPartNullableWithAggregatesFilter<"PayloadMapping"> | $Enums.PayloadUrlPart | null
-  UrlPartValue?: Prisma.StringNullableWithAggregatesFilter<"PayloadMapping"> | string | null
+  Field?: Prisma.EnumPayloadMappingFieldWithAggregatesFilter<"PayloadMapping"> | $Enums.PayloadMappingField
+  Source?: Prisma.EnumPayloadMappingSourceWithAggregatesFilter<"PayloadMapping"> | $Enums.PayloadMappingSource
+  Config?: Prisma.JsonWithAggregatesFilter<"PayloadMapping">
   TrackingRuleId?: Prisma.IntWithAggregatesFilter<"PayloadMapping"> | number
 }
 
 export type PayloadMappingCreateInput = {
-  Field: $Enums.PayloadField
-  Source: $Enums.PayloadSource
-  Value?: string | null
-  RequestUrl?: string | null
-  RequestUrlPattern?: string | null
-  RequestMethod?: $Enums.PayloadRequestMethod | null
-  RequestBodyPath?: string | null
-  UrlPart?: $Enums.PayloadUrlPart | null
-  UrlPartValue?: string | null
+  Field: $Enums.PayloadMappingField
+  Source: $Enums.PayloadMappingSource
+  Config: Prisma.JsonNullValueInput | runtime.InputJsonValue
   TrackingRule: Prisma.TrackingRuleCreateNestedOneWithoutPayloadMappingsInput
 }
 
 export type PayloadMappingUncheckedCreateInput = {
   Id?: number
-  Field: $Enums.PayloadField
-  Source: $Enums.PayloadSource
-  Value?: string | null
-  RequestUrl?: string | null
-  RequestUrlPattern?: string | null
-  RequestMethod?: $Enums.PayloadRequestMethod | null
-  RequestBodyPath?: string | null
-  UrlPart?: $Enums.PayloadUrlPart | null
-  UrlPartValue?: string | null
+  Field: $Enums.PayloadMappingField
+  Source: $Enums.PayloadMappingSource
+  Config: Prisma.JsonNullValueInput | runtime.InputJsonValue
   TrackingRuleId: number
 }
 
 export type PayloadMappingUpdateInput = {
-  Field?: Prisma.EnumPayloadFieldFieldUpdateOperationsInput | $Enums.PayloadField
-  Source?: Prisma.EnumPayloadSourceFieldUpdateOperationsInput | $Enums.PayloadSource
-  Value?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  RequestUrl?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  RequestUrlPattern?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  RequestMethod?: Prisma.NullableEnumPayloadRequestMethodFieldUpdateOperationsInput | $Enums.PayloadRequestMethod | null
-  RequestBodyPath?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  UrlPart?: Prisma.NullableEnumPayloadUrlPartFieldUpdateOperationsInput | $Enums.PayloadUrlPart | null
-  UrlPartValue?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  Field?: Prisma.EnumPayloadMappingFieldFieldUpdateOperationsInput | $Enums.PayloadMappingField
+  Source?: Prisma.EnumPayloadMappingSourceFieldUpdateOperationsInput | $Enums.PayloadMappingSource
+  Config?: Prisma.JsonNullValueInput | runtime.InputJsonValue
   TrackingRule?: Prisma.TrackingRuleUpdateOneRequiredWithoutPayloadMappingsNestedInput
 }
 
 export type PayloadMappingUncheckedUpdateInput = {
   Id?: Prisma.IntFieldUpdateOperationsInput | number
-  Field?: Prisma.EnumPayloadFieldFieldUpdateOperationsInput | $Enums.PayloadField
-  Source?: Prisma.EnumPayloadSourceFieldUpdateOperationsInput | $Enums.PayloadSource
-  Value?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  RequestUrl?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  RequestUrlPattern?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  RequestMethod?: Prisma.NullableEnumPayloadRequestMethodFieldUpdateOperationsInput | $Enums.PayloadRequestMethod | null
-  RequestBodyPath?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  UrlPart?: Prisma.NullableEnumPayloadUrlPartFieldUpdateOperationsInput | $Enums.PayloadUrlPart | null
-  UrlPartValue?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  Field?: Prisma.EnumPayloadMappingFieldFieldUpdateOperationsInput | $Enums.PayloadMappingField
+  Source?: Prisma.EnumPayloadMappingSourceFieldUpdateOperationsInput | $Enums.PayloadMappingSource
+  Config?: Prisma.JsonNullValueInput | runtime.InputJsonValue
   TrackingRuleId?: Prisma.IntFieldUpdateOperationsInput | number
 }
 
 export type PayloadMappingCreateManyInput = {
   Id?: number
-  Field: $Enums.PayloadField
-  Source: $Enums.PayloadSource
-  Value?: string | null
-  RequestUrl?: string | null
-  RequestUrlPattern?: string | null
-  RequestMethod?: $Enums.PayloadRequestMethod | null
-  RequestBodyPath?: string | null
-  UrlPart?: $Enums.PayloadUrlPart | null
-  UrlPartValue?: string | null
+  Field: $Enums.PayloadMappingField
+  Source: $Enums.PayloadMappingSource
+  Config: Prisma.JsonNullValueInput | runtime.InputJsonValue
   TrackingRuleId: number
 }
 
 export type PayloadMappingUpdateManyMutationInput = {
-  Field?: Prisma.EnumPayloadFieldFieldUpdateOperationsInput | $Enums.PayloadField
-  Source?: Prisma.EnumPayloadSourceFieldUpdateOperationsInput | $Enums.PayloadSource
-  Value?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  RequestUrl?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  RequestUrlPattern?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  RequestMethod?: Prisma.NullableEnumPayloadRequestMethodFieldUpdateOperationsInput | $Enums.PayloadRequestMethod | null
-  RequestBodyPath?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  UrlPart?: Prisma.NullableEnumPayloadUrlPartFieldUpdateOperationsInput | $Enums.PayloadUrlPart | null
-  UrlPartValue?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  Field?: Prisma.EnumPayloadMappingFieldFieldUpdateOperationsInput | $Enums.PayloadMappingField
+  Source?: Prisma.EnumPayloadMappingSourceFieldUpdateOperationsInput | $Enums.PayloadMappingSource
+  Config?: Prisma.JsonNullValueInput | runtime.InputJsonValue
 }
 
 export type PayloadMappingUncheckedUpdateManyInput = {
   Id?: Prisma.IntFieldUpdateOperationsInput | number
-  Field?: Prisma.EnumPayloadFieldFieldUpdateOperationsInput | $Enums.PayloadField
-  Source?: Prisma.EnumPayloadSourceFieldUpdateOperationsInput | $Enums.PayloadSource
-  Value?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  RequestUrl?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  RequestUrlPattern?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  RequestMethod?: Prisma.NullableEnumPayloadRequestMethodFieldUpdateOperationsInput | $Enums.PayloadRequestMethod | null
-  RequestBodyPath?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  UrlPart?: Prisma.NullableEnumPayloadUrlPartFieldUpdateOperationsInput | $Enums.PayloadUrlPart | null
-  UrlPartValue?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  Field?: Prisma.EnumPayloadMappingFieldFieldUpdateOperationsInput | $Enums.PayloadMappingField
+  Source?: Prisma.EnumPayloadMappingSourceFieldUpdateOperationsInput | $Enums.PayloadMappingSource
+  Config?: Prisma.JsonNullValueInput | runtime.InputJsonValue
   TrackingRuleId?: Prisma.IntFieldUpdateOperationsInput | number
 }
 
@@ -448,13 +330,7 @@ export type PayloadMappingCountOrderByAggregateInput = {
   Id?: Prisma.SortOrder
   Field?: Prisma.SortOrder
   Source?: Prisma.SortOrder
-  Value?: Prisma.SortOrder
-  RequestUrl?: Prisma.SortOrder
-  RequestUrlPattern?: Prisma.SortOrder
-  RequestMethod?: Prisma.SortOrder
-  RequestBodyPath?: Prisma.SortOrder
-  UrlPart?: Prisma.SortOrder
-  UrlPartValue?: Prisma.SortOrder
+  Config?: Prisma.SortOrder
   TrackingRuleId?: Prisma.SortOrder
 }
 
@@ -467,13 +343,6 @@ export type PayloadMappingMaxOrderByAggregateInput = {
   Id?: Prisma.SortOrder
   Field?: Prisma.SortOrder
   Source?: Prisma.SortOrder
-  Value?: Prisma.SortOrder
-  RequestUrl?: Prisma.SortOrder
-  RequestUrlPattern?: Prisma.SortOrder
-  RequestMethod?: Prisma.SortOrder
-  RequestBodyPath?: Prisma.SortOrder
-  UrlPart?: Prisma.SortOrder
-  UrlPartValue?: Prisma.SortOrder
   TrackingRuleId?: Prisma.SortOrder
 }
 
@@ -481,13 +350,6 @@ export type PayloadMappingMinOrderByAggregateInput = {
   Id?: Prisma.SortOrder
   Field?: Prisma.SortOrder
   Source?: Prisma.SortOrder
-  Value?: Prisma.SortOrder
-  RequestUrl?: Prisma.SortOrder
-  RequestUrlPattern?: Prisma.SortOrder
-  RequestMethod?: Prisma.SortOrder
-  RequestBodyPath?: Prisma.SortOrder
-  UrlPart?: Prisma.SortOrder
-  UrlPartValue?: Prisma.SortOrder
   TrackingRuleId?: Prisma.SortOrder
 }
 
@@ -538,49 +400,25 @@ export type PayloadMappingUncheckedUpdateManyWithoutTrackingRuleNestedInput = {
   deleteMany?: Prisma.PayloadMappingScalarWhereInput | Prisma.PayloadMappingScalarWhereInput[]
 }
 
-export type EnumPayloadFieldFieldUpdateOperationsInput = {
-  set?: $Enums.PayloadField
+export type EnumPayloadMappingFieldFieldUpdateOperationsInput = {
+  set?: $Enums.PayloadMappingField
 }
 
-export type EnumPayloadSourceFieldUpdateOperationsInput = {
-  set?: $Enums.PayloadSource
-}
-
-export type NullableStringFieldUpdateOperationsInput = {
-  set?: string | null
-}
-
-export type NullableEnumPayloadRequestMethodFieldUpdateOperationsInput = {
-  set?: $Enums.PayloadRequestMethod | null
-}
-
-export type NullableEnumPayloadUrlPartFieldUpdateOperationsInput = {
-  set?: $Enums.PayloadUrlPart | null
+export type EnumPayloadMappingSourceFieldUpdateOperationsInput = {
+  set?: $Enums.PayloadMappingSource
 }
 
 export type PayloadMappingCreateWithoutTrackingRuleInput = {
-  Field: $Enums.PayloadField
-  Source: $Enums.PayloadSource
-  Value?: string | null
-  RequestUrl?: string | null
-  RequestUrlPattern?: string | null
-  RequestMethod?: $Enums.PayloadRequestMethod | null
-  RequestBodyPath?: string | null
-  UrlPart?: $Enums.PayloadUrlPart | null
-  UrlPartValue?: string | null
+  Field: $Enums.PayloadMappingField
+  Source: $Enums.PayloadMappingSource
+  Config: Prisma.JsonNullValueInput | runtime.InputJsonValue
 }
 
 export type PayloadMappingUncheckedCreateWithoutTrackingRuleInput = {
   Id?: number
-  Field: $Enums.PayloadField
-  Source: $Enums.PayloadSource
-  Value?: string | null
-  RequestUrl?: string | null
-  RequestUrlPattern?: string | null
-  RequestMethod?: $Enums.PayloadRequestMethod | null
-  RequestBodyPath?: string | null
-  UrlPart?: $Enums.PayloadUrlPart | null
-  UrlPartValue?: string | null
+  Field: $Enums.PayloadMappingField
+  Source: $Enums.PayloadMappingSource
+  Config: Prisma.JsonNullValueInput | runtime.InputJsonValue
 }
 
 export type PayloadMappingCreateOrConnectWithoutTrackingRuleInput = {
@@ -614,67 +452,37 @@ export type PayloadMappingScalarWhereInput = {
   OR?: Prisma.PayloadMappingScalarWhereInput[]
   NOT?: Prisma.PayloadMappingScalarWhereInput | Prisma.PayloadMappingScalarWhereInput[]
   Id?: Prisma.IntFilter<"PayloadMapping"> | number
-  Field?: Prisma.EnumPayloadFieldFilter<"PayloadMapping"> | $Enums.PayloadField
-  Source?: Prisma.EnumPayloadSourceFilter<"PayloadMapping"> | $Enums.PayloadSource
-  Value?: Prisma.StringNullableFilter<"PayloadMapping"> | string | null
-  RequestUrl?: Prisma.StringNullableFilter<"PayloadMapping"> | string | null
-  RequestUrlPattern?: Prisma.StringNullableFilter<"PayloadMapping"> | string | null
-  RequestMethod?: Prisma.EnumPayloadRequestMethodNullableFilter<"PayloadMapping"> | $Enums.PayloadRequestMethod | null
-  RequestBodyPath?: Prisma.StringNullableFilter<"PayloadMapping"> | string | null
-  UrlPart?: Prisma.EnumPayloadUrlPartNullableFilter<"PayloadMapping"> | $Enums.PayloadUrlPart | null
-  UrlPartValue?: Prisma.StringNullableFilter<"PayloadMapping"> | string | null
+  Field?: Prisma.EnumPayloadMappingFieldFilter<"PayloadMapping"> | $Enums.PayloadMappingField
+  Source?: Prisma.EnumPayloadMappingSourceFilter<"PayloadMapping"> | $Enums.PayloadMappingSource
+  Config?: Prisma.JsonFilter<"PayloadMapping">
   TrackingRuleId?: Prisma.IntFilter<"PayloadMapping"> | number
 }
 
 export type PayloadMappingCreateManyTrackingRuleInput = {
   Id?: number
-  Field: $Enums.PayloadField
-  Source: $Enums.PayloadSource
-  Value?: string | null
-  RequestUrl?: string | null
-  RequestUrlPattern?: string | null
-  RequestMethod?: $Enums.PayloadRequestMethod | null
-  RequestBodyPath?: string | null
-  UrlPart?: $Enums.PayloadUrlPart | null
-  UrlPartValue?: string | null
+  Field: $Enums.PayloadMappingField
+  Source: $Enums.PayloadMappingSource
+  Config: Prisma.JsonNullValueInput | runtime.InputJsonValue
 }
 
 export type PayloadMappingUpdateWithoutTrackingRuleInput = {
-  Field?: Prisma.EnumPayloadFieldFieldUpdateOperationsInput | $Enums.PayloadField
-  Source?: Prisma.EnumPayloadSourceFieldUpdateOperationsInput | $Enums.PayloadSource
-  Value?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  RequestUrl?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  RequestUrlPattern?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  RequestMethod?: Prisma.NullableEnumPayloadRequestMethodFieldUpdateOperationsInput | $Enums.PayloadRequestMethod | null
-  RequestBodyPath?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  UrlPart?: Prisma.NullableEnumPayloadUrlPartFieldUpdateOperationsInput | $Enums.PayloadUrlPart | null
-  UrlPartValue?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  Field?: Prisma.EnumPayloadMappingFieldFieldUpdateOperationsInput | $Enums.PayloadMappingField
+  Source?: Prisma.EnumPayloadMappingSourceFieldUpdateOperationsInput | $Enums.PayloadMappingSource
+  Config?: Prisma.JsonNullValueInput | runtime.InputJsonValue
 }
 
 export type PayloadMappingUncheckedUpdateWithoutTrackingRuleInput = {
   Id?: Prisma.IntFieldUpdateOperationsInput | number
-  Field?: Prisma.EnumPayloadFieldFieldUpdateOperationsInput | $Enums.PayloadField
-  Source?: Prisma.EnumPayloadSourceFieldUpdateOperationsInput | $Enums.PayloadSource
-  Value?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  RequestUrl?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  RequestUrlPattern?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  RequestMethod?: Prisma.NullableEnumPayloadRequestMethodFieldUpdateOperationsInput | $Enums.PayloadRequestMethod | null
-  RequestBodyPath?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  UrlPart?: Prisma.NullableEnumPayloadUrlPartFieldUpdateOperationsInput | $Enums.PayloadUrlPart | null
-  UrlPartValue?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  Field?: Prisma.EnumPayloadMappingFieldFieldUpdateOperationsInput | $Enums.PayloadMappingField
+  Source?: Prisma.EnumPayloadMappingSourceFieldUpdateOperationsInput | $Enums.PayloadMappingSource
+  Config?: Prisma.JsonNullValueInput | runtime.InputJsonValue
 }
 
 export type PayloadMappingUncheckedUpdateManyWithoutTrackingRuleInput = {
   Id?: Prisma.IntFieldUpdateOperationsInput | number
-  Field?: Prisma.EnumPayloadFieldFieldUpdateOperationsInput | $Enums.PayloadField
-  Source?: Prisma.EnumPayloadSourceFieldUpdateOperationsInput | $Enums.PayloadSource
-  Value?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  RequestUrl?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  RequestUrlPattern?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  RequestMethod?: Prisma.NullableEnumPayloadRequestMethodFieldUpdateOperationsInput | $Enums.PayloadRequestMethod | null
-  RequestBodyPath?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  UrlPart?: Prisma.NullableEnumPayloadUrlPartFieldUpdateOperationsInput | $Enums.PayloadUrlPart | null
-  UrlPartValue?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  Field?: Prisma.EnumPayloadMappingFieldFieldUpdateOperationsInput | $Enums.PayloadMappingField
+  Source?: Prisma.EnumPayloadMappingSourceFieldUpdateOperationsInput | $Enums.PayloadMappingSource
+  Config?: Prisma.JsonNullValueInput | runtime.InputJsonValue
 }
 
 
@@ -683,13 +491,7 @@ export type PayloadMappingSelect<ExtArgs extends runtime.Types.Extensions.Intern
   Id?: boolean
   Field?: boolean
   Source?: boolean
-  Value?: boolean
-  RequestUrl?: boolean
-  RequestUrlPattern?: boolean
-  RequestMethod?: boolean
-  RequestBodyPath?: boolean
-  UrlPart?: boolean
-  UrlPartValue?: boolean
+  Config?: boolean
   TrackingRuleId?: boolean
   TrackingRule?: boolean | Prisma.TrackingRuleDefaultArgs<ExtArgs>
 }, ExtArgs["result"]["payloadMapping"]>
@@ -698,13 +500,7 @@ export type PayloadMappingSelectCreateManyAndReturn<ExtArgs extends runtime.Type
   Id?: boolean
   Field?: boolean
   Source?: boolean
-  Value?: boolean
-  RequestUrl?: boolean
-  RequestUrlPattern?: boolean
-  RequestMethod?: boolean
-  RequestBodyPath?: boolean
-  UrlPart?: boolean
-  UrlPartValue?: boolean
+  Config?: boolean
   TrackingRuleId?: boolean
   TrackingRule?: boolean | Prisma.TrackingRuleDefaultArgs<ExtArgs>
 }, ExtArgs["result"]["payloadMapping"]>
@@ -713,13 +509,7 @@ export type PayloadMappingSelectUpdateManyAndReturn<ExtArgs extends runtime.Type
   Id?: boolean
   Field?: boolean
   Source?: boolean
-  Value?: boolean
-  RequestUrl?: boolean
-  RequestUrlPattern?: boolean
-  RequestMethod?: boolean
-  RequestBodyPath?: boolean
-  UrlPart?: boolean
-  UrlPartValue?: boolean
+  Config?: boolean
   TrackingRuleId?: boolean
   TrackingRule?: boolean | Prisma.TrackingRuleDefaultArgs<ExtArgs>
 }, ExtArgs["result"]["payloadMapping"]>
@@ -728,17 +518,11 @@ export type PayloadMappingSelectScalar = {
   Id?: boolean
   Field?: boolean
   Source?: boolean
-  Value?: boolean
-  RequestUrl?: boolean
-  RequestUrlPattern?: boolean
-  RequestMethod?: boolean
-  RequestBodyPath?: boolean
-  UrlPart?: boolean
-  UrlPartValue?: boolean
+  Config?: boolean
   TrackingRuleId?: boolean
 }
 
-export type PayloadMappingOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"Id" | "Field" | "Source" | "Value" | "RequestUrl" | "RequestUrlPattern" | "RequestMethod" | "RequestBodyPath" | "UrlPart" | "UrlPartValue" | "TrackingRuleId", ExtArgs["result"]["payloadMapping"]>
+export type PayloadMappingOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"Id" | "Field" | "Source" | "Config" | "TrackingRuleId", ExtArgs["result"]["payloadMapping"]>
 export type PayloadMappingInclude<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   TrackingRule?: boolean | Prisma.TrackingRuleDefaultArgs<ExtArgs>
 }
@@ -756,15 +540,9 @@ export type $PayloadMappingPayload<ExtArgs extends runtime.Types.Extensions.Inte
   }
   scalars: runtime.Types.Extensions.GetPayloadResult<{
     Id: number
-    Field: $Enums.PayloadField
-    Source: $Enums.PayloadSource
-    Value: string | null
-    RequestUrl: string | null
-    RequestUrlPattern: string | null
-    RequestMethod: $Enums.PayloadRequestMethod | null
-    RequestBodyPath: string | null
-    UrlPart: $Enums.PayloadUrlPart | null
-    UrlPartValue: string | null
+    Field: $Enums.PayloadMappingField
+    Source: $Enums.PayloadMappingSource
+    Config: runtime.JsonValue
     TrackingRuleId: number
   }, ExtArgs["result"]["payloadMapping"]>
   composites: {}
@@ -1191,15 +969,9 @@ export interface Prisma__PayloadMappingClient<T, Null = never, ExtArgs extends r
  */
 export interface PayloadMappingFieldRefs {
   readonly Id: Prisma.FieldRef<"PayloadMapping", 'Int'>
-  readonly Field: Prisma.FieldRef<"PayloadMapping", 'PayloadField'>
-  readonly Source: Prisma.FieldRef<"PayloadMapping", 'PayloadSource'>
-  readonly Value: Prisma.FieldRef<"PayloadMapping", 'String'>
-  readonly RequestUrl: Prisma.FieldRef<"PayloadMapping", 'String'>
-  readonly RequestUrlPattern: Prisma.FieldRef<"PayloadMapping", 'String'>
-  readonly RequestMethod: Prisma.FieldRef<"PayloadMapping", 'PayloadRequestMethod'>
-  readonly RequestBodyPath: Prisma.FieldRef<"PayloadMapping", 'String'>
-  readonly UrlPart: Prisma.FieldRef<"PayloadMapping", 'PayloadUrlPart'>
-  readonly UrlPartValue: Prisma.FieldRef<"PayloadMapping", 'String'>
+  readonly Field: Prisma.FieldRef<"PayloadMapping", 'PayloadMappingField'>
+  readonly Source: Prisma.FieldRef<"PayloadMapping", 'PayloadMappingSource'>
+  readonly Config: Prisma.FieldRef<"PayloadMapping", 'Json'>
   readonly TrackingRuleId: Prisma.FieldRef<"PayloadMapping", 'Int'>
 }
     

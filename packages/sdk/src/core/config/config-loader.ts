@@ -1,6 +1,6 @@
-import { TrackerConfig, TrackingRule, ReturnMethod, PayloadMapping, Condition, TrackingTarget } from '../../types';
+import { TrackerConfig, TrackingRule, ReturnMethod, PayloadMapping } from '../../types';
 import { OriginVerifier } from '../utils/origin-verifier';
-import { DEFAULT_API_URL, DEFAULT_CONFIG_ENDPOINT_PATH } from '../constants';
+import { DEFAULT_API_URL } from '../constants';
 
 // Luồng hoạt động
 // 1. SDK khởi tạo
@@ -62,9 +62,10 @@ export class ConfigLoader {
     const baseUrl = process.env.API_URL || DEFAULT_API_URL;
 
     try {
-      // Bước 1: Gọi 4 API song song để lấy domain, list rules cơ bản, return methods và event types
+      // Bước 1: Gọi 3 API song song để lấy domain, return methods và event types
+      // Rules sẽ dùng mock data
       const [domainResponse, rulesListResponse, returnMethodsResponse, eventTypesResponse] = await Promise.all([
-        fetch(`${baseUrl}${DEFAULT_CONFIG_ENDPOINT_PATH}/${this.domainKey}`),
+        fetch(`${baseUrl}/domain/${this.domainKey}`),
         fetch(`${baseUrl}/rule/domain/${this.domainKey}`),
         fetch(`${baseUrl}/return-method/${this.domainKey}`),
         fetch(`${baseUrl}/rule/event-type`)
@@ -118,23 +119,9 @@ export class ConfigLoader {
       name: rule.Name || rule.name,
       domainId: rule.DomainID || rule.domainId,
       eventTypeId: rule.EventTypeID || rule.eventTypeId,
-      trackingTargetId: rule.TrackingTargetId || rule.trackingTargetId,
-      payloadMappings: this.transformPayloadMappings(rule.PayloadMappings || rule.payloadMappings || []),
-      conditions: this.transformConditions(rule.Conditions || rule.conditions || []),
-      trackingTarget: this.transformTrackingTarget(rule.TrackingTarget || rule.trackingTarget),
-    }));
-  }
-
-  // Transform conditions từ server format sang SDK format
-  private transformConditions(conditionsData: any[]): Condition[] {
-    if (!Array.isArray(conditionsData)) return [];
-
-    return conditionsData.map(condition => ({
-      id: condition.Id || condition.id,
-      value: condition.Value || condition.value,
-      trackingRuleId: condition.TrackingRuleID || condition.trackingRuleId,
-      patternId: condition.PatternId || condition.patternId,
-      operatorId: condition.OperatorID || condition.operatorId,
+      actionType: rule.ActionType || rule.actionType || null,
+      payloadMappings: this.transformPayloadMappings(rule.PayloadMapping || rule.PayloadMappings || rule.payloadMappings || []),
+      trackingTarget: this.transformTrackingTargetToString(rule.TrackingTarget || rule.trackingTarget),
     }));
   }
 
@@ -146,33 +133,24 @@ export class ConfigLoader {
       id: payload.Id || payload.id,
       field: payload.Field || payload.field,
       source: payload.Source || payload.source,
-      value: payload.Value || payload.value,
-      requestUrlPattern: payload.RequestUrlPattern || payload.requestUrlPattern || null,
-      requestMethod: payload.RequestMethod || payload.requestMethod || null,
-      requestBodyPath: payload.RequestBodyPath || payload.requestBodyPath || null,
-      urlPart: payload.UrlPart || payload.urlPart || null,
-      urlPartValue: payload.UrlPartValue || payload.urlPartValue || null,
+      config: payload.Config || payload.config || {},
       trackingRuleId: payload.TrackingRuleId || payload.trackingRuleId,
     }));
   }
 
-  // Transform tracking target từ server format sang SDK format
-  private transformTrackingTarget(targetData: any): TrackingTarget {
+  // Transform tracking target từ server format sang SDK format (trả về string)
+  private transformTrackingTargetToString(targetData: any): string {
     if (!targetData) {
-      return {
-        id: 0,
-        value: '',
-        patternId: 0,
-        operatorId: 0,
-      };
+      return '';
     }
 
-    return {
-      id: targetData.Id || targetData.id || 0,
-      value: targetData.Value || targetData.value || '',
-      patternId: targetData.PatternId || targetData.patternId || 0,
-      operatorId: targetData.OperatorId || targetData.operatorId || 0,
-    };
+    // Nếu targetData là string (CSS selector), trả về trực tiếp
+    if (typeof targetData === 'string') {
+      return targetData;
+    }
+
+    // Nếu targetData là object, lấy value
+    return targetData.Value || targetData.value || '';
   }
 
   // Transform return methods từ server format sang SDK format

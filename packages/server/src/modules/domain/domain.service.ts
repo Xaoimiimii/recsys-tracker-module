@@ -82,4 +82,22 @@ export class DomainService {
         const methods = await this.prisma.returnMethod.findMany();
         return methods;
     }
+    
+    async getUserIdentity(domainKey: string) {
+        const domain = await this.prisma.domain.findUnique({
+            where: {
+                Key: domainKey
+            }
+        });
+
+        if (!domain) throw new NotFoundException(`Key ${domainKey} not found`);
+
+        const userIdentity = await this.prisma.userIdentity.findFirst({
+            where: {
+                DomainId: domain.Id
+            }
+        });
+
+        return userIdentity;
+    }
 }

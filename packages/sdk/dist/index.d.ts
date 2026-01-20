@@ -3,6 +3,7 @@ import { TrackerConfig } from './types';
 import { PayloadBuilder } from './core/payload/payload-builder';
 import { EventDeduplicator } from './core/utils/event-deduplicator';
 import { LoopGuard } from './core/utils/loop-guard';
+import { UserIdentityManager } from './core/user';
 export declare class RecSysTracker {
     private configLoader;
     private errorBoundary;
@@ -18,6 +19,7 @@ export declare class RecSysTracker {
     payloadBuilder: PayloadBuilder;
     eventDeduplicator: EventDeduplicator;
     loopGuard: LoopGuard;
+    userIdentityManager: UserIdentityManager;
     constructor();
     init(): Promise<void>;
     private autoInitializePlugins;
@@ -49,9 +51,7 @@ export { EventDeduplicator } from './core/utils/event-deduplicator';
 export { LoopGuard } from './core/utils/loop-guard';
 export { IPlugin, BasePlugin } from './core/plugins/base-plugin';
 export { ClickPlugin } from './core/plugins/click-plugin';
-export { PageViewPlugin } from './core/plugins/page-view-plugin';
 export { RatingPlugin } from './core/plugins/rating-plugin';
-export { ScrollPlugin } from './core/plugins/scroll-plugin';
 export { ReviewPlugin } from './core/plugins/review-plugin';
 export type * from './types';
 //# sourceMappingURL=index.d.ts.map

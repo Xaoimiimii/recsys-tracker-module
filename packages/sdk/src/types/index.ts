@@ -18,49 +18,49 @@ export interface TrackingRule {
   name: string;
   domainId: number;
   eventTypeId: number; 
-  trackingTargetId: number;
+  actionType?: string | null;
   payloadMappings: PayloadMapping[];
-  conditions: Condition[];
-  trackingTarget: TrackingTarget;
+  trackingTarget: string;
 }
 
 export interface PayloadMapping {
-  id: number;
+  id?: number;
   field: string;
   source: string;
-  value: string;
-  requestUrlPattern?: string | null;
-  requestMethod?: string | null;
-  requestBodyPath?: string | null;
-  urlPart?: string | null;
-  urlPartValue?: string | null;
-  trackingRuleId: number;
+  config: PayloadMappingConfig;
+  trackingRuleId?: number;
 }
 
-export interface PayloadConfig {
-  field: string;
-  source: string;
-  value?: string;
-  requestUrlPattern?: string;
-  requestMethod?: string;
-  requestBodyPath?: string;
-  urlPart?: string;
-  urlPartValue?: string;
+export interface PayloadMappingConfig {
+  // For request_url source
+  RequestUrlPattern?: string;
+  RequestMethod?: string;
+  Value?: string; // For pathname: segment index, for query: param name, for request_body: JSON path
+  ExtractType?: 'pathname' | 'query'; // Only for request_url
+  
+  // For request_body/response_body source
+  // (RequestUrlPattern and RequestMethod already covered above)
+  // Value used as JSON path for body extraction
+  
+  // For element source
+  SelectorPattern?: string;
 }
 
-export interface Condition {
-  id: number;
-  value: string;
-  trackingRuleId: number;
-  patternId: number;
-  operatorId: number;
+// User Identity configuration
+export interface UserIdentityConfig {
+  id?: number;
+  source: 'request_body' | 'request_url' | 'local_storage' | 'session_storage' | 'cookie' | 'element';
+  domainId: number;
+  requestConfig?: UserIdentityRequestConfig | null;
+  value?: string | null; // For element/cookie/local_storage/session_storage
+  field: 'UserId' | 'AnonymousId';
 }
 
-export interface TrackingTarget {
-  id: number;
-  value: string;
-  patternId: number;
-  operatorId: number;
+export interface UserIdentityRequestConfig {
+  RequestUrlPattern: string;
+  RequestMethod: string;
+  Value: string; // JSON path for request_body, segment index for request_url pathname
+  ExtractType?: 'pathname' | 'query'; // Only for request_url
 }
 
 export interface ReturnMethod {
