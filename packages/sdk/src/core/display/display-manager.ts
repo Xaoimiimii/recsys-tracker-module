@@ -8,7 +8,7 @@ const ANON_USER_ID_KEY = 'recsys_anon_id';
 export class DisplayManager {
   private popupDisplay: PopupDisplay | null = null;
   private inlineDisplay: InlineDisplay | null = null;
-  //private domainKey: string;
+  private domainKey: string;
   private apiBaseUrl: string;
   
   private recommendationFetcher: RecommendationFetcher;
@@ -16,15 +16,10 @@ export class DisplayManager {
   private cachedRecommendations: RecommendationItem[] | null = null;
   private fetchPromise: Promise<RecommendationItem[]> | null = null;
 
-  // constructor(domainKey: string, apiBaseUrl: string = 'https://recsys-tracker-module.onrender.com') {
-  //   this.domainKey = domainKey;
-  //   this.apiBaseUrl = apiBaseUrl;
-  //   this.recommendationFetcher = new RecommendationFetcher(domainKey, apiBaseUrl);
-  // }
-
-  constructor(apiBaseUrl: string = 'https://recsys-tracker-module.onrender.com') {
+  constructor(domainKey: string, apiBaseUrl: string = 'https://recsys-tracker-module.onrender.com') {
+    this.domainKey = domainKey;
     this.apiBaseUrl = apiBaseUrl;
-    this.recommendationFetcher = new RecommendationFetcher(apiBaseUrl);
+    this.recommendationFetcher = new RecommendationFetcher(domainKey, apiBaseUrl);
   }
 
   // Khởi tạo display methods dựa trên danh sách config
@@ -100,10 +95,11 @@ export class DisplayManager {
   private initializePopup(slotName: string, config: PopupConfig): void {
     try {
       this.popupDisplay = new PopupDisplay(
+        this.domainKey,
         slotName,
         this.apiBaseUrl,
         config, 
-        () => this.getRecommendations()
+        //() => this.getRecommendations()
       );
       
       this.popupDisplay.start();
@@ -118,6 +114,7 @@ export class DisplayManager {
       if (!config.selector) return;
 
       this.inlineDisplay = new InlineDisplay(
+        this.domainKey,
         slotName,
         config.selector,
         this.apiBaseUrl,

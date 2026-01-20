@@ -1,5 +1,5 @@
 export class InlineDisplay {
-    constructor(_slotName, selector, _apiBaseUrl, config = {}, recommendationGetter) {
+    constructor(_domainKey, _slotName, selector, _apiBaseUrl, config = {}, recommendationGetter) {
         this.observer = null;
         this.debounceTimer = null;
         this.selector = selector;

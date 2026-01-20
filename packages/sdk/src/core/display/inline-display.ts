@@ -9,6 +9,7 @@ export class InlineDisplay {
   private debounceTimer: NodeJS.Timeout | null = null;
 
   constructor(
+    _domainKey: string,
     _slotName: string,
     selector: string,
     _apiBaseUrl: string,

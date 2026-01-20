@@ -6,7 +6,7 @@ export declare class InlineDisplay {
     private recommendationGetter;
     private observer;
     private debounceTimer;
-    constructor(_slotName: string, selector: string, _apiBaseUrl: string, config: InlineConfig | undefined, recommendationGetter: () => Promise<RecommendationItem[]>);
+    constructor(_domainKey: string, _slotName: string, selector: string, _apiBaseUrl: string, config: InlineConfig | undefined, recommendationGetter: () => Promise<RecommendationItem[]>);
     start(): void;
     stop(): void;
     private scanAndRender;

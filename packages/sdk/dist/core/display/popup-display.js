@@ -1,12 +1,57 @@
+const MOCK_ITEMS = [
+    {
+        "id": 460, "domainItemId": "444", "title": "Tình Yêu Xanh Lá (juju)", "description": "",
+        "img": "https://i.pinimg.com/736x/38/9a/5e/389a5e34f5880fb86115e87561372908.jpg"
+    },
+    {
+        "id": 131, "domainItemId": "107", "title": "How Long", "description": "",
+        "img": "https://i.pinimg.com/736x/38/9a/5e/389a5e34f5880fb86115e87561372908.jpg"
+    },
+    {
+        "id": 644, "domainItemId": "629", "title": "Break Free", "description": "",
+        "img": "https://i.pinimg.com/736x/38/9a/5e/389a5e34f5880fb86115e87561372908.jpg"
+    },
+    {
+        "id": 194, "domainItemId": "172", "title": "Đẹp Nhất Là Em(Between us)", "description": "",
+        "img": "https://i.pinimg.com/736x/38/9a/5e/389a5e34f5880fb86115e87561372908.jpg"
+    },
+    {
+        "id": 68, "domainItemId": "22", "title": "Cho Tôi Lang Thang", "description": "",
+        "img": "https://i.pinimg.com/736x/38/9a/5e/389a5e34f5880fb86115e87561372908.jpg"
+    },
+    {
+        "id": 383, "domainItemId": "364", "title": "Nonsense", "description": "",
+        "img": "https://i.pinimg.com/736x/38/9a/5e/389a5e34f5880fb86115e87561372908.jpg"
+    },
+    {
+        "id": 84, "domainItemId": "38", "title": "một triệu like", "description": "",
+        "img": "https://i.pinimg.com/736x/38/9a/5e/389a5e34f5880fb86115e87561372908.jpg"
+    },
+    {
+        "id": 622, "domainItemId": "607", "title": "Bang Bang", "description": "",
+        "img": "https://i.pinimg.com/736x/38/9a/5e/389a5e34f5880fb86115e87561372908.jpg"
+    },
+    {
+        "id": 604, "domainItemId": "589", "title": "After Hours", "description": "",
+        "img": "https://i.pinimg.com/736x/38/9a/5e/389a5e34f5880fb86115e87561372908.jpg"
+    },
+    {
+        "id": 813, "domainItemId": "799", "title": "Bâng Khuâng", "description": "",
+        "img": "https://i.pinimg.com/736x/38/9a/5e/389a5e34f5880fb86115e87561372908.jpg"
+    }
+];
 export class PopupDisplay {
-    constructor(_slotName, _apiBaseUrl, config = {}, recommendationGetter) {
+    constructor(_domainKey, _slotName, _apiBaseUrl, config = {}) {
         var _a;
+        //private recommendationGetter: () => Promise<RecommendationItem[]>;
         this.popupTimeout = null;
         this.autoCloseTimeout = null;
         this.autoSlideTimeout = null;
         this.shadowHost = null;
+        this.spaCheckInterval = null;
+        this.isPendingShow = false;
         this.DEFAULT_DELAY = 5000;
-        this.recommendationGetter = recommendationGetter;
+        //this.recommendationGetter = recommendationGetter;
         this.config = {
             delay: (_a = config.delay) !== null && _a !== void 0 ? _a : this.DEFAULT_DELAY,
             autoCloseDelay: config.autoCloseDelay,
@@ -14,11 +59,71 @@ export class PopupDisplay {
         };
     }
     start() {
-        this.scheduleNextPopup();
+        this.startWatcher();
     }
     stop() {
         this.clearTimeouts();
+        if (this.spaCheckInterval) {
+            clearInterval(this.spaCheckInterval);
+            this.spaCheckInterval = null;
+        }
         this.removePopup();
+    }
+    startWatcher() {
+        if (this.spaCheckInterval)
+            clearInterval(this.spaCheckInterval);
+        this.spaCheckInterval = setInterval(() => {
+            const shouldShow = this.shouldShowPopup(); // Check URL hiện tại
+            const isVisible = this.shadowHost !== null; // Check xem Popup có đang hiện không
+            // CASE 1: URL KHÔNG khớp nhưng Popup đang hiện -> ĐÓNG NGAY
+            if (!shouldShow && isVisible) {
+                this.removePopup();
+                this.isPendingShow = false;
+                this.clearTimeouts(); // Hủy luôn nếu có timer nào đang chạy ngầm
+                return;
+            }
+            // CASE 2: URL KHÔNG khớp nhưng đang đếm ngược để hiện -> HỦY ĐẾM NGƯỢC
+            if (!shouldShow && this.isPendingShow) {
+                this.clearTimeouts();
+                this.isPendingShow = false;
+                return;
+            }
+            // CASE 3: URL KHỚP, Popup CHƯA hiện và CHƯA đếm ngược -> BẮT ĐẦU ĐẾM
+            if (shouldShow && !isVisible && !this.isPendingShow) {
+                this.scheduleShow();
+            }
+        }, 500);
+    }
+    // Hàm lên lịch hiển thị (tách riêng logic delay)
+    scheduleShow() {
+        const delay = this.config.delay || 0;
+        this.isPendingShow = true;
+        this.popupTimeout = setTimeout(() => {
+            if (this.shouldShowPopup()) {
+                this.showPopup();
+            }
+            this.isPendingShow = false;
+        }, delay);
+    }
+    async showPopup() {
+        try {
+            const items = MOCK_ITEMS; //this.fetchRecommendations()
+            // Chỉ hiện nếu chưa hiện (double check)
+            if (items && items.length > 0 && !this.shadowHost) {
+                this.renderPopup(items);
+                // Logic autoClose (tự đóng sau X giây)
+                if (this.config.autoCloseDelay && this.config.autoCloseDelay > 0) {
+                    this.autoCloseTimeout = setTimeout(() => {
+                        this.removePopup();
+                        // Sau khi đóng, Watcher vẫn chạy nên nếu URL vẫn đúng thì nó sẽ lại đếm ngược để hiện lại.
+                        // Nếu muốn hiện 1 lần duy nhất mỗi lần vào trang, cần thêm logic session storage.
+                    }, this.config.autoCloseDelay * 1000);
+                }
+            }
+        }
+        catch (error) {
+            this.isPendingShow = false;
+        }
     }
     // --- LOGIC 1: TRIGGER CONFIG (URL CHECKING) ---
     shouldShowPopup() {
@@ -29,25 +134,16 @@ export class PopupDisplay {
         // Lấy URL hiện tại (pathname: /products/ao-thun)
         const currentUrl = window.location.pathname;
         const targetUrl = trigger.targetValue;
-        // Logic OperatorId (Map với select option trong form của bạn)
-        switch (trigger.operatorId) {
-            case 1: // Contains
-                return currentUrl.includes(targetUrl);
-            case 2: // Equals
-                return currentUrl === targetUrl;
-            case 3: // Starts with
-                return currentUrl.startsWith(targetUrl);
-            case 4: // Ends with
-                return currentUrl.endsWith(targetUrl);
-            default:
-                return true;
-        }
+        return currentUrl.includes(targetUrl);
     }
     scheduleNextPopup() {
         this.clearTimeouts();
         // Check ngay lập tức trước khi hẹn giờ
         if (!this.shouldShowPopup()) {
-            return; // Không khớp URL -> Không làm gì cả
+            this.popupTimeout = setTimeout(() => {
+                this.scheduleNextPopup();
+            }, 1000);
+            return;
         }
         const delay = this.config.delay || 0;
         this.popupTimeout = setTimeout(() => {
@@ -61,38 +157,14 @@ export class PopupDisplay {
             }
         }, delay);
     }
-    async showPopup() {
-        try {
-            const items = await this.fetchRecommendations();
-            console.log('PopupDisplay - Fetched items:', items);
-            if (items && items.length > 0) {
-                this.renderPopup(items);
-                if (this.config.autoCloseDelay && this.config.autoCloseDelay > 0) {
-                    this.autoCloseTimeout = setTimeout(() => {
-                        this.removePopup();
-                        this.scheduleNextPopup();
-                    }, this.config.autoCloseDelay * 1000); // DB lưu giây, setTimeout cần ms
-                }
-            }
-            else {
-                this.scheduleNextPopup();
-            }
-        }
-        catch (error) {
-            this.scheduleNextPopup();
-        }
-    }
-    async fetchRecommendations() {
-        try {
-            return await this.recommendationGetter();
-        }
-        catch {
-            return [];
-        }
-    }
+    // private async fetchRecommendations(): Promise<RecommendationItem[]> {
+    //   try {
+    //     return await this.recommendationGetter();
+    //   } catch { return []; }
+    // }
     // --- LOGIC 2: DYNAMIC CSS GENERATOR ---
     getDynamicStyles() {
-        var _a, _b, _c, _d, _e, _f, _g, _h, _j, _k, _l;
+        var _a, _b, _c, _d, _e, _f, _g, _h, _j, _k, _l, _m;
         const style = this.config.styleJson || {};
         const layout = this.config.layoutJson || {};
         const tokens = style.tokens || {};
@@ -110,8 +182,8 @@ export class PopupDisplay {
         else if (popupWrapper.position === 'top-center') {
             posCSS = 'top: 24px; left: 50%; transform: translateX(-50%);';
         }
-        const width = popupWrapper.width ? `${popupWrapper.width}px` : '340px';
-        const fontFamily = typo.fontFamily || 'Arial, sans-serif';
+        // const width = popupWrapper.width ? `${popupWrapper.width}px` : '340px';
+        const width = '340px';
         const contentMode = layout.contentMode || 'carousel'; // carousel, grid, list
         // CSS cho phần body (nơi chứa items)
         let bodyLayoutCSS = '';
@@ -123,7 +195,7 @@ export class PopupDisplay {
             gap: ${gridGap};
             padding: 16px;
             overflow-y: auto;
-            max-height: 400px; /* Giới hạn chiều cao nếu nhiều item */
+            max-height: 200px; /* Giới hạn chiều cao nếu nhiều item */
         `;
         }
         else if (contentMode === 'list') {
@@ -134,14 +206,14 @@ export class PopupDisplay {
             gap: ${listGap};
             padding: 16px;
             overflow-y: auto;
-            max-height: 400px;
+            max-height: 200px;
         `;
         }
         else {
             bodyLayoutCSS = `width: 100%; padding: 16px;`;
         }
         return `
-      :host { all: initial; font-family: ${fontFamily}; }
+      :host { all: initial; font-family: inherit; }
       * { box-sizing: border-box; }
 
       .recsys-popup {
@@ -194,7 +266,7 @@ export class PopupDisplay {
 
       .recsys-slide { width: 100%; padding: 16px; }
 
-      .recsys-item { display: flex; flex-direction: column; gap: 8px; text-align: center; }
+      .recsys-item { display: flex; flex-direction: column; gap: 8px; text-align: center; align-items: center;}
 
       .recsys-img { 
          width: 100%; height: 180px; object-fit: cover; 
@@ -205,7 +277,7 @@ export class PopupDisplay {
       .recsys-field { margin-bottom: 2px; }
       .recsys-field-product_name, .recsys-field-name {
          font-size: ${((_l = typo.body) === null || _l === void 0 ? void 0 : _l.fontSize) || 14}px;
-         font-weight: 600; color: ${colors.textPrimary || '#333'};
+         font-weight: ${((_m = typo.body) === null || _m === void 0 ? void 0 : _m.fontWeight) || 600}; color: ${colors.textPrimary || '#333'};
          display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;
       }
       .recsys-field-price {
@@ -322,8 +394,7 @@ export class PopupDisplay {
             return;
         let html = '';
         // Giới hạn số lượng hiển thị nếu là popup tĩnh (vd: tối đa 4 cái)
-        const maxItems = 4;
-        items.slice(0, maxItems).forEach(item => {
+        items.forEach(item => {
             html += this.renderItemContent(item);
         });
         container.innerHTML = html;
@@ -361,6 +432,7 @@ export class PopupDisplay {
         if (this.shadowHost) {
             this.shadowHost.remove();
             this.shadowHost = null;
+            this.isPendingShow = false;
         }
     }
     clearTimeouts() {

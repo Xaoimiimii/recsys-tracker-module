@@ -1,20 +1,21 @@
 import { PopupConfig } from '../../types';
-import { RecommendationItem } from '../recommendation';
 export declare class PopupDisplay {
     private config;
-    private recommendationGetter;
     private popupTimeout;
     private autoCloseTimeout;
     private autoSlideTimeout;
     private shadowHost;
+    private spaCheckInterval;
+    private isPendingShow;
     private readonly DEFAULT_DELAY;
-    constructor(_slotName: string, _apiBaseUrl: string, config: PopupConfig | undefined, recommendationGetter: () => Promise<RecommendationItem[]>);
+    constructor(_domainKey: string, _slotName: string, _apiBaseUrl: string, config?: PopupConfig);
     start(): void;
     stop(): void;
+    private startWatcher;
+    private scheduleShow;
+    private showPopup;
     private shouldShowPopup;
     private scheduleNextPopup;
-    private showPopup;
-    private fetchRecommendations;
     private getDynamicStyles;
     private renderItemContent;
     private renderPopup;

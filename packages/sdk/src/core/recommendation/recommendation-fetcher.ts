@@ -8,21 +8,21 @@ import {
 import { PlaceholderImage } from './placeholder-image';
 
 export class RecommendationFetcher {
-  //private domainKey: string;
+  private domainKey: string;
   private apiBaseUrl: string;
   private cache: Map<string, { items: RecommendationItem[], timestamp: number }>;
   private readonly CACHE_TTL = 5 * 60 * 1000; // 5 minutes cache
 
-  // constructor(domainKey: string, apiBaseUrl: string = 'https://recsys-tracker-module.onrender.com') {
-  //   this.domainKey = domainKey;
-  //   this.apiBaseUrl = apiBaseUrl;
-  //   this.cache = new Map();
-  // }
-
-  constructor(apiBaseUrl: string = 'http://localhost:3001') {
+  constructor(domainKey: string, apiBaseUrl: string = 'https://recsys-tracker-module.onrender.com') {
+    this.domainKey = domainKey;
     this.apiBaseUrl = apiBaseUrl;
     this.cache = new Map();
   }
+
+  // constructor(apiBaseUrl: string = 'http://localhost:3001') {
+  //   this.apiBaseUrl = apiBaseUrl;
+  //   this.cache = new Map();
+  // }
 
   async fetchRecommendations(
     userValue: string,
@@ -40,7 +40,7 @@ export class RecommendationFetcher {
       // Prepare request payload
       const requestBody: RecommendationRequest = {
         AnonymousId: this.getOrCreateAnonymousId(),
-        //DomainKey: this.domainKey,
+        DomainKey: this.domainKey,
         NumberItems: options.numberItems || 10,
       };
 
@@ -52,7 +52,7 @@ export class RecommendationFetcher {
 
       // Call API
       const response = await fetch(`${this.apiBaseUrl}/recommendation`, {
-        method: 'GET',
+        method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },

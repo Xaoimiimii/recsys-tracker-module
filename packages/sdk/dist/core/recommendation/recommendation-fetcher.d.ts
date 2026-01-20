@@ -1,9 +1,10 @@
 import { RecommendationItem, RecommendationOptions, UserField } from './types';
 export declare class RecommendationFetcher {
+    private domainKey;
     private apiBaseUrl;
     private cache;
     private readonly CACHE_TTL;
-    constructor(apiBaseUrl?: string);
+    constructor(domainKey: string, apiBaseUrl?: string);
     fetchRecommendations(userValue: string, userField?: UserField, options?: RecommendationOptions): Promise<RecommendationItem[]>;
     /**
      * Get recommendations cho anonymous user (auto-detect)

@@ -3,18 +3,14 @@ import { InlineDisplay } from './inline-display';
 import { RecommendationFetcher } from '../recommendation';
 const ANON_USER_ID_KEY = 'recsys_anon_id';
 export class DisplayManager {
-    // constructor(domainKey: string, apiBaseUrl: string = 'https://recsys-tracker-module.onrender.com') {
-    //   this.domainKey = domainKey;
-    //   this.apiBaseUrl = apiBaseUrl;
-    //   this.recommendationFetcher = new RecommendationFetcher(domainKey, apiBaseUrl);
-    // }
-    constructor(apiBaseUrl = 'https://recsys-tracker-module.onrender.com') {
+    constructor(domainKey, apiBaseUrl = 'https://recsys-tracker-module.onrender.com') {
         this.popupDisplay = null;
         this.inlineDisplay = null;
         this.cachedRecommendations = null;
         this.fetchPromise = null;
+        this.domainKey = domainKey;
         this.apiBaseUrl = apiBaseUrl;
-        this.recommendationFetcher = new RecommendationFetcher(apiBaseUrl);
+        this.recommendationFetcher = new RecommendationFetcher(domainKey, apiBaseUrl);
     }
     // Khởi tạo display methods dựa trên danh sách config
     async initialize(returnMethods) {
@@ -83,7 +79,7 @@ export class DisplayManager {
     // }
     initializePopup(slotName, config) {
         try {
-            this.popupDisplay = new PopupDisplay(slotName, this.apiBaseUrl, config, () => this.getRecommendations());
+            this.popupDisplay = new PopupDisplay(this.domainKey, slotName, this.apiBaseUrl, config);
             this.popupDisplay.start();
         }
         catch (error) {
@@ -95,7 +91,7 @@ export class DisplayManager {
         try {
             if (!config.selector)
                 return;
-            this.inlineDisplay = new InlineDisplay(slotName, config.selector, this.apiBaseUrl, config, // Truyền object config
+            this.inlineDisplay = new InlineDisplay(this.domainKey, slotName, config.selector, this.apiBaseUrl, config, // Truyền object config
             () => this.getRecommendations());
             this.inlineDisplay.start();
         }

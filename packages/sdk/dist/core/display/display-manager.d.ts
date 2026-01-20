@@ -3,11 +3,12 @@ import { RecommendationItem } from '../recommendation';
 export declare class DisplayManager {
     private popupDisplay;
     private inlineDisplay;
+    private domainKey;
     private apiBaseUrl;
     private recommendationFetcher;
     private cachedRecommendations;
     private fetchPromise;
-    constructor(apiBaseUrl?: string);
+    constructor(domainKey: string, apiBaseUrl?: string);
     initialize(returnMethods: ReturnMethod[]): Promise<void>;
     private activateDisplayMethod;
     private initializePopup;
