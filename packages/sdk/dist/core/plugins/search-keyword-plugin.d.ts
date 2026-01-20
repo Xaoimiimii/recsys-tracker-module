@@ -1,13 +1,3 @@
-/**
- * SearchKeywordPlugin - Search Keyword Tracking
- *
- * 1. Lấy search keyword configuration từ tracker config
- * 2. Theo dõi input events trên input selector
- * 3. Log search keyword khi người dùng nhập (với debounce)
- *
- * FLOW:
- * init → get config from tracker → attach listeners → log keywords
- */
 import { BasePlugin } from './base-plugin';
 import { RecSysTracker } from '../..';
 export declare class SearchKeywordPlugin extends BasePlugin {
@@ -17,6 +7,8 @@ export declare class SearchKeywordPlugin extends BasePlugin {
     private handleKeyPressBound;
     private debounceTimer;
     private readonly debounceDelay;
+    private searchKeywordConfigId;
+    private readonly STORAGE_KEY_PREFIX;
     init(tracker: RecSysTracker): void;
     start(): void;
     stop(): void;
@@ -47,5 +39,21 @@ export declare class SearchKeywordPlugin extends BasePlugin {
      * Handle keypress event - log khi user nhấn Enter (không debounce)
      */
     private handleKeyPress;
+    /**
+     * Lưu keyword vào localStorage với SearchKeywordConfigID
+     */
+    private saveKeyword;
+    /**
+     * Lấy keyword đã lưu cho SearchKeywordConfigID
+     */
+    getKeyword(configId: number): string | null;
+    /**
+     * Trigger push keyword API (được gọi khi nhấn Enter hoặc từ DisplayManager)
+     */
+    private triggerPushKeyword;
+    /**
+     * Call API POST recommendation/push-keyword
+     */
+    pushKeywordToServer(userId: string, anonymousId: string, domainKey: string, keyword: string): Promise<void>;
 }
 //# sourceMappingURL=search-keyword-plugin.d.ts.map

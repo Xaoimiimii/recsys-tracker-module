@@ -67,6 +67,7 @@ export interface UserIdentityRequestConfig {
 export interface ReturnMethod {
   id: number;
   domainId: number;
+  searchKeywordConfigId?: number | null;
   returnType: string;
   value: string;
   configurationName: string;

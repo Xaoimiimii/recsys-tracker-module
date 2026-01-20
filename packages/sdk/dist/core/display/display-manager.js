@@ -8,6 +8,7 @@ export class DisplayManager {
         this.inlineDisplay = null;
         this.cachedRecommendations = null;
         this.fetchPromise = null;
+        this.searchKeywordPlugin = null;
         this.domainKey = domainKey;
         this.apiBaseUrl = apiBaseUrl;
         this.recommendationFetcher = new RecommendationFetcher(domainKey, apiBaseUrl);
@@ -19,9 +20,38 @@ export class DisplayManager {
         }
         // Fetch recommendations 1 lần duy nhất cho tất cả display methods
         await this.fetchRecommendationsOnce();
-        returnMethods.forEach(method => {
+        // Process each return method
+        for (const method of returnMethods) {
+            // Check if this method has SearchKeywordConfigID
+            if (method.searchKeywordConfigId && this.searchKeywordPlugin) {
+                await this.handleSearchKeywordReturnMethod(method);
+            }
             this.activateDisplayMethod(method);
-        });
+        }
+    }
+    /**
+     * Set SearchKeywordPlugin reference (called from RecSysTracker)
+     */
+    setSearchKeywordPlugin(plugin) {
+        this.searchKeywordPlugin = plugin;
+    }
+    /**
+     * Handle return method with SearchKeywordConfigID
+     */
+    async handleSearchKeywordReturnMethod(method) {
+        var _a, _b, _c;
+        if (!method.searchKeywordConfigId || !this.searchKeywordPlugin)
+            return;
+        // Get saved keyword for this config ID
+        const keyword = this.searchKeywordPlugin.getKeyword(method.searchKeywordConfigId);
+        if (keyword) {
+            // Get user info
+            const userInfo = ((_c = (_b = (_a = window.RecSysTracker) === null || _a === void 0 ? void 0 : _a.userIdentityManager) === null || _b === void 0 ? void 0 : _b.getUserInfo) === null || _c === void 0 ? void 0 : _c.call(_b)) || {};
+            const userId = userInfo.value || '';
+            const anonymousId = userInfo.anonymousId || '';
+            // Push keyword to server
+            await this.searchKeywordPlugin.pushKeywordToServer(userId, anonymousId, this.domainKey, keyword);
+        }
     }
     // Fetch recommendations 1 lần duy nhất và cache kết quả
     async fetchRecommendationsOnce() {

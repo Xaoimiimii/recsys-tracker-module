@@ -162,6 +162,7 @@ export class ConfigLoader {
     return returnMethodsData.map(method => ({
       id: method.Id || method.id,
       domainId: method.DomainID || method.domainId,
+      searchKeywordConfigId: method.SearchKeywordConfigID || method.searchKeywordConfigId || null,
       returnType: method.ReturnType || method.returnType,
       value: method.Value || method.value || '',
       configurationName: method.ConfigurationName || method.configurationName,

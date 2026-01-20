@@ -13,6 +13,7 @@ export class DisplayManager {
   private recommendationFetcher: RecommendationFetcher;
   private cachedRecommendations: RecommendationItem[] | null = null;
   private fetchPromise: Promise<RecommendationItem[]> | null = null;
+  private searchKeywordPlugin: any = null;
 
   constructor(domainKey: string, apiBaseUrl: string = 'https://recsys-tracker-module.onrender.com') {
     this.domainKey = domainKey;
@@ -29,9 +30,47 @@ export class DisplayManager {
     // Fetch recommendations 1 lần duy nhất cho tất cả display methods
     await this.fetchRecommendationsOnce();
 
-    returnMethods.forEach(method => {
+    // Process each return method
+    for (const method of returnMethods) {
+      // Check if this method has SearchKeywordConfigID
+      if (method.searchKeywordConfigId && this.searchKeywordPlugin) {
+        await this.handleSearchKeywordReturnMethod(method);
+      }
+      
       this.activateDisplayMethod(method);
-    });
+    }
+  }
+
+  /**
+   * Set SearchKeywordPlugin reference (called from RecSysTracker)
+   */
+  public setSearchKeywordPlugin(plugin: any): void {
+    this.searchKeywordPlugin = plugin;
+  }
+
+  /**
+   * Handle return method with SearchKeywordConfigID
+   */
+  private async handleSearchKeywordReturnMethod(method: ReturnMethod): Promise<void> {
+    if (!method.searchKeywordConfigId || !this.searchKeywordPlugin) return;
+
+    // Get saved keyword for this config ID
+    const keyword = this.searchKeywordPlugin.getKeyword(method.searchKeywordConfigId);
+    
+    if (keyword) {
+      // Get user info
+      const userInfo = (window as any).RecSysTracker?.userIdentityManager?.getUserInfo?.() || {};
+      const userId = userInfo.value || '';
+      const anonymousId = userInfo.anonymousId || '';
+
+      // Push keyword to server
+      await this.searchKeywordPlugin.pushKeywordToServer(
+        userId,
+        anonymousId,
+        this.domainKey,
+        keyword
+      );
+    }
   }
 
   // Fetch recommendations 1 lần duy nhất và cache kết quả

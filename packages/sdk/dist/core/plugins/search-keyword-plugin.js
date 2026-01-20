@@ -1,14 +1,5 @@
-/**
- * SearchKeywordPlugin - Search Keyword Tracking
- *
- * 1. Lấy search keyword configuration từ tracker config
- * 2. Theo dõi input events trên input selector
- * 3. Log search keyword khi người dùng nhập (với debounce)
- *
- * FLOW:
- * init → get config from tracker → attach listeners → log keywords
- */
 import { BasePlugin } from './base-plugin';
+import { getOrCreateAnonymousId } from './utils/plugin-utils';
 export class SearchKeywordPlugin extends BasePlugin {
     constructor() {
         super(...arguments);
@@ -18,6 +9,8 @@ export class SearchKeywordPlugin extends BasePlugin {
         this.handleKeyPressBound = this.handleKeyPress.bind(this);
         this.debounceTimer = null;
         this.debounceDelay = 400; // 400ms debounce
+        this.searchKeywordConfigId = null;
+        this.STORAGE_KEY_PREFIX = 'recsys_search_keyword_';
     }
     init(tracker) {
         this.errorBoundary.execute(() => {
@@ -34,6 +27,8 @@ export class SearchKeywordPlugin extends BasePlugin {
             if (!searchKeywordConfig) {
                 return;
             }
+            // Lưu searchKeywordConfigId
+            this.searchKeywordConfigId = searchKeywordConfig.Id;
             // Attach listeners
             this.attachListeners(searchKeywordConfig.InputSelector);
             this.active = true;
@@ -136,6 +131,7 @@ export class SearchKeywordPlugin extends BasePlugin {
         this.debounceTimer = window.setTimeout(() => {
             if (searchKeyword) {
                 console.log('[SearchKeywordPlugin] Search keyword (input):', searchKeyword);
+                this.saveKeyword(searchKeyword);
             }
             this.debounceTimer = null;
         }, this.debounceDelay);
@@ -154,7 +150,77 @@ export class SearchKeywordPlugin extends BasePlugin {
             const searchKeyword = target.value.trim();
             if (searchKeyword) {
                 console.log('[SearchKeywordPlugin] Search keyword (Enter pressed):', searchKeyword);
+                this.saveKeyword(searchKeyword);
+                // Trigger push keyword API ngay lập tức
+                this.triggerPushKeyword(searchKeyword);
             }
+        }
+    }
+    /**
+     * Lưu keyword vào localStorage với SearchKeywordConfigID
+     */
+    saveKeyword(keyword) {
+        if (this.searchKeywordConfigId === null)
+            return;
+        const storageKey = `${this.STORAGE_KEY_PREFIX}${this.searchKeywordConfigId}`;
+        localStorage.setItem(storageKey, keyword);
+    }
+    /**
+     * Lấy keyword đã lưu cho SearchKeywordConfigID
+     */
+    getKeyword(configId) {
+        const storageKey = `${this.STORAGE_KEY_PREFIX}${configId}`;
+        try {
+            return localStorage.getItem(storageKey);
+        }
+        catch (error) {
+            return null;
+        }
+    }
+    /**
+     * Trigger push keyword API (được gọi khi nhấn Enter hoặc từ DisplayManager)
+     */
+    async triggerPushKeyword(keyword) {
+        if (!this.tracker)
+            return;
+        const config = this.tracker.getConfig();
+        if (!config)
+            return;
+        const userInfo = this.tracker.userIdentityManager.getUserInfo();
+        const userId = userInfo.value || '';
+        const anonymousId = userInfo.field === 'AnonymousId' ? userInfo.value : getOrCreateAnonymousId();
+        await this.pushKeywordToServer(userId, anonymousId, config.domainKey, keyword);
+    }
+    /**
+     * Call API POST recommendation/push-keyword
+     */
+    async pushKeywordToServer(userId, anonymousId, domainKey, keyword) {
+        const baseUrl = process.env.API_URL || 'https://recsys-tracker-module.onrender.com';
+        const url = `${baseUrl}/recommendation/push-keyword`;
+        const payload = {
+            UserId: userId,
+            AnonymousId: anonymousId,
+            DomainKey: domainKey,
+            Keyword: keyword
+        };
+        try {
+            console.log('[SearchKeywordPlugin] Pushing keyword to server:', payload);
+            const response = await fetch(url, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify(payload)
+            });
+            if (response.ok) {
+                console.log('[SearchKeywordPlugin] Keyword pushed successfully');
+            }
+            else {
+                console.error('[SearchKeywordPlugin] Failed to push keyword:', response.statusText);
+            }
+        }
+        catch (error) {
+            console.error('[SearchKeywordPlugin] Error pushing keyword:', error);
         }
     }
 }

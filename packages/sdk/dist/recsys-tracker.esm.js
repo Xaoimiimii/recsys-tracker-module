@@ -285,6 +285,7 @@ class ConfigLoader {
         return returnMethodsData.map(method => ({
             id: method.Id || method.id,
             domainId: method.DomainID || method.domainId,
+            searchKeywordConfigId: method.SearchKeywordConfigID || method.searchKeywordConfigId || null,
             returnType: method.ReturnType || method.returnType,
             value: method.Value || method.value || '',
             configurationName: method.ConfigurationName || method.configurationName,
@@ -1916,6 +1917,7 @@ class DisplayManager {
         this.inlineDisplay = null;
         this.cachedRecommendations = null;
         this.fetchPromise = null;
+        this.searchKeywordPlugin = null;
         this.domainKey = domainKey;
         this.apiBaseUrl = apiBaseUrl;
         this.recommendationFetcher = new RecommendationFetcher(domainKey, apiBaseUrl);
@@ -1927,9 +1929,38 @@ class DisplayManager {
         }
         // Fetch recommendations 1 lần duy nhất cho tất cả display methods
         await this.fetchRecommendationsOnce();
-        returnMethods.forEach(method => {
+        // Process each return method
+        for (const method of returnMethods) {
+            // Check if this method has SearchKeywordConfigID
+            if (method.searchKeywordConfigId && this.searchKeywordPlugin) {
+                await this.handleSearchKeywordReturnMethod(method);
+            }
             this.activateDisplayMethod(method);
-        });
+        }
+    }
+    /**
+     * Set SearchKeywordPlugin reference (called from RecSysTracker)
+     */
+    setSearchKeywordPlugin(plugin) {
+        this.searchKeywordPlugin = plugin;
+    }
+    /**
+     * Handle return method with SearchKeywordConfigID
+     */
+    async handleSearchKeywordReturnMethod(method) {
+        var _a, _b, _c;
+        if (!method.searchKeywordConfigId || !this.searchKeywordPlugin)
+            return;
+        // Get saved keyword for this config ID
+        const keyword = this.searchKeywordPlugin.getKeyword(method.searchKeywordConfigId);
+        if (keyword) {
+            // Get user info
+            const userInfo = ((_c = (_b = (_a = window.RecSysTracker) === null || _a === void 0 ? void 0 : _a.userIdentityManager) === null || _b === void 0 ? void 0 : _b.getUserInfo) === null || _c === void 0 ? void 0 : _c.call(_b)) || {};
+            const userId = userInfo.value || '';
+            const anonymousId = userInfo.anonymousId || '';
+            // Push keyword to server
+            await this.searchKeywordPlugin.pushKeywordToServer(userId, anonymousId, this.domainKey, keyword);
+        }
     }
     // Fetch recommendations 1 lần duy nhất và cache kết quả
     async fetchRecommendationsOnce() {
@@ -2682,16 +2713,104 @@ class ReviewPlugin extends BasePlugin {
     }
 }
 
+const STORAGE_KEYS = {
+    ANON_USER_ID: 'recsys_anon_id',
+    USER_ID: 'recsys_user_id',
+    SESSION_ID: 'recsys_session',
+    IDENTIFIERS: 'recsys_identifiers',
+    LAST_USER_ID: 'recsys_last_user_id',
+    CACHED_USER_INFO: 'recsys_cached_user_info' // Lưu user info đã bắt được
+};
+function log(...args) {
+}
 /**
- * SearchKeywordPlugin - Search Keyword Tracking
- *
- * 1. Lấy search keyword configuration từ tracker config
- * 2. Theo dõi input events trên input selector
- * 3. Log search keyword khi người dùng nhập (với debounce)
- *
- * FLOW:
- * init → get config from tracker → attach listeners → log keywords
+ * Lưu user info vào localStorage khi bắt được từ rule
+ * @param userField - UserId hoặc Username
+ * @param userValue - Giá trị user đã bắt được
  */
+function saveCachedUserInfo(userField, userValue) {
+    console.log('[plugin-utils] saveCachedUserInfo called - field:', userField, 'value:', userValue);
+    // Chỉ lưu nếu userValue valid (không phải AnonymousId, guest, empty)
+    if (!userValue ||
+        userValue === 'guest' ||
+        userValue.startsWith('anon_') ||
+        userField === 'AnonymousId') {
+        console.log('[plugin-utils] Skipping save - invalid user value or AnonymousId');
+        return;
+    }
+    try {
+        const cachedInfo = {
+            userField,
+            userValue,
+            timestamp: Date.now()
+        };
+        localStorage.setItem(STORAGE_KEYS.CACHED_USER_INFO, JSON.stringify(cachedInfo));
+        console.log('[plugin-utils] Successfully saved cached user info:', cachedInfo);
+        log('Saved cached user info:', cachedInfo);
+    }
+    catch (error) {
+        console.error('[plugin-utils] Failed to save cached user info:', error);
+    }
+}
+/**
+ * Lấy cached user info từ localStorage
+ * @returns CachedUserInfo hoặc null nếu không có
+ */
+function getCachedUserInfo() {
+    try {
+        const cached = localStorage.getItem(STORAGE_KEYS.CACHED_USER_INFO);
+        console.log('[plugin-utils] getCachedUserInfo - raw cached value:', cached);
+        if (!cached) {
+            console.log('[plugin-utils] No cached user info found');
+            return null;
+        }
+        const userInfo = JSON.parse(cached);
+        console.log('[plugin-utils] Parsed cached user info:', userInfo);
+        // Validate cached data
+        if (userInfo.userField && userInfo.userValue && userInfo.timestamp) {
+            console.log('[plugin-utils] Valid cached user info:', userInfo);
+            log('Retrieved cached user info:', userInfo);
+            return userInfo;
+        }
+        console.log('[plugin-utils] Invalid cached user info structure');
+        return null;
+    }
+    catch (error) {
+        console.error('[plugin-utils] Error reading cached user info:', error);
+        return null;
+    }
+}
+/**
+ * Khởi tạo và lấy Anonymous ID từ localStorage
+ * Tự động tạo mới nếu chưa tồn tại
+ */
+function getOrCreateAnonymousId() {
+    try {
+        let anonId = localStorage.getItem(STORAGE_KEYS.ANON_USER_ID);
+        console.log('[plugin-utils] getOrCreateAnonymousId - existing anonId:', anonId);
+        if (!anonId) {
+            // Generate new anonymous ID: anon_timestamp_randomstring
+            const timestamp = Date.now();
+            const randomStr = Math.random().toString(36).substring(2, 10);
+            anonId = `anon_${timestamp}_${randomStr}`;
+            localStorage.setItem(STORAGE_KEYS.ANON_USER_ID, anonId);
+            console.log('[plugin-utils] Created new anonymous ID:', anonId);
+            log('Created new anonymous ID:', anonId);
+        }
+        else {
+            console.log('[plugin-utils] Using existing anonymous ID:', anonId);
+        }
+        return anonId;
+    }
+    catch (error) {
+        console.error('[plugin-utils] Error accessing localStorage for anonId:', error);
+        // Fallback nếu localStorage không available
+        const fallbackId = `anon_${Date.now()}_${Math.random().toString(36).substring(2, 10)}`;
+        console.log('[plugin-utils] Using fallback anonymous ID:', fallbackId);
+        return fallbackId;
+    }
+}
+
 class SearchKeywordPlugin extends BasePlugin {
     constructor() {
         super(...arguments);
@@ -2701,6 +2820,8 @@ class SearchKeywordPlugin extends BasePlugin {
         this.handleKeyPressBound = this.handleKeyPress.bind(this);
         this.debounceTimer = null;
         this.debounceDelay = 400; // 400ms debounce
+        this.searchKeywordConfigId = null;
+        this.STORAGE_KEY_PREFIX = 'recsys_search_keyword_';
     }
     init(tracker) {
         this.errorBoundary.execute(() => {
@@ -2717,6 +2838,8 @@ class SearchKeywordPlugin extends BasePlugin {
             if (!searchKeywordConfig) {
                 return;
             }
+            // Lưu searchKeywordConfigId
+            this.searchKeywordConfigId = searchKeywordConfig.Id;
             // Attach listeners
             this.attachListeners(searchKeywordConfig.InputSelector);
             this.active = true;
@@ -2819,6 +2942,7 @@ class SearchKeywordPlugin extends BasePlugin {
         this.debounceTimer = window.setTimeout(() => {
             if (searchKeyword) {
                 console.log('[SearchKeywordPlugin] Search keyword (input):', searchKeyword);
+                this.saveKeyword(searchKeyword);
             }
             this.debounceTimer = null;
         }, this.debounceDelay);
@@ -2837,7 +2961,77 @@ class SearchKeywordPlugin extends BasePlugin {
             const searchKeyword = target.value.trim();
             if (searchKeyword) {
                 console.log('[SearchKeywordPlugin] Search keyword (Enter pressed):', searchKeyword);
+                this.saveKeyword(searchKeyword);
+                // Trigger push keyword API ngay lập tức
+                this.triggerPushKeyword(searchKeyword);
             }
+        }
+    }
+    /**
+     * Lưu keyword vào localStorage với SearchKeywordConfigID
+     */
+    saveKeyword(keyword) {
+        if (this.searchKeywordConfigId === null)
+            return;
+        const storageKey = `${this.STORAGE_KEY_PREFIX}${this.searchKeywordConfigId}`;
+        localStorage.setItem(storageKey, keyword);
+    }
+    /**
+     * Lấy keyword đã lưu cho SearchKeywordConfigID
+     */
+    getKeyword(configId) {
+        const storageKey = `${this.STORAGE_KEY_PREFIX}${configId}`;
+        try {
+            return localStorage.getItem(storageKey);
+        }
+        catch (error) {
+            return null;
+        }
+    }
+    /**
+     * Trigger push keyword API (được gọi khi nhấn Enter hoặc từ DisplayManager)
+     */
+    async triggerPushKeyword(keyword) {
+        if (!this.tracker)
+            return;
+        const config = this.tracker.getConfig();
+        if (!config)
+            return;
+        const userInfo = this.tracker.userIdentityManager.getUserInfo();
+        const userId = userInfo.value || '';
+        const anonymousId = userInfo.field === 'AnonymousId' ? userInfo.value : getOrCreateAnonymousId();
+        await this.pushKeywordToServer(userId, anonymousId, config.domainKey, keyword);
+    }
+    /**
+     * Call API POST recommendation/push-keyword
+     */
+    async pushKeywordToServer(userId, anonymousId, domainKey, keyword) {
+        const baseUrl = "https://recsys-tracker-module.onrender.com";
+        const url = `${baseUrl}/recommendation/push-keyword`;
+        const payload = {
+            UserId: userId,
+            AnonymousId: anonymousId,
+            DomainKey: domainKey,
+            Keyword: keyword
+        };
+        try {
+            console.log('[SearchKeywordPlugin] Pushing keyword to server:', payload);
+            const response = await fetch(url, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify(payload)
+            });
+            if (response.ok) {
+                console.log('[SearchKeywordPlugin] Keyword pushed successfully');
+            }
+            else {
+                console.error('[SearchKeywordPlugin] Failed to push keyword:', response.statusText);
+            }
+        }
+        catch (error) {
+            console.error('[SearchKeywordPlugin] Error pushing keyword:', error);
         }
     }
 }
@@ -4096,104 +4290,6 @@ class PayloadBuilder {
     }
 }
 
-const STORAGE_KEYS = {
-    ANON_USER_ID: 'recsys_anon_id',
-    USER_ID: 'recsys_user_id',
-    SESSION_ID: 'recsys_session',
-    IDENTIFIERS: 'recsys_identifiers',
-    LAST_USER_ID: 'recsys_last_user_id',
-    CACHED_USER_INFO: 'recsys_cached_user_info' // Lưu user info đã bắt được
-};
-function log(...args) {
-}
-/**
- * Lưu user info vào localStorage khi bắt được từ rule
- * @param userField - UserId hoặc Username
- * @param userValue - Giá trị user đã bắt được
- */
-function saveCachedUserInfo(userField, userValue) {
-    console.log('[plugin-utils] saveCachedUserInfo called - field:', userField, 'value:', userValue);
-    // Chỉ lưu nếu userValue valid (không phải AnonymousId, guest, empty)
-    if (!userValue ||
-        userValue === 'guest' ||
-        userValue.startsWith('anon_') ||
-        userField === 'AnonymousId') {
-        console.log('[plugin-utils] Skipping save - invalid user value or AnonymousId');
-        return;
-    }
-    try {
-        const cachedInfo = {
-            userField,
-            userValue,
-            timestamp: Date.now()
-        };
-        localStorage.setItem(STORAGE_KEYS.CACHED_USER_INFO, JSON.stringify(cachedInfo));
-        console.log('[plugin-utils] Successfully saved cached user info:', cachedInfo);
-        log('Saved cached user info:', cachedInfo);
-    }
-    catch (error) {
-        console.error('[plugin-utils] Failed to save cached user info:', error);
-    }
-}
-/**
- * Lấy cached user info từ localStorage
- * @returns CachedUserInfo hoặc null nếu không có
- */
-function getCachedUserInfo() {
-    try {
-        const cached = localStorage.getItem(STORAGE_KEYS.CACHED_USER_INFO);
-        console.log('[plugin-utils] getCachedUserInfo - raw cached value:', cached);
-        if (!cached) {
-            console.log('[plugin-utils] No cached user info found');
-            return null;
-        }
-        const userInfo = JSON.parse(cached);
-        console.log('[plugin-utils] Parsed cached user info:', userInfo);
-        // Validate cached data
-        if (userInfo.userField && userInfo.userValue && userInfo.timestamp) {
-            console.log('[plugin-utils] Valid cached user info:', userInfo);
-            log('Retrieved cached user info:', userInfo);
-            return userInfo;
-        }
-        console.log('[plugin-utils] Invalid cached user info structure');
-        return null;
-    }
-    catch (error) {
-        console.error('[plugin-utils] Error reading cached user info:', error);
-        return null;
-    }
-}
-/**
- * Khởi tạo và lấy Anonymous ID từ localStorage
- * Tự động tạo mới nếu chưa tồn tại
- */
-function getOrCreateAnonymousId() {
-    try {
-        let anonId = localStorage.getItem(STORAGE_KEYS.ANON_USER_ID);
-        console.log('[plugin-utils] getOrCreateAnonymousId - existing anonId:', anonId);
-        if (!anonId) {
-            // Generate new anonymous ID: anon_timestamp_randomstring
-            const timestamp = Date.now();
-            const randomStr = Math.random().toString(36).substring(2, 10);
-            anonId = `anon_${timestamp}_${randomStr}`;
-            localStorage.setItem(STORAGE_KEYS.ANON_USER_ID, anonId);
-            console.log('[plugin-utils] Created new anonymous ID:', anonId);
-            log('Created new anonymous ID:', anonId);
-        }
-        else {
-            console.log('[plugin-utils] Using existing anonymous ID:', anonId);
-        }
-        return anonId;
-    }
-    catch (error) {
-        console.error('[plugin-utils] Error accessing localStorage for anonId:', error);
-        // Fallback nếu localStorage không available
-        const fallbackId = `anon_${Date.now()}_${Math.random().toString(36).substring(2, 10)}`;
-        console.log('[plugin-utils] Using fallback anonymous ID:', fallbackId);
-        return fallbackId;
-    }
-}
-
 /**
  * UserIdentityManager - Quản lý User Identity riêng biệt
  *
@@ -4588,14 +4684,19 @@ class RecSysTracker {
                     this.eventDispatcher.setDomainUrl(this.config.domainUrl);
                 }
                 console.log(this.config);
+                // Tự động khởi tạo plugins dựa trên rules
+                this.autoInitializePlugins();
                 // Khởi tạo Display Manager nếu có returnMethods
                 if (this.config.returnMethods && this.config.returnMethods.length > 0) {
                     const apiBaseUrl = "https://recsys-tracker-module.onrender.com";
                     this.displayManager = new DisplayManager(this.config.domainKey, apiBaseUrl);
+                    // Connect SearchKeywordPlugin với DisplayManager
+                    const searchKeywordPlugin = this.pluginManager.get('SearchKeywordPlugin');
+                    if (searchKeywordPlugin) {
+                        this.displayManager.setSearchKeywordPlugin(searchKeywordPlugin);
+                    }
                     await this.displayManager.initialize(this.config.returnMethods);
                 }
-                // Tự động khởi tạo plugins dựa trên rules
-                this.autoInitializePlugins();
             }
             else {
                 // Nếu origin verification thất bại, không khởi tạo SDK
