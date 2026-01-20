@@ -25,22 +25,16 @@ export class UserIdentityManager {
   private isInitialized = false;
 
   /**
-   * Initialize và load user identity config
-   * @param domainKey - Domain key để load config
+   * Initialize với user identity config từ TrackerConfig
+   * @param config - User identity config đã được load từ API
    */
-  async initialize(domainKey: string): Promise<void> {
+  initialize(config: UserIdentityConfig | null | undefined): void {
     if (this.isInitialized) {
       return;
     }
-
-    console.log('[UserIdentityManager] Initializing for domain:', domainKey);
-
-    // Load user identity config
-    this.userIdentityConfig = await this.loadUserIdentityConfig(domainKey);
+    this.userIdentityConfig = config || null;
 
     if (this.userIdentityConfig) {
-      console.log('[UserIdentityManager] Config loaded:', this.userIdentityConfig);
-      
       // Nếu source là network (request_body/request_url), đăng ký với NetworkObserver
       if (this.isNetworkSource(this.userIdentityConfig.source)) {
         console.log('[UserIdentityManager] Network source detected, will be handled by NetworkObserver');
@@ -51,29 +45,6 @@ export class UserIdentityManager {
     }
 
     this.isInitialized = true;
-  }
-
-  /**
-   * Load user identity config từ API (mock for now)
-   * TODO: Replace with real API call when available
-   */
-  private async loadUserIdentityConfig(_domainKey: string): Promise<UserIdentityConfig | null> {
-    console.log('[UserIdentityManager] Loading user identity config (MOCK)');
-    
-    // MOCK DATA
-    const mockConfig: UserIdentityConfig = {
-      id: 1,
-      source: 'request_body',
-      domainId: 11,
-      requestConfig: {
-        RequestUrlPattern: '/api/auth/me',
-        RequestMethod: 'GET',
-        Value: 'username'
-      },
-      field: 'UserId'
-    };
-
-    return mockConfig;
   }
 
   /**
@@ -110,12 +81,10 @@ export class UserIdentityManager {
           break;
 
         default:
-          console.warn('[UserIdentityManager] Unsupported static source:', source);
           return;
       }
 
       if (extractedValue) {
-        console.log('[UserIdentityManager] Extracted user info from', source, ':', extractedValue);
         saveCachedUserInfo(field, extractedValue);
       }
     } catch (error) {
@@ -147,7 +116,8 @@ export class UserIdentityManager {
       return false;
     }
 
-    return PathMatcher.match(url, RequestUrlPattern);
+    const matches = PathMatcher.match(url, RequestUrlPattern);
+    return matches;
   }
 
   /**
@@ -180,7 +150,6 @@ export class UserIdentityManager {
       }
 
       if (extractedValue) {
-        console.log('[UserIdentityManager] Extracted user info from network:', extractedValue);
         saveCachedUserInfo(field, String(extractedValue));
       }
     } catch (error) {

@@ -23,6 +23,8 @@ export declare class NetworkObserver {
     private isActive;
     private recManager;
     private userIdentityManager;
+    private pendingUserIdentityRequests;
+    private readonly MAX_PENDING_REQUESTS;
     private registeredRules;
     private constructor();
     /**
@@ -33,6 +35,11 @@ export declare class NetworkObserver {
      * Set UserIdentityManager reference
      */
     setUserIdentityManager(userIdentityManager: UserIdentityManager): void;
+    /**
+     * Process user identity request
+     * Extracted as separate method to handle both real-time and buffered requests
+     */
+    private processUserIdentityRequest;
     /**
      * Initialize observer với REC manager
      * PHẢI GỌI KHI SDK INIT

@@ -6,6 +6,7 @@ export interface TrackerConfig {
     returnMethods?: ReturnMethod[];
     eventTypes?: EventType[];
     searchKeywordConfig?: SearchKeywordConfig;
+    userIdentityConfig?: UserIdentityConfig;
     options?: TrackerOptions;
 }
 export interface EventType {

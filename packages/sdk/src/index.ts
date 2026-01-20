@@ -68,12 +68,6 @@ export class RecSysTracker {
         return;
       }
 
-      // Initialize UserIdentityManager
-      await this.userIdentityManager.initialize(this.config.domainKey);
-      
-      // Connect UserIdentityManager with NetworkObserver
-      networkObserver.setUserIdentityManager(this.userIdentityManager);
-
       // Khởi tạo EventDispatcher
       const baseUrl = process.env.API_URL || DEFAULT_API_URL;
       this.eventDispatcher = new EventDispatcher({
@@ -84,6 +78,12 @@ export class RecSysTracker {
       const remoteConfig = await this.configLoader.fetchRemoteConfig();
       if (remoteConfig) {
         this.config = remoteConfig;
+
+        // Initialize UserIdentityManager with config from server
+        this.userIdentityManager.initialize(this.config.userIdentityConfig);
+        
+        // Connect UserIdentityManager with NetworkObserver
+        networkObserver.setUserIdentityManager(this.userIdentityManager);
 
         // Cập nhật domainUrl cho EventDispatcher để verify origin khi gửi event
         if (this.eventDispatcher && this.config.domainUrl) {

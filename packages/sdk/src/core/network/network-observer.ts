@@ -45,6 +45,10 @@ export class NetworkObserver {
   // Reference to UserIdentityManager
   private userIdentityManager: UserIdentityManager | null = null;
   
+  // Buffer for requests that arrived before UserIdentityManager was set
+  private pendingUserIdentityRequests: NetworkRequestInfo[] = [];
+  private readonly MAX_PENDING_REQUESTS = 10;
+  
   // Registered rules that need network data
   private registeredRules: Map<number, TrackingRule> = new Map();
 
@@ -69,7 +73,51 @@ export class NetworkObserver {
    */
   setUserIdentityManager(userIdentityManager: UserIdentityManager): void {
     this.userIdentityManager = userIdentityManager;
-    console.log('[NetworkObserver] UserIdentityManager set');
+    
+    // Process any pending requests that were buffered
+    if (this.pendingUserIdentityRequests.length > 0) {
+      for (const requestInfo of this.pendingUserIdentityRequests) {
+        this.processUserIdentityRequest(requestInfo);
+      }
+      
+      this.pendingUserIdentityRequests = [];
+    }
+  }
+
+  /**
+   * Process user identity request
+   * Extracted as separate method to handle both real-time and buffered requests
+   */
+  private async processUserIdentityRequest(requestInfo: NetworkRequestInfo): Promise<void> {
+    if (!this.userIdentityManager) {
+      return;
+    }
+
+    const matchesUserIdentity = this.userIdentityManager.matchesUserIdentityRequest(
+      requestInfo.url,
+      requestInfo.method
+    );
+    
+    if (matchesUserIdentity) {
+      // Parse response body nếu cần
+      let responseBodyText: string | null = null;
+      if (requestInfo.responseBody) {
+        if (typeof requestInfo.responseBody === 'string') {
+          responseBodyText = requestInfo.responseBody;
+        } else {
+          responseBodyText = await (requestInfo.responseBody as Response).text();
+          requestInfo.responseBody = responseBodyText;
+        }
+      }
+      
+      // Extract user info
+      this.userIdentityManager.extractFromNetworkRequest(
+        requestInfo.url,
+        requestInfo.method,
+        requestInfo.requestBody,
+        responseBodyText
+      );
+    }
   }
 
   /**
@@ -185,36 +233,13 @@ export class NetworkObserver {
     // STEP 1: USER IDENTITY HANDLING
     // Delegate to UserIdentityManager nếu có
     if (this.userIdentityManager) {
-      const matchesUserIdentity = this.userIdentityManager.matchesUserIdentityRequest(
-        requestInfo.url,
-        requestInfo.method
-      );
-      
-      if (matchesUserIdentity) {
-        console.log('[NetworkObserver] 💾 User identity request matched:', requestInfo.url);
-        
-        // Parse response body nếu cần
-        let responseBodyText: string | null = null;
-        if (requestInfo.responseBody) {
-          if (typeof requestInfo.responseBody === 'string') {
-            responseBodyText = requestInfo.responseBody;
-          } else {
-            try {
-              responseBodyText = await (requestInfo.responseBody as Response).text();
-              requestInfo.responseBody = responseBodyText;
-            } catch (error) {
-              console.error('[NetworkObserver] Failed to parse response for user identity:', error);
-            }
-          }
-        }
-        
-        // Extract user info
-        this.userIdentityManager.extractFromNetworkRequest(
-          requestInfo.url,
-          requestInfo.method,
-          requestInfo.requestBody,
-          responseBodyText
-        );
+      this.processUserIdentityRequest(requestInfo);
+    } else {
+      // Buffer request if UserIdentityManager not ready yet
+      // Only buffer GET/POST requests to avoid memory issues
+      if ((requestInfo.method === 'GET' || requestInfo.method === 'POST') && 
+          this.pendingUserIdentityRequests.length < this.MAX_PENDING_REQUESTS) {
+        this.pendingUserIdentityRequests.push(requestInfo);
       }
     }
 
@@ -231,19 +256,13 @@ export class NetworkObserver {
       return; // Không match với rule nào để track events
     }
 
-    // CHỈ LOG KHI CÓ POTENTIAL MATCH
-    console.log('[NetworkObserver] 🎯 Potential match found - URL:', requestInfo.url, 'Method:', requestInfo.method);
-    console.log('[NetworkObserver] Matching rules:', potentialMatches.map(r => `${r.id}:${r.name}`));
-    
     // Parse response body nếu cần (chỉ khi có match)
     if (requestInfo.responseBody && typeof requestInfo.responseBody !== 'string') {
       // responseBody là Response clone từ fetch
       try {
         const text = await (requestInfo.responseBody as Response).text();
         requestInfo.responseBody = text;
-        console.log('[NetworkObserver] Response body parsed (preview):', text.substring(0, 200));
       } catch (error) {
-        console.error('[NetworkObserver] Failed to parse response body:', error);
         return;
       }
     }
@@ -257,12 +276,9 @@ export class NetworkObserver {
       );
 
       if (!context) {
-        console.log('[NetworkObserver] No active context for rule:', rule.id);
         continue;
       }
 
-      console.log('[NetworkObserver] ✅ Processing rule with active context:', context.executionId);
-      
       // Process mappings cho rule này
       this.processRuleMappings(rule, context, requestInfo);
     }
@@ -276,52 +292,33 @@ export class NetworkObserver {
     context: RuleExecutionContext,
     requestInfo: NetworkRequestInfo
   ): void {
-    console.log('[NetworkObserver] processRuleMappings for rule:', rule.id);
-    
     if (!rule.payloadMappings) {
-      console.log('[NetworkObserver] No payload mappings');
       return;
     }
 
-    console.log('[NetworkObserver] Processing', rule.payloadMappings.length, 'mappings');
-    
     for (const mapping of rule.payloadMappings) {
       const source = (mapping.source || '').toLowerCase();
-      console.log('[NetworkObserver] Checking mapping - Field:', mapping.field, 'Source:', source);
-      
+
       // Chỉ xử lý network sources
       if (!this.isNetworkSource(source)) {
-        console.log('[NetworkObserver] Not a network source, skipping');
         continue;
       }
 
-      console.log('[NetworkObserver] Is network source, checking pattern match');
-      console.log('[NetworkObserver] Mapping pattern:', mapping.config?.RequestUrlPattern, 'Method:', mapping.config?.RequestMethod);
-      console.log('[NetworkObserver] Request URL:', requestInfo.url, 'Method:', requestInfo.method);
-      
       // Check pattern match
       if (!this.matchesPattern(mapping, requestInfo)) {
-        console.log('[NetworkObserver] Pattern does not match, skipping');
         continue;
       }
 
-      console.log('[NetworkObserver] ✅ Pattern matched! Extracting value...');
-      
       // Extract value
       const value = this.extractValue(mapping, requestInfo);
-      console.log('[NetworkObserver] Extracted value:', value);
       
       if (value !== null && value !== undefined) {
-        console.log('[NetworkObserver] 📦 Collecting field into REC:', mapping.field, '=', value);
-        
         // Collect vào REC
         this.recManager!.collectField(
           context.executionId,
           mapping.field,
           value
         );
-      } else {
-        console.log('[NetworkObserver] ⚠️ Extracted value is null/undefined');
       }
     }
   }
@@ -409,11 +406,9 @@ export class NetworkObserver {
       case 'request_body':
         // SMART: Nếu là GET request, tự động chuyển sang response body
         if (method === 'GET') {
-          console.log('[NetworkObserver] Smart routing: RequestBody + GET → Using ResponseBody');
           return this.extractFromResponseBody(mapping, requestInfo);
         }
         // POST/PUT/PATCH/DELETE → Dùng request body như bình thường
-        console.log('[NetworkObserver] Using RequestBody for method:', method);
         return this.extractFromRequestBody(mapping, requestInfo);
       
       case 'responsebody':
@@ -433,22 +428,14 @@ export class NetworkObserver {
    * Extract từ request body
    */
   private extractFromRequestBody(mapping: any, requestInfo: NetworkRequestInfo): any {
-    console.log('[NetworkObserver] extractFromRequestBody');
-    console.log('[NetworkObserver] Raw request body:', requestInfo.requestBody);
-    
     const body = parseBody(requestInfo.requestBody);
-    console.log('[NetworkObserver] Parsed request body:', body);
     
     if (!body) {
-      console.log('[NetworkObserver] Request body is empty/null');
       return null;
     }
 
     const path = mapping.config?.Value;
-    console.log('[NetworkObserver] Extracting by path:', path);
-    
     const result = extractByPath(body, path);
-    console.log('[NetworkObserver] Extract result:', result);
     
     return result;
   }
@@ -457,22 +444,15 @@ export class NetworkObserver {
    * Extract từ response body
    */
   private extractFromResponseBody(mapping: any, requestInfo: NetworkRequestInfo): any {
-    console.log('[NetworkObserver] extractFromResponseBody');
-    console.log('[NetworkObserver] Raw response body:', requestInfo.responseBody?.substring?.(0, 500));
-    
     const body = parseBody(requestInfo.responseBody);
-    console.log('[NetworkObserver] Parsed response body:', body);
     
     if (!body) {
-      console.log('[NetworkObserver] Response body is empty/null');
       return null;
     }
 
     const path = mapping.config?.Value;
-    console.log('[NetworkObserver] Extracting by path:', path);
     
     const result = extractByPath(body, path);
-    console.log('[NetworkObserver] Extract result:', result);
     
     return result;
   }

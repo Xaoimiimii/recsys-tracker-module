@@ -197,12 +197,13 @@ class ConfigLoader {
         const baseUrl = "https://recsys-tracker-module.onrender.com";
         try {
             // Bước 1: Gọi các API song song để lấy domain, return methods, event types và search keyword config
-            const [domainResponse, rulesListResponse, returnMethodsResponse, eventTypesResponse, searchKeywordResponse] = await Promise.all([
+            const [domainResponse, rulesListResponse, returnMethodsResponse, eventTypesResponse, searchKeywordResponse, userIdentityResponse] = await Promise.all([
                 fetch(`${baseUrl}/domain/${this.domainKey}`),
                 fetch(`${baseUrl}/rule/domain/${this.domainKey}`),
                 fetch(`${baseUrl}/return-method/${this.domainKey}`),
                 fetch(`${baseUrl}/rule/event-type`),
-                fetch(`${baseUrl}/search-keyword-config?domainKey=${this.domainKey}`)
+                fetch(`${baseUrl}/search-keyword-config?domainKey=${this.domainKey}`),
+                fetch(`https://recsys-tracker-web-config.onrender.com/domain/user-identity?key=${this.domainKey}`),
             ]);
             // Kiểm tra response
             if (!domainResponse.ok) {
@@ -214,6 +215,7 @@ class ConfigLoader {
             const returnMethodsData = returnMethodsResponse.ok ? await returnMethodsResponse.json() : [];
             const eventTypesData = eventTypesResponse.ok ? await eventTypesResponse.json() : [];
             const searchKeywordData = searchKeywordResponse.ok ? await searchKeywordResponse.json() : [];
+            const userIdentityData = userIdentityResponse.ok ? await userIdentityResponse.json() : null;
             // Cập nhật config với data từ server
             if (this.config) {
                 this.config = {
@@ -224,6 +226,20 @@ class ConfigLoader {
                     returnMethods: this.transformReturnMethods(returnMethodsData),
                     eventTypes: this.transformEventTypes(eventTypesData),
                     searchKeywordConfig: searchKeywordData && searchKeywordData.length > 0 ? searchKeywordData[0] : undefined,
+                    userIdentityConfig: userIdentityData ? {
+                        id: userIdentityData.Id,
+                        source: userIdentityData.Source,
+                        domainId: userIdentityData.DomainId,
+                        requestConfig: userIdentityData.RequestConfig,
+                        value: userIdentityData.Value,
+                        field: userIdentityData.Field
+                    } : {
+                        source: "local_storage",
+                        domainId: this.config.domainType || 0,
+                        requestConfig: null,
+                        value: "recsys_anonymous_id",
+                        field: "AnonymousId",
+                    }
                 };
                 // Verify origin sau khi có domainUrl từ server
                 if (this.config.domainUrl) {
@@ -3652,6 +3668,9 @@ class NetworkObserver {
         this.recManager = null;
         // Reference to UserIdentityManager
         this.userIdentityManager = null;
+        // Buffer for requests that arrived before UserIdentityManager was set
+        this.pendingUserIdentityRequests = [];
+        this.MAX_PENDING_REQUESTS = 10;
         // Registered rules that need network data
         this.registeredRules = new Map();
         this.originalFetch = window.fetch;
@@ -3672,7 +3691,38 @@ class NetworkObserver {
      */
     setUserIdentityManager(userIdentityManager) {
         this.userIdentityManager = userIdentityManager;
-        console.log('[NetworkObserver] UserIdentityManager set');
+        // Process any pending requests that were buffered
+        if (this.pendingUserIdentityRequests.length > 0) {
+            for (const requestInfo of this.pendingUserIdentityRequests) {
+                this.processUserIdentityRequest(requestInfo);
+            }
+            this.pendingUserIdentityRequests = [];
+        }
+    }
+    /**
+     * Process user identity request
+     * Extracted as separate method to handle both real-time and buffered requests
+     */
+    async processUserIdentityRequest(requestInfo) {
+        if (!this.userIdentityManager) {
+            return;
+        }
+        const matchesUserIdentity = this.userIdentityManager.matchesUserIdentityRequest(requestInfo.url, requestInfo.method);
+        if (matchesUserIdentity) {
+            // Parse response body nếu cần
+            let responseBodyText = null;
+            if (requestInfo.responseBody) {
+                if (typeof requestInfo.responseBody === 'string') {
+                    responseBodyText = requestInfo.responseBody;
+                }
+                else {
+                    responseBodyText = await requestInfo.responseBody.text();
+                    requestInfo.responseBody = responseBodyText;
+                }
+            }
+            // Extract user info
+            this.userIdentityManager.extractFromNetworkRequest(requestInfo.url, requestInfo.method, requestInfo.requestBody, responseBodyText);
+        }
     }
     /**
      * Initialize observer với REC manager
@@ -3771,27 +3821,14 @@ class NetworkObserver {
         // STEP 1: USER IDENTITY HANDLING
         // Delegate to UserIdentityManager nếu có
         if (this.userIdentityManager) {
-            const matchesUserIdentity = this.userIdentityManager.matchesUserIdentityRequest(requestInfo.url, requestInfo.method);
-            if (matchesUserIdentity) {
-                console.log('[NetworkObserver] 💾 User identity request matched:', requestInfo.url);
-                // Parse response body nếu cần
-                let responseBodyText = null;
-                if (requestInfo.responseBody) {
-                    if (typeof requestInfo.responseBody === 'string') {
-                        responseBodyText = requestInfo.responseBody;
-                    }
-                    else {
-                        try {
-                            responseBodyText = await requestInfo.responseBody.text();
-                            requestInfo.responseBody = responseBodyText;
-                        }
-                        catch (error) {
-                            console.error('[NetworkObserver] Failed to parse response for user identity:', error);
-                        }
-                    }
-                }
-                // Extract user info
-                this.userIdentityManager.extractFromNetworkRequest(requestInfo.url, requestInfo.method, requestInfo.requestBody, responseBodyText);
+            this.processUserIdentityRequest(requestInfo);
+        }
+        else {
+            // Buffer request if UserIdentityManager not ready yet
+            // Only buffer GET/POST requests to avoid memory issues
+            if ((requestInfo.method === 'GET' || requestInfo.method === 'POST') &&
+                this.pendingUserIdentityRequests.length < this.MAX_PENDING_REQUESTS) {
+                this.pendingUserIdentityRequests.push(requestInfo);
             }
         }
         // STEP 2: SECURITY CHECK - Có registered rules không?
@@ -3804,19 +3841,14 @@ class NetworkObserver {
         if (potentialMatches.length === 0) {
             return; // Không match với rule nào để track events
         }
-        // CHỈ LOG KHI CÓ POTENTIAL MATCH
-        console.log('[NetworkObserver] 🎯 Potential match found - URL:', requestInfo.url, 'Method:', requestInfo.method);
-        console.log('[NetworkObserver] Matching rules:', potentialMatches.map(r => `${r.id}:${r.name}`));
         // Parse response body nếu cần (chỉ khi có match)
         if (requestInfo.responseBody && typeof requestInfo.responseBody !== 'string') {
             // responseBody là Response clone từ fetch
             try {
                 const text = await requestInfo.responseBody.text();
                 requestInfo.responseBody = text;
-                console.log('[NetworkObserver] Response body parsed (preview):', text.substring(0, 200));
             }
             catch (error) {
-                console.error('[NetworkObserver] Failed to parse response body:', error);
                 return;
             }
         }
@@ -3825,10 +3857,8 @@ class NetworkObserver {
             // Tìm REC phù hợp cho rule này
             const context = this.recManager.findMatchingContext(rule.id, requestInfo.timestamp);
             if (!context) {
-                console.log('[NetworkObserver] No active context for rule:', rule.id);
                 continue;
             }
-            console.log('[NetworkObserver] ✅ Processing rule with active context:', context.executionId);
             // Process mappings cho rule này
             this.processRuleMappings(rule, context, requestInfo);
         }
@@ -3837,40 +3867,24 @@ class NetworkObserver {
      * Process payload mappings của rule và extract data vào REC
      */
     processRuleMappings(rule, context, requestInfo) {
-        var _a, _b;
-        console.log('[NetworkObserver] processRuleMappings for rule:', rule.id);
         if (!rule.payloadMappings) {
-            console.log('[NetworkObserver] No payload mappings');
             return;
         }
-        console.log('[NetworkObserver] Processing', rule.payloadMappings.length, 'mappings');
         for (const mapping of rule.payloadMappings) {
             const source = (mapping.source || '').toLowerCase();
-            console.log('[NetworkObserver] Checking mapping - Field:', mapping.field, 'Source:', source);
             // Chỉ xử lý network sources
             if (!this.isNetworkSource(source)) {
-                console.log('[NetworkObserver] Not a network source, skipping');
                 continue;
             }
-            console.log('[NetworkObserver] Is network source, checking pattern match');
-            console.log('[NetworkObserver] Mapping pattern:', (_a = mapping.config) === null || _a === void 0 ? void 0 : _a.RequestUrlPattern, 'Method:', (_b = mapping.config) === null || _b === void 0 ? void 0 : _b.RequestMethod);
-            console.log('[NetworkObserver] Request URL:', requestInfo.url, 'Method:', requestInfo.method);
             // Check pattern match
             if (!this.matchesPattern(mapping, requestInfo)) {
-                console.log('[NetworkObserver] Pattern does not match, skipping');
                 continue;
             }
-            console.log('[NetworkObserver] ✅ Pattern matched! Extracting value...');
             // Extract value
             const value = this.extractValue(mapping, requestInfo);
-            console.log('[NetworkObserver] Extracted value:', value);
             if (value !== null && value !== undefined) {
-                console.log('[NetworkObserver] 📦 Collecting field into REC:', mapping.field, '=', value);
                 // Collect vào REC
                 this.recManager.collectField(context.executionId, mapping.field, value);
-            }
-            else {
-                console.log('[NetworkObserver] ⚠️ Extracted value is null/undefined');
             }
         }
     }
@@ -3949,11 +3963,9 @@ class NetworkObserver {
             case 'request_body':
                 // SMART: Nếu là GET request, tự động chuyển sang response body
                 if (method === 'GET') {
-                    console.log('[NetworkObserver] Smart routing: RequestBody + GET → Using ResponseBody');
                     return this.extractFromResponseBody(mapping, requestInfo);
                 }
                 // POST/PUT/PATCH/DELETE → Dùng request body như bình thường
-                console.log('[NetworkObserver] Using RequestBody for method:', method);
                 return this.extractFromRequestBody(mapping, requestInfo);
             case 'responsebody':
             case 'response_body':
@@ -3970,37 +3982,25 @@ class NetworkObserver {
      */
     extractFromRequestBody(mapping, requestInfo) {
         var _a;
-        console.log('[NetworkObserver] extractFromRequestBody');
-        console.log('[NetworkObserver] Raw request body:', requestInfo.requestBody);
         const body = parseBody(requestInfo.requestBody);
-        console.log('[NetworkObserver] Parsed request body:', body);
         if (!body) {
-            console.log('[NetworkObserver] Request body is empty/null');
             return null;
         }
         const path = (_a = mapping.config) === null || _a === void 0 ? void 0 : _a.Value;
-        console.log('[NetworkObserver] Extracting by path:', path);
         const result = extractByPath(body, path);
-        console.log('[NetworkObserver] Extract result:', result);
         return result;
     }
     /**
      * Extract từ response body
      */
     extractFromResponseBody(mapping, requestInfo) {
-        var _a, _b, _c;
-        console.log('[NetworkObserver] extractFromResponseBody');
-        console.log('[NetworkObserver] Raw response body:', (_b = (_a = requestInfo.responseBody) === null || _a === void 0 ? void 0 : _a.substring) === null || _b === void 0 ? void 0 : _b.call(_a, 0, 500));
+        var _a;
         const body = parseBody(requestInfo.responseBody);
-        console.log('[NetworkObserver] Parsed response body:', body);
         if (!body) {
-            console.log('[NetworkObserver] Response body is empty/null');
             return null;
         }
-        const path = (_c = mapping.config) === null || _c === void 0 ? void 0 : _c.Value;
-        console.log('[NetworkObserver] Extracting by path:', path);
+        const path = (_a = mapping.config) === null || _a === void 0 ? void 0 : _a.Value;
         const result = extractByPath(body, path);
-        console.log('[NetworkObserver] Extract result:', result);
         return result;
     }
     /**
@@ -4309,18 +4309,15 @@ class UserIdentityManager {
         this.isInitialized = false;
     }
     /**
-     * Initialize và load user identity config
-     * @param domainKey - Domain key để load config
+     * Initialize với user identity config từ TrackerConfig
+     * @param config - User identity config đã được load từ API
      */
-    async initialize(domainKey) {
+    initialize(config) {
         if (this.isInitialized) {
             return;
         }
-        console.log('[UserIdentityManager] Initializing for domain:', domainKey);
-        // Load user identity config
-        this.userIdentityConfig = await this.loadUserIdentityConfig(domainKey);
+        this.userIdentityConfig = config || null;
         if (this.userIdentityConfig) {
-            console.log('[UserIdentityManager] Config loaded:', this.userIdentityConfig);
             // Nếu source là network (request_body/request_url), đăng ký với NetworkObserver
             if (this.isNetworkSource(this.userIdentityConfig.source)) {
                 console.log('[UserIdentityManager] Network source detected, will be handled by NetworkObserver');
@@ -4331,26 +4328,6 @@ class UserIdentityManager {
             }
         }
         this.isInitialized = true;
-    }
-    /**
-     * Load user identity config từ API (mock for now)
-     * TODO: Replace with real API call when available
-     */
-    async loadUserIdentityConfig(_domainKey) {
-        console.log('[UserIdentityManager] Loading user identity config (MOCK)');
-        // MOCK DATA
-        const mockConfig = {
-            id: 1,
-            source: 'request_body',
-            domainId: 11,
-            requestConfig: {
-                RequestUrlPattern: '/api/auth/me',
-                RequestMethod: 'GET',
-                Value: 'username'
-            },
-            field: 'UserId'
-        };
-        return mockConfig;
     }
     /**
      * Extract và cache user info từ static sources (localStorage, cookie, etc.)
@@ -4380,11 +4357,9 @@ class UserIdentityManager {
                     }
                     break;
                 default:
-                    console.warn('[UserIdentityManager] Unsupported static source:', source);
                     return;
             }
             if (extractedValue) {
-                console.log('[UserIdentityManager] Extracted user info from', source, ':', extractedValue);
                 saveCachedUserInfo(field, extractedValue);
             }
         }
@@ -4410,7 +4385,8 @@ class UserIdentityManager {
         if (RequestMethod.toUpperCase() !== method.toUpperCase()) {
             return false;
         }
-        return PathMatcher.match(url, RequestUrlPattern);
+        const matches = PathMatcher.match(url, RequestUrlPattern);
+        return matches;
     }
     /**
      * Extract user info từ network request
@@ -4434,7 +4410,6 @@ class UserIdentityManager {
                 extractedValue = extractFromUrl(url, Value, ExtractType, requestConfig.RequestUrlPattern);
             }
             if (extractedValue) {
-                console.log('[UserIdentityManager] Extracted user info from network:', extractedValue);
                 saveCachedUserInfo(field, String(extractedValue));
             }
         }
@@ -4670,10 +4645,6 @@ class RecSysTracker {
             if (!this.config) {
                 return;
             }
-            // Initialize UserIdentityManager
-            await this.userIdentityManager.initialize(this.config.domainKey);
-            // Connect UserIdentityManager with NetworkObserver
-            networkObserver.setUserIdentityManager(this.userIdentityManager);
             // Khởi tạo EventDispatcher
             const baseUrl = "https://recsys-tracker-module.onrender.com";
             this.eventDispatcher = new EventDispatcher({
@@ -4683,6 +4654,10 @@ class RecSysTracker {
             const remoteConfig = await this.configLoader.fetchRemoteConfig();
             if (remoteConfig) {
                 this.config = remoteConfig;
+                // Initialize UserIdentityManager with config from server
+                this.userIdentityManager.initialize(this.config.userIdentityConfig);
+                // Connect UserIdentityManager with NetworkObserver
+                networkObserver.setUserIdentityManager(this.userIdentityManager);
                 // Cập nhật domainUrl cho EventDispatcher để verify origin khi gửi event
                 if (this.eventDispatcher && this.config.domainUrl) {
                     this.eventDispatcher.setDomainUrl(this.config.domainUrl);

@@ -12,15 +12,10 @@ export declare class UserIdentityManager {
     private userIdentityConfig;
     private isInitialized;
     /**
-     * Initialize và load user identity config
-     * @param domainKey - Domain key để load config
+     * Initialize với user identity config từ TrackerConfig
+     * @param config - User identity config đã được load từ API
      */
-    initialize(domainKey: string): Promise<void>;
-    /**
-     * Load user identity config từ API (mock for now)
-     * TODO: Replace with real API call when available
-     */
-    private loadUserIdentityConfig;
+    initialize(config: UserIdentityConfig | null | undefined): void;
     /**
      * Extract và cache user info từ static sources (localStorage, cookie, etc.)
      */

@@ -60,12 +60,13 @@ export class ConfigLoader {
         const baseUrl = process.env.API_URL || DEFAULT_API_URL;
         try {
             // Bước 1: Gọi các API song song để lấy domain, return methods, event types và search keyword config
-            const [domainResponse, rulesListResponse, returnMethodsResponse, eventTypesResponse, searchKeywordResponse] = await Promise.all([
+            const [domainResponse, rulesListResponse, returnMethodsResponse, eventTypesResponse, searchKeywordResponse, userIdentityResponse] = await Promise.all([
                 fetch(`${baseUrl}/domain/${this.domainKey}`),
                 fetch(`${baseUrl}/rule/domain/${this.domainKey}`),
                 fetch(`${baseUrl}/return-method/${this.domainKey}`),
                 fetch(`${baseUrl}/rule/event-type`),
-                fetch(`${baseUrl}/search-keyword-config?domainKey=${this.domainKey}`)
+                fetch(`${baseUrl}/search-keyword-config?domainKey=${this.domainKey}`),
+                fetch(`https://recsys-tracker-web-config.onrender.com/domain/user-identity?key=${this.domainKey}`),
             ]);
             // Kiểm tra response
             if (!domainResponse.ok) {
@@ -77,6 +78,7 @@ export class ConfigLoader {
             const returnMethodsData = returnMethodsResponse.ok ? await returnMethodsResponse.json() : [];
             const eventTypesData = eventTypesResponse.ok ? await eventTypesResponse.json() : [];
             const searchKeywordData = searchKeywordResponse.ok ? await searchKeywordResponse.json() : [];
+            const userIdentityData = userIdentityResponse.ok ? await userIdentityResponse.json() : null;
             // Cập nhật config với data từ server
             if (this.config) {
                 this.config = {
@@ -87,6 +89,20 @@ export class ConfigLoader {
                     returnMethods: this.transformReturnMethods(returnMethodsData),
                     eventTypes: this.transformEventTypes(eventTypesData),
                     searchKeywordConfig: searchKeywordData && searchKeywordData.length > 0 ? searchKeywordData[0] : undefined,
+                    userIdentityConfig: userIdentityData ? {
+                        id: userIdentityData.Id,
+                        source: userIdentityData.Source,
+                        domainId: userIdentityData.DomainId,
+                        requestConfig: userIdentityData.RequestConfig,
+                        value: userIdentityData.Value,
+                        field: userIdentityData.Field
+                    } : {
+                        source: "local_storage",
+                        domainId: this.config.domainType || 0,
+                        requestConfig: null,
+                        value: "recsys_anonymous_id",
+                        field: "AnonymousId",
+                    }
                 };
                 // Verify origin sau khi có domainUrl từ server
                 if (this.config.domainUrl) {
