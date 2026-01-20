@@ -169,10 +169,28 @@ export class RecommendationService {
                         Title: true,
                         Description: true,
                         ImageUrl: true,
+                        ItemCategories: {
+                            select: {
+                                Category: {
+                                    select: {
+                                        Name: true
+                                    }
+                                }
+                            }
+                        },
+                        Attributes: true
                     }
                 });
 
-                return item;
+                return {
+                    Id: item?.Id,
+                    DomainItemId: item?.DomainItemId,
+                    Title: item?.Title,
+                    Description: item?.Description,
+                    ImageUrl: item?.ImageUrl,
+                    Categories: item?.ItemCategories.map(ic => ic.Category.Name),
+                    ...((item?.Attributes as Record<string, any>) || {})
+                };
             })
         );
 
