@@ -114,7 +114,7 @@ export class DisplayManager {
                 this.popupDisplay.stop();
                 this.popupDisplay = null;
             }
-            this.popupDisplay = new PopupDisplay(this.domainKey, slotName, this.apiBaseUrl, config);
+            this.popupDisplay = new PopupDisplay(this.domainKey, slotName, this.apiBaseUrl, config, () => this.getRecommendations());
             this.popupDisplay.start();
         }
         catch (error) {

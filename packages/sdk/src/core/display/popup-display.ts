@@ -1,49 +1,9 @@
 import { PopupConfig, StyleJson, LayoutJson } from '../../types';
 import { RecommendationItem } from '../recommendation';
 
-
-const MOCK_ITEMS: RecommendationItem[] = 
-[
-  {
-    "id": 460, "DomainItemId": "444", "Title": "Tình Yêu Xanh Lá (juju)", "Description": "Nhạc chill",
-    "ImageUrl": "https://www.postposmo.com/wp-content/uploads/2024/01/gatito.jpg",
-    "Categories": ["Indie", "V-Pop"], "TestCustomAttribute": 95
-  },
-  {
-    "id": 131, "DomainItemId": "107", "Title": "How Long", "Description": "Charlie Puth",
-    "ImageUrl": "https://www.postposmo.com/wp-content/uploads/2024/01/gatito.jpg",
-    "Categories": ["US-UK", "Pop"], "TestCustomAttribute": 88
-  },
-  {
-    "id": 644, "DomainItemId": "629", "Title": "Break Free", "Description": "Ariana Grande",
-    "ImageUrl": "https://www.postposmo.com/wp-content/uploads/2024/01/gatito.jpg",
-    "Categories": ["Pop", "Dance"], "TestCustomAttribute": 92
-  },
-  {
-    "id": 194, "DomainItemId": "172", "Title": "Đẹp Nhất Là Em", "Description": "Soobin",
-    "ImageUrl": "https://www.postposmo.com/wp-content/uploads/2024/01/gatito.jpg",
-    "Categories": ["Ballad", "V-Pop"], "TestCustomAttribute": 85
-  },
-  {
-    "id": 68, "DomainItemId": "22", "Title": "Cho Tôi Lang Thang", "Description": "Đen Vâu",
-    "ImageUrl": "https://www.postposmo.com/wp-content/uploads/2024/01/gatito.jpg",
-    "Categories": ["Rap", "Indie"], "TestCustomAttribute": 90
-  },
-  {
-    "id": 383, "DomainItemId": "364", "Title": "Nonsense", "Description": "Sabrina Carpenter",
-    "ImageUrl": "https://www.postposmo.com/wp-content/uploads/2024/01/gatito.jpg",
-    "Categories": ["Pop"], "TestCustomAttribute": 78
-  },
-  {
-    "Id": 723, "DomainItemId": "709", "Title": "Helium", "Description": "Sia", 
-    "ImageUrl": "https://www.postposmo.com/wp-content/uploads/2024/01/gatito.jpg", // Null trong ví dụ, nhưng để ảnh demo cho đẹp
-    "Categories": ["Alt-Pop", "Âu Mỹ"], "TestCustomAttribute": 50 
-  }
-];
-
 export class PopupDisplay {
   private config: PopupConfig;
-  //private recommendationGetter: () => Promise<RecommendationItem[]>;
+  private recommendationGetter: () => Promise<RecommendationItem[]>;
   private popupTimeout: NodeJS.Timeout | null = null;
   private autoCloseTimeout: NodeJS.Timeout | null = null;
   private autoSlideTimeout: NodeJS.Timeout | null = null;
@@ -59,9 +19,9 @@ export class PopupDisplay {
     _slotName: string,
     _apiBaseUrl: string,
     config: PopupConfig = {} as PopupConfig,
-    //recommendationGetter: () => Promise<RecommendationItem[]>
+    recommendationGetter: () => Promise<RecommendationItem[]>
   ) {
-    //this.recommendationGetter = recommendationGetter;
+    this.recommendationGetter = recommendationGetter;
     this.config = {
       delay: config.delay ?? this.DEFAULT_DELAY,
       autoCloseDelay: config.autoCloseDelay,
@@ -127,7 +87,7 @@ export class PopupDisplay {
 
   private async showPopup(): Promise<void> {
     try {
-      const items = MOCK_ITEMS; //this.fetchRecommendations()
+      const items = await this.fetchRecommendations();
       
       // Chỉ hiện nếu chưa hiện (double check)
       if (items && items.length > 0 && !this.shadowHost) {
@@ -187,11 +147,11 @@ export class PopupDisplay {
     }, delay);
   }
 
-  // private async fetchRecommendations(): Promise<RecommendationItem[]> {
-  //   try {
-  //     return await this.recommendationGetter();
-  //   } catch { return []; }
-  // }
+  private async fetchRecommendations(): Promise<RecommendationItem[]> {
+    try {
+      return await this.recommendationGetter();
+    } catch { return []; }
+  }
 
 
   // --- LOGIC 2: DYNAMIC CSS GENERATOR ---
