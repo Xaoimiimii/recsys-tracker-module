@@ -27,6 +27,8 @@ export class DisplayManager {
   public async initialize(returnMethods: ReturnMethod[]): Promise<void> {
     this.destroy();
 
+    console.log("return", returnMethods);
+
     if (!returnMethods || !Array.isArray(returnMethods) || returnMethods.length === 0) {
       console.warn('[DisplayManager] No return methods provided for initialization.');
       return;
@@ -170,7 +172,7 @@ export class DisplayManager {
         config.selector,
         this.apiBaseUrl,
         config, // Truyền object config
-        () => this.getRecommendations()
+        //() => this.getRecommendations()
       );
       
       this.inlineDisplay.start();

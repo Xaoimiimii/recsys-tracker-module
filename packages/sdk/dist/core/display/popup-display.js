@@ -45,6 +45,7 @@ export class PopupDisplay {
         this.shadowHost = null;
         this.spaCheckInterval = null;
         this.isPendingShow = false;
+        this.isManuallyClosed = false;
         this.DEFAULT_DELAY = 5000;
         //this.recommendationGetter = recommendationGetter;
         this.config = {
@@ -70,6 +71,9 @@ export class PopupDisplay {
         this.spaCheckInterval = setInterval(() => {
             const shouldShow = this.shouldShowPopup(); // Check URL hiện tại
             const isVisible = this.shadowHost !== null; // Check xem Popup có đang hiện không
+            if (!shouldShow) {
+                this.isManuallyClosed = false;
+            }
             // CASE 1: URL KHÔNG khớp nhưng Popup đang hiện -> ĐÓNG NGAY
             if (!shouldShow && isVisible) {
                 this.removePopup();
@@ -84,7 +88,7 @@ export class PopupDisplay {
                 return;
             }
             // CASE 3: URL KHỚP, Popup CHƯA hiện và CHƯA đếm ngược -> BẮT ĐẦU ĐẾM
-            if (shouldShow && !isVisible && !this.isPendingShow) {
+            if (shouldShow && !isVisible && !this.isPendingShow && !this.isManuallyClosed) {
                 this.scheduleShow();
             }
         }, 500);
@@ -199,7 +203,7 @@ export class PopupDisplay {
         // Xử lý Height từ Config (Nếu JSON có height thì dùng, ko thì max-height)
         const popupHeightCSS = popupWrapper.height
             ? `height: ${popupWrapper.height}px;`
-            : `height: auto; max-height: 80vh;`;
+            : `height: auto; max-height: 50vh;`;
         let posCSS = 'bottom: 20px; right: 20px;';
         switch (popupWrapper.position) {
             case 'bottom-left':
@@ -216,6 +220,8 @@ export class PopupDisplay {
         let containerCSS = '';
         let itemDir = 'column';
         let itemAlign = 'stretch';
+        let infoTextAlign = 'center';
+        let infoAlignItems = 'center';
         if (contentMode === 'grid') {
             const cols = modeConfig.columns || 2;
             const gapPx = ((_g = tokens.spacingScale) === null || _g === void 0 ? void 0 : _g[modeConfig.gap || 'md']) || 12;
@@ -227,6 +233,8 @@ export class PopupDisplay {
             const gapPx = ((_h = tokens.spacingScale) === null || _h === void 0 ? void 0 : _h[modeConfig.rowGap || 'md']) || 12;
             containerCSS = `display: flex; flex-direction: column; gap: ${gapPx}px; padding: ${density.cardPadding || 16}px;`;
             containerCSS = 'padding: 0;';
+            infoTextAlign = 'left';
+            infoAlignItems = 'flex-start';
         }
         // 4. Styles Mapping
         const cardComp = components.card || {};
@@ -264,7 +272,7 @@ export class PopupDisplay {
         padding: 12px 16px; border-bottom: 1px solid ${getColor('border')};
         display: flex; justify-content: space-between; align-items: center;
         background: ${getColor('surface')};
-        flex-shrink: 0; /* Header không bị co lại khi scroll body */
+        flex-shrink: 0; 
       }
       .recsys-header-title {
           font-size: ${((_p = (_o = tokens.typography) === null || _o === void 0 ? void 0 : _o.title) === null || _p === void 0 ? void 0 : _p.fontSize) || 16}px;
@@ -309,7 +317,8 @@ export class PopupDisplay {
       }
       .recsys-img-box img { width: 100%; height: 100%; object-fit: ${((_v = components.image) === null || _v === void 0 ? void 0 : _v.objectFit) || 'cover'}; }
 
-      .recsys-info { display: flex; flex-direction: column; gap: 4px; flex: 1; min-width: 0; }
+      .recsys-info { display: flex; flex-direction: column; gap: 4px; flex: 1; min-width: 0; text-align: ${infoTextAlign}; 
+        align-items: ${infoAlignItems};}
 
       .recsys-badges { display: flex; flex-wrap: wrap; gap: 4px; margin-top: auto; }
       .recsys-badge { 
@@ -494,8 +503,8 @@ export class PopupDisplay {
         (_a = shadow.querySelector('.recsys-close')) === null || _a === void 0 ? void 0 : _a.addEventListener('click', () => {
             if (this.autoSlideTimeout)
                 clearTimeout(this.autoSlideTimeout);
+            this.isManuallyClosed = true;
             this.removePopup();
-            this.scheduleNextPopup();
         });
     }
     renderStaticItems(shadow, items) {
