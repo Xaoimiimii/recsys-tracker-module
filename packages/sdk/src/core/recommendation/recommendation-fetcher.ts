@@ -19,6 +19,11 @@ export class RecommendationFetcher {
     this.cache = new Map();
   }
 
+  // constructor(apiBaseUrl: string = 'http://localhost:3001') {
+  //   this.apiBaseUrl = apiBaseUrl;
+  //   this.cache = new Map();
+  // }
+
   async fetchRecommendations(
     userValue: string,
     userField: UserField = 'AnonymousId',

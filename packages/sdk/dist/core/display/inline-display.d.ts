@@ -1,4 +1,4 @@
-import { InlineConfig } from './types';
+import { InlineConfig } from '../../types';
 import { RecommendationItem } from '../recommendation';
 export declare class InlineDisplay {
     private selector;
@@ -13,9 +13,11 @@ export declare class InlineDisplay {
     private findContainers;
     private setupObserver;
     private processContainer;
-    private isPageAllowed;
     private fetchRecommendations;
-    private renderWidget;
+    private getTokenColor;
+    private getTokenRadius;
     private getWidgetStyles;
+    private renderItemContent;
+    private renderWidget;
 }
 //# sourceMappingURL=inline-display.d.ts.map

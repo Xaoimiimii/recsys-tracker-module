@@ -13,17 +13,24 @@ export class DisplayManager {
         this.apiBaseUrl = apiBaseUrl;
         this.recommendationFetcher = new RecommendationFetcher(domainKey, apiBaseUrl);
     }
-    // Khởi tạo display methods dựa trên config
+    // Khởi tạo display methods dựa trên danh sách config
     async initialize(returnMethods) {
-        if (!returnMethods || returnMethods.length === 0) {
+        this.destroy();
+        if (!returnMethods || !Array.isArray(returnMethods) || returnMethods.length === 0) {
+            console.warn('[DisplayManager] No return methods provided for initialization.');
             return;
         }
-        // Fetch recommendations 1 lần duy nhất cho tất cả display methods
-        await this.fetchRecommendationsOnce();
+        // Fetch recommendations once for all display methods
+        try {
+            await this.fetchRecommendationsOnce();
+        }
+        catch (error) {
+            console.error('[DisplayManager] Failed to fetch recommendations.');
+        }
         // Process each return method
         for (const method of returnMethods) {
             // Check if this method has SearchKeywordConfigID
-            if (method.searchKeywordConfigId && this.searchKeywordPlugin) {
+            if (method.SearchKeywordConfigId && this.searchKeywordPlugin) {
                 await this.handleSearchKeywordReturnMethod(method);
             }
             this.activateDisplayMethod(method);
@@ -40,10 +47,10 @@ export class DisplayManager {
      */
     async handleSearchKeywordReturnMethod(method) {
         var _a, _b, _c;
-        if (!method.searchKeywordConfigId || !this.searchKeywordPlugin)
+        if (!method.SearchKeywordConfigId || !this.searchKeywordPlugin)
             return;
         // Get saved keyword for this config ID
-        const keyword = this.searchKeywordPlugin.getKeyword(method.searchKeywordConfigId);
+        const keyword = this.searchKeywordPlugin.getKeyword(method.SearchKeywordConfigId);
         if (keyword) {
             // Get user info
             const userInfo = ((_c = (_b = (_a = window.RecSysTracker) === null || _a === void 0 ? void 0 : _a.userIdentityManager) === null || _b === void 0 ? void 0 : _b.getUserInfo) === null || _c === void 0 ? void 0 : _c.call(_b)) || {};
@@ -53,17 +60,90 @@ export class DisplayManager {
             await this.searchKeywordPlugin.pushKeywordToServer(userId, anonymousId, this.domainKey, keyword);
         }
     }
-    // Fetch recommendations 1 lần duy nhất và cache kết quả
+    // Phân loại và kích hoạt display method tương ứng
+    activateDisplayMethod(method) {
+        var _a;
+        const { ReturnType, ConfigurationName, Value, OperatorId } = method;
+        // Chuẩn bị cấu hình chung (Giao diện, Style, Fields)
+        const commonConfig = {
+            layoutJson: method.LayoutJson,
+            styleJson: method.StyleJson,
+            customizingFields: method.CustomizingFields
+        };
+        // Kiểm tra loại hiển thị (Lưu ý: Backend thường trả về chữ hoa)
+        const type = ReturnType === null || ReturnType === void 0 ? void 0 : ReturnType.toUpperCase();
+        if (type === 'POPUP') {
+            const duration = ((_a = method.DelayDuration) !== null && _a !== void 0 ? _a : 0) * 1000;
+            const popupConfig = {
+                ...commonConfig,
+                delay: duration,
+                autoCloseDelay: 0,
+                triggerConfig: {
+                    targetValue: Value,
+                    operatorId: OperatorId
+                }
+            };
+            this.initializePopup(ConfigurationName, popupConfig);
+        }
+        else if (type === 'INLINE-INJECTION' || type === 'INLINE_INJECTION') {
+            const inlineConfig = {
+                ...commonConfig,
+                selector: Value
+            };
+            this.initializeInline(ConfigurationName, inlineConfig);
+        }
+    }
+    // Khởi tạo Popup Display với Config đầy đủ
+    // private initializePopup(slotName: string, config: PopupConfig): void {
+    //   try {
+    //     this.popupDisplay = new PopupDisplay(
+    //       this.domainKey,
+    //       slotName,
+    //       this.apiBaseUrl,
+    //       config, 
+    //       () => this.getRecommendations()
+    //     );
+    //     this.popupDisplay.start();
+    //   } catch (error) {
+    //     console.error('[DisplayManager] Error initializing popup:', error);
+    //   }
+    // }
+    initializePopup(slotName, config) {
+        try {
+            if (this.popupDisplay) {
+                this.popupDisplay.stop();
+                this.popupDisplay = null;
+            }
+            this.popupDisplay = new PopupDisplay(this.domainKey, slotName, this.apiBaseUrl, config);
+            this.popupDisplay.start();
+        }
+        catch (error) {
+            console.error('[DisplayManager] Error initializing popup:', error);
+        }
+    }
+    // Khởi tạo Inline Display với Config đầy đủ
+    initializeInline(slotName, config) {
+        try {
+            if (this.inlineDisplay) {
+                this.inlineDisplay.stop();
+                this.inlineDisplay = null;
+            }
+            if (!config.selector)
+                return;
+            this.inlineDisplay = new InlineDisplay(this.domainKey, slotName, config.selector, this.apiBaseUrl, config, // Truyền object config
+            () => this.getRecommendations());
+            this.inlineDisplay.start();
+        }
+        catch (error) {
+            console.error('[DisplayManager] Error initializing inline:', error);
+        }
+    }
+    // --- LOGIC FETCH RECOMMENDATION (GIỮ NGUYÊN) ---
     async fetchRecommendationsOnce() {
-        // Nếu đã có cache, return ngay
-        if (this.cachedRecommendations) {
+        if (this.cachedRecommendations)
             return this.cachedRecommendations;
-        }
-        // Nếu đang fetch, đợi kết quả
-        if (this.fetchPromise) {
+        if (this.fetchPromise)
             return this.fetchPromise;
-        }
-        // Fetch mới
         this.fetchPromise = this.fetchRecommendationsInternal();
         try {
             this.cachedRecommendations = await this.fetchPromise;
@@ -73,91 +153,28 @@ export class DisplayManager {
             this.fetchPromise = null;
         }
     }
-    // Internal fetch method
     async fetchRecommendationsInternal() {
         try {
-            // MOCK: Temporarily using UserId="1" for testing
-            // TODO: Uncomment below code when enough data is available
             const anonymousId = this.getAnonymousId();
-            if (!anonymousId) {
+            if (!anonymousId)
                 return [];
-            }
-            const items = await this.recommendationFetcher.fetchRecommendations(anonymousId, 'AnonymousId', { numberItems: 6 });
-            return items;
+            return await this.recommendationFetcher.fetchRecommendations(anonymousId, 'AnonymousId', { numberItems: 6 });
         }
         catch (error) {
             return [];
         }
     }
-    // Lấy anonymous ID từ localStorage (recsys_anon_id)
     getAnonymousId() {
         try {
-            const anonId = localStorage.getItem(ANON_USER_ID_KEY);
-            if (anonId) {
-                return anonId;
-            }
-            return null;
+            return localStorage.getItem(ANON_USER_ID_KEY) || null;
         }
-        catch (error) {
+        catch {
             return null;
         }
     }
-    // Get cached recommendations
     async getRecommendations() {
         return this.fetchRecommendationsOnce();
     }
-    // Kích hoạt display method tương ứng
-    activateDisplayMethod(method) {
-        const { returnType, configurationName, value } = method;
-        switch (returnType) {
-            case 'POPUP': // Popup
-                this.initializePopup(configurationName, value);
-                break;
-            case 'INLINE-INJECTION': // Inline (with hyphen)
-            case 'INLINE_INJECTION': // Inline (with underscore)
-                this.initializeInline(configurationName, value);
-                break;
-            default:
-                // do nothing
-                break;
-        }
-    }
-    // Khởi tạo Popup Display
-    initializePopup(slotName, config) {
-        try {
-            // Parse config nếu là JSON string, nếu không thì dùng default
-            let popupConfig = {};
-            if (config) {
-                try {
-                    popupConfig = JSON.parse(config);
-                }
-                catch {
-                    popupConfig = {};
-                }
-            }
-            this.popupDisplay = new PopupDisplay(this.domainKey, slotName, this.apiBaseUrl, popupConfig, () => this.getRecommendations() // Provide getter function
-            );
-            this.popupDisplay.start();
-        }
-        catch (error) {
-            // console.error('[DisplayManager] Error initializing popup:', error);
-        }
-    }
-    // Khởi tạo Inline Display
-    initializeInline(slotName, selector) {
-        try {
-            if (!selector) {
-                return;
-            }
-            this.inlineDisplay = new InlineDisplay(this.domainKey, slotName, selector, this.apiBaseUrl, {}, () => this.getRecommendations() // Provide getter function
-            );
-            this.inlineDisplay.start();
-        }
-        catch (error) {
-            console.error('[DisplayManager] Error initializing inline:', error);
-        }
-    }
-    // Dừng tất cả display methods
     destroy() {
         if (this.popupDisplay) {
             this.popupDisplay.stop();

@@ -165,14 +165,32 @@ export class ConfigLoader {
     transformReturnMethods(returnMethodsData) {
         if (!returnMethodsData || !Array.isArray(returnMethodsData))
             return [];
-        return returnMethodsData.map(method => ({
-            id: method.Id || method.id,
-            domainId: method.DomainID || method.domainId,
-            searchKeywordConfigId: method.SearchKeywordConfigID || method.searchKeywordConfigId || null,
-            returnType: method.ReturnType || method.returnType,
-            value: method.Value || method.value || '',
-            configurationName: method.ConfigurationName || method.configurationName,
-        }));
+        return returnMethodsData.map(method => {
+            let layoutJson = method.Layout || method.layout;
+            let styleJson = method.Style || method.style;
+            let customFields = method.Customizing || method.customizing;
+            if (typeof layoutJson === 'string')
+                layoutJson = JSON.parse(layoutJson);
+            if (typeof styleJson === 'string')
+                styleJson = JSON.parse(styleJson);
+            if (typeof customFields === 'string')
+                customFields = JSON.parse(customFields);
+            return {
+                Id: method.Id || method.id,
+                Key: method.DomainID || method.domainId,
+                SearchKeywordConfigId: method.SearchKeywordConfigID || method.searchKeywordConfigId || null,
+                ConfigurationName: method.ConfigurationName || method.configurationName,
+                ReturnType: method.ReturnType || method.returnType,
+                Value: method.Value || method.value || '',
+                OperatorId: method.OperatorID || method.operatorId,
+                LayoutJson: layoutJson || {},
+                StyleJson: styleJson || {},
+                CustomizingFields: {
+                    fields: Array.isArray(customFields) ? customFields : []
+                },
+                DelayDuration: Number(method.DelayDuration || method.delayDuration || method.Duration || 0),
+            };
+        });
     }
     // Transform event types từ server format sang SDK format
     transformEventTypes(eventTypesData) {

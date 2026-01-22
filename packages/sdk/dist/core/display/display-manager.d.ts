@@ -19,13 +19,13 @@ export declare class DisplayManager {
      * Handle return method with SearchKeywordConfigID
      */
     private handleSearchKeywordReturnMethod;
+    private activateDisplayMethod;
+    private initializePopup;
+    private initializeInline;
     private fetchRecommendationsOnce;
     private fetchRecommendationsInternal;
     private getAnonymousId;
     getRecommendations(): Promise<RecommendationItem[]>;
-    private activateDisplayMethod;
-    private initializePopup;
-    private initializeInline;
     destroy(): void;
 }
 //# sourceMappingURL=display-manager.d.ts.map

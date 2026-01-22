@@ -8,21 +8,15 @@ export interface RecommendationRequest {
 }
 
 export interface RecommendationResponse {
-  Id: number;
-  DomainItemId: string;
-  Title: string;
-  Description: string;
-  ImageUrl: string | null;
+  [key: string]: any; 
 }
 
+// Interface chính dùng trong app
 export interface RecommendationItem {
-  id: number;
-  domainItemId: string;
-  title: string;
-  description: string;
-  img: string;
+  id?: number | string;
+  Id?: number | string;
+  [key: string]: any;
 }
-
 export interface RecommendationOptions {
   numberItems?: number;
   userField?: UserField;
