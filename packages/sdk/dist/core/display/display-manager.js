@@ -16,6 +16,7 @@ export class DisplayManager {
     // Khởi tạo display methods dựa trên danh sách config
     async initialize(returnMethods) {
         this.destroy();
+        console.log("return", returnMethods);
         if (!returnMethods || !Array.isArray(returnMethods) || returnMethods.length === 0) {
             console.warn('[DisplayManager] No return methods provided for initialization.');
             return;

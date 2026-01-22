@@ -6,18 +6,20 @@ export declare class InlineDisplay {
     private recommendationGetter;
     private observer;
     private debounceTimer;
+    private autoSlideTimeout;
+    private readonly DEFAULT_DELAY;
     constructor(_domainKey: string, _slotName: string, selector: string, _apiBaseUrl: string, config: InlineConfig | undefined, recommendationGetter: () => Promise<RecommendationItem[]>);
     start(): void;
     stop(): void;
+    private setupObserver;
     private scanAndRender;
     private findContainers;
-    private setupObserver;
     private processContainer;
     private fetchRecommendations;
-    private getTokenColor;
-    private getTokenRadius;
-    private getWidgetStyles;
+    private getDynamicStyles;
     private renderItemContent;
     private renderWidget;
+    private renderStaticItems;
+    private setupCarousel;
 }
 //# sourceMappingURL=inline-display.d.ts.map

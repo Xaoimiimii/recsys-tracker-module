@@ -11,6 +11,7 @@ export class PopupDisplay {
 
   private spaCheckInterval: NodeJS.Timeout | null = null;
   private isPendingShow: boolean = false;
+  private isManuallyClosed: boolean = false;
 
   private readonly DEFAULT_DELAY = 5000;
 
@@ -48,6 +49,9 @@ export class PopupDisplay {
     this.spaCheckInterval = setInterval(() => {
         const shouldShow = this.shouldShowPopup(); // Check URL hiện tại
         const isVisible = this.shadowHost !== null; // Check xem Popup có đang hiện không
+        if (!shouldShow) {
+            this.isManuallyClosed = false;
+        }
 
         // CASE 1: URL KHÔNG khớp nhưng Popup đang hiện -> ĐÓNG NGAY
         if (!shouldShow && isVisible) {
@@ -65,7 +69,7 @@ export class PopupDisplay {
         }
 
         // CASE 3: URL KHỚP, Popup CHƯA hiện và CHƯA đếm ngược -> BẮT ĐẦU ĐẾM
-        if (shouldShow && !isVisible && !this.isPendingShow) {
+        if (shouldShow && !isVisible && !this.isPendingShow && !this.isManuallyClosed) {
             this.scheduleShow();
         }
 
@@ -198,7 +202,7 @@ export class PopupDisplay {
     // Xử lý Height từ Config (Nếu JSON có height thì dùng, ko thì max-height)
     const popupHeightCSS = popupWrapper.height 
         ? `height: ${popupWrapper.height}px;` 
-        : `height: auto; max-height: 80vh;`;
+        : `height: auto; max-height: 50vh;`;
 
     let posCSS = 'bottom: 20px; right: 20px;';
     switch (popupWrapper.position) {
@@ -211,6 +215,8 @@ export class PopupDisplay {
     let containerCSS = '';
     let itemDir = 'column';
     let itemAlign = 'stretch';
+    let infoTextAlign = 'center';   
+    let infoAlignItems = 'center';
 
     if (contentMode === 'grid') {
         const cols = modeConfig.columns || 2;
@@ -222,6 +228,8 @@ export class PopupDisplay {
         const gapPx = tokens.spacingScale?.[modeConfig.rowGap || 'md'] || 12;
         containerCSS = `display: flex; flex-direction: column; gap: ${gapPx}px; padding: ${density.cardPadding || 16}px;`;
         containerCSS = 'padding: 0;'; 
+        infoTextAlign = 'left';
+        infoAlignItems = 'flex-start';
     }
 
     // 4. Styles Mapping
@@ -264,7 +272,7 @@ export class PopupDisplay {
         padding: 12px 16px; border-bottom: 1px solid ${getColor('border')};
         display: flex; justify-content: space-between; align-items: center;
         background: ${getColor('surface')};
-        flex-shrink: 0; /* Header không bị co lại khi scroll body */
+        flex-shrink: 0; 
       }
       .recsys-header-title {
           font-size: ${tokens.typography?.title?.fontSize || 16}px;
@@ -309,7 +317,8 @@ export class PopupDisplay {
       }
       .recsys-img-box img { width: 100%; height: 100%; object-fit: ${components.image?.objectFit || 'cover'}; }
 
-      .recsys-info { display: flex; flex-direction: column; gap: 4px; flex: 1; min-width: 0; }
+      .recsys-info { display: flex; flex-direction: column; gap: 4px; flex: 1; min-width: 0; text-align: ${infoTextAlign}; 
+        align-items: ${infoAlignItems};}
 
       .recsys-badges { display: flex; flex-wrap: wrap; gap: 4px; margin-top: auto; }
       .recsys-badge { 
@@ -502,8 +511,8 @@ export class PopupDisplay {
 
     shadow.querySelector('.recsys-close')?.addEventListener('click', () => {
       if (this.autoSlideTimeout) clearTimeout(this.autoSlideTimeout);
+      this.isManuallyClosed = true;
       this.removePopup();
-      this.scheduleNextPopup();
     });
   }
 

@@ -286,7 +286,7 @@ export interface ComponentStyles {
             liftPx: number;
             shadowToken: string;
         };
-    };
+    };  
     image: {
         radiusFollowsCard: boolean;
         objectFit: 'cover' | 'contain' | 'fill';

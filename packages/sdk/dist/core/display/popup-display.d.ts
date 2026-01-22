@@ -9,6 +9,7 @@ export declare class PopupDisplay {
     private shadowHost;
     private spaCheckInterval;
     private isPendingShow;
+    private isManuallyClosed;
     private readonly DEFAULT_DELAY;
     constructor(_domainKey: string, _slotName: string, _apiBaseUrl: string, config: PopupConfig | undefined, recommendationGetter: () => Promise<RecommendationItem[]>);
     start(): void;

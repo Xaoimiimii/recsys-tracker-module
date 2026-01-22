@@ -137,7 +137,7 @@
         }
     }
 
-    //export const DEFAULT_API_URL = 'https://recsys-tracker-module.onrender.com';
+    //export const DEFAULT_API_URL = 'http://localhost:3001';
     const DEFAULT_TRACK_ENDPOINT_PATH = '/event';
 
     // Luồng hoạt động
@@ -1056,6 +1056,7 @@
             this.shadowHost = null;
             this.spaCheckInterval = null;
             this.isPendingShow = false;
+            this.isManuallyClosed = false;
             this.DEFAULT_DELAY = 5000;
             this.recommendationGetter = recommendationGetter;
             this.config = {
@@ -1081,6 +1082,9 @@
             this.spaCheckInterval = setInterval(() => {
                 const shouldShow = this.shouldShowPopup(); // Check URL hiện tại
                 const isVisible = this.shadowHost !== null; // Check xem Popup có đang hiện không
+                if (!shouldShow) {
+                    this.isManuallyClosed = false;
+                }
                 // CASE 1: URL KHÔNG khớp nhưng Popup đang hiện -> ĐÓNG NGAY
                 if (!shouldShow && isVisible) {
                     this.removePopup();
@@ -1095,7 +1099,7 @@
                     return;
                 }
                 // CASE 3: URL KHỚP, Popup CHƯA hiện và CHƯA đếm ngược -> BẮT ĐẦU ĐẾM
-                if (shouldShow && !isVisible && !this.isPendingShow) {
+                if (shouldShow && !isVisible && !this.isPendingShow && !this.isManuallyClosed) {
                     this.scheduleShow();
                 }
             }, 500);
@@ -1213,7 +1217,7 @@
             // Xử lý Height từ Config (Nếu JSON có height thì dùng, ko thì max-height)
             const popupHeightCSS = popupWrapper.height
                 ? `height: ${popupWrapper.height}px;`
-                : `height: auto; max-height: 80vh;`;
+                : `height: auto; max-height: 50vh;`;
             let posCSS = 'bottom: 20px; right: 20px;';
             switch (popupWrapper.position) {
                 case 'bottom-left':
@@ -1230,6 +1234,8 @@
             let containerCSS = '';
             let itemDir = 'column';
             let itemAlign = 'stretch';
+            let infoTextAlign = 'center';
+            let infoAlignItems = 'center';
             if (contentMode === 'grid') {
                 const cols = modeConfig.columns || 2;
                 const gapPx = ((_g = tokens.spacingScale) === null || _g === void 0 ? void 0 : _g[modeConfig.gap || 'md']) || 12;
@@ -1241,6 +1247,8 @@
                 const gapPx = ((_h = tokens.spacingScale) === null || _h === void 0 ? void 0 : _h[modeConfig.rowGap || 'md']) || 12;
                 containerCSS = `display: flex; flex-direction: column; gap: ${gapPx}px; padding: ${density.cardPadding || 16}px;`;
                 containerCSS = 'padding: 0;';
+                infoTextAlign = 'left';
+                infoAlignItems = 'flex-start';
             }
             // 4. Styles Mapping
             const cardComp = components.card || {};
@@ -1278,7 +1286,7 @@
         padding: 12px 16px; border-bottom: 1px solid ${getColor('border')};
         display: flex; justify-content: space-between; align-items: center;
         background: ${getColor('surface')};
-        flex-shrink: 0; /* Header không bị co lại khi scroll body */
+        flex-shrink: 0; 
       }
       .recsys-header-title {
           font-size: ${((_p = (_o = tokens.typography) === null || _o === void 0 ? void 0 : _o.title) === null || _p === void 0 ? void 0 : _p.fontSize) || 16}px;
@@ -1323,7 +1331,8 @@
       }
       .recsys-img-box img { width: 100%; height: 100%; object-fit: ${((_v = components.image) === null || _v === void 0 ? void 0 : _v.objectFit) || 'cover'}; }
 
-      .recsys-info { display: flex; flex-direction: column; gap: 4px; flex: 1; min-width: 0; }
+      .recsys-info { display: flex; flex-direction: column; gap: 4px; flex: 1; min-width: 0; text-align: ${infoTextAlign}; 
+        align-items: ${infoAlignItems};}
 
       .recsys-badges { display: flex; flex-wrap: wrap; gap: 4px; margin-top: auto; }
       .recsys-badge { 
@@ -1508,8 +1517,8 @@
             (_a = shadow.querySelector('.recsys-close')) === null || _a === void 0 ? void 0 : _a.addEventListener('click', () => {
                 if (this.autoSlideTimeout)
                     clearTimeout(this.autoSlideTimeout);
+                this.isManuallyClosed = true;
                 this.removePopup();
-                this.scheduleNextPopup();
             });
         }
         renderStaticItems(shadow, items) {
@@ -1571,13 +1580,13 @@
         constructor(_domainKey, _slotName, selector, _apiBaseUrl, config = {}, recommendationGetter) {
             this.observer = null;
             this.debounceTimer = null;
+            this.autoSlideTimeout = null;
+            this.DEFAULT_DELAY = 5000;
             this.selector = selector;
             this.recommendationGetter = recommendationGetter;
             this.config = { ...config };
         }
         start() {
-            // Inline thường chỉ cần check selector tồn tại, 
-            // nhưng nếu có trigger config check URL thì thêm ở đây
             this.scanAndRender();
             this.setupObserver();
         }
@@ -1589,6 +1598,20 @@
             if (this.debounceTimer) {
                 clearTimeout(this.debounceTimer);
             }
+            if (this.autoSlideTimeout) {
+                clearTimeout(this.autoSlideTimeout);
+            }
+        }
+        // --- CORE INLINE LOGIC (Mutation Observer) ---
+        setupObserver() {
+            this.observer = new MutationObserver(() => {
+                if (this.debounceTimer)
+                    clearTimeout(this.debounceTimer);
+                this.debounceTimer = setTimeout(() => {
+                    this.scanAndRender();
+                }, 100);
+            });
+            this.observer.observe(document.body, { childList: true, subtree: true });
         }
         scanAndRender() {
             const containers = this.findContainers();
@@ -1606,16 +1629,6 @@
             }
             return containers;
         }
-        setupObserver() {
-            this.observer = new MutationObserver(() => {
-                if (this.debounceTimer)
-                    clearTimeout(this.debounceTimer);
-                this.debounceTimer = setTimeout(() => {
-                    this.scanAndRender();
-                }, 100);
-            });
-            this.observer.observe(document.body, { childList: true, subtree: true });
-        }
         async processContainer(container) {
             if (!container || container.getAttribute('data-recsys-loaded') === 'true')
                 return;
@@ -1626,7 +1639,9 @@
                     this.renderWidget(container, items);
                 }
             }
-            catch (error) { }
+            catch (error) {
+                console.error('[InlineDisplay] Error processing container', error);
+            }
         }
         async fetchRecommendations() {
             try {
@@ -1636,249 +1651,398 @@
                 return [];
             }
         }
-        getTokenColor(tokenName, tokens) {
-            var _a;
-            return ((_a = tokens === null || tokens === void 0 ? void 0 : tokens.colors) === null || _a === void 0 ? void 0 : _a[tokenName]) || tokenName || 'transparent';
-        }
-        getTokenRadius(tokenName, tokens) {
-            var _a;
-            const val = (_a = tokens === null || tokens === void 0 ? void 0 : tokens.radius) === null || _a === void 0 ? void 0 : _a[tokenName];
-            return val !== undefined ? `${val}px` : '0px';
-        }
-        // --- DYNAMIC CSS INLINE ---
-        getWidgetStyles() {
-            var _a, _b, _c, _d, _e, _f, _g, _h, _j, _k, _l, _m, _o, _p, _q, _r, _s, _t, _u, _v, _w, _x, _y;
+        // --- DYNAMIC CSS GENERATOR (SYNCED WITH POPUP) ---
+        getDynamicStyles() {
+            var _a, _b, _c, _d, _e, _f, _g, _h, _j, _k, _l, _m, _o, _p, _q, _r, _s, _t, _u;
             const style = this.config.styleJson || {};
             const layout = this.config.layoutJson || {};
+            // 1. Unpack Configs
             const tokens = style.tokens || {};
             const components = style.components || {};
-            const contentMode = layout.contentMode || 'grid'; // grid | list
-            const currentModeConfig = ((_a = layout.modes) === null || _a === void 0 ? void 0 : _a[contentMode]) || {};
-            // Override cho mode hiện tại (nếu có)
-            const modeOverride = ((_b = style.modeOverrides) === null || _b === void 0 ? void 0 : _b[contentMode]) || {};
-            // 1. Base Styles & Grid/List Setup
+            const size = style.size || 'md';
+            const density = ((_a = tokens.densityBySize) === null || _a === void 0 ? void 0 : _a[size]) || {};
+            // --- Helper Getters ---
+            const getColor = (tokenName) => { var _a; return ((_a = tokens.colors) === null || _a === void 0 ? void 0 : _a[tokenName]) || tokenName || 'transparent'; };
+            const getRadius = (tokenName) => {
+                var _a;
+                const r = (_a = tokens.radius) === null || _a === void 0 ? void 0 : _a[tokenName];
+                return r !== undefined ? `${r}px` : '4px';
+            };
+            const getShadow = (tokenName) => { var _a; return ((_a = tokens.shadow) === null || _a === void 0 ? void 0 : _a[tokenName]) || 'none'; };
+            // 2. Setup Dimensions
+            const contentMode = layout.contentMode || 'grid';
+            const modeConfig = ((_b = layout.modes) === null || _b === void 0 ? void 0 : _b[contentMode]) || {};
+            // Image Size logic
+            const imgLayout = ((_e = (_d = (_c = layout.card) === null || _c === void 0 ? void 0 : _c.image) === null || _d === void 0 ? void 0 : _d.sizeByMode) === null || _e === void 0 ? void 0 : _e[contentMode]) || {};
+            const imgHeightRaw = imgLayout.height || density.imageHeight || 140;
+            let imgWidthRaw = '100%';
+            if (contentMode === 'list')
+                imgWidthRaw = imgLayout.width || 96;
+            if (contentMode === 'carousel' && imgLayout.width)
+                imgWidthRaw = imgLayout.width;
+            const imgHeight = typeof imgHeightRaw === 'number' ? `${imgHeightRaw}px` : imgHeightRaw;
+            const imgWidth = typeof imgWidthRaw === 'number' ? `${imgWidthRaw}px` : imgWidthRaw;
+            // 3. Container Logic
             let containerCSS = '';
+            let extraCSS = '';
+            let itemDir = 'column';
+            let itemAlign = 'stretch';
+            let infoTextAlign = 'center';
+            let infoAlignItems = 'center';
+            let itemWidthCSS = 'width: 100%;';
             if (contentMode === 'grid') {
-                const gridConfig = currentModeConfig;
-                const gap = gridConfig.gap || '16px';
-                const cols = gridConfig.columns || 4;
+                const cols = modeConfig.columns || 4; // Inline default thường rộng hơn popup (4 cột)
+                const gapPx = ((_f = tokens.spacingScale) === null || _f === void 0 ? void 0 : _f[modeConfig.gap || 'md']) || 16;
                 containerCSS = `
-            display: grid;
-            grid-template-columns: repeat(${cols}, 1fr);
-            gap: ${((_d = (_c = style.tokens) === null || _c === void 0 ? void 0 : _c.spacingScale) === null || _d === void 0 ? void 0 : _d[gap]) || 12}px;
-        `;
-                // Responsive (Example logic based on breakpoints provided in JSON)
-                if (gridConfig.responsive) {
-                    // Logic media query simple
-                    containerCSS += `
-                @media (max-width: 768px) { grid-template-columns: repeat(2, 1fr); }
-                @media (max-width: 480px) { grid-template-columns: 1fr; }
-             `;
-                }
+          display: grid;
+          grid-auto-flow: column;
+          grid-auto-columns: minmax(calc((100% - (${cols} - 1) * ${gapPx}px) / ${cols}), 1fr);
+          gap: ${gapPx}px;
+          overflow-x: auto; 
+          overflow-y: hidden;
+          padding-bottom: 8px;
+          padding-top: 8px;
+          scrollbar-color: ${getColor('border')} transparent;
+          scrollbar-width: thin; 
+          scroll-behavior: smooth;
+      `;
+                // Responsive đơn giản cho Grid Inline
+                extraCSS += `
+          @media (max-width: 768px) { 
+              .recsys-container { 
+                  /* Trên tablet hiển thị khoảng 2.2 items để gợi ý còn nữa */
+                  grid-auto-columns: minmax(calc((100% - ${gapPx}px) / 2.2), 1fr); 
+              } 
+          }
+          @media (max-width: 480px) { 
+              .recsys-container { 
+                  /* Trên mobile hiển thị item gần full màn hình */
+                  grid-auto-columns: minmax(calc(100% - 32px), 1fr); 
+              } 
+          }
+          
+          /* Custom Scrollbar cho Webkit (Chrome, Safari) */
+          .recsys-container::-webkit-scrollbar { height: 6px; }
+          .recsys-container::-webkit-scrollbar-track { background: transparent; }
+          .recsys-container::-webkit-scrollbar-thumb { 
+              background-color: ${getColor('border')}; 
+              border-radius: 4px; 
+          }
+      `;
             }
-            else { // List
-                const listConfig = currentModeConfig;
-                const gap = listConfig.rowGap || '12px';
+            else if (contentMode === 'list') {
+                itemDir = 'row';
+                itemAlign = 'flex-start';
+                const gapPx = ((_g = tokens.spacingScale) === null || _g === void 0 ? void 0 : _g[modeConfig.rowGap || 'md']) || 12;
+                containerCSS = `display: flex; flex-direction: column; gap: ${gapPx}px;`;
+                infoTextAlign = 'left';
+                infoAlignItems = 'flex-start';
+            }
+            else if (contentMode === 'carousel') {
+                const cols = modeConfig.itemsPerView || modeConfig.columns || 5;
+                const gap = ((_h = tokens.spacingScale) === null || _h === void 0 ? void 0 : _h[modeConfig.gap || 'md']) || 16;
                 containerCSS = `
-            display: flex;
-            flex-direction: column;
-            gap: ${((_f = (_e = style.tokens) === null || _e === void 0 ? void 0 : _e.spacingScale) === null || _f === void 0 ? void 0 : _f[gap]) || 12}px;
-        `;
-            }
-            // 2. Card Styles
-            const cardComp = { ...components.card, ...modeOverride.card };
-            const cardBg = this.getTokenColor(cardComp.backgroundToken, tokens);
-            const cardBorderColor = this.getTokenColor(cardComp.borderColorToken, tokens);
-            const cardRadius = this.getTokenRadius(cardComp.radiusToken, tokens);
-            const cardShadow = ((_g = tokens.shadow) === null || _g === void 0 ? void 0 : _g[cardComp.shadowToken]) || 'none';
-            const cardPadding = ((_k = (_j = (_h = style.tokens) === null || _h === void 0 ? void 0 : _h.densityBySize) === null || _j === void 0 ? void 0 : _j[style.size || 'md']) === null || _k === void 0 ? void 0 : _k.cardPadding) || 12;
-            // 3. Image Styles
-            const imgComp = { ...components.image, ...modeOverride.image };
-            const imgLayout = layout.card.image || {};
-            const imgSize = ((_l = imgLayout.sizeByMode) === null || _l === void 0 ? void 0 : _l[contentMode]) || {};
-            // Image Layout logic
-            let imgContainerCSS = '';
-            let itemFlexDir = 'column';
-            let itemAlignItems = 'stretch';
-            if (contentMode === 'list') {
-                itemFlexDir = 'row'; // List thì ảnh bên trái
-                itemAlignItems = 'flex-start';
-                imgContainerCSS = `
-            width: ${imgSize.width || 96}px;
-            height: ${imgSize.height || 96}px;
-            flex-shrink: 0;
-        `;
-            }
-            else {
-                // Grid
-                imgContainerCSS = `
-            width: 100%;
-            height: ${imgSize.height || 140}px;
-        `;
-            }
-            // 4. Typography & Colors
-            const typo = tokens.typography || {};
-            const textColor = this.getTokenColor(((_o = (_m = components.fieldRow) === null || _m === void 0 ? void 0 : _m.value) === null || _o === void 0 ? void 0 : _o.colorToken) || 'textPrimary', tokens);
-            //const labelColor = this.getTokenColor(components.fieldRow?.label?.colorToken || 'textSecondary', tokens);
-            return `
-      :host { 
-          all: initial; 
-          font-family: inherit; 
-          width: 100%; 
-          display: block; 
-          box-sizing: border-box;
-      }
-      * { box-sizing: border-box; }
-
-      .recsys-wrapper {
-        ${containerCSS}
-        padding: 16px 0;
-      }
-
-      .recsys-item {
-        background: ${cardBg};
-        border: ${cardComp.border ? `1px solid ${cardBorderColor}` : 'none'};
-        border-radius: ${cardRadius};
-        box-shadow: ${cardShadow};
-        overflow: hidden;
-        cursor: pointer;
-        display: flex;
-        flex-direction: ${itemFlexDir}; 
-        align-items: ${itemAlignItems};
-        transition: transform 0.2s, box-shadow 0.2s;
-        padding: ${cardPadding}px;
-        gap: 12px; /* Gap giữa ảnh và nội dung text */
-      }
-
-      ${((_p = cardComp.hover) === null || _p === void 0 ? void 0 : _p.enabled) ? `
-      .recsys-item:hover {
-        transform: translateY(-${cardComp.hover.liftPx || 0}px);
-        box-shadow: ${((_q = tokens.shadow) === null || _q === void 0 ? void 0 : _q[cardComp.hover.shadowToken]) || 'none'};
-      }
-      ` : ''}
-
-      .recsys-img-box {
-        ${imgContainerCSS}
-        border-radius: ${imgComp.radiusFollowsCard ? cardRadius : '4px'};
-        overflow: hidden;
-        background: ${this.getTokenColor('muted', tokens)};
-        position: relative;
-      }
-
-      .recsys-img-box img {
-        width: 100%; height: 100%; 
-        object-fit: ${imgComp.objectFit || 'cover'};
-        display: block;
-      }
-
-      .recsys-info {
-        flex: 1;
-        display: flex;
-        flex-direction: column;
-        gap: ${((_r = tokens.spacingScale) === null || _r === void 0 ? void 0 : _r[(_s = components.fieldRow) === null || _s === void 0 ? void 0 : _s.rowGapToken]) || 4}px;
-        justify-content: center;
-        min-width: 0; /* Fix flex overflow text */
-      }
-
-      /* Field Styling */
-      
-      .recsys-title {
-          font-size: ${((_t = typo.title) === null || _t === void 0 ? void 0 : _t.fontSize) || 16}px;
-          font-weight: ${((_u = typo.title) === null || _u === void 0 ? void 0 : _u.fontWeight) || 600};
-          color: ${this.getTokenColor('textPrimary', tokens)};
-          margin-bottom: 4px;
-          display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;
-      }
-
-      .recsys-value {
-          color: ${textColor};
-          white-space: nowrap; 
-          overflow: hidden; 
-          text-overflow: ellipsis;
-      }
-
-      /* Categories / Array Badges */
-      .recsys-badges {
-          display: flex; gap: 4px; flex-wrap: wrap;
-      }
-      .recsys-badge {
-          font-size: 10px;
-          padding: 2px 6px;
-          border-radius: ${this.getTokenRadius(((_v = tokens.radius) === null || _v === void 0 ? void 0 : _v.badge) || 'badge', tokens)};
-          background: ${this.getTokenColor(((_w = components.badge) === null || _w === void 0 ? void 0 : _w.backgroundToken) || 'primary', tokens)};
-          color: ${((_x = components.badge) === null || _x === void 0 ? void 0 : _x.textColor) || '#fff'};
-      }
-
-      /* Button / Actions */
-      .recsys-actions {
-          margin-top: auto;
-          display: flex;
-          justify-content: flex-end;
-      }
-      .recsys-btn {
-          background: ${this.getTokenColor('primary', tokens)};
-          color: #fff;
-          border: none;
-          padding: 6px 12px;
-          border-radius: ${this.getTokenRadius(((_y = tokens.radius) === null || _y === void 0 ? void 0 : _y.button) || 'button', tokens)};
-          font-size: 12px;
-          cursor: pointer;
-      }
+        display: flex; 
+        justify-content: center; 
+        padding: 0 40px; 
+        position: relative; 
+        min-height: 200px;
     `;
-        }
-        // --- DYNAMIC HTML INLINE ---
-        renderItemContent(item) {
-            var _a;
-            const fields = ((_a = this.config.customizingFields) === null || _a === void 0 ? void 0 : _a.fields) || [];
-            const activeFields = fields.filter(f => f.isEnabled).sort((a, b) => a.position - b.position);
-            let html = '';
-            // Tách ảnh ra render riêng ở trên đầu card (chuẩn UI card)
-            const imageField = activeFields.find(f => f.key === 'image' || f.key === 'img');
-            if (imageField) {
-                html += `
-          <div class="recsys-img-box">
-             <img src="${item.img}" alt="${item.title || ''}">
-          </div>
-        `;
+                itemWidthCSS = `
+        flex: 0 0 calc((100% - (${cols} - 1) * ${gap}px) / ${cols});
+        max-width: calc((100% - (${cols} - 1) * ${gap}px) / ${cols});
+        margin: 0; /* Xóa margin auto cũ */
+      `;
             }
-            html += `<div class="recsys-info">`;
-            activeFields.forEach(field => {
-                const key = field.key;
-                if (key === 'image' || key === 'img')
-                    return; // Đã render ở trên
-                let value = '';
-                if (key === 'product_name' || key === 'name')
-                    value = item.title;
-                else if (key === 'description')
-                    value = item.description;
-                else
-                    value = item[key];
-                if (value) {
-                    html += `<div class="recsys-field-${key}">${value}</div>`;
+            // 4. Styles Mapping
+            const cardComp = components.card || {};
+            const modeOverride = ((_j = style.modeOverrides) === null || _j === void 0 ? void 0 : _j[contentMode]) || {};
+            // Colors
+            const colorTitle = getColor('textPrimary');
+            //const colorBody = getColor('textSecondary');
+            const colorPrimary = getColor('primary');
+            // Card Specifics
+            const cardBg = getColor(cardComp.backgroundToken || 'surface');
+            const cardBorder = cardComp.border ? `1px solid ${getColor(cardComp.borderColorToken)}` : 'none';
+            const cardRadius = getRadius(cardComp.radiusToken || 'card');
+            const cardShadow = getShadow(cardComp.shadowToken);
+            const cardPadding = ((_k = modeOverride.card) === null || _k === void 0 ? void 0 : _k.paddingFromDensity)
+                ? (density[modeOverride.card.paddingFromDensity] || 12)
+                : (density.cardPadding || 12);
+            const btnBg = getColor('surface');
+            return `
+    :host { all: initial; font-family: inherit; width: 100%; display: block; box-sizing: border-box; }
+    * { box-sizing: border-box; }
+
+    .recsys-wrapper {
+      width: 100%;
+      background: ${getColor(((_l = components.canvas) === null || _l === void 0 ? void 0 : _l.backgroundToken) || 'transparent')};
+      padding: 16px 0;
+      border-radius: 8px;
+    }
+
+    .recsys-header {
+      margin-left: 10px;
+      margin-bottom: 16px;
+      border-bottom: 1px solid ${getColor('border')};
+      padding-bottom: 8px;
+      
+      justify-content: space-between; align-items: center;
+    }
+    .recsys-header-title {
+        font-size: ${((_o = (_m = tokens.typography) === null || _m === void 0 ? void 0 : _m.title) === null || _o === void 0 ? void 0 : _o.fontSize) || 18}px;
+        font-weight: ${((_q = (_p = tokens.typography) === null || _p === void 0 ? void 0 : _p.title) === null || _q === void 0 ? void 0 : _q.fontWeight) || 600};
+        color: ${colorTitle};
+    }
+
+    .recsys-container { ${containerCSS} }
+
+    .recsys-item {
+        display: flex; flex-direction: ${itemDir}; align-items: ${itemAlign};
+        gap: ${((_r = tokens.spacingScale) === null || _r === void 0 ? void 0 : _r.sm) || 8}px;
+        background: ${cardBg}; border: ${cardBorder}; border-radius: ${cardRadius};
+        box-shadow: ${cardShadow}; padding: ${cardPadding}px;
+        cursor: pointer; transition: all 0.2s;
+        ${itemWidthCSS}
+        min-width: 0; /* Fix flex overflow */
+    }
+
+    .recsys-item:hover .recsys-name {
+        color: ${colorPrimary}; 
+    }
+
+    ${((_s = cardComp.hover) === null || _s === void 0 ? void 0 : _s.enabled) ? `
+    .recsys-item:hover {
+        transform: translateY(-${cardComp.hover.liftPx || 2}px);
+        box-shadow: ${getShadow(cardComp.hover.shadowToken || 'cardHover')};
+    }
+    ` : ''}
+
+    .recsys-img-box {
+        width: ${imgWidth}; height: ${imgHeight};
+        border-radius: ${getRadius(((_t = components.image) === null || _t === void 0 ? void 0 : _t.radiusFollowsCard) ? cardComp.radiusToken : 'image')};
+        overflow: hidden; background: ${getColor('muted')}; flex-shrink: 0; display: flex;
+    }
+    .recsys-img-box img { width: 100%; height: 100%; object-fit: ${((_u = components.image) === null || _u === void 0 ? void 0 : _u.objectFit) || 'contain'}; }
+
+    .recsys-info { display: flex; flex-direction: column; gap: 4px; flex: 1; min-width: 0; text-align: ${infoTextAlign}; 
+      align-items: ${infoAlignItems};}
+
+    /* Buttons for Carousel */
+    .recsys-nav {
+        position: absolute; top: 50%; transform: translateY(-50%);
+        width: 32px; height: 32px;
+        border-radius: 50%;
+        background: ${btnBg};
+        border: 1px solid ${getColor('border')};
+        display: flex; align-items: center; justify-content: center;
+        z-index: 10; cursor: pointer; color: ${colorTitle};
+        box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+        font-size: 18px; padding-bottom: 2px;
+        opacity: 0.9; transition: opacity 0.2s;
+    }
+    .recsys-nav:hover { opacity: 1; }
+    .recsys-prev { left: 0; }
+    .recsys-next { right: 0; }
+  `;
+        }
+        // --- DYNAMIC HTML RENDERER (SYNCED WITH POPUP) ---
+        renderItemContent(item) {
+            var _a, _b, _c, _d;
+            const customizingFields = ((_a = this.config.customizingFields) === null || _a === void 0 ? void 0 : _a.fields) || [];
+            const activeFields = customizingFields.filter(f => f.isEnabled).sort((a, b) => a.position - b.position);
+            // 1. Configs & Colors
+            const styleJson = this.config.styleJson || {};
+            const fieldOverrides = ((_c = (_b = styleJson.components) === null || _b === void 0 ? void 0 : _b.fieldRow) === null || _c === void 0 ? void 0 : _c.overrides) || {};
+            const colors = ((_d = styleJson.tokens) === null || _d === void 0 ? void 0 : _d.colors) || {};
+            // Helper: Smart Get Value
+            const getValue = (obj, configKey) => {
+                if (!obj)
+                    return '';
+                if (obj[configKey] !== undefined)
+                    return obj[configKey];
+                const pascalKey = configKey.replace(/(_\w)/g, m => m[1].toUpperCase()).replace(/^\w/, c => c.toUpperCase());
+                if (obj[pascalKey] !== undefined)
+                    return obj[pascalKey];
+                const camelKey = configKey.replace(/(_\w)/g, m => m[1].toUpperCase());
+                if (obj[camelKey] !== undefined)
+                    return obj[camelKey];
+                if (obj[configKey.toUpperCase()] !== undefined)
+                    return obj[configKey.toUpperCase()];
+                const lowerKey = configKey.toLowerCase();
+                if (['title', 'name', 'product_name', 'item_name'].includes(lowerKey))
+                    return obj['Title'] || obj['title'] || obj['Name'] || obj['name'];
+                if (['image', 'img', 'image_url', 'avatar'].includes(lowerKey))
+                    return obj['ImageUrl'] || obj['imageUrl'] || obj['Img'] || obj['img'] || obj['Image'] || obj['image'];
+                return '';
+            };
+            // Helper: Get Final Style (Override > Default)
+            const getFinalStyle = (fieldKey) => {
+                const key = fieldKey.toLowerCase();
+                const override = fieldOverrides[fieldKey] || {};
+                let defaultColor = colors.textSecondary;
+                let defaultWeight = '400';
+                let defaultSize = 12;
+                if (['title', 'name', 'product_name', 'item_name'].includes(key)) {
+                    defaultColor = colors.textPrimary;
+                    defaultWeight = '600';
+                    defaultSize = 14;
                 }
+                else if (key.includes('price')) {
+                    defaultColor = colors.primary;
+                    defaultWeight = '700';
+                    defaultSize = 14;
+                }
+                else if (key.includes('rating')) {
+                    defaultColor = colors.warning;
+                }
+                else if (key.includes('category') || key.includes('categories')) {
+                    defaultColor = colors.primary;
+                    defaultSize = 11;
+                }
+                const finalColor = override.color || defaultColor;
+                const finalSize = override.fontSize || defaultSize;
+                const finalWeight = override.fontWeight || defaultWeight;
+                let style = '';
+                if (finalColor)
+                    style += `color: ${finalColor} !important; `;
+                if (finalSize)
+                    style += `font-size: ${finalSize}px !important; `;
+                if (finalWeight)
+                    style += `font-weight: ${finalWeight} !important; `;
+                return style;
+            };
+            // 2. Extract Data
+            const titleFieldConfig = activeFields.find(f => ['title', 'name', 'product_name', 'item_name'].includes(f.key.toLowerCase()));
+            const titleValue = titleFieldConfig ? getValue(item, titleFieldConfig.key) : getValue(item, 'title');
+            const titleStyle = titleFieldConfig ? getFinalStyle(titleFieldConfig.key) : `color: ${colors.textPrimary}; font-weight: 600;`;
+            const imageFieldConfig = activeFields.find(f => ['image', 'img', 'image_url', 'imageurl'].includes(f.key.toLowerCase()));
+            const imgSrc = imageFieldConfig ? getValue(item, imageFieldConfig.key) : getValue(item, 'image');
+            // 3. Render HTML Structure
+            let html = `
+      <div class="recsys-item" data-id="${item.id || ''}">
+        ${imgSrc ? `
+        <div class="recsys-img-box">
+            <img src="${imgSrc}" alt="${titleValue || ''}" />
+        </div>` : ''}
+        
+        <div class="recsys-info">
+            <div class="recsys-name" title="${titleValue}" style="${titleStyle}">
+              ${titleValue || ''}
+            </div>
+    `;
+            // 4. Render Remaining Fields
+            activeFields.forEach(field => {
+                const key = field.key.toLowerCase();
+                if (['image', 'img', 'image_url', 'title', 'name', 'product_name', 'item_name'].includes(key))
+                    return;
+                let rawValue = getValue(item, field.key);
+                if (rawValue === undefined || rawValue === null || rawValue === '')
+                    return;
+                let displayValue = rawValue;
+                if (Array.isArray(rawValue)) {
+                    displayValue = rawValue.join(', ');
+                }
+                const valueStyle = getFinalStyle(field.key);
+                html += `<div class="recsys-field-row">
+          <span class="recsys-value" style="${valueStyle}">${displayValue}</span>
+      </div>`;
             });
-            html += `</div>`;
+            html += `</div></div>`;
             return html;
         }
+        // --- RENDER MAIN WIDGET ---
+        // --- RENDER MAIN WIDGET ---
         renderWidget(container, items) {
+            var _a, _b, _c, _d, _e;
             let shadow = container.shadowRoot;
             if (!shadow)
                 shadow = container.attachShadow({ mode: 'open' });
             shadow.innerHTML = '';
             const style = document.createElement('style');
-            style.textContent = this.getWidgetStyles();
+            style.textContent = this.getDynamicStyles();
             shadow.appendChild(style);
+            const styleJson = this.config.styleJson || {};
+            const layout = this.config.layoutJson || {};
+            const contentMode = layout.contentMode || 'grid';
+            const title = ((_b = (_a = layout.wrapper) === null || _a === void 0 ? void 0 : _a.header) === null || _b === void 0 ? void 0 : _b.title) || 'Gợi ý cho bạn';
             const wrapper = document.createElement('div');
             wrapper.className = 'recsys-wrapper';
-            items.forEach(item => {
-                const itemEl = document.createElement('div');
-                itemEl.className = 'recsys-item';
-                itemEl.setAttribute('data-id', String(item.id));
-                // GỌI RENDER ĐỘNG
-                itemEl.innerHTML = this.renderItemContent(item);
-                wrapper.appendChild(itemEl);
-            });
-            shadow.appendChild(wrapper);
+            // Header
+            const headerHTML = `
+      <div class="recsys-header">
+        <span class="recsys-header-title">${title}</span>
+      </div>
+    `;
+            // [FIX] Tách biệt logic render để tránh ghi đè innerHTML
+            if (contentMode === 'carousel') {
+                const modeConfig = ((_c = layout.modes) === null || _c === void 0 ? void 0 : _c.carousel) || {};
+                const gap = ((_e = (_d = styleJson === null || styleJson === void 0 ? void 0 : styleJson.tokens) === null || _d === void 0 ? void 0 : _d.spacingScale) === null || _e === void 0 ? void 0 : _e[modeConfig.gap || 'md']) || 16;
+                // Render cấu trúc Carousel
+                wrapper.innerHTML = headerHTML + `
+        <div style="position: relative; width: 100%; max-width: 100%;">
+          <button class="recsys-nav recsys-prev">‹</button>
+          
+          <div class="recsys-container" style="display: flex; overflow: hidden; width: 100%; gap: ${gap}px;"></div>
+          
+          <button class="recsys-nav recsys-next">›</button>
+        </div>`;
+                shadow.appendChild(wrapper);
+                this.setupCarousel(shadow, items); // Khởi tạo logic carousel
+            }
+            else {
+                // Render cấu trúc Grid/List
+                wrapper.innerHTML = headerHTML + `<div class="recsys-container"></div>`;
+                shadow.appendChild(wrapper);
+                this.renderStaticItems(shadow, items);
+            }
+        }
+        renderStaticItems(shadow, items) {
+            const container = shadow.querySelector('.recsys-container');
+            if (!container)
+                return;
+            container.innerHTML = items.map(item => this.renderItemContent(item)).join('');
+        }
+        // --- CAROUSEL LOGIC ---
+        setupCarousel(shadow, items) {
+            var _a, _b, _c;
+            // Lấy số lượng item cần hiện từ config (mặc định 5 nếu không có)
+            const layout = this.config.layoutJson || {};
+            const modeConfig = ((_a = layout.modes) === null || _a === void 0 ? void 0 : _a.carousel) || {};
+            const itemsPerView = modeConfig.itemsPerView || modeConfig.columns || 5;
+            console.log(itemsPerView);
+            let currentIndex = 0;
+            const slideContainer = shadow.querySelector('.recsys-container');
+            if (!slideContainer)
+                return;
+            const renderSlide = () => {
+                let html = '';
+                // [FIX] Vòng lặp lấy N item liên tiếp thay vì chỉ 1 item
+                for (let i = 0; i < itemsPerView; i++) {
+                    const index = (currentIndex + i) % items.length;
+                    html += this.renderItemContent(items[index]);
+                }
+                slideContainer.innerHTML = html;
+            };
+            const next = () => {
+                currentIndex = (currentIndex + 1) % items.length;
+                renderSlide();
+                resetAutoSlide();
+            };
+            const prev = () => {
+                currentIndex = (currentIndex - 1 + items.length) % items.length;
+                renderSlide();
+                resetAutoSlide();
+            };
+            const resetAutoSlide = () => {
+                if (this.autoSlideTimeout)
+                    clearTimeout(this.autoSlideTimeout);
+                this.autoSlideTimeout = setTimeout(next, this.DEFAULT_DELAY);
+            };
+            (_b = shadow.querySelector('.recsys-prev')) === null || _b === void 0 ? void 0 : _b.addEventListener('click', prev);
+            (_c = shadow.querySelector('.recsys-next')) === null || _c === void 0 ? void 0 : _c.addEventListener('click', next);
+            renderSlide();
+            resetAutoSlide();
         }
     }
 
@@ -2206,6 +2370,7 @@
         // Khởi tạo display methods dựa trên danh sách config
         async initialize(returnMethods) {
             this.destroy();
+            console.log("return", returnMethods);
             if (!returnMethods || !Array.isArray(returnMethods) || returnMethods.length === 0) {
                 console.warn('[DisplayManager] No return methods provided for initialization.');
                 return;
