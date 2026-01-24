@@ -1647,7 +1647,7 @@ class InlineDisplay {
     }
     // --- DYNAMIC CSS GENERATOR (SYNCED WITH POPUP) ---
     getDynamicStyles() {
-        var _a, _b, _c, _d, _e, _f, _g, _h, _j, _k, _l, _m, _o, _p, _q, _r, _s, _t;
+        var _a, _b, _c, _d, _e, _f, _g, _h, _j, _k, _l, _m, _o;
         const style = this.config.styleJson || {};
         const layout = this.config.layoutJson || {};
         // 1. Unpack Configs
@@ -1666,19 +1666,16 @@ class InlineDisplay {
         // 2. Setup Dimensions
         const contentMode = layout.contentMode || 'grid';
         const modeConfig = ((_b = layout.modes) === null || _b === void 0 ? void 0 : _b[contentMode]) || {};
-        // Image Size logic
-        const imgLayout = ((_e = (_d = (_c = layout.card) === null || _c === void 0 ? void 0 : _c.image) === null || _d === void 0 ? void 0 : _d.sizeByMode) === null || _e === void 0 ? void 0 : _e[contentMode]) || {};
-        const imgHeightRaw = imgLayout.height || density.imageHeight || 140;
-        let imgWidthRaw = '100%';
-        if (contentMode === 'list')
-            imgWidthRaw = imgLayout.width || 96;
-        if (contentMode === 'carousel' && imgLayout.width)
-            imgWidthRaw = imgLayout.width;
-        const imgHeight = typeof imgHeightRaw === 'number' ? `${imgHeightRaw}px` : imgHeightRaw;
-        const imgWidth = typeof imgWidthRaw === 'number' ? `${imgWidthRaw}px` : imgWidthRaw;
+        // Image Size logic - not used anymore with aspect-ratio approach
+        // const imgLayout = layout.card?.image?.sizeByMode?.[contentMode as 'grid' | 'list' | 'carousel'] || {};
+        // const imgHeightRaw = imgLayout.height || density.imageHeight || 150; 
+        // let imgWidthRaw: string | number = contentMode === 'grid' ? 150 : '100%';
+        // if (contentMode === 'list') imgWidthRaw = (imgLayout as any).width || 96;
+        // if (contentMode === 'carousel' && (imgLayout as any).width) imgWidthRaw = (imgLayout as any).width;
+        // const imgHeight = typeof imgHeightRaw === 'number' ? `${imgHeightRaw}px` : imgHeightRaw;
+        // const imgWidth = typeof imgWidthRaw === 'number' ? `${imgWidthRaw}px` : imgWidthRaw;
         // 3. Container Logic
         let containerCSS = '';
-        let extraCSS = '';
         let itemDir = 'column';
         let itemAlign = 'stretch';
         let infoTextAlign = 'center';
@@ -1686,55 +1683,25 @@ class InlineDisplay {
         let itemWidthCSS = 'width: 100%;';
         if (contentMode === 'grid') {
             const cols = modeConfig.columns || 4; // Inline default thường rộng hơn popup (4 cột)
-            const gapPx = ((_f = tokens.spacingScale) === null || _f === void 0 ? void 0 : _f[modeConfig.gap || 'md']) || 16;
+            const gapPx = ((_c = tokens.spacingScale) === null || _c === void 0 ? void 0 : _c[modeConfig.gap || 'md']) || 16;
             containerCSS = `
           display: grid;
-          grid-auto-flow: column;
-          grid-auto-columns: minmax(calc((100% - (${cols} - 1) * ${gapPx}px) / ${cols}), 1fr);
+          grid-template-columns: repeat(${cols}, 1fr);
           gap: ${gapPx}px;
-          overflow-x: auto; 
-          overflow-y: hidden;
-          padding-bottom: 8px;
-          padding-top: 8px;
-          scrollbar-color: ${getColor('border')} transparent;
-          scrollbar-width: thin; 
-          scroll-behavior: smooth;
-      `;
-            // Responsive đơn giản cho Grid Inline
-            extraCSS += `
-          @media (max-width: 768px) { 
-              .recsys-container { 
-                  /* Trên tablet hiển thị khoảng 2.2 items để gợi ý còn nữa */
-                  grid-auto-columns: minmax(calc((100% - ${gapPx}px) / 2.2), 1fr); 
-              } 
-          }
-          @media (max-width: 480px) { 
-              .recsys-container { 
-                  /* Trên mobile hiển thị item gần full màn hình */
-                  grid-auto-columns: minmax(calc(100% - 32px), 1fr); 
-              } 
-          }
-          
-          /* Custom Scrollbar cho Webkit (Chrome, Safari) */
-          .recsys-container::-webkit-scrollbar { height: 6px; }
-          .recsys-container::-webkit-scrollbar-track { background: transparent; }
-          .recsys-container::-webkit-scrollbar-thumb { 
-              background-color: ${getColor('border')}; 
-              border-radius: 4px; 
-          }
+          padding: 8px 0;
       `;
         }
         else if (contentMode === 'list') {
             itemDir = 'row';
             itemAlign = 'flex-start';
-            const gapPx = ((_g = tokens.spacingScale) === null || _g === void 0 ? void 0 : _g[modeConfig.rowGap || 'md']) || 12;
+            const gapPx = ((_d = tokens.spacingScale) === null || _d === void 0 ? void 0 : _d[modeConfig.rowGap || 'md']) || 12;
             containerCSS = `display: flex; flex-direction: column; gap: ${gapPx}px;`;
             infoTextAlign = 'left';
             infoAlignItems = 'flex-start';
         }
         else if (contentMode === 'carousel') {
             const cols = modeConfig.itemsPerView || modeConfig.columns || 5;
-            const gap = ((_h = tokens.spacingScale) === null || _h === void 0 ? void 0 : _h[modeConfig.gap || 'md']) || 16;
+            const gap = ((_e = tokens.spacingScale) === null || _e === void 0 ? void 0 : _e[modeConfig.gap || 'md']) || 16;
             containerCSS = `
         display: flex; 
         justify-content: center; 
@@ -1750,7 +1717,7 @@ class InlineDisplay {
         }
         // 4. Styles Mapping
         const cardComp = components.card || {};
-        const modeOverride = ((_j = style.modeOverrides) === null || _j === void 0 ? void 0 : _j[contentMode]) || {};
+        const modeOverride = ((_f = style.modeOverrides) === null || _f === void 0 ? void 0 : _f[contentMode]) || {};
         // Colors
         const colorTitle = getColor('textPrimary');
         //const colorBody = getColor('textSecondary');
@@ -1760,7 +1727,7 @@ class InlineDisplay {
         const cardBorder = cardComp.border ? `1px solid ${getColor(cardComp.borderColorToken)}` : 'none';
         const cardRadius = getRadius(cardComp.radiusToken || 'card');
         const cardShadow = getShadow(cardComp.shadowToken);
-        const cardPadding = ((_k = modeOverride.card) === null || _k === void 0 ? void 0 : _k.paddingFromDensity)
+        const cardPadding = ((_g = modeOverride.card) === null || _g === void 0 ? void 0 : _g.paddingFromDensity)
             ? (density[modeOverride.card.paddingFromDensity] || 12)
             : (density.cardPadding || 12);
         const btnBg = getColor('surface');
@@ -1770,7 +1737,7 @@ class InlineDisplay {
 
     .recsys-wrapper {
       width: 100%;
-      background: ${getColor('surface') || 'transparent'};
+      background: ${getColor('surface')};
       padding: 16px 0;
       border-radius: 8px;
     }
@@ -1784,8 +1751,8 @@ class InlineDisplay {
       justify-content: space-between; align-items: center;
     }
     .recsys-header-title {
-        font-size: ${((_m = (_l = tokens.typography) === null || _l === void 0 ? void 0 : _l.title) === null || _m === void 0 ? void 0 : _m.fontSize) || 18}px;
-        font-weight: ${((_p = (_o = tokens.typography) === null || _o === void 0 ? void 0 : _o.title) === null || _p === void 0 ? void 0 : _p.fontWeight) || 600};
+        font-size: ${((_j = (_h = tokens.typography) === null || _h === void 0 ? void 0 : _h.title) === null || _j === void 0 ? void 0 : _j.fontSize) || 18}px;
+        font-weight: ${((_l = (_k = tokens.typography) === null || _k === void 0 ? void 0 : _k.title) === null || _l === void 0 ? void 0 : _l.fontWeight) || 600};
         color: ${colorTitle};
     }
 
@@ -1793,7 +1760,7 @@ class InlineDisplay {
 
     .recsys-item {
         display: flex; flex-direction: ${itemDir}; align-items: ${itemAlign};
-        gap: ${((_q = tokens.spacingScale) === null || _q === void 0 ? void 0 : _q.sm) || 8}px;
+        gap: ${((_m = tokens.spacingScale) === null || _m === void 0 ? void 0 : _m.sm) || 8}px;
         background: ${cardBg}; border: ${cardBorder}; border-radius: ${cardRadius};
         box-shadow: ${cardShadow}; padding: ${cardPadding}px;
         cursor: pointer; transition: all 0.2s;
@@ -1805,7 +1772,7 @@ class InlineDisplay {
         color: ${colorPrimary}; 
     }
 
-    ${((_r = cardComp.hover) === null || _r === void 0 ? void 0 : _r.enabled) ? `
+    ${((_o = cardComp.hover) === null || _o === void 0 ? void 0 : _o.enabled) ? `
     .recsys-item:hover {
         transform: translateY(-${cardComp.hover.liftPx || 2}px);
         box-shadow: ${getShadow(cardComp.hover.shadowToken || 'cardHover')};
@@ -1813,11 +1780,19 @@ class InlineDisplay {
     ` : ''}
 
     .recsys-img-box {
-        width: ${imgWidth}; height: ${imgHeight};
-        border-radius: ${getRadius(((_s = components.image) === null || _s === void 0 ? void 0 : _s.radiusFollowsCard) ? cardComp.radiusToken : 'image')};
-        overflow: hidden; background: ${getColor('muted')}; flex-shrink: 0; display: flex;
+        width: 100%;
+        aspect-ratio: 1;
+        overflow: hidden; 
+        background: ${getColor('muted')}; 
+        flex-shrink: 0;
     }
-    .recsys-img-box img { width: 100%; height: 100%; object-fit: ${((_t = components.image) === null || _t === void 0 ? void 0 : _t.objectFit) || 'contain'}; }
+    .recsys-img-box img { 
+        width: 100%; 
+        aspect-ratio: 1;
+        object-fit: cover;
+        border-radius: 4px;
+        transition: all 0.3s ease;
+    }
 
     .recsys-info { display: flex; flex-direction: column; gap: 4px; flex: 1; min-width: 0; text-align: ${infoTextAlign}; 
       align-items: ${infoAlignItems};}
@@ -2157,7 +2132,7 @@ class RecommendationFetcher {
     //   this.apiBaseUrl = apiBaseUrl;
     //   this.cache = new Map();
     // }
-    async fetchRecommendations(userValue, userField = 'AnonymousId', options = {}) {
+    async fetchRecommendations(userValue, userField = 'AnonymousId', _options = {}) {
         try {
             // Check cache first
             const cacheKey = this.getCacheKey(userValue, userField);
@@ -2169,7 +2144,8 @@ class RecommendationFetcher {
             const requestBody = {
                 AnonymousId: this.getOrCreateAnonymousId(),
                 DomainKey: this.domainKey,
-                NumberItems: options.numberItems || 10,
+                // NumberItems: options.numberItems || 50,
+                NumberItems: 50,
             };
             // Check for cached user info in localStorage
             const cachedUserId = this.getCachedUserId();

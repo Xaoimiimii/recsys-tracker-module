@@ -10,7 +10,7 @@ export class RecommendationFetcher {
     //   this.apiBaseUrl = apiBaseUrl;
     //   this.cache = new Map();
     // }
-    async fetchRecommendations(userValue, userField = 'AnonymousId', options = {}) {
+    async fetchRecommendations(userValue, userField = 'AnonymousId', _options = {}) {
         try {
             // Check cache first
             const cacheKey = this.getCacheKey(userValue, userField);
@@ -22,7 +22,8 @@ export class RecommendationFetcher {
             const requestBody = {
                 AnonymousId: this.getOrCreateAnonymousId(),
                 DomainKey: this.domainKey,
-                NumberItems: options.numberItems || 10,
+                // NumberItems: options.numberItems || 50,
+                NumberItems: 50,
             };
             // Check for cached user info in localStorage
             const cachedUserId = this.getCachedUserId();

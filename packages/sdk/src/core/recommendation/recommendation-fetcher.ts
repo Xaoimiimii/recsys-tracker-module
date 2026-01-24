@@ -27,7 +27,7 @@ export class RecommendationFetcher {
   async fetchRecommendations(
     userValue: string,
     userField: UserField = 'AnonymousId',
-    options: RecommendationOptions = {}
+    _options: RecommendationOptions = {}
   ): Promise<RecommendationItem[]> {
     try {
       // Check cache first
@@ -41,7 +41,8 @@ export class RecommendationFetcher {
       const requestBody: RecommendationRequest = {
         AnonymousId: this.getOrCreateAnonymousId(),
         DomainKey: this.domainKey,
-        NumberItems: options.numberItems || 10,
+        // NumberItems: options.numberItems || 50,
+        NumberItems: 50,
       };
 
       // Check for cached user info in localStorage

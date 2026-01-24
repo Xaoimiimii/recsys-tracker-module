@@ -114,16 +114,16 @@ export class InlineDisplay {
     const contentMode = layout.contentMode || 'grid'; 
     const modeConfig = layout.modes?.[contentMode as keyof typeof layout.modes] || {} as any;
     
-    // Image Size logic
-    const imgLayout = layout.card?.image?.sizeByMode?.[contentMode as 'grid' | 'list' | 'carousel'] || {};
-    const imgHeightRaw = imgLayout.height || density.imageHeight || 140; 
+    // Image Size logic - not used anymore with aspect-ratio approach
+    // const imgLayout = layout.card?.image?.sizeByMode?.[contentMode as 'grid' | 'list' | 'carousel'] || {};
+    // const imgHeightRaw = imgLayout.height || density.imageHeight || 150; 
     
-    let imgWidthRaw: string | number = '100%';
-    if (contentMode === 'list') imgWidthRaw = (imgLayout as any).width || 96;
-    if (contentMode === 'carousel' && (imgLayout as any).width) imgWidthRaw = (imgLayout as any).width;
+    // let imgWidthRaw: string | number = contentMode === 'grid' ? 150 : '100%';
+    // if (contentMode === 'list') imgWidthRaw = (imgLayout as any).width || 96;
+    // if (contentMode === 'carousel' && (imgLayout as any).width) imgWidthRaw = (imgLayout as any).width;
 
-    const imgHeight = typeof imgHeightRaw === 'number' ? `${imgHeightRaw}px` : imgHeightRaw;
-    const imgWidth = typeof imgWidthRaw === 'number' ? `${imgWidthRaw}px` : imgWidthRaw;
+    // const imgHeight = typeof imgHeightRaw === 'number' ? `${imgHeightRaw}px` : imgHeightRaw;
+    // const imgWidth = typeof imgWidthRaw === 'number' ? `${imgWidthRaw}px` : imgWidthRaw;
 
     // 3. Container Logic
     let containerCSS = '';
@@ -139,39 +139,27 @@ export class InlineDisplay {
       const gapPx = tokens.spacingScale?.[modeConfig.gap || 'md'] || 16;
       containerCSS = `
           display: grid;
-          grid-auto-flow: column;
-          grid-auto-columns: minmax(calc((100% - (${cols} - 1) * ${gapPx}px) / ${cols}), 1fr);
+          grid-template-columns: repeat(${cols}, 1fr);
           gap: ${gapPx}px;
-          overflow-x: auto; 
-          overflow-y: hidden;
-          padding-bottom: 8px;
-          padding-top: 8px;
-          scrollbar-color: ${getColor('border')} transparent;
-          scrollbar-width: thin; 
-          scroll-behavior: smooth;
+          padding: 8px 0;
       `;
       
       // Responsive đơn giản cho Grid Inline
       extraCSS += `
+          @media (max-width: 1024px) { 
+              .recsys-container { 
+                  grid-template-columns: repeat(3, 1fr); 
+              } 
+          }
           @media (max-width: 768px) { 
               .recsys-container { 
-                  /* Trên tablet hiển thị khoảng 2.2 items để gợi ý còn nữa */
-                  grid-auto-columns: minmax(calc((100% - ${gapPx}px) / 2.2), 1fr); 
+                  grid-template-columns: repeat(2, 1fr); 
               } 
           }
           @media (max-width: 480px) { 
               .recsys-container { 
-                  /* Trên mobile hiển thị item gần full màn hình */
-                  grid-auto-columns: minmax(calc(100% - 32px), 1fr); 
+                  grid-template-columns: repeat(1, 1fr); 
               } 
-          }
-          
-          /* Custom Scrollbar cho Webkit (Chrome, Safari) */
-          .recsys-container::-webkit-scrollbar { height: 6px; }
-          .recsys-container::-webkit-scrollbar-track { background: transparent; }
-          .recsys-container::-webkit-scrollbar-thumb { 
-              background-color: ${getColor('border')}; 
-              border-radius: 4px; 
           }
       `;
     } else if (contentMode === 'list') {
@@ -267,11 +255,19 @@ export class InlineDisplay {
     ` : ''}
 
     .recsys-img-box {
-        width: ${imgWidth}; height: ${imgHeight};
-        border-radius: ${getRadius(components.image?.radiusFollowsCard ? cardComp.radiusToken : 'image')};
-        overflow: hidden; background: ${getColor('muted')}; flex-shrink: 0; display: flex;
+        width: 100%;
+        aspect-ratio: 1;
+        overflow: hidden; 
+        background: ${getColor('muted')}; 
+        flex-shrink: 0;
     }
-    .recsys-img-box img { width: 100%; height: 100%; object-fit: ${components.image?.objectFit || 'contain'}; }
+    .recsys-img-box img { 
+        width: 100%; 
+        aspect-ratio: 1;
+        object-fit: cover;
+        border-radius: 4px;
+        transition: all 0.3s ease;
+    }
 
     .recsys-info { display: flex; flex-direction: column; gap: 4px; flex: 1; min-width: 0; text-align: ${infoTextAlign}; 
       align-items: ${infoAlignItems};}

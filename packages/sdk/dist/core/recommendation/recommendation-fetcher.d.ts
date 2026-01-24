@@ -5,7 +5,7 @@ export declare class RecommendationFetcher {
     private cache;
     private readonly CACHE_TTL;
     constructor(domainKey: string, apiBaseUrl?: string);
-    fetchRecommendations(userValue: string, userField?: UserField, options?: RecommendationOptions): Promise<RecommendationItem[]>;
+    fetchRecommendations(userValue: string, userField?: UserField, _options?: RecommendationOptions): Promise<RecommendationItem[]>;
     /**
      * Get recommendations cho anonymous user (auto-detect)
      * @param options - Optional configuration
