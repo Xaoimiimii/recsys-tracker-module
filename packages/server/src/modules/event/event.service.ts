@@ -58,49 +58,86 @@ export class EventService {
 
         let user: User | null = null;
 
+        // if (event.UserId)
+        // {
+        //     if (event.AnonymousId)
+        //     {
+        //         user = await this.prisma.user.findUnique({
+        //             where: {
+        //                 AnonymousId_UserId_DomainId: {
+        //                     AnonymousId: event.AnonymousId,
+        //                     UserId: event.UserId,
+        //                     DomainId: domain.Id,
+        //                 }
+        //             }
+        //         });
+        //         if (!user)
+        //         {
+        //             user = await this.prisma.user.create({
+        //                 data: {
+        //                     AnonymousId: event.AnonymousId,
+        //                     UserId: event.UserId,
+        //                     DomainId: domain.Id,
+        //                     CreatedAt: new Date(),
+        //                 }
+        //             });
+        //         }
+        //     } else {
+        //         user = await this.prisma.user.findFirst({
+        //             where: {
+        //                 UserId: event.UserId,
+        //                 DomainId: domain.Id,
+        //             }
+        //         });
+        //         if (!user)
+        //         {
+        //             user = await this.prisma.user.create({
+        //                 data: {
+        //                     UserId: event.UserId,
+        //                     DomainId: domain.Id,
+        //                     CreatedAt: new Date(),
+        //                 }
+        //             });
+        //         }
+        //     }
+        // } else {
+        //     user = await this.prisma.user.findFirst({
+        //         where: {
+        //             AnonymousId: event.AnonymousId,
+        //             DomainId: domain.Id,
+        //         }
+        //     });
+        //     if (!user)
+        //     {
+        //         user = await this.prisma.user.create({
+        //             data: {
+        //                 AnonymousId: event.AnonymousId,
+        //                 DomainId: domain.Id,
+        //                 CreatedAt: new Date(),
+        //             }
+        //         });
+        //     }
+        // }
+
         if (event.UserId)
         {
-            if (event.AnonymousId)
-            {
-                user = await this.prisma.user.findUnique({
-                    where: {
-                        AnonymousId_UserId_DomainId: {
-                            AnonymousId: event.AnonymousId,
-                            UserId: event.UserId,
-                            DomainId: domain.Id,
-                        }
-                    }
-                });
-                if (!user)
-                {
-                    user = await this.prisma.user.create({
-                        data: {
-                            AnonymousId: event.AnonymousId,
-                            UserId: event.UserId,
-                            DomainId: domain.Id,
-                            CreatedAt: new Date(),
-                        }
-                    });
+            user = await this.prisma.user.findFirst({
+                where: {
+                    UserId: event.UserId,
+                    DomainId: domain.Id,
                 }
-            } else {
-                user = await this.prisma.user.findFirst({
-                    where: {
+            });
+            if (!user)
+            {
+                user = await this.prisma.user.create({
+                    data: {
                         UserId: event.UserId,
                         DomainId: domain.Id,
+                        CreatedAt: new Date(),
                     }
                 });
-                if (!user)
-                {
-                    user = await this.prisma.user.create({
-                        data: {
-                            UserId: event.UserId,
-                            DomainId: domain.Id,
-                            CreatedAt: new Date(),
-                        }
-                    });
-                }
             }
-        } else {
+        } else if (event.AnonymousId) {
             user = await this.prisma.user.findFirst({
                 where: {
                     AnonymousId: event.AnonymousId,
@@ -117,6 +154,8 @@ export class EventService {
                     }
                 });
             }
+        } else {
+            throw new BadRequestException(`There must be UserId or AnonymousId`);
         }
         
         const item = await this.prisma.item.findUnique({
