@@ -10,7 +10,7 @@ export class RecommendationController {
     @Post()
     async getRecommendations(@Body() body: RecommendationRequestDto) {
         const { UserId, AnonymousId, DomainKey, NumberItems } = body;
-
+        
         return await this.recommendationService.getRecommendations(
             AnonymousId,
             DomainKey,

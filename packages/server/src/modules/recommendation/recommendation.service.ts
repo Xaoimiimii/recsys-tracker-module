@@ -19,6 +19,7 @@ export class RecommendationService {
     ) { }
 
     async getRecommendations(anonymousId: string, domainKey: string, numberItems: number = 10, userId?: string) {
+        console.log(1);
         const domain = await this.prisma.domain.findUnique({ where: { Key: domainKey } });
         if (!domain) {
             throw new NotFoundException(`Domain with key '${domainKey}' does not exist.`);
@@ -154,7 +155,32 @@ export class RecommendationService {
 
         const ratedItemsIds = ratedItems.map((item) => item.ItemId);
 
-        const recommendations = allItems.filter((item) => !ratedItemsIds.includes(item.ItemId));
+        let recommendations = allItems.filter((item) => !ratedItemsIds.includes(item.ItemId));
+
+        if (!recommendations || recommendations.length === 0) {
+            const topItemsByAvgPredict = await this.prisma.predict.groupBy({
+                by: ['ItemId'],
+                _avg: {
+                    Value: true
+                },
+                orderBy: {
+                    _avg: {
+                        Value: 'desc'
+                    }
+                },
+                take: numberItems * 2
+            });
+
+            const topItemIds = topItemsByAvgPredict
+                .filter(item => !ratedItemsIds.includes(item.ItemId))
+                .map(item => item.ItemId);
+
+            recommendations = topItemIds.map((itemId, index) => ({
+                ItemId: itemId,
+                UserId: user!.Id,
+                Value: topItemsByAvgPredict[index]._avg.Value || 0
+            }));
+        }
 
         const detailedRecommendations = await Promise.all(
             recommendations.map(async (recommendation) => {
