@@ -1653,7 +1653,7 @@
         }
         // --- DYNAMIC CSS GENERATOR (SYNCED WITH POPUP) ---
         getDynamicStyles() {
-            var _a, _b, _c, _d, _e, _f, _g, _h, _j, _k, _l, _m, _o, _p, _q, _r, _s, _t, _u;
+            var _a, _b, _c, _d, _e, _f, _g, _h, _j, _k, _l, _m, _o, _p, _q, _r, _s, _t;
             const style = this.config.styleJson || {};
             const layout = this.config.layoutJson || {};
             // 1. Unpack Configs
@@ -1776,7 +1776,7 @@
 
     .recsys-wrapper {
       width: 100%;
-      background: ${getColor(((_l = components.canvas) === null || _l === void 0 ? void 0 : _l.backgroundToken) || 'transparent')};
+      background: ${getColor('surface') || 'transparent'};
       padding: 16px 0;
       border-radius: 8px;
     }
@@ -1790,8 +1790,8 @@
       justify-content: space-between; align-items: center;
     }
     .recsys-header-title {
-        font-size: ${((_o = (_m = tokens.typography) === null || _m === void 0 ? void 0 : _m.title) === null || _o === void 0 ? void 0 : _o.fontSize) || 18}px;
-        font-weight: ${((_q = (_p = tokens.typography) === null || _p === void 0 ? void 0 : _p.title) === null || _q === void 0 ? void 0 : _q.fontWeight) || 600};
+        font-size: ${((_m = (_l = tokens.typography) === null || _l === void 0 ? void 0 : _l.title) === null || _m === void 0 ? void 0 : _m.fontSize) || 18}px;
+        font-weight: ${((_p = (_o = tokens.typography) === null || _o === void 0 ? void 0 : _o.title) === null || _p === void 0 ? void 0 : _p.fontWeight) || 600};
         color: ${colorTitle};
     }
 
@@ -1799,7 +1799,7 @@
 
     .recsys-item {
         display: flex; flex-direction: ${itemDir}; align-items: ${itemAlign};
-        gap: ${((_r = tokens.spacingScale) === null || _r === void 0 ? void 0 : _r.sm) || 8}px;
+        gap: ${((_q = tokens.spacingScale) === null || _q === void 0 ? void 0 : _q.sm) || 8}px;
         background: ${cardBg}; border: ${cardBorder}; border-radius: ${cardRadius};
         box-shadow: ${cardShadow}; padding: ${cardPadding}px;
         cursor: pointer; transition: all 0.2s;
@@ -1811,7 +1811,7 @@
         color: ${colorPrimary}; 
     }
 
-    ${((_s = cardComp.hover) === null || _s === void 0 ? void 0 : _s.enabled) ? `
+    ${((_r = cardComp.hover) === null || _r === void 0 ? void 0 : _r.enabled) ? `
     .recsys-item:hover {
         transform: translateY(-${cardComp.hover.liftPx || 2}px);
         box-shadow: ${getShadow(cardComp.hover.shadowToken || 'cardHover')};
@@ -1820,10 +1820,10 @@
 
     .recsys-img-box {
         width: ${imgWidth}; height: ${imgHeight};
-        border-radius: ${getRadius(((_t = components.image) === null || _t === void 0 ? void 0 : _t.radiusFollowsCard) ? cardComp.radiusToken : 'image')};
+        border-radius: ${getRadius(((_s = components.image) === null || _s === void 0 ? void 0 : _s.radiusFollowsCard) ? cardComp.radiusToken : 'image')};
         overflow: hidden; background: ${getColor('muted')}; flex-shrink: 0; display: flex;
     }
-    .recsys-img-box img { width: 100%; height: 100%; object-fit: ${((_u = components.image) === null || _u === void 0 ? void 0 : _u.objectFit) || 'contain'}; }
+    .recsys-img-box img { width: 100%; height: 100%; object-fit: ${((_t = components.image) === null || _t === void 0 ? void 0 : _t.objectFit) || 'contain'}; }
 
     .recsys-info { display: flex; flex-direction: column; gap: 4px; flex: 1; min-width: 0; text-align: ${infoTextAlign}; 
       align-items: ${infoAlignItems};}

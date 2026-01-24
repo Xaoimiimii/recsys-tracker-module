@@ -224,7 +224,7 @@ export class InlineDisplay {
 
     .recsys-wrapper {
       width: 100%;
-      background: ${getColor(components.canvas?.backgroundToken || 'transparent')};
+      background: ${getColor('surface') || 'transparent'};
       padding: 16px 0;
       border-radius: 8px;
     }
