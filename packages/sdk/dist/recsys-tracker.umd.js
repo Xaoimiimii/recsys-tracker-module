@@ -1181,7 +1181,7 @@
         // --- LOGIC 2: DYNAMIC CSS GENERATOR ---
         // --- DYNAMIC CSS GENERATOR (FINAL CLEAN VERSION) ---
         getDynamicStyles() {
-            var _a, _b, _c, _d, _e, _f, _g, _h, _j, _k, _l, _m, _o, _p, _q, _r, _s, _t, _u, _v, _w, _x;
+            var _a, _b, _c, _d, _e, _f, _g, _h, _j, _k, _l, _m, _o, _p, _q, _r, _s, _t, _u, _v, _w;
             const style = this.config.styleJson || {};
             const layout = this.config.layoutJson || {};
             // 1. Unpack Configs
@@ -1248,7 +1248,6 @@
                 const gapPx = ((_h = tokens.spacingScale) === null || _h === void 0 ? void 0 : _h[modeConfig.rowGap || 'md']) || 12;
                 containerCSS = `display: flex; flex-direction: column; gap: ${gapPx}px; padding: ${density.cardPadding || 16}px;`;
                 containerCSS = 'padding: 0;';
-                infoAlignItems = 'flex-start';
             }
             // 4. Styles Mapping
             const cardComp = components.card || {};
@@ -1272,10 +1271,10 @@
 
       .recsys-popup {
         position: fixed; ${posCSS} width: ${popupWidth}; ${popupHeightCSS}
-        background: ${getColor(((_l = components.canvas) === null || _l === void 0 ? void 0 : _l.backgroundToken) || 'background')};
+        background: ${getColor('surface')};
         color: ${colorTitle};
         border-radius: ${getRadius('card')}; 
-        box-shadow: ${(_m = tokens.shadow) === null || _m === void 0 ? void 0 : _m.cardHover};
+        box-shadow: ${(_l = tokens.shadow) === null || _l === void 0 ? void 0 : _l.cardHover};
         border: 1px solid ${getColor('border')};
         display: flex; flex-direction: column; z-index: 999999; overflow: hidden;
         animation: slideIn 0.3s ease-out;
@@ -1289,8 +1288,8 @@
         flex-shrink: 0; 
       }
       .recsys-header-title {
-          font-size: ${((_p = (_o = tokens.typography) === null || _o === void 0 ? void 0 : _o.title) === null || _p === void 0 ? void 0 : _p.fontSize) || 16}px;
-          font-weight: ${((_r = (_q = tokens.typography) === null || _q === void 0 ? void 0 : _q.title) === null || _r === void 0 ? void 0 : _r.fontWeight) || 600};
+          font-size: ${((_o = (_m = tokens.typography) === null || _m === void 0 ? void 0 : _m.title) === null || _o === void 0 ? void 0 : _o.fontSize) || 16}px;
+          font-weight: ${((_q = (_p = tokens.typography) === null || _p === void 0 ? void 0 : _p.title) === null || _q === void 0 ? void 0 : _q.fontWeight) || 600};
           color: ${colorTitle};
       }
       .recsys-close { background: none; border: none; color: ${colorBody}; cursor: pointer; font-size: 18px; }
@@ -1304,11 +1303,11 @@
 
       .recsys-item {
          display: flex; flex-direction: ${itemDir}; align-items: ${itemAlign};
-         gap: ${((_s = tokens.spacingScale) === null || _s === void 0 ? void 0 : _s.sm) || 8}px;
+         gap: ${((_r = tokens.spacingScale) === null || _r === void 0 ? void 0 : _r.sm) || 8}px;
          background: ${cardBg}; border: ${cardBorder}; border-radius: ${cardRadius};
          box-shadow: ${cardShadow}; padding: ${cardPadding}px;
          cursor: pointer; transition: all 0.2s;
-         width: 100%;
+         width: 100%; min-width: 0; box-sizing: border-box; overflow: hidden;
       }
 
       /* SỬ DỤNG colorPrimary Ở ĐÂY */
@@ -1316,7 +1315,7 @@
           color: ${colorPrimary}; 
       }
 
-      ${((_t = cardComp.hover) === null || _t === void 0 ? void 0 : _t.enabled) ? `
+      ${((_s = cardComp.hover) === null || _s === void 0 ? void 0 : _s.enabled) ? `
       .recsys-item:hover {
          transform: translateY(-${cardComp.hover.liftPx || 2}px);
          box-shadow: ${getShadow(cardComp.hover.shadowToken || 'cardHover')};
@@ -1326,19 +1325,25 @@
 
       .recsys-img-box {
          width: ${imgWidth}; height: ${imgHeight};
-         border-radius: ${getRadius(((_u = components.image) === null || _u === void 0 ? void 0 : _u.radiusFollowsCard) ? cardComp.radiusToken : 'image')};
+         border-radius: ${getRadius(((_t = components.image) === null || _t === void 0 ? void 0 : _t.radiusFollowsCard) ? cardComp.radiusToken : 'image')};
          overflow: hidden; background: ${getColor('muted')}; flex-shrink: 0; display: flex;
       }
-      .recsys-img-box img { width: 100%; height: 100%; object-fit: ${((_v = components.image) === null || _v === void 0 ? void 0 : _v.objectFit) || 'cover'}; }
+      .recsys-img-box img { width: 100%; height: 100%; object-fit: ${((_u = components.image) === null || _u === void 0 ? void 0 : _u.objectFit) || 'cover'}; }
 
       .recsys-info { display: flex; flex-direction: column; gap: 4px; flex: 1; min-width: 0; text-align: ${infoTextAlign}; 
-        align-items: ${infoAlignItems};}
+        align-items: ${infoAlignItems}; width: 100%}
+      
+      .recsys-field-row {
+        width: 100%;
+        min-width: 0;
+        display: block;
+      }
 
       .recsys-badges { display: flex; flex-wrap: wrap; gap: 4px; margin-top: auto; }
       .recsys-badge { 
          font-size: 10px; 
-         background: ${getColor(((_w = components.badge) === null || _w === void 0 ? void 0 : _w.backgroundToken) || 'primary')}; 
-         color: ${((_x = components.badge) === null || _x === void 0 ? void 0 : _x.textColor) || '#fff'};
+         background: ${getColor(((_v = components.badge) === null || _v === void 0 ? void 0 : _v.backgroundToken) || 'primary')}; 
+         color: ${((_w = components.badge) === null || _w === void 0 ? void 0 : _w.textColor) || '#fff'};
          padding: 2px 6px; border-radius: ${getRadius('badge')};
       }
 
@@ -1433,6 +1438,15 @@
                     style += `font-size: ${finalSize}px !important; `;
                 if (finalWeight)
                     style += `font-weight: ${finalWeight} !important; `;
+                if (['artist', 'singer', 'performer', 'artist_name', 'description'].includes(key)) {
+                    style += `
+            white-space: nowrap; 
+            overflow: hidden; 
+            text-overflow: ellipsis; 
+            display: block; 
+            max-width: 100%;
+          `;
+                }
                 return style;
             };
             // 2. Render Title & Image
@@ -1444,7 +1458,7 @@
             const imgSrc = imageFieldConfig ? getValue(item, imageFieldConfig.key) : getValue(item, 'image');
             // 3. Render Khung
             let html = `
-       <div class="recsys-item">
+       <div class="recsys-item" data-id="${item.id}">
           ${imgSrc ? `
           <div class="recsys-img-box">
              <img src="${imgSrc}" alt="${titleValue || ''}" />
@@ -1528,6 +1542,14 @@
             if (!container)
                 return;
             container.innerHTML = items.map(item => this.renderItemContent(item)).join('');
+            container.querySelectorAll('.recsys-item').forEach((element) => {
+                element.addEventListener('click', (e) => {
+                    const target = e.currentTarget;
+                    const id = target.getAttribute('data-id');
+                    if (id)
+                        this.handleItemClick(id);
+                });
+            });
         }
         setupCarousel(shadow, items) {
             var _a, _b;
@@ -1537,6 +1559,13 @@
                 const item = items[currentIndex];
                 // GỌI HÀM RENDER ĐỘNG
                 slideContainer.innerHTML = this.renderItemContent(item);
+                const itemElement = slideContainer.querySelector('.recsys-item');
+                if (itemElement) {
+                    const id = item.id || item.Id;
+                    if (id !== undefined && id !== null) {
+                        this.handleItemClick(id);
+                    }
+                }
             };
             const next = () => {
                 currentIndex = (currentIndex + 1) % items.length;
@@ -1575,6 +1604,11 @@
             this.popupTimeout = null;
             this.autoCloseTimeout = null;
             this.autoSlideTimeout = null;
+        }
+        handleItemClick(id) {
+            if (!id)
+                return;
+            window.location.href = `/song/${id}`;
         }
     }
 
@@ -1687,8 +1721,8 @@
             let containerCSS = '';
             let itemDir = 'column';
             let itemAlign = 'stretch';
-            let infoTextAlign = 'center';
-            let infoAlignItems = 'center';
+            let infoTextAlign = 'left';
+            let infoAlignItems = 'flex-start';
             let itemWidthCSS = 'width: 100%;';
             if (contentMode === 'grid') {
                 const cols = modeConfig.columns || 4; // Inline default thường rộng hơn popup (4 cột)
@@ -1705,8 +1739,6 @@
                 itemAlign = 'flex-start';
                 const gapPx = ((_d = tokens.spacingScale) === null || _d === void 0 ? void 0 : _d[modeConfig.rowGap || 'md']) || 12;
                 containerCSS = `display: flex; flex-direction: column; gap: ${gapPx}px;`;
-                infoTextAlign = 'left';
-                infoAlignItems = 'flex-start';
             }
             else if (contentMode === 'carousel') {
                 const cols = modeConfig.itemsPerView || modeConfig.columns || 5;
@@ -1760,31 +1792,31 @@
       justify-content: space-between; align-items: center;
     }
     .recsys-header-title {
-        font-size: ${((_j = (_h = tokens.typography) === null || _h === void 0 ? void 0 : _h.title) === null || _j === void 0 ? void 0 : _j.fontSize) || 18}px;
-        font-weight: ${((_l = (_k = tokens.typography) === null || _k === void 0 ? void 0 : _k.title) === null || _l === void 0 ? void 0 : _l.fontWeight) || 600};
-        color: ${colorTitle};
+      font-size: ${((_j = (_h = tokens.typography) === null || _h === void 0 ? void 0 : _h.title) === null || _j === void 0 ? void 0 : _j.fontSize) || 18}px;
+      font-weight: ${((_l = (_k = tokens.typography) === null || _k === void 0 ? void 0 : _k.title) === null || _l === void 0 ? void 0 : _l.fontWeight) || 600};
+      color: ${colorTitle};
     }
 
     .recsys-container { ${containerCSS} }
 
     .recsys-item {
-        display: flex; flex-direction: ${itemDir}; align-items: ${itemAlign};
-        gap: ${((_m = tokens.spacingScale) === null || _m === void 0 ? void 0 : _m.sm) || 8}px;
-        background: ${cardBg}; border: ${cardBorder}; border-radius: ${cardRadius};
-        box-shadow: ${cardShadow}; padding: ${cardPadding}px;
-        cursor: pointer; transition: all 0.2s;
-        ${itemWidthCSS}
-        min-width: 0; /* Fix flex overflow */
+      display: flex; flex-direction: ${itemDir}; align-items: ${itemAlign};
+      gap: ${((_m = tokens.spacingScale) === null || _m === void 0 ? void 0 : _m.sm) || 8}px;
+      background: ${cardBg}; border: ${cardBorder}; border-radius: ${cardRadius};
+      box-shadow: ${cardShadow}; padding: ${cardPadding}px;
+      cursor: pointer; transition: all 0.2s;
+      ${itemWidthCSS}
+      min-width: 0; /* Fix flex overflow */
     }
 
     .recsys-item:hover .recsys-name {
-        color: ${colorPrimary}; 
+      color: ${colorPrimary}; 
     }
 
     ${((_o = cardComp.hover) === null || _o === void 0 ? void 0 : _o.enabled) ? `
     .recsys-item:hover {
-        transform: translateY(-${cardComp.hover.liftPx || 2}px);
-        box-shadow: ${getShadow(cardComp.hover.shadowToken || 'cardHover')};
+      transform: translateY(-${cardComp.hover.liftPx || 2}px);
+      box-shadow: ${getShadow(cardComp.hover.shadowToken || 'cardHover')};
     }
     ` : ''}
 
@@ -1794,6 +1826,7 @@
         overflow: hidden; 
         background: ${getColor('muted')}; 
         flex-shrink: 0;
+        border-radius: 4px;
     }
     .recsys-img-box img { 
         width: 100%; 
@@ -1806,18 +1839,24 @@
     .recsys-info { display: flex; flex-direction: column; gap: 4px; flex: 1; min-width: 0; text-align: ${infoTextAlign}; 
       align-items: ${infoAlignItems};}
 
+    .recsys-field-row {
+      width: 100%;
+      min-width: 0;
+      display: block;
+    }
+
     /* Buttons for Carousel */
     .recsys-nav {
-        position: absolute; top: 50%; transform: translateY(-50%);
-        width: 32px; height: 32px;
-        border-radius: 50%;
-        background: ${btnBg};
-        border: 1px solid ${getColor('border')};
-        display: flex; align-items: center; justify-content: center;
-        z-index: 10; cursor: pointer; color: ${colorTitle};
-        box-shadow: 0 2px 8px rgba(0,0,0,0.15);
-        font-size: 18px; padding-bottom: 2px;
-        opacity: 0.9; transition: opacity 0.2s;
+      position: absolute; top: 50%; transform: translateY(-50%);
+      width: 32px; height: 32px;
+      border-radius: 50%;
+      background: ${btnBg};
+      border: 1px solid ${getColor('border')};
+      display: flex; align-items: center; justify-content: center;
+      z-index: 10; cursor: pointer; color: ${colorTitle};
+      box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+      font-size: 18px; padding-bottom: 2px;
+      opacity: 0.9; transition: opacity 0.2s;
     }
     .recsys-nav:hover { opacity: 1; }
     .recsys-prev { left: 0; }
@@ -1888,6 +1927,16 @@
                     style += `font-size: ${finalSize}px !important; `;
                 if (finalWeight)
                     style += `font-weight: ${finalWeight} !important; `;
+                if (['artist', 'singer', 'performer', 'artist_name', 'description'].includes(key)) {
+                    style += `
+          white-space: nowrap; 
+          overflow: hidden; 
+          text-overflow: ellipsis; 
+          display: block; 
+          max-width: 100%;
+          width: 100%;
+        `;
+                }
                 return style;
             };
             // 2. Extract Data
@@ -1980,6 +2029,14 @@
             if (!container)
                 return;
             container.innerHTML = items.map(item => this.renderItemContent(item)).join('');
+            container.querySelectorAll('.recsys-item').forEach((element) => {
+                element.addEventListener('click', (e) => {
+                    const target = e.currentTarget;
+                    const id = target.getAttribute('data-id');
+                    if (id)
+                        this.handleItemClick(id);
+                });
+            });
         }
         // --- CAROUSEL LOGIC ---
         setupCarousel(shadow, items) {
@@ -2001,6 +2058,14 @@
                     html += this.renderItemContent(items[index]);
                 }
                 slideContainer.innerHTML = html;
+                slideContainer.querySelectorAll('.recsys-item').forEach((element) => {
+                    element.addEventListener('click', (e) => {
+                        const target = e.currentTarget;
+                        const id = target.getAttribute('data-id');
+                        if (id)
+                            this.handleItemClick(id);
+                    });
+                });
             };
             const next = () => {
                 currentIndex = (currentIndex + 1) % items.length;
@@ -2021,6 +2086,11 @@
             (_c = shadow.querySelector('.recsys-next')) === null || _c === void 0 ? void 0 : _c.addEventListener('click', next);
             renderSlide();
             resetAutoSlide();
+        }
+        handleItemClick(id) {
+            if (!id)
+                return;
+            window.location.href = `/song/${id}`;
         }
     }
 
@@ -2222,7 +2292,7 @@
             }
             return data.map(item => {
                 const result = { ...item };
-                result.id = item.id || item.Id;
+                result.id = item.DomainItemId;
                 const rawImg = item.ImageUrl || item.imageUrl || item.Image || item.img;
                 result.img = rawImg || PlaceholderImage.getDefaultRecommendation();
                 result.title = item.title || item.Title || item.Name || item.name;

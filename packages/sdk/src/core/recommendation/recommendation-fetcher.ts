@@ -122,7 +122,7 @@ export class RecommendationFetcher {
 
     return data.map(item => {
       const result: RecommendationItem = { ...item };
-      result.id = item.id || item.Id;
+      result.id = item.DomainItemId;
       const rawImg = item.ImageUrl || item.imageUrl || item.Image || item.img;
       result.img = rawImg || PlaceholderImage.getDefaultRecommendation();
       result.title = item.title || item.Title || item.Name || item.name;

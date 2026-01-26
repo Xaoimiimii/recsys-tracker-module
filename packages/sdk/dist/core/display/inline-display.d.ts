@@ -21,5 +21,6 @@ export declare class InlineDisplay {
     private renderWidget;
     private renderStaticItems;
     private setupCarousel;
+    private handleItemClick;
 }
 //# sourceMappingURL=inline-display.d.ts.map
