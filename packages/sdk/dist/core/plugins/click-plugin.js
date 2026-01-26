@@ -20,7 +20,7 @@ export class ClickPlugin extends BasePlugin {
     init(tracker) {
         this.errorBoundary.execute(() => {
             super.init(tracker);
-            console.log('[ClickPlugin] Initialized');
+            // console.log('[ClickPlugin] Initialized');
         }, 'ClickPlugin.init');
     }
     start() {

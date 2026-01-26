@@ -23,7 +23,7 @@ export class ClickPlugin extends BasePlugin {
   public init(tracker: RecSysTracker): void {
     this.errorBoundary.execute(() => {
       super.init(tracker);
-      console.log('[ClickPlugin] Initialized');
+      // console.log('[ClickPlugin] Initialized');
     }, 'ClickPlugin.init');
   }
 

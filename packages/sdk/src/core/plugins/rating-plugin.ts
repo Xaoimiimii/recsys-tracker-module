@@ -25,7 +25,7 @@ export class RatingPlugin extends BasePlugin {
   public init(tracker: RecSysTracker): void {
     this.errorBoundary.execute(() => {
       super.init(tracker);
-      console.log('[RatingPlugin] Initialized');
+      // console.log('[RatingPlugin] Initialized');
     }, 'RatingPlugin.init');
   }
 

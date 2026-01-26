@@ -24,7 +24,7 @@ export class ReviewPlugin extends BasePlugin {
   public init(tracker: RecSysTracker): void {
     this.errorBoundary.execute(() => {
       super.init(tracker);
-      console.log('[ReviewPlugin] Initialized');
+      // console.log('[ReviewPlugin] Initialized');
     }, 'ReviewPlugin.init');
   }
 

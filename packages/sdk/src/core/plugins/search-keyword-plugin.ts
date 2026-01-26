@@ -16,7 +16,7 @@ export class SearchKeywordPlugin extends BasePlugin {
   public init(tracker: RecSysTracker): void {
     this.errorBoundary.execute(() => {
       super.init(tracker);
-      console.log('[SearchKeywordPlugin] Initialized');
+      // console.log('[SearchKeywordPlugin] Initialized');
     }, 'SearchKeywordPlugin.init');
   }
 
@@ -150,7 +150,7 @@ export class SearchKeywordPlugin extends BasePlugin {
     // Set new timer
     this.debounceTimer = window.setTimeout(() => {
       if (searchKeyword) {
-        console.log('[SearchKeywordPlugin] Search keyword (input):', searchKeyword);
+        // console.log('[SearchKeywordPlugin] Search keyword (input):', searchKeyword);
         this.saveKeyword(searchKeyword);
       }
       this.debounceTimer = null;
@@ -172,7 +172,7 @@ export class SearchKeywordPlugin extends BasePlugin {
       const searchKeyword = target.value.trim();
 
       if (searchKeyword) {
-        console.log('[SearchKeywordPlugin] Search keyword (Enter pressed):', searchKeyword);
+        // console.log('[SearchKeywordPlugin] Search keyword (Enter pressed):', searchKeyword);
         this.saveKeyword(searchKeyword);
 
         // Trigger push keyword API ngay lập tức
@@ -239,7 +239,7 @@ export class SearchKeywordPlugin extends BasePlugin {
     };
 
     try {
-      console.log('[SearchKeywordPlugin] Pushing keyword to server:', payload);
+      // console.log('[SearchKeywordPlugin] Pushing keyword to server:', payload);
       const response = await fetch(url, {
         method: 'POST',
         headers: {
@@ -249,12 +249,12 @@ export class SearchKeywordPlugin extends BasePlugin {
       });
 
       if (response.ok) {
-        console.log('[SearchKeywordPlugin] Keyword pushed successfully');
+        // console.log('[SearchKeywordPlugin] Keyword pushed successfully');
       } else {
-        console.error('[SearchKeywordPlugin] Failed to push keyword:', response.statusText);
+        // console.error('[SearchKeywordPlugin] Failed to push keyword:', response.statusText);
       }
     } catch (error) {
-      console.error('[SearchKeywordPlugin] Error pushing keyword:', error);
+      // console.error('[SearchKeywordPlugin] Error pushing keyword:', error);
     }
   }
 }

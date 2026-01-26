@@ -2885,7 +2885,7 @@ class ClickPlugin extends BasePlugin {
     init(tracker) {
         this.errorBoundary.execute(() => {
             super.init(tracker);
-            console.log('[ClickPlugin] Initialized');
+            // console.log('[ClickPlugin] Initialized');
         }, 'ClickPlugin.init');
     }
     start() {
@@ -3072,7 +3072,7 @@ class ReviewPlugin extends BasePlugin {
     init(tracker) {
         this.errorBoundary.execute(() => {
             super.init(tracker);
-            console.log('[ReviewPlugin] Initialized');
+            // console.log('[ReviewPlugin] Initialized');
         }, 'ReviewPlugin.init');
     }
     start() {
@@ -3384,7 +3384,7 @@ class SearchKeywordPlugin extends BasePlugin {
     init(tracker) {
         this.errorBoundary.execute(() => {
             super.init(tracker);
-            console.log('[SearchKeywordPlugin] Initialized');
+            // console.log('[SearchKeywordPlugin] Initialized');
         }, 'SearchKeywordPlugin.init');
     }
     start() {
@@ -3499,7 +3499,7 @@ class SearchKeywordPlugin extends BasePlugin {
         // Set new timer
         this.debounceTimer = window.setTimeout(() => {
             if (searchKeyword) {
-                console.log('[SearchKeywordPlugin] Search keyword (input):', searchKeyword);
+                // console.log('[SearchKeywordPlugin] Search keyword (input):', searchKeyword);
                 this.saveKeyword(searchKeyword);
             }
             this.debounceTimer = null;
@@ -3518,7 +3518,7 @@ class SearchKeywordPlugin extends BasePlugin {
             const target = event.target;
             const searchKeyword = target.value.trim();
             if (searchKeyword) {
-                console.log('[SearchKeywordPlugin] Search keyword (Enter pressed):', searchKeyword);
+                // console.log('[SearchKeywordPlugin] Search keyword (Enter pressed):', searchKeyword);
                 this.saveKeyword(searchKeyword);
                 // Trigger push keyword API ngay lập tức
                 this.triggerPushKeyword(searchKeyword);
@@ -3573,7 +3573,7 @@ class SearchKeywordPlugin extends BasePlugin {
             Keyword: keyword
         };
         try {
-            console.log('[SearchKeywordPlugin] Pushing keyword to server:', payload);
+            // console.log('[SearchKeywordPlugin] Pushing keyword to server:', payload);
             const response = await fetch(url, {
                 method: 'POST',
                 headers: {
@@ -3582,14 +3582,14 @@ class SearchKeywordPlugin extends BasePlugin {
                 body: JSON.stringify(payload)
             });
             if (response.ok) {
-                console.log('[SearchKeywordPlugin] Keyword pushed successfully');
+                // console.log('[SearchKeywordPlugin] Keyword pushed successfully');
             }
             else {
-                console.error('[SearchKeywordPlugin] Failed to push keyword:', response.statusText);
+                // console.error('[SearchKeywordPlugin] Failed to push keyword:', response.statusText);
             }
         }
         catch (error) {
-            console.error('[SearchKeywordPlugin] Error pushing keyword:', error);
+            // console.error('[SearchKeywordPlugin] Error pushing keyword:', error);
         }
     }
 }
@@ -5000,7 +5000,7 @@ class RatingPlugin extends BasePlugin {
     init(tracker) {
         this.errorBoundary.execute(() => {
             super.init(tracker);
-            console.log('[RatingPlugin] Initialized');
+            // console.log('[RatingPlugin] Initialized');
         }, 'RatingPlugin.init');
     }
     start() {
