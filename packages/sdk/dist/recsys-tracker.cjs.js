@@ -1770,8 +1770,6 @@ class InlineDisplay {
     }
 
     .recsys-header {
-      margin-left: 10px;
-      margin-bottom: 16px;
       border-bottom: 1px solid ${getColor('border')};
       padding-bottom: 8px;
       
