@@ -423,9 +423,7 @@ export class PopupDisplay {
         activeFields.forEach(field => {
             const key = field.key.toLowerCase();
             let rawValue = getValue(item, field.key);
-            console.log('Checking field:', field.key, 'Value:', rawValue);
             if (!rawValue) {
-                console.warn(`!!! Data rỗng cho field "${key}". Item data:`, item);
                 return;
             }
             if (['image', 'img', 'image_url', 'title', 'name', 'product_name', 'item_name'].includes(key))

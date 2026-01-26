@@ -1456,9 +1456,7 @@ class PopupDisplay {
         activeFields.forEach(field => {
             const key = field.key.toLowerCase();
             let rawValue = getValue(item, field.key);
-            console.log('Checking field:', field.key, 'Value:', rawValue);
             if (!rawValue) {
-                console.warn(`!!! Data rỗng cho field "${key}". Item data:`, item);
                 return;
             }
             if (['image', 'img', 'image_url', 'title', 'name', 'product_name', 'item_name'].includes(key))
@@ -1606,7 +1604,6 @@ class InlineDisplay {
         this.config = { ...config };
     }
     start() {
-        console.log('[InlineDisplay] Starting with selector:', this.selector);
         this.scanAndRender();
         this.setupObserver();
     }
@@ -1634,73 +1631,51 @@ class InlineDisplay {
         this.observer.observe(document.body, { childList: true, subtree: true });
     }
     scanAndRender() {
-        console.log('[InlineDisplay] Scanning for containers with selector:', this.selector);
         const containers = this.findContainers();
-        console.log('[InlineDisplay] Found containers:', containers.length);
         containers.forEach(container => {
-            console.log('[InlineDisplay] Processing container:', container);
             this.processContainer(container);
         });
     }
     findContainers() {
-        console.log('[InlineDisplay] Looking for selector:', this.selector);
         let containers = document.querySelectorAll(this.selector);
-        console.log('[InlineDisplay] Direct selector match:', containers.length);
         if (containers.length === 0) {
             // Get the base name without special characters
             let baseName = this.selector.replace(/^[.#]/, ''); // Remove leading . or #
             // Strategy 1: Try as class selector
             if (!this.selector.startsWith('.')) {
                 const classSelector = `.${baseName}`;
-                console.log('[InlineDisplay] Trying as class:', classSelector);
                 containers = document.querySelectorAll(classSelector);
-                console.log('[InlineDisplay] Class selector found:', containers.length);
             }
             // Strategy 2: Try attribute selector for CSS Modules
             if (containers.length === 0) {
                 const attributeSelector = `[class*="${baseName}"]`;
-                console.log('[InlineDisplay] Trying attribute selector (CSS Modules):', attributeSelector);
                 containers = document.querySelectorAll(attributeSelector);
-                console.log('[InlineDisplay] Attribute selector found:', containers.length);
             }
             // Strategy 3: Try as ID
             if (containers.length === 0 && !this.selector.startsWith('#')) {
                 const idSelector = `#${baseName}`;
-                console.log('[InlineDisplay] Trying as ID:', idSelector);
                 containers = document.querySelectorAll(idSelector);
-                console.log('[InlineDisplay] ID selector found:', containers.length);
             }
             // Strategy 4: Try without leading dot (for edge cases)
             if (containers.length === 0 && this.selector.startsWith('.')) {
-                console.log('[InlineDisplay] Trying without dot:', baseName);
                 containers = document.querySelectorAll(baseName);
-                console.log('[InlineDisplay] Without dot found:', containers.length);
             }
         }
-        console.log('[InlineDisplay] Final result:', containers.length, 'containers');
         return containers;
     }
     async processContainer(container) {
-        console.log('[InlineDisplay] Process container called, already loaded?', container.getAttribute('data-recsys-loaded'));
         if (!container || container.getAttribute('data-recsys-loaded') === 'true') {
-            console.log('[InlineDisplay] Skipping container (already loaded or null)');
             return;
         }
         container.setAttribute('data-recsys-loaded', 'true');
-        console.log('[InlineDisplay] Marked container as loaded');
         try {
             const items = await this.fetchRecommendations();
-            console.log('[InlineDisplay] Fetched recommendations:', (items === null || items === void 0 ? void 0 : items.length) || 0);
             if (items && items.length > 0) {
-                console.log('[InlineDisplay] Rendering widget with', items.length, 'items');
                 this.renderWidget(container, items);
-            }
-            else {
-                console.log('[InlineDisplay] No items to render');
             }
         }
         catch (error) {
-            console.error('[InlineDisplay] Error processing container', error);
+            // console.error('[InlineDisplay] Error processing container', error);
         }
     }
     async fetchRecommendations() {
