@@ -1977,7 +1977,7 @@ class InlineDisplay {
     // --- RENDER MAIN WIDGET ---
     // --- RENDER MAIN WIDGET ---
     renderWidget(container, items) {
-        var _a, _b, _c, _d, _e;
+        var _a, _b, _c;
         let shadow = container.shadowRoot;
         if (!shadow)
             shadow = container.attachShadow({ mode: 'open' });
@@ -1988,21 +1988,27 @@ class InlineDisplay {
         const styleJson = this.config.styleJson || {};
         const layout = this.config.layoutJson || {};
         const contentMode = layout.contentMode || 'grid';
-        const title = ((_b = (_a = layout.wrapper) === null || _a === void 0 ? void 0 : _a.header) === null || _b === void 0 ? void 0 : _b.title) || 'Gợi ý cho bạn';
+        // const title = layout.wrapper?.header?.title || 'Gợi ý cho bạn';
         const wrapper = document.createElement('div');
         wrapper.className = 'recsys-wrapper';
-        // Header
-        const headerHTML = `
-      <div class="recsys-header">
-        <span class="recsys-header-title">${title}</span>
-      </div>
-    `;
+        // // Header
+        // const headerHTML = `
+        //   <div class="recsys-header">
+        //     <span class="recsys-header-title">${title}</span>
+        //   </div>
+        // `;
         // [FIX] Tách biệt logic render để tránh ghi đè innerHTML
         if (contentMode === 'carousel') {
-            const modeConfig = ((_c = layout.modes) === null || _c === void 0 ? void 0 : _c.carousel) || {};
-            const gap = ((_e = (_d = styleJson === null || styleJson === void 0 ? void 0 : styleJson.tokens) === null || _d === void 0 ? void 0 : _d.spacingScale) === null || _e === void 0 ? void 0 : _e[modeConfig.gap || 'md']) || 16;
+            const modeConfig = ((_a = layout.modes) === null || _a === void 0 ? void 0 : _a.carousel) || {};
+            const gap = ((_c = (_b = styleJson === null || styleJson === void 0 ? void 0 : styleJson.tokens) === null || _b === void 0 ? void 0 : _b.spacingScale) === null || _c === void 0 ? void 0 : _c[modeConfig.gap || 'md']) || 16;
             // Render cấu trúc Carousel
-            wrapper.innerHTML = headerHTML + `
+            // wrapper.innerHTML = headerHTML + `
+            //   <div style="position: relative; width: 100%; max-width: 100%;">
+            //     <button class="recsys-nav recsys-prev">‹</button>
+            //     <div class="recsys-container" style="display: flex; overflow: hidden; width: 100%; gap: ${gap}px;"></div>
+            //     <button class="recsys-nav recsys-next">›</button>
+            //   </div>`;
+            wrapper.innerHTML = `
         <div style="position: relative; width: 100%; max-width: 100%;">
           <button class="recsys-nav recsys-prev">‹</button>
           
@@ -2015,7 +2021,8 @@ class InlineDisplay {
         }
         else {
             // Render cấu trúc Grid/List
-            wrapper.innerHTML = headerHTML + `<div class="recsys-container"></div>`;
+            // wrapper.innerHTML = headerHTML + `<div class="recsys-container"></div>`;
+            wrapper.innerHTML = `<div class="recsys-container"></div>`;
             shadow.appendChild(wrapper);
             this.renderStaticItems(shadow, items);
         }

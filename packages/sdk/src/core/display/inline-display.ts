@@ -453,17 +453,17 @@ export class InlineDisplay {
     const styleJson = this.config.styleJson || {} as any;
     const layout: any = this.config.layoutJson || {};
     const contentMode = layout.contentMode || 'grid';
-    const title = layout.wrapper?.header?.title || 'Gợi ý cho bạn';
+    // const title = layout.wrapper?.header?.title || 'Gợi ý cho bạn';
 
     const wrapper = document.createElement('div');
     wrapper.className = 'recsys-wrapper';
     
-    // Header
-    const headerHTML = `
-      <div class="recsys-header">
-        <span class="recsys-header-title">${title}</span>
-      </div>
-    `;
+    // // Header
+    // const headerHTML = `
+    //   <div class="recsys-header">
+    //     <span class="recsys-header-title">${title}</span>
+    //   </div>
+    // `;
 
     // [FIX] Tách biệt logic render để tránh ghi đè innerHTML
     if (contentMode === 'carousel') {
@@ -471,7 +471,16 @@ export class InlineDisplay {
       const gap = styleJson?.tokens?.spacingScale?.[modeConfig.gap || 'md'] || 16;
 
       // Render cấu trúc Carousel
-      wrapper.innerHTML = headerHTML + `
+      // wrapper.innerHTML = headerHTML + `
+      //   <div style="position: relative; width: 100%; max-width: 100%;">
+      //     <button class="recsys-nav recsys-prev">‹</button>
+          
+      //     <div class="recsys-container" style="display: flex; overflow: hidden; width: 100%; gap: ${gap}px;"></div>
+          
+      //     <button class="recsys-nav recsys-next">›</button>
+      //   </div>`;
+
+      wrapper.innerHTML = `
         <div style="position: relative; width: 100%; max-width: 100%;">
           <button class="recsys-nav recsys-prev">‹</button>
           
@@ -484,7 +493,8 @@ export class InlineDisplay {
       this.setupCarousel(shadow, items); // Khởi tạo logic carousel
     } else {
       // Render cấu trúc Grid/List
-      wrapper.innerHTML = headerHTML + `<div class="recsys-container"></div>`;
+      // wrapper.innerHTML = headerHTML + `<div class="recsys-container"></div>`;
+      wrapper.innerHTML = `<div class="recsys-container"></div>`;
       shadow.appendChild(wrapper);
       this.renderStaticItems(shadow, items);
     }
