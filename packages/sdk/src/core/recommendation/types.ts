@@ -20,4 +20,6 @@ export interface RecommendationItem {
 export interface RecommendationOptions {
   numberItems?: number;
   userField?: UserField;
+  autoRefresh?: boolean; // Tự động fetch lại mỗi 1 phút
+  onRefresh?: (items: RecommendationItem[]) => void; // Callback khi có data mới từ auto-refresh
 }

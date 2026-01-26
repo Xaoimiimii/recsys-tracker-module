@@ -191,7 +191,7 @@ class ConfigLoader {
         if (!this.domainKey) {
             return this.config;
         }
-        const baseUrl = "https://recsys-tracker-module.onrender.com";
+        const baseUrl = "http://localhost:3000";
         try {
             // Bước 1: Gọi các API song song để lấy domain, return methods, event types và search keyword config
             const [domainResponse, rulesListResponse, returnMethodsResponse, eventTypesResponse, searchKeywordResponse, userIdentityResponse] = await Promise.all([
@@ -1112,6 +1112,7 @@ class PopupDisplay {
     async showPopup() {
         try {
             const items = await this.fetchRecommendations();
+            console.log('Fetched items for popup:', items);
             // Chỉ hiện nếu chưa hiện (double check)
             if (items && items.length > 0 && !this.shadowHost) {
                 this.renderPopup(items);
@@ -2124,9 +2125,12 @@ class PlaceholderImage {
 class RecommendationFetcher {
     constructor(domainKey, apiBaseUrl = 'https://recsys-tracker-module.onrender.com') {
         this.CACHE_TTL = 5 * 60 * 1000; // 5 minutes cache
+        this.AUTO_REFRESH_INTERVAL = 60 * 1000; // 1 minute auto-refresh
         this.domainKey = domainKey;
         this.apiBaseUrl = apiBaseUrl;
         this.cache = new Map();
+        this.autoRefreshTimers = new Map();
+        this.refreshCallbacks = new Map();
     }
     // constructor(apiBaseUrl: string = 'http://localhost:3001') {
     //   this.apiBaseUrl = apiBaseUrl;
@@ -2144,7 +2148,6 @@ class RecommendationFetcher {
             const requestBody = {
                 AnonymousId: this.getOrCreateAnonymousId(),
                 DomainKey: this.domainKey,
-                // NumberItems: options.numberItems || 50,
                 NumberItems: 50,
             };
             // Check for cached user info in localStorage
@@ -2168,11 +2171,87 @@ class RecommendationFetcher {
             const items = this.transformResponse(data);
             // Cache results
             this.saveToCache(cacheKey, items);
+            // Enable auto-refresh if option is set
+            if (_options.autoRefresh && _options.onRefresh) {
+                // Check if auto-refresh already enabled for this key
+                if (!this.autoRefreshTimers.has(cacheKey)) {
+                    console.log(`[RecSysTracker] Auto-refresh enabled for ${cacheKey}`);
+                    this.enableAutoRefresh(userValue, userField, _options.onRefresh, _options);
+                }
+            }
             return items;
         }
         catch (error) {
+            console.error('[RecSysTracker] Failed to fetch recommendations:', error);
             throw error;
         }
+    }
+    /**
+     * Enable auto-refresh for recommendations
+     * Tự động fetch recommendations mới mỗi 1 phút
+     */
+    enableAutoRefresh(userValue, userField = 'AnonymousId', callback, options = {}) {
+        const cacheKey = this.getCacheKey(userValue, userField);
+        console.log(`[RecSysTracker] Starting auto-refresh for ${cacheKey}`);
+        console.log(`[RecSysTracker] Refresh interval: ${this.AUTO_REFRESH_INTERVAL}ms (${this.AUTO_REFRESH_INTERVAL / 1000}s)`);
+        // Stop existing auto-refresh if any
+        this.stopAutoRefresh(cacheKey);
+        // Store callback
+        this.refreshCallbacks.set(cacheKey, callback);
+        // Fetch immediately
+        console.log('[RecSysTracker] Fetching initial recommendations...');
+        this.fetchRecommendations(userValue, userField, options)
+            .then(items => {
+            console.log(`[RecSysTracker] Initial fetch successful, received ${items.length} items`);
+            callback(items);
+        })
+            .catch(error => console.error('[RecSysTracker] Initial fetch failed:', error));
+        // Set up auto-refresh timer
+        const timerId = setInterval(async () => {
+            console.log(`[RecSysTracker] Auto-refresh triggered at ${new Date().toLocaleTimeString()}`);
+            try {
+                // Force fresh fetch by clearing cache for this key
+                this.cache.delete(cacheKey);
+                console.log(`[RecSysTracker] Cache cleared for ${cacheKey}, fetching fresh data...`);
+                const items = await this.fetchRecommendations(userValue, userField, options);
+                console.log(`[RecSysTracker] Auto-refresh successful, received ${items.length} items`);
+                const cb = this.refreshCallbacks.get(cacheKey);
+                if (cb) {
+                    console.log('[RecSysTracker] Calling callback with new data');
+                    cb(items);
+                }
+                else {
+                    console.warn('[RecSysTracker] Callback not found for', cacheKey);
+                }
+            }
+            catch (error) {
+                console.error('[RecSysTracker] Auto-refresh failed:', error);
+            }
+        }, this.AUTO_REFRESH_INTERVAL);
+        this.autoRefreshTimers.set(cacheKey, timerId);
+        console.log(`[RecSysTracker] Auto-refresh timer set, timer ID:`, timerId);
+        // Return function to stop auto-refresh
+        return () => this.stopAutoRefresh(cacheKey);
+    }
+    // Stop auto-refresh for a specific cache key
+    stopAutoRefresh(cacheKey) {
+        const timerId = this.autoRefreshTimers.get(cacheKey);
+        if (timerId) {
+            console.log(`[RecSysTracker] Stopping auto-refresh for ${cacheKey}`);
+            clearInterval(timerId);
+            this.autoRefreshTimers.delete(cacheKey);
+            this.refreshCallbacks.delete(cacheKey);
+        }
+    }
+    /**
+     * Stop all auto-refresh timers
+     */
+    stopAllAutoRefresh() {
+        this.autoRefreshTimers.forEach((timerId) => {
+            clearInterval(timerId);
+        });
+        this.autoRefreshTimers.clear();
+        this.refreshCallbacks.clear();
     }
     /**
      * Get recommendations cho anonymous user (auto-detect)
@@ -2203,6 +2282,36 @@ class RecommendationFetcher {
         return this.fetchRecommendations(username, 'Username', options);
     }
     /**
+     * Enable auto-refresh cho anonymous user
+     * @param callback - Callback function được gọi khi có data mới
+     * @param options - Optional configuration
+     * @returns Function to stop auto-refresh
+     */
+    enableAutoRefreshForAnonymousUser(callback, options = {}) {
+        const anonymousId = this.getOrCreateAnonymousId();
+        return this.enableAutoRefresh(anonymousId, 'AnonymousId', callback, options);
+    }
+    /**
+     * Enable auto-refresh cho logged-in user by ID
+     * @param userId - User ID
+     * @param callback - Callback function được gọi khi có data mới
+     * @param options - Optional configuration
+     * @returns Function to stop auto-refresh
+     */
+    enableAutoRefreshForUserId(userId, callback, options = {}) {
+        return this.enableAutoRefresh(userId, 'UserId', callback, options);
+    }
+    /**
+     * Enable auto-refresh cho logged-in user by Username
+     * @param username - Username
+     * @param callback - Callback function được gọi khi có data mới
+     * @param options - Optional configuration
+     * @returns Function to stop auto-refresh
+     */
+    enableAutoRefreshForUsername(username, callback, options = {}) {
+        return this.enableAutoRefresh(username, 'Username', callback, options);
+    }
+    /**
      * Transform API response sang RecommendationItem format
      * @param data - Response từ API
      * @returns RecommendationItem[]
@@ -2215,6 +2324,7 @@ class RecommendationFetcher {
             id: item.Id,
             domainItemId: item.DomainItemId,
             title: item.Title,
+            artist: item.Artist,
             description: item.Description,
             img: item.ImageUrl || PlaceholderImage.getDefaultRecommendation(),
         }));
@@ -2483,7 +2593,26 @@ class DisplayManager {
             const anonymousId = this.getAnonymousId();
             if (!anonymousId)
                 return [];
-            return await this.recommendationFetcher.fetchRecommendations(anonymousId, 'AnonymousId', { numberItems: 6 });
+            return await this.recommendationFetcher.fetchRecommendations(anonymousId, 'AnonymousId', {
+                numberItems: 6,
+                autoRefresh: true,
+                onRefresh: (newItems) => {
+                    console.log('🔄 [DisplayManager] Auto-refreshed recommendations at', new Date().toLocaleTimeString());
+                    console.log('📦 [DisplayManager] New items count:', newItems.length);
+                    // Update cached recommendations
+                    this.cachedRecommendations = newItems;
+                    // Re-render popup if it's currently visible
+                    if (this.popupDisplay) {
+                        console.log('🔄 [DisplayManager] Updating popup with new recommendations');
+                        // Popup will use getRecommendations() which returns cached data
+                    }
+                    // Re-render inline if it's currently visible
+                    if (this.inlineDisplay) {
+                        console.log('🔄 [DisplayManager] Updating inline with new recommendations');
+                        // Inline will use getRecommendations() which returns cached data
+                    }
+                }
+            });
         }
         catch (error) {
             return [];
@@ -3442,7 +3571,7 @@ class SearchKeywordPlugin extends BasePlugin {
      * Call API POST recommendation/push-keyword
      */
     async pushKeywordToServer(userId, anonymousId, domainKey, keyword) {
-        const baseUrl = "https://recsys-tracker-module.onrender.com";
+        const baseUrl = "http://localhost:3000";
         const url = `${baseUrl}/recommendation/push-keyword`;
         const payload = {
             UserId: userId,
@@ -5062,7 +5191,7 @@ class RecSysTracker {
                 return;
             }
             // Khởi tạo EventDispatcher
-            const baseUrl = "https://recsys-tracker-module.onrender.com";
+            const baseUrl = "http://localhost:3000";
             this.eventDispatcher = new EventDispatcher({
                 endpoint: `${baseUrl}${DEFAULT_TRACK_ENDPOINT_PATH}`,
             });
@@ -5083,7 +5212,7 @@ class RecSysTracker {
                 this.autoInitializePlugins();
                 // Khởi tạo Display Manager nếu có returnMethods
                 if (this.config.returnMethods && this.config.returnMethods.length > 0) {
-                    const apiBaseUrl = "https://recsys-tracker-module.onrender.com";
+                    const apiBaseUrl = "http://localhost:3000";
                     this.displayManager = new DisplayManager(this.config.domainKey, apiBaseUrl);
                     // Connect SearchKeywordPlugin với DisplayManager
                     const searchKeywordPlugin = this.pluginManager.get('SearchKeywordPlugin');

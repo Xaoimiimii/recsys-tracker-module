@@ -16,5 +16,7 @@ export interface RecommendationItem {
 export interface RecommendationOptions {
     numberItems?: number;
     userField?: UserField;
+    autoRefresh?: boolean;
+    onRefresh?: (items: RecommendationItem[]) => void;
 }
 //# sourceMappingURL=types.d.ts.map

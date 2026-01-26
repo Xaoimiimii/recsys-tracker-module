@@ -12,11 +12,16 @@ export class RecommendationFetcher {
   private apiBaseUrl: string;
   private cache: Map<string, { items: RecommendationItem[], timestamp: number }>;
   private readonly CACHE_TTL = 5 * 60 * 1000; // 5 minutes cache
+  private readonly AUTO_REFRESH_INTERVAL = 60 * 1000; // 1 minute auto-refresh
+  private autoRefreshTimers: Map<string, NodeJS.Timeout | number>;
+  private refreshCallbacks: Map<string, (items: RecommendationItem[]) => void>;
 
   constructor(domainKey: string, apiBaseUrl: string = 'https://recsys-tracker-module.onrender.com') {
     this.domainKey = domainKey;
     this.apiBaseUrl = apiBaseUrl;
     this.cache = new Map();
+    this.autoRefreshTimers = new Map();
+    this.refreshCallbacks = new Map();
   }
 
   // constructor(apiBaseUrl: string = 'http://localhost:3001') {
@@ -41,7 +46,6 @@ export class RecommendationFetcher {
       const requestBody: RecommendationRequest = {
         AnonymousId: this.getOrCreateAnonymousId(),
         DomainKey: this.domainKey,
-        // NumberItems: options.numberItems || 50,
         NumberItems: 50,
       };
 
@@ -72,11 +76,103 @@ export class RecommendationFetcher {
       // Cache results
       this.saveToCache(cacheKey, items);
 
+      // Enable auto-refresh if option is set
+      if (_options.autoRefresh && _options.onRefresh) {
+        // Check if auto-refresh already enabled for this key
+        if (!this.autoRefreshTimers.has(cacheKey)) {
+          console.log(`[RecSysTracker] Auto-refresh enabled for ${cacheKey}`);
+          this.enableAutoRefresh(userValue, userField, _options.onRefresh, _options);
+        }
+      }
+
       return items;
 
     } catch (error) {
+      console.error('[RecSysTracker] Failed to fetch recommendations:', error);
       throw error;
     }
+  }
+
+  /**
+   * Enable auto-refresh for recommendations
+   * Tự động fetch recommendations mới mỗi 1 phút
+   */
+  enableAutoRefresh(
+    userValue: string,
+    userField: UserField = 'AnonymousId',
+    callback: (items: RecommendationItem[]) => void,
+    options: RecommendationOptions = {}
+  ): () => void {
+    const cacheKey = this.getCacheKey(userValue, userField);
+
+    console.log(`[RecSysTracker] Starting auto-refresh for ${cacheKey}`);
+    console.log(`[RecSysTracker] Refresh interval: ${this.AUTO_REFRESH_INTERVAL}ms (${this.AUTO_REFRESH_INTERVAL / 1000}s)`);
+
+    // Stop existing auto-refresh if any
+    this.stopAutoRefresh(cacheKey);
+
+    // Store callback
+    this.refreshCallbacks.set(cacheKey, callback);
+
+    // Fetch immediately
+    console.log('[RecSysTracker] Fetching initial recommendations...');
+    this.fetchRecommendations(userValue, userField, options)
+      .then(items => {
+        console.log(`[RecSysTracker] Initial fetch successful, received ${items.length} items`);
+        callback(items);
+      })
+      .catch(error => console.error('[RecSysTracker] Initial fetch failed:', error));
+
+    // Set up auto-refresh timer
+    const timerId = setInterval(async () => {
+      console.log(`[RecSysTracker] Auto-refresh triggered at ${new Date().toLocaleTimeString()}`);
+      try {
+        // Force fresh fetch by clearing cache for this key
+        this.cache.delete(cacheKey);
+        console.log(`[RecSysTracker] Cache cleared for ${cacheKey}, fetching fresh data...`);
+        
+        const items = await this.fetchRecommendations(userValue, userField, options);
+        console.log(`[RecSysTracker] Auto-refresh successful, received ${items.length} items`);
+        
+        const cb = this.refreshCallbacks.get(cacheKey);
+        if (cb) {
+          console.log('[RecSysTracker] Calling callback with new data');
+          cb(items);
+        } else {
+          console.warn('[RecSysTracker] Callback not found for', cacheKey);
+        }
+      } catch (error) {
+        console.error('[RecSysTracker] Auto-refresh failed:', error);
+      }
+    }, this.AUTO_REFRESH_INTERVAL);
+
+    this.autoRefreshTimers.set(cacheKey, timerId);
+    console.log(`[RecSysTracker] Auto-refresh timer set, timer ID:`, timerId);
+
+    // Return function to stop auto-refresh
+    return () => this.stopAutoRefresh(cacheKey);
+  }
+
+  // Stop auto-refresh for a specific cache key
+  private stopAutoRefresh(cacheKey: string): void {
+    const timerId = this.autoRefreshTimers.get(cacheKey);
+    if (timerId) {
+      console.log(`[RecSysTracker] Stopping auto-refresh for ${cacheKey}`);
+      clearInterval(timerId as NodeJS.Timeout);
+      this.autoRefreshTimers.delete(cacheKey);
+      this.refreshCallbacks.delete(cacheKey);
+    }
+  }
+
+  /**
+   * Stop all auto-refresh timers
+   */
+  stopAllAutoRefresh(): void {
+    this.autoRefreshTimers.forEach((timerId) => {
+      clearInterval(timerId as NodeJS.Timeout);
+    });
+    this.autoRefreshTimers.clear();
+    this.refreshCallbacks.clear();
   }
 
   /**
@@ -111,6 +207,50 @@ export class RecommendationFetcher {
   }
 
   /**
+   * Enable auto-refresh cho anonymous user
+   * @param callback - Callback function được gọi khi có data mới
+   * @param options - Optional configuration
+   * @returns Function to stop auto-refresh
+   */
+  enableAutoRefreshForAnonymousUser(
+    callback: (items: RecommendationItem[]) => void,
+    options: RecommendationOptions = {}
+  ): () => void {
+    const anonymousId = this.getOrCreateAnonymousId();
+    return this.enableAutoRefresh(anonymousId, 'AnonymousId', callback, options);
+  }
+
+  /**
+   * Enable auto-refresh cho logged-in user by ID
+   * @param userId - User ID
+   * @param callback - Callback function được gọi khi có data mới
+   * @param options - Optional configuration
+   * @returns Function to stop auto-refresh
+   */
+  enableAutoRefreshForUserId(
+    userId: string,
+    callback: (items: RecommendationItem[]) => void,
+    options: RecommendationOptions = {}
+  ): () => void {
+    return this.enableAutoRefresh(userId, 'UserId', callback, options);
+  }
+
+  /**
+   * Enable auto-refresh cho logged-in user by Username
+   * @param username - Username
+   * @param callback - Callback function được gọi khi có data mới
+   * @param options - Optional configuration
+   * @returns Function to stop auto-refresh
+   */
+  enableAutoRefreshForUsername(
+    username: string,
+    callback: (items: RecommendationItem[]) => void,
+    options: RecommendationOptions = {}
+  ): () => void {
+    return this.enableAutoRefresh(username, 'Username', callback, options);
+  }
+
+  /**
    * Transform API response sang RecommendationItem format
    * @param data - Response từ API
    * @returns RecommendationItem[]
@@ -124,6 +264,7 @@ export class RecommendationFetcher {
       id: item.Id,
       domainItemId: item.DomainItemId,
       title: item.Title,
+      artist: item.Artist,
       description: item.Description,
       img: item.ImageUrl || PlaceholderImage.getDefaultRecommendation(),
     }));

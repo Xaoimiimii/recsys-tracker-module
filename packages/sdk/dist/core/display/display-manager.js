@@ -159,7 +159,26 @@ export class DisplayManager {
             const anonymousId = this.getAnonymousId();
             if (!anonymousId)
                 return [];
-            return await this.recommendationFetcher.fetchRecommendations(anonymousId, 'AnonymousId', { numberItems: 6 });
+            return await this.recommendationFetcher.fetchRecommendations(anonymousId, 'AnonymousId', {
+                numberItems: 6,
+                autoRefresh: true,
+                onRefresh: (newItems) => {
+                    console.log('🔄 [DisplayManager] Auto-refreshed recommendations at', new Date().toLocaleTimeString());
+                    console.log('📦 [DisplayManager] New items count:', newItems.length);
+                    // Update cached recommendations
+                    this.cachedRecommendations = newItems;
+                    // Re-render popup if it's currently visible
+                    if (this.popupDisplay) {
+                        console.log('🔄 [DisplayManager] Updating popup with new recommendations');
+                        // Popup will use getRecommendations() which returns cached data
+                    }
+                    // Re-render inline if it's currently visible
+                    if (this.inlineDisplay) {
+                        console.log('🔄 [DisplayManager] Updating inline with new recommendations');
+                        // Inline will use getRecommendations() which returns cached data
+                    }
+                }
+            });
         }
         catch (error) {
             return [];
