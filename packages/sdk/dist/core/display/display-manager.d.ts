@@ -8,17 +8,14 @@ export declare class DisplayManager {
     private recommendationFetcher;
     private cachedRecommendations;
     private fetchPromise;
-    private searchKeywordPlugin;
     constructor(domainKey: string, apiBaseUrl?: string);
     initialize(returnMethods: ReturnMethod[]): Promise<void>;
     /**
      * Set SearchKeywordPlugin reference (called from RecSysTracker)
      */
-    setSearchKeywordPlugin(plugin: any): void;
     /**
      * Handle return method with SearchKeywordConfigID
      */
-    private handleSearchKeywordReturnMethod;
     private activateDisplayMethod;
     private initializePopup;
     private initializeInline;

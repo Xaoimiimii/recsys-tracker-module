@@ -15,7 +15,7 @@ export class DisplayManager {
   
   private cachedRecommendations: RecommendationItem[] | null = null;
   private fetchPromise: Promise<RecommendationItem[]> | null = null;
-  private searchKeywordPlugin: any = null;
+  // private searchKeywordPlugin: any = null;
 
   constructor(domainKey: string, apiBaseUrl: string = 'https://recsys-tracker-module.onrender.com') {
     this.domainKey = domainKey;
@@ -40,10 +40,10 @@ export class DisplayManager {
 
     // Process each return method
     for (const method of returnMethods) {
-      // Check if this method has SearchKeywordConfigID
-      if (method.SearchKeywordConfigId && this.searchKeywordPlugin) {
-        await this.handleSearchKeywordReturnMethod(method);
-      }
+      // // Check if this method has SearchKeywordConfigID
+      // if (method.SearchKeywordConfigId && this.searchKeywordPlugin) {
+      //   await this.handleSearchKeywordReturnMethod(method);
+      // }
       
       this.activateDisplayMethod(method);
     }
@@ -52,34 +52,34 @@ export class DisplayManager {
   /**
    * Set SearchKeywordPlugin reference (called from RecSysTracker)
    */
-  public setSearchKeywordPlugin(plugin: any): void {
-    this.searchKeywordPlugin = plugin;
-  }
+  // public setSearchKeywordPlugin(plugin: any): void {
+  //   this.searchKeywordPlugin = plugin;
+  // }
 
   /**
    * Handle return method with SearchKeywordConfigID
    */
-  private async handleSearchKeywordReturnMethod(method: ReturnMethod): Promise<void> {
-    if (!method.SearchKeywordConfigId || !this.searchKeywordPlugin) return;
+  // private async handleSearchKeywordReturnMethod(method: ReturnMethod): Promise<void> {
+  //   if (!method.SearchKeywordConfigId || !this.searchKeywordPlugin) return;
 
-    // Get saved keyword for this config ID
-    const keyword = this.searchKeywordPlugin.getKeyword(method.SearchKeywordConfigId);
+  //   // Get saved keyword for this config ID
+  //   const keyword = this.searchKeywordPlugin.getKeyword(method.SearchKeywordConfigId);
     
-    if (keyword) {
-      // Get user info
-      const userInfo = (window as any).RecSysTracker?.userIdentityManager?.getUserInfo?.() || {};
-      const userId = userInfo.value || '';
-      const anonymousId = userInfo.anonymousId || '';
+  //   if (keyword) {
+  //     // Get user info
+  //     const userInfo = (window as any).RecSysTracker?.userIdentityManager?.getUserInfo?.() || {};
+  //     const userId = userInfo.value || '';
+  //     const anonymousId = userInfo.anonymousId || '';
 
-      // Push keyword to server
-      await this.searchKeywordPlugin.pushKeywordToServer(
-        userId,
-        anonymousId,
-        this.domainKey,
-        keyword
-      );
-    }
-  }
+  //     // Push keyword to server
+  //     await this.searchKeywordPlugin.pushKeywordToServer(
+  //       userId,
+  //       anonymousId,
+  //       this.domainKey,
+  //       keyword
+  //     );
+  //   }
+  // }
 
   // Phân loại và kích hoạt display method tương ứng
   private activateDisplayMethod(method: ReturnMethod): void {

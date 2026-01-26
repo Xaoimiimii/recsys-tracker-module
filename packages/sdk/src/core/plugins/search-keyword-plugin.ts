@@ -150,7 +150,7 @@ export class SearchKeywordPlugin extends BasePlugin {
     // Set new timer
     this.debounceTimer = window.setTimeout(() => {
       if (searchKeyword) {
-        // console.log('[SearchKeywordPlugin] Search keyword (input):', searchKeyword);
+        console.log('[SearchKeywordPlugin] Search keyword (input):', searchKeyword);
         this.saveKeyword(searchKeyword);
       }
       this.debounceTimer = null;

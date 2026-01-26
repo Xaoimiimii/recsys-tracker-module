@@ -101,10 +101,10 @@ export class RecSysTracker {
           this.displayManager = new DisplayManager(this.config.domainKey, apiBaseUrl);
           
           // Connect SearchKeywordPlugin với DisplayManager
-          const searchKeywordPlugin = this.pluginManager.get('SearchKeywordPlugin');
-          if (searchKeywordPlugin) {
-            this.displayManager.setSearchKeywordPlugin(searchKeywordPlugin);
-          }
+          // const searchKeywordPlugin = this.pluginManager.get('SearchKeywordPlugin');
+          // if (searchKeywordPlugin) {
+          //   this.displayManager.setSearchKeywordPlugin(searchKeywordPlugin);
+          // }
           
           await this.displayManager.initialize(this.config.returnMethods);
         }
