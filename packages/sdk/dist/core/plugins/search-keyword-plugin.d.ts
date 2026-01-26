@@ -3,12 +3,7 @@ import { RecSysTracker } from '../..';
 export declare class SearchKeywordPlugin extends BasePlugin {
     readonly name = "SearchKeywordPlugin";
     private inputElement;
-    private handleInputBound;
-    private handleKeyPressBound;
-    private debounceTimer;
-    private readonly debounceDelay;
-    private searchKeywordConfigId;
-    private readonly STORAGE_KEY_PREFIX;
+    private handleSubmitBound;
     init(tracker: RecSysTracker): void;
     start(): void;
     stop(): void;
@@ -32,28 +27,12 @@ export declare class SearchKeywordPlugin extends BasePlugin {
      */
     private removeListeners;
     /**
-     * Handle input event - log với debounce 400ms
+     * Handle submit event - call API when user presses Enter
      */
-    private handleInput;
-    /**
-     * Handle keypress event - log khi user nhấn Enter (không debounce)
-     */
-    private handleKeyPress;
-    /**
-     * Lưu keyword vào localStorage với SearchKeywordConfigID
-     */
-    private saveKeyword;
-    /**
-     * Lấy keyword đã lưu cho SearchKeywordConfigID
-     */
-    getKeyword(configId: number): string | null;
-    /**
-     * Trigger push keyword API (được gọi khi nhấn Enter hoặc từ DisplayManager)
-     */
-    private triggerPushKeyword;
+    private handleSubmit;
     /**
      * Call API POST recommendation/push-keyword
      */
-    pushKeywordToServer(userId: string, anonymousId: string, domainKey: string, keyword: string): Promise<void>;
+    private pushKeywordToServer;
 }
 //# sourceMappingURL=search-keyword-plugin.d.ts.map

@@ -3395,17 +3395,11 @@ class SearchKeywordPlugin extends BasePlugin {
         super(...arguments);
         this.name = 'SearchKeywordPlugin';
         this.inputElement = null;
-        this.handleInputBound = this.handleInput.bind(this);
-        this.handleKeyPressBound = this.handleKeyPress.bind(this);
-        this.debounceTimer = null;
-        this.debounceDelay = 400; // 400ms debounce
-        this.searchKeywordConfigId = null;
-        this.STORAGE_KEY_PREFIX = 'recsys_search_keyword_';
+        this.handleSubmitBound = this.handleSubmit.bind(this);
     }
     init(tracker) {
         this.errorBoundary.execute(() => {
             super.init(tracker);
-            // console.log('[SearchKeywordPlugin] Initialized');
         }, 'SearchKeywordPlugin.init');
     }
     start() {
@@ -3417,8 +3411,6 @@ class SearchKeywordPlugin extends BasePlugin {
             if (!searchKeywordConfig) {
                 return;
             }
-            // Lưu searchKeywordConfigId
-            this.searchKeywordConfigId = searchKeywordConfig.Id;
             // Attach listeners
             this.attachListeners(searchKeywordConfig.InputSelector);
             this.active = true;
@@ -3426,11 +3418,6 @@ class SearchKeywordPlugin extends BasePlugin {
     }
     stop() {
         this.errorBoundary.execute(() => {
-            // Clear debounce timer
-            if (this.debounceTimer !== null) {
-                clearTimeout(this.debounceTimer);
-                this.debounceTimer = null;
-            }
             this.removeListeners();
             super.stop();
         }, 'SearchKeywordPlugin.stop');
@@ -3492,94 +3479,35 @@ class SearchKeywordPlugin extends BasePlugin {
     addEventListeners() {
         if (!this.inputElement)
             return;
-        // Listen for input events (khi user nhập)
-        this.inputElement.addEventListener('input', this.handleInputBound);
-        // Listen for keypress events (khi user nhấn Enter)
-        this.inputElement.addEventListener('keypress', this.handleKeyPressBound);
+        // Listen for keypress events (when user presses Enter to submit)
+        this.inputElement.addEventListener('keypress', this.handleSubmitBound);
     }
     /**
      * Remove event listeners
      */
     removeListeners() {
         if (this.inputElement) {
-            this.inputElement.removeEventListener('input', this.handleInputBound);
-            this.inputElement.removeEventListener('keypress', this.handleKeyPressBound);
+            this.inputElement.removeEventListener('keypress', this.handleSubmitBound);
             this.inputElement = null;
         }
     }
     /**
-     * Handle input event - log với debounce 400ms
+     * Handle submit event - call API when user presses Enter
      */
-    handleInput(event) {
-        // Clear existing timer
-        if (this.debounceTimer !== null) {
-            clearTimeout(this.debounceTimer);
-        }
-        const target = event.target;
-        const searchKeyword = target.value.trim();
-        // Set new timer
-        this.debounceTimer = window.setTimeout(() => {
-            if (searchKeyword) {
-                // console.log('[SearchKeywordPlugin] Search keyword (input):', searchKeyword);
-                this.saveKeyword(searchKeyword);
-            }
-            this.debounceTimer = null;
-        }, this.debounceDelay);
-    }
-    /**
-     * Handle keypress event - log khi user nhấn Enter (không debounce)
-     */
-    handleKeyPress(event) {
+    async handleSubmit(event) {
         if (event.key === 'Enter') {
-            // Clear debounce timer khi nhấn Enter
-            if (this.debounceTimer !== null) {
-                clearTimeout(this.debounceTimer);
-                this.debounceTimer = null;
-            }
             const target = event.target;
             const searchKeyword = target.value.trim();
-            if (searchKeyword) {
-                // console.log('[SearchKeywordPlugin] Search keyword (Enter pressed):', searchKeyword);
-                this.saveKeyword(searchKeyword);
-                // Trigger push keyword API ngay lập tức
-                this.triggerPushKeyword(searchKeyword);
+            if (searchKeyword && this.tracker) {
+                const config = this.tracker.getConfig();
+                if (!config)
+                    return;
+                const userInfo = this.tracker.userIdentityManager.getUserInfo();
+                const userId = userInfo.value || '';
+                const anonymousId = userInfo.field === 'AnonymousId' ? userInfo.value : getOrCreateAnonymousId();
+                await this.pushKeywordToServer(userId, anonymousId, config.domainKey, searchKeyword);
             }
         }
-    }
-    /**
-     * Lưu keyword vào localStorage với SearchKeywordConfigID
-     */
-    saveKeyword(keyword) {
-        if (this.searchKeywordConfigId === null)
-            return;
-        const storageKey = `${this.STORAGE_KEY_PREFIX}${this.searchKeywordConfigId}`;
-        localStorage.setItem(storageKey, keyword);
-    }
-    /**
-     * Lấy keyword đã lưu cho SearchKeywordConfigID
-     */
-    getKeyword(configId) {
-        const storageKey = `${this.STORAGE_KEY_PREFIX}${configId}`;
-        try {
-            return localStorage.getItem(storageKey);
-        }
-        catch (error) {
-            return null;
-        }
-    }
-    /**
-     * Trigger push keyword API (được gọi khi nhấn Enter hoặc từ DisplayManager)
-     */
-    async triggerPushKeyword(keyword) {
-        if (!this.tracker)
-            return;
-        const config = this.tracker.getConfig();
-        if (!config)
-            return;
-        const userInfo = this.tracker.userIdentityManager.getUserInfo();
-        const userId = userInfo.value || '';
-        const anonymousId = userInfo.field === 'AnonymousId' ? userInfo.value : getOrCreateAnonymousId();
-        await this.pushKeywordToServer(userId, anonymousId, config.domainKey, keyword);
     }
     /**
      * Call API POST recommendation/push-keyword
@@ -3594,7 +3522,6 @@ class SearchKeywordPlugin extends BasePlugin {
             Keyword: keyword
         };
         try {
-            // console.log('[SearchKeywordPlugin] Pushing keyword to server:', payload);
             const response = await fetch(url, {
                 method: 'POST',
                 headers: {
@@ -3602,15 +3529,12 @@ class SearchKeywordPlugin extends BasePlugin {
                 },
                 body: JSON.stringify(payload)
             });
-            if (response.ok) {
-                // console.log('[SearchKeywordPlugin] Keyword pushed successfully');
-            }
-            else {
-                // console.error('[SearchKeywordPlugin] Failed to push keyword:', response.statusText);
+            if (!response.ok) {
+                console.error('[SearchKeywordPlugin] Failed to push keyword:', response.statusText);
             }
         }
         catch (error) {
-            // console.error('[SearchKeywordPlugin] Error pushing keyword:', error);
+            console.error('[SearchKeywordPlugin] Error pushing keyword:', error);
         }
     }
 }
