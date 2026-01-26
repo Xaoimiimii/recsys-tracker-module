@@ -147,7 +147,6 @@ export function extractFromUrl(
 
     return null;
   } catch (error) {
-    console.error('[DataExtractors] Error extracting from URL:', error);
     return null;
   }
 }

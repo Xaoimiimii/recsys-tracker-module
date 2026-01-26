@@ -40,11 +40,10 @@ var RecSysTracker = (function (exports) {
                     return true;
                 }
                 // Không có origin hoặc referrer, hoặc cả 2 đều không khớp
-                console.warn('[RecSysTracker] Origin verification failed: no valid origin or referrer');
+                // console.warn('[RecSysTracker] Origin verification failed: no valid origin or referrer');
                 return false;
             }
             catch (error) {
-                console.error('[RecSysTracker] Error during origin verification:', error);
                 return false;
             }
         }
@@ -57,12 +56,6 @@ var RecSysTracker = (function (exports) {
             const normalizedCurrent = this.normalizeUrl(currentOrigin);
             const normalizedDomain = this.normalizeUrl(domainUrl);
             const isValid = normalizedCurrent === normalizedDomain;
-            if (!isValid) {
-                console.warn('[RecSysTracker] Origin mismatch:', {
-                    current: normalizedCurrent,
-                    expected: normalizedDomain
-                });
-            }
             return isValid;
         }
         // Verify bằng document.referrer
@@ -194,7 +187,7 @@ var RecSysTracker = (function (exports) {
             if (!this.domainKey) {
                 return this.config;
             }
-            const baseUrl = "http://localhost:3000";
+            const baseUrl = "https://recsys-tracker-module.onrender.com";
             try {
                 // Bước 1: Gọi các API song song để lấy domain, return methods, event types và search keyword config
                 const [domainResponse, rulesListResponse, returnMethodsResponse, eventTypesResponse, searchKeywordResponse, userIdentityResponse] = await Promise.all([
@@ -3574,7 +3567,7 @@ var RecSysTracker = (function (exports) {
          * Call API POST recommendation/push-keyword
          */
         async pushKeywordToServer(userId, anonymousId, domainKey, keyword) {
-            const baseUrl = "http://localhost:3000";
+            const baseUrl = "https://recsys-tracker-module.onrender.com";
             const url = `${baseUrl}/recommendation/push-keyword`;
             const payload = {
                 UserId: userId,
@@ -4159,7 +4152,6 @@ var RecSysTracker = (function (exports) {
             return null;
         }
         catch (error) {
-            console.error('[DataExtractors] Error extracting from URL:', error);
             return null;
         }
     }
@@ -5194,7 +5186,7 @@ var RecSysTracker = (function (exports) {
                     return;
                 }
                 // Khởi tạo EventDispatcher
-                const baseUrl = "http://localhost:3000";
+                const baseUrl = "https://recsys-tracker-module.onrender.com";
                 this.eventDispatcher = new EventDispatcher({
                     endpoint: `${baseUrl}${DEFAULT_TRACK_ENDPOINT_PATH}`,
                 });
@@ -5215,7 +5207,7 @@ var RecSysTracker = (function (exports) {
                     this.autoInitializePlugins();
                     // Khởi tạo Display Manager nếu có returnMethods
                     if (this.config.returnMethods && this.config.returnMethods.length > 0) {
-                        const apiBaseUrl = "http://localhost:3000";
+                        const apiBaseUrl = "https://recsys-tracker-module.onrender.com";
                         this.displayManager = new DisplayManager(this.config.domainKey, apiBaseUrl);
                         // Connect SearchKeywordPlugin với DisplayManager
                         const searchKeywordPlugin = this.pluginManager.get('SearchKeywordPlugin');

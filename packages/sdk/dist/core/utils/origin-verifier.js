@@ -37,11 +37,10 @@ export class OriginVerifier {
                 return true;
             }
             // Không có origin hoặc referrer, hoặc cả 2 đều không khớp
-            console.warn('[RecSysTracker] Origin verification failed: no valid origin or referrer');
+            // console.warn('[RecSysTracker] Origin verification failed: no valid origin or referrer');
             return false;
         }
         catch (error) {
-            console.error('[RecSysTracker] Error during origin verification:', error);
             return false;
         }
     }
@@ -54,12 +53,6 @@ export class OriginVerifier {
         const normalizedCurrent = this.normalizeUrl(currentOrigin);
         const normalizedDomain = this.normalizeUrl(domainUrl);
         const isValid = normalizedCurrent === normalizedDomain;
-        if (!isValid) {
-            console.warn('[RecSysTracker] Origin mismatch:', {
-                current: normalizedCurrent,
-                expected: normalizedDomain
-            });
-        }
         return isValid;
     }
     // Verify bằng document.referrer
