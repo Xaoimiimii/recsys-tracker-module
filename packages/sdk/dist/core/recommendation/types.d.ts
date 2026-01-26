@@ -6,6 +6,7 @@ export interface RecommendationRequest {
     NumberItems: number;
 }
 export interface RecommendationResponse {
+    id: number;
     [key: string]: any;
 }
 export interface RecommendationItem {

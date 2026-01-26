@@ -260,14 +260,14 @@ export class RecommendationFetcher {
       return [];
     }
 
-    return data.map(item => ({
-      id: item.Id,
-      domainItemId: item.DomainItemId,
-      title: item.Title,
-      artist: item.Artist,
-      description: item.Description,
-      img: item.ImageUrl || PlaceholderImage.getDefaultRecommendation(),
-    }));
+    return data.map(item => {
+      const result: RecommendationItem = { ...item };
+      result.id = item.DomainItemId;
+      const rawImg = item.ImageUrl || item.imageUrl || item.Image || item.img;
+      result.img = rawImg || PlaceholderImage.getDefaultRecommendation();
+      result.title = item.title || item.Title || item.Name || item.name;
+      return result;
+    });
   }
 
   /**

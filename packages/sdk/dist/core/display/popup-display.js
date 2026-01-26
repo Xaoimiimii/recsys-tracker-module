@@ -69,6 +69,7 @@ export class PopupDisplay {
     async showPopup() {
         try {
             const items = await this.fetchRecommendations();
+            console.log(items);
             // Chỉ hiện nếu chưa hiện (double check)
             if (items && items.length > 0 && !this.shadowHost) {
                 this.renderPopup(items);
@@ -131,7 +132,7 @@ export class PopupDisplay {
     // --- LOGIC 2: DYNAMIC CSS GENERATOR ---
     // --- DYNAMIC CSS GENERATOR (FINAL CLEAN VERSION) ---
     getDynamicStyles() {
-        var _a, _b, _c, _d, _e, _f, _g, _h, _j, _k, _l, _m, _o, _p, _q, _r, _s, _t, _u, _v, _w, _x;
+        var _a, _b, _c, _d, _e, _f, _g, _h, _j, _k, _l, _m, _o, _p, _q, _r, _s, _t, _u, _v, _w;
         const style = this.config.styleJson || {};
         const layout = this.config.layoutJson || {};
         // 1. Unpack Configs
@@ -185,8 +186,8 @@ export class PopupDisplay {
         let containerCSS = '';
         let itemDir = 'column';
         let itemAlign = 'stretch';
-        let infoTextAlign = 'center';
-        let infoAlignItems = 'center';
+        let infoTextAlign = 'left';
+        let infoAlignItems = 'flex-start';
         if (contentMode === 'grid') {
             const cols = modeConfig.columns || 2;
             const gapPx = ((_g = tokens.spacingScale) === null || _g === void 0 ? void 0 : _g[modeConfig.gap || 'md']) || 12;
@@ -198,8 +199,6 @@ export class PopupDisplay {
             const gapPx = ((_h = tokens.spacingScale) === null || _h === void 0 ? void 0 : _h[modeConfig.rowGap || 'md']) || 12;
             containerCSS = `display: flex; flex-direction: column; gap: ${gapPx}px; padding: ${density.cardPadding || 16}px;`;
             containerCSS = 'padding: 0;';
-            infoTextAlign = 'left';
-            infoAlignItems = 'flex-start';
         }
         // 4. Styles Mapping
         const cardComp = components.card || {};
@@ -223,10 +222,10 @@ export class PopupDisplay {
 
       .recsys-popup {
         position: fixed; ${posCSS} width: ${popupWidth}; ${popupHeightCSS}
-        background: ${getColor(((_l = components.canvas) === null || _l === void 0 ? void 0 : _l.backgroundToken) || 'background')};
+        background: ${getColor('surface')};
         color: ${colorTitle};
         border-radius: ${getRadius('card')}; 
-        box-shadow: ${(_m = tokens.shadow) === null || _m === void 0 ? void 0 : _m.cardHover};
+        box-shadow: ${(_l = tokens.shadow) === null || _l === void 0 ? void 0 : _l.cardHover};
         border: 1px solid ${getColor('border')};
         display: flex; flex-direction: column; z-index: 999999; overflow: hidden;
         animation: slideIn 0.3s ease-out;
@@ -240,8 +239,8 @@ export class PopupDisplay {
         flex-shrink: 0; 
       }
       .recsys-header-title {
-          font-size: ${((_p = (_o = tokens.typography) === null || _o === void 0 ? void 0 : _o.title) === null || _p === void 0 ? void 0 : _p.fontSize) || 16}px;
-          font-weight: ${((_r = (_q = tokens.typography) === null || _q === void 0 ? void 0 : _q.title) === null || _r === void 0 ? void 0 : _r.fontWeight) || 600};
+          font-size: ${((_o = (_m = tokens.typography) === null || _m === void 0 ? void 0 : _m.title) === null || _o === void 0 ? void 0 : _o.fontSize) || 16}px;
+          font-weight: ${((_q = (_p = tokens.typography) === null || _p === void 0 ? void 0 : _p.title) === null || _q === void 0 ? void 0 : _q.fontWeight) || 600};
           color: ${colorTitle};
       }
       .recsys-close { background: none; border: none; color: ${colorBody}; cursor: pointer; font-size: 18px; }
@@ -255,11 +254,11 @@ export class PopupDisplay {
 
       .recsys-item {
          display: flex; flex-direction: ${itemDir}; align-items: ${itemAlign};
-         gap: ${((_s = tokens.spacingScale) === null || _s === void 0 ? void 0 : _s.sm) || 8}px;
+         gap: ${((_r = tokens.spacingScale) === null || _r === void 0 ? void 0 : _r.sm) || 8}px;
          background: ${cardBg}; border: ${cardBorder}; border-radius: ${cardRadius};
          box-shadow: ${cardShadow}; padding: ${cardPadding}px;
          cursor: pointer; transition: all 0.2s;
-         width: 100%;
+         width: 100%; min-width: 0; box-sizing: border-box; overflow: hidden;
       }
 
       /* SỬ DỤNG colorPrimary Ở ĐÂY */
@@ -267,7 +266,7 @@ export class PopupDisplay {
           color: ${colorPrimary}; 
       }
 
-      ${((_t = cardComp.hover) === null || _t === void 0 ? void 0 : _t.enabled) ? `
+      ${((_s = cardComp.hover) === null || _s === void 0 ? void 0 : _s.enabled) ? `
       .recsys-item:hover {
          transform: translateY(-${cardComp.hover.liftPx || 2}px);
          box-shadow: ${getShadow(cardComp.hover.shadowToken || 'cardHover')};
@@ -277,19 +276,25 @@ export class PopupDisplay {
 
       .recsys-img-box {
          width: ${imgWidth}; height: ${imgHeight};
-         border-radius: ${getRadius(((_u = components.image) === null || _u === void 0 ? void 0 : _u.radiusFollowsCard) ? cardComp.radiusToken : 'image')};
+         border-radius: ${getRadius(((_t = components.image) === null || _t === void 0 ? void 0 : _t.radiusFollowsCard) ? cardComp.radiusToken : 'image')};
          overflow: hidden; background: ${getColor('muted')}; flex-shrink: 0; display: flex;
       }
-      .recsys-img-box img { width: 100%; height: 100%; object-fit: ${((_v = components.image) === null || _v === void 0 ? void 0 : _v.objectFit) || 'cover'}; }
+      .recsys-img-box img { width: 100%; height: 100%; object-fit: ${((_u = components.image) === null || _u === void 0 ? void 0 : _u.objectFit) || 'cover'}; }
 
       .recsys-info { display: flex; flex-direction: column; gap: 4px; flex: 1; min-width: 0; text-align: ${infoTextAlign}; 
-        align-items: ${infoAlignItems};}
+        align-items: ${infoAlignItems}; width: 100%}
+      
+      .recsys-field-row {
+        width: 100%;
+        min-width: 0;
+        display: block;
+      }
 
       .recsys-badges { display: flex; flex-wrap: wrap; gap: 4px; margin-top: auto; }
       .recsys-badge { 
          font-size: 10px; 
-         background: ${getColor(((_w = components.badge) === null || _w === void 0 ? void 0 : _w.backgroundToken) || 'primary')}; 
-         color: ${((_x = components.badge) === null || _x === void 0 ? void 0 : _x.textColor) || '#fff'};
+         background: ${getColor(((_v = components.badge) === null || _v === void 0 ? void 0 : _v.backgroundToken) || 'primary')}; 
+         color: ${((_w = components.badge) === null || _w === void 0 ? void 0 : _w.textColor) || '#fff'};
          padding: 2px 6px; border-radius: ${getRadius('badge')};
       }
 
@@ -384,6 +389,15 @@ export class PopupDisplay {
                 style += `font-size: ${finalSize}px !important; `;
             if (finalWeight)
                 style += `font-weight: ${finalWeight} !important; `;
+            if (['artist', 'singer', 'performer', 'artist_name', 'description'].includes(key)) {
+                style += `
+            white-space: nowrap; 
+            overflow: hidden; 
+            text-overflow: ellipsis; 
+            display: block; 
+            max-width: 100%;
+          `;
+            }
             return style;
         };
         // 2. Render Title & Image
@@ -395,7 +409,7 @@ export class PopupDisplay {
         const imgSrc = imageFieldConfig ? getValue(item, imageFieldConfig.key) : getValue(item, 'image');
         // 3. Render Khung
         let html = `
-       <div class="recsys-item">
+       <div class="recsys-item" data-id="${item.id}">
           ${imgSrc ? `
           <div class="recsys-img-box">
              <img src="${imgSrc}" alt="${titleValue || ''}" />
@@ -409,12 +423,14 @@ export class PopupDisplay {
         // 4. Render các field còn lại
         activeFields.forEach(field => {
             const key = field.key.toLowerCase();
+            let rawValue = getValue(item, field.key);
+            console.log('Checking field:', field.key, 'Value:', rawValue);
+            if (!rawValue) {
+                console.warn(`!!! Data rỗng cho field "${key}". Item data:`, item);
+                return;
+            }
             if (['image', 'img', 'image_url', 'title', 'name', 'product_name', 'item_name'].includes(key))
                 return;
-            let value = getValue(item, field.key);
-            if (value === undefined || value === null || value === '')
-                return;
-            let rawValue = getValue(item, field.key);
             if (rawValue === undefined || rawValue === null || rawValue === '')
                 return;
             // [SỬA ĐỔI] Xử lý mảng: Nối thành chuỗi (Pop, Ballad) thay vì render Badge
@@ -477,6 +493,14 @@ export class PopupDisplay {
         if (!container)
             return;
         container.innerHTML = items.map(item => this.renderItemContent(item)).join('');
+        container.querySelectorAll('.recsys-item').forEach((element) => {
+            element.addEventListener('click', (e) => {
+                const target = e.currentTarget;
+                const id = target.getAttribute('data-id');
+                if (id)
+                    this.handleItemClick(id);
+            });
+        });
     }
     setupCarousel(shadow, items) {
         var _a, _b;
@@ -486,6 +510,13 @@ export class PopupDisplay {
             const item = items[currentIndex];
             // GỌI HÀM RENDER ĐỘNG
             slideContainer.innerHTML = this.renderItemContent(item);
+            const itemElement = slideContainer.querySelector('.recsys-item');
+            if (itemElement) {
+                const id = item.id || item.Id;
+                if (id !== undefined && id !== null) {
+                    this.handleItemClick(id);
+                }
+            }
         };
         const next = () => {
             currentIndex = (currentIndex + 1) % items.length;
@@ -524,6 +555,11 @@ export class PopupDisplay {
         this.popupTimeout = null;
         this.autoCloseTimeout = null;
         this.autoSlideTimeout = null;
+    }
+    handleItemClick(id) {
+        if (!id)
+            return;
+        window.location.href = `/song/${id}`;
     }
 }
 //# sourceMappingURL=popup-display.js.map

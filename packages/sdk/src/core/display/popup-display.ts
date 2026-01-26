@@ -92,7 +92,7 @@ export class PopupDisplay {
   private async showPopup(): Promise<void> {
     try {
       const items = await this.fetchRecommendations();
-      
+      console.log(items);
       // Chỉ hiện nếu chưa hiện (double check)
       if (items && items.length > 0 && !this.shadowHost) {
         this.renderPopup(items);
@@ -215,8 +215,8 @@ export class PopupDisplay {
     let containerCSS = '';
     let itemDir = 'column';
     let itemAlign = 'stretch';
-    let infoTextAlign = 'center';   
-    let infoAlignItems = 'center';
+    let infoTextAlign = 'left';   
+    let infoAlignItems = 'flex-start';
 
     if (contentMode === 'grid') {
         const cols = modeConfig.columns || 2;
@@ -228,8 +228,6 @@ export class PopupDisplay {
         const gapPx = tokens.spacingScale?.[modeConfig.rowGap || 'md'] || 12;
         containerCSS = `display: flex; flex-direction: column; gap: ${gapPx}px; padding: ${density.cardPadding || 16}px;`;
         containerCSS = 'padding: 0;'; 
-        infoTextAlign = 'left';
-        infoAlignItems = 'flex-start';
     }
 
     // 4. Styles Mapping
@@ -258,7 +256,7 @@ export class PopupDisplay {
 
       .recsys-popup {
         position: fixed; ${posCSS} width: ${popupWidth}; ${popupHeightCSS}
-        background: ${getColor(components.canvas?.backgroundToken || 'background')};
+        background: ${getColor('surface')};
         color: ${colorTitle};
         border-radius: ${getRadius('card')}; 
         box-shadow: ${tokens.shadow?.cardHover};
@@ -294,7 +292,7 @@ export class PopupDisplay {
          background: ${cardBg}; border: ${cardBorder}; border-radius: ${cardRadius};
          box-shadow: ${cardShadow}; padding: ${cardPadding}px;
          cursor: pointer; transition: all 0.2s;
-         width: 100%;
+         width: 100%; min-width: 0; box-sizing: border-box; overflow: hidden;
       }
 
       /* SỬ DỤNG colorPrimary Ở ĐÂY */
@@ -318,7 +316,13 @@ export class PopupDisplay {
       .recsys-img-box img { width: 100%; height: 100%; object-fit: ${components.image?.objectFit || 'cover'}; }
 
       .recsys-info { display: flex; flex-direction: column; gap: 4px; flex: 1; min-width: 0; text-align: ${infoTextAlign}; 
-        align-items: ${infoAlignItems};}
+        align-items: ${infoAlignItems}; width: 100%}
+      
+      .recsys-field-row {
+        width: 100%;
+        min-width: 0;
+        display: block;
+      }
 
       .recsys-badges { display: flex; flex-wrap: wrap; gap: 4px; margin-top: auto; }
       .recsys-badge { 
@@ -415,6 +419,16 @@ export class PopupDisplay {
         if (finalColor) style += `color: ${finalColor} !important; `;
         if (finalSize) style += `font-size: ${finalSize}px !important; `;
         if (finalWeight) style += `font-weight: ${finalWeight} !important; `;
+
+        if (['artist', 'singer', 'performer', 'artist_name', 'description'].includes(key)) {
+          style += `
+            white-space: nowrap; 
+            overflow: hidden; 
+            text-overflow: ellipsis; 
+            display: block; 
+            max-width: 100%;
+          `;
+        }
         
         return style;
     };
@@ -431,7 +445,7 @@ export class PopupDisplay {
 
     // 3. Render Khung
     let html = `
-       <div class="recsys-item">
+       <div class="recsys-item" data-id="${item.id}">
           ${imgSrc ? `
           <div class="recsys-img-box">
              <img src="${imgSrc}" alt="${titleValue || ''}" />
@@ -446,12 +460,14 @@ export class PopupDisplay {
     // 4. Render các field còn lại
     activeFields.forEach(field => {
         const key = field.key.toLowerCase();
-        if (['image', 'img', 'image_url', 'title', 'name', 'product_name', 'item_name'].includes(key)) return;
-
-        let value = getValue(item, field.key);
-        if (value === undefined || value === null || value === '') return;
-
         let rawValue = getValue(item, field.key);
+        console.log('Checking field:', field.key, 'Value:', rawValue);
+        if (!rawValue) {
+          console.warn(`!!! Data rỗng cho field "${key}". Item data:`, item);
+          return; 
+        }
+
+        if (['image', 'img', 'image_url', 'title', 'name', 'product_name', 'item_name'].includes(key)) return;
         if (rawValue === undefined || rawValue === null || rawValue === '') return;
 
         // [SỬA ĐỔI] Xử lý mảng: Nối thành chuỗi (Pop, Ballad) thay vì render Badge
@@ -520,6 +536,13 @@ export class PopupDisplay {
      const container = shadow.querySelector('.recsys-container');
      if (!container) return;
      container.innerHTML = items.map(item => this.renderItemContent(item)).join('');
+     container.querySelectorAll('.recsys-item').forEach((element) => {
+      element.addEventListener('click', (e) => {
+          const target = e.currentTarget as HTMLElement;
+          const id = target.getAttribute('data-id');
+          if (id) this.handleItemClick(id);
+      });
+     });
   }
 
   private setupCarousel(shadow: ShadowRoot, items: RecommendationItem[]): void {
@@ -530,6 +553,13 @@ export class PopupDisplay {
       const item = items[currentIndex];
       // GỌI HÀM RENDER ĐỘNG
       slideContainer.innerHTML = this.renderItemContent(item);
+      const itemElement = slideContainer.querySelector('.recsys-item');
+      if (itemElement) {
+        const id = item.id || item.Id;
+        if (id !== undefined && id !== null) {
+          this.handleItemClick(id);
+        }
+      }
     };
 
     const next = () => {
@@ -571,6 +601,11 @@ export class PopupDisplay {
     this.popupTimeout = null;
     this.autoCloseTimeout = null;
     this.autoSlideTimeout = null;
+  }
+
+  private handleItemClick(id: string | number): void {
+      if (!id) return;
+      window.location.href = `/song/${id}`; 
   }
 }
 

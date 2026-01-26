@@ -27,5 +27,6 @@ export declare class PopupDisplay {
     private setupCarousel;
     private removePopup;
     private clearTimeouts;
+    private handleItemClick;
 }
 //# sourceMappingURL=popup-display.d.ts.map

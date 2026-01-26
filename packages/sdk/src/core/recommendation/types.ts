@@ -8,6 +8,7 @@ export interface RecommendationRequest {
 }
 
 export interface RecommendationResponse {
+  id: number;
   [key: string]: any; 
 }
 

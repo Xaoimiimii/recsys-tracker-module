@@ -57,6 +57,7 @@ export class InlineDisplay {
         container.setAttribute('data-recsys-loaded', 'true');
         try {
             const items = await this.fetchRecommendations();
+            console.log(items);
             if (items && items.length > 0) {
                 this.renderWidget(container, items);
             }
@@ -107,8 +108,8 @@ export class InlineDisplay {
         let extraCSS = '';
         let itemDir = 'column';
         let itemAlign = 'stretch';
-        let infoTextAlign = 'center';
-        let infoAlignItems = 'center';
+        let infoTextAlign = 'left';
+        let infoAlignItems = 'flex-start';
         let itemWidthCSS = 'width: 100%;';
         if (contentMode === 'grid') {
             const cols = modeConfig.columns || 4; // Inline default thường rộng hơn popup (4 cột)
@@ -143,8 +144,6 @@ export class InlineDisplay {
             itemAlign = 'flex-start';
             const gapPx = ((_d = tokens.spacingScale) === null || _d === void 0 ? void 0 : _d[modeConfig.rowGap || 'md']) || 12;
             containerCSS = `display: flex; flex-direction: column; gap: ${gapPx}px;`;
-            infoTextAlign = 'left';
-            infoAlignItems = 'flex-start';
         }
         else if (contentMode === 'carousel') {
             const cols = modeConfig.itemsPerView || modeConfig.columns || 5;
@@ -198,31 +197,31 @@ export class InlineDisplay {
       justify-content: space-between; align-items: center;
     }
     .recsys-header-title {
-        font-size: ${((_j = (_h = tokens.typography) === null || _h === void 0 ? void 0 : _h.title) === null || _j === void 0 ? void 0 : _j.fontSize) || 18}px;
-        font-weight: ${((_l = (_k = tokens.typography) === null || _k === void 0 ? void 0 : _k.title) === null || _l === void 0 ? void 0 : _l.fontWeight) || 600};
-        color: ${colorTitle};
+      font-size: ${((_j = (_h = tokens.typography) === null || _h === void 0 ? void 0 : _h.title) === null || _j === void 0 ? void 0 : _j.fontSize) || 18}px;
+      font-weight: ${((_l = (_k = tokens.typography) === null || _k === void 0 ? void 0 : _k.title) === null || _l === void 0 ? void 0 : _l.fontWeight) || 600};
+      color: ${colorTitle};
     }
 
     .recsys-container { ${containerCSS} }
 
     .recsys-item {
-        display: flex; flex-direction: ${itemDir}; align-items: ${itemAlign};
-        gap: ${((_m = tokens.spacingScale) === null || _m === void 0 ? void 0 : _m.sm) || 8}px;
-        background: ${cardBg}; border: ${cardBorder}; border-radius: ${cardRadius};
-        box-shadow: ${cardShadow}; padding: ${cardPadding}px;
-        cursor: pointer; transition: all 0.2s;
-        ${itemWidthCSS}
-        min-width: 0; /* Fix flex overflow */
+      display: flex; flex-direction: ${itemDir}; align-items: ${itemAlign};
+      gap: ${((_m = tokens.spacingScale) === null || _m === void 0 ? void 0 : _m.sm) || 8}px;
+      background: ${cardBg}; border: ${cardBorder}; border-radius: ${cardRadius};
+      box-shadow: ${cardShadow}; padding: ${cardPadding}px;
+      cursor: pointer; transition: all 0.2s;
+      ${itemWidthCSS}
+      min-width: 0; /* Fix flex overflow */
     }
 
     .recsys-item:hover .recsys-name {
-        color: ${colorPrimary}; 
+      color: ${colorPrimary}; 
     }
 
     ${((_o = cardComp.hover) === null || _o === void 0 ? void 0 : _o.enabled) ? `
     .recsys-item:hover {
-        transform: translateY(-${cardComp.hover.liftPx || 2}px);
-        box-shadow: ${getShadow(cardComp.hover.shadowToken || 'cardHover')};
+      transform: translateY(-${cardComp.hover.liftPx || 2}px);
+      box-shadow: ${getShadow(cardComp.hover.shadowToken || 'cardHover')};
     }
     ` : ''}
 
@@ -232,6 +231,7 @@ export class InlineDisplay {
         overflow: hidden; 
         background: ${getColor('muted')}; 
         flex-shrink: 0;
+        border-radius: 4px;
     }
     .recsys-img-box img { 
         width: 100%; 
@@ -244,18 +244,24 @@ export class InlineDisplay {
     .recsys-info { display: flex; flex-direction: column; gap: 4px; flex: 1; min-width: 0; text-align: ${infoTextAlign}; 
       align-items: ${infoAlignItems};}
 
+    .recsys-field-row {
+      width: 100%;
+      min-width: 0;
+      display: block;
+    }
+
     /* Buttons for Carousel */
     .recsys-nav {
-        position: absolute; top: 50%; transform: translateY(-50%);
-        width: 32px; height: 32px;
-        border-radius: 50%;
-        background: ${btnBg};
-        border: 1px solid ${getColor('border')};
-        display: flex; align-items: center; justify-content: center;
-        z-index: 10; cursor: pointer; color: ${colorTitle};
-        box-shadow: 0 2px 8px rgba(0,0,0,0.15);
-        font-size: 18px; padding-bottom: 2px;
-        opacity: 0.9; transition: opacity 0.2s;
+      position: absolute; top: 50%; transform: translateY(-50%);
+      width: 32px; height: 32px;
+      border-radius: 50%;
+      background: ${btnBg};
+      border: 1px solid ${getColor('border')};
+      display: flex; align-items: center; justify-content: center;
+      z-index: 10; cursor: pointer; color: ${colorTitle};
+      box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+      font-size: 18px; padding-bottom: 2px;
+      opacity: 0.9; transition: opacity 0.2s;
     }
     .recsys-nav:hover { opacity: 1; }
     .recsys-prev { left: 0; }
@@ -326,6 +332,16 @@ export class InlineDisplay {
                 style += `font-size: ${finalSize}px !important; `;
             if (finalWeight)
                 style += `font-weight: ${finalWeight} !important; `;
+            if (['artist', 'singer', 'performer', 'artist_name', 'description'].includes(key)) {
+                style += `
+          white-space: nowrap; 
+          overflow: hidden; 
+          text-overflow: ellipsis; 
+          display: block; 
+          max-width: 100%;
+          width: 100%;
+        `;
+            }
             return style;
         };
         // 2. Extract Data
@@ -418,6 +434,14 @@ export class InlineDisplay {
         if (!container)
             return;
         container.innerHTML = items.map(item => this.renderItemContent(item)).join('');
+        container.querySelectorAll('.recsys-item').forEach((element) => {
+            element.addEventListener('click', (e) => {
+                const target = e.currentTarget;
+                const id = target.getAttribute('data-id');
+                if (id)
+                    this.handleItemClick(id);
+            });
+        });
     }
     // --- CAROUSEL LOGIC ---
     setupCarousel(shadow, items) {
@@ -438,6 +462,14 @@ export class InlineDisplay {
                 html += this.renderItemContent(items[index]);
             }
             slideContainer.innerHTML = html;
+            slideContainer.querySelectorAll('.recsys-item').forEach((element) => {
+                element.addEventListener('click', (e) => {
+                    const target = e.currentTarget;
+                    const id = target.getAttribute('data-id');
+                    if (id)
+                        this.handleItemClick(id);
+                });
+            });
         };
         const next = () => {
             currentIndex = (currentIndex + 1) % items.length;
@@ -458,6 +490,11 @@ export class InlineDisplay {
         (_c = shadow.querySelector('.recsys-next')) === null || _c === void 0 ? void 0 : _c.addEventListener('click', next);
         renderSlide();
         resetAutoSlide();
+    }
+    handleItemClick(id) {
+        if (!id)
+            return;
+        window.location.href = `/song/${id}`;
     }
 }
 //# sourceMappingURL=inline-display.js.map
