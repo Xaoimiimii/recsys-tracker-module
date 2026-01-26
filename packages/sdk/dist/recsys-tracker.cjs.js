@@ -1116,6 +1116,7 @@ class PopupDisplay {
     async showPopup() {
         try {
             const items = await this.fetchRecommendations();
+            console.log(items);
             // Chỉ hiện nếu chưa hiện (double check)
             if (items && items.length > 0 && !this.shadowHost) {
                 this.renderPopup(items);
@@ -1232,8 +1233,8 @@ class PopupDisplay {
         let containerCSS = '';
         let itemDir = 'column';
         let itemAlign = 'stretch';
-        let infoTextAlign = 'center';
-        let infoAlignItems = 'center';
+        let infoTextAlign = 'left';
+        let infoAlignItems = 'flex-start';
         if (contentMode === 'grid') {
             const cols = modeConfig.columns || 2;
             const gapPx = ((_g = tokens.spacingScale) === null || _g === void 0 ? void 0 : _g[modeConfig.gap || 'md']) || 12;
@@ -1245,7 +1246,6 @@ class PopupDisplay {
             const gapPx = ((_h = tokens.spacingScale) === null || _h === void 0 ? void 0 : _h[modeConfig.rowGap || 'md']) || 12;
             containerCSS = `display: flex; flex-direction: column; gap: ${gapPx}px; padding: ${density.cardPadding || 16}px;`;
             containerCSS = 'padding: 0;';
-            infoTextAlign = 'left';
             infoAlignItems = 'flex-start';
         }
         // 4. Styles Mapping
@@ -1456,12 +1456,14 @@ class PopupDisplay {
         // 4. Render các field còn lại
         activeFields.forEach(field => {
             const key = field.key.toLowerCase();
+            let rawValue = getValue(item, field.key);
+            console.log('Checking field:', field.key, 'Value:', rawValue);
+            if (!rawValue) {
+                console.warn(`!!! Data rỗng cho field "${key}". Item data:`, item);
+                return;
+            }
             if (['image', 'img', 'image_url', 'title', 'name', 'product_name', 'item_name'].includes(key))
                 return;
-            let value = getValue(item, field.key);
-            if (value === undefined || value === null || value === '')
-                return;
-            let rawValue = getValue(item, field.key);
             if (rawValue === undefined || rawValue === null || rawValue === '')
                 return;
             // [SỬA ĐỔI] Xử lý mảng: Nối thành chuỗi (Pop, Ballad) thay vì render Badge
@@ -1633,6 +1635,7 @@ class InlineDisplay {
         container.setAttribute('data-recsys-loaded', 'true');
         try {
             const items = await this.fetchRecommendations();
+            console.log(items);
             if (items && items.length > 0) {
                 this.renderWidget(container, items);
             }
@@ -2215,13 +2218,14 @@ class RecommendationFetcher {
         if (!Array.isArray(data)) {
             return [];
         }
-        return data.map(item => ({
-            id: item.Id,
-            domainItemId: item.DomainItemId,
-            title: item.Title,
-            description: item.Description,
-            img: item.ImageUrl || PlaceholderImage.getDefaultRecommendation(),
-        }));
+        return data.map(item => {
+            const result = { ...item };
+            result.id = item.id || item.Id;
+            const rawImg = item.ImageUrl || item.imageUrl || item.Image || item.img;
+            result.img = rawImg || PlaceholderImage.getDefaultRecommendation();
+            result.title = item.title || item.Title || item.Name || item.name;
+            return result;
+        });
     }
     /**
      * Get cached user ID from localStorage

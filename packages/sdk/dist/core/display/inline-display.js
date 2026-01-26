@@ -57,6 +57,7 @@ export class InlineDisplay {
         container.setAttribute('data-recsys-loaded', 'true');
         try {
             const items = await this.fetchRecommendations();
+            console.log(items);
             if (items && items.length > 0) {
                 this.renderWidget(container, items);
             }

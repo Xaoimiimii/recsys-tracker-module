@@ -77,6 +77,7 @@ export class InlineDisplay {
 
     try {
       const items = await this.fetchRecommendations();
+      console.log(items);
       if (items && items.length > 0) {
         this.renderWidget(container, items);
       }
