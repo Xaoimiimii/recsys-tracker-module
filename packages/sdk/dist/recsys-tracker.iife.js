@@ -4859,10 +4859,7 @@ var RecSysTracker = (function (exports) {
             this.userIdentityConfig = config || null;
             if (this.userIdentityConfig) {
                 // Nếu source là network (request_body/request_url), đăng ký với NetworkObserver
-                if (this.isNetworkSource(this.userIdentityConfig.source)) {
-                    console.log('[UserIdentityManager] Network source detected, will be handled by NetworkObserver');
-                }
-                else {
+                if (!this.isNetworkSource(this.userIdentityConfig.source)) {
                     // Nếu source là static (localStorage, cookie, etc.), extract ngay
                     this.extractAndCacheUserInfo();
                 }
@@ -4904,7 +4901,7 @@ var RecSysTracker = (function (exports) {
                 }
             }
             catch (error) {
-                console.error('[UserIdentityManager] Error extracting user info:', error);
+                // console.error('[UserIdentityManager] Error extracting user info:', error);
             }
         }
         /**
@@ -4954,7 +4951,7 @@ var RecSysTracker = (function (exports) {
                 }
             }
             catch (error) {
-                console.error('[UserIdentityManager] Error extracting from network:', error);
+                // console.error('[UserIdentityManager] Error extracting from network:', error);
             }
         }
         /**
