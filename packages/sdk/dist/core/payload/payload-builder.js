@@ -42,30 +42,22 @@ export class PayloadBuilder {
      * @param onComplete - Callback khi payload sẵn sàng để dispatch
      */
     handleTrigger(rule, triggerContext, onComplete) {
-        console.log('[PayloadBuilder] handleTrigger started for rule:', rule.id, 'eventTypeId:', rule.eventTypeId);
         // 1. Phân tích mappings
         const { syncMappings, asyncMappings } = this.classifyMappings(rule);
-        console.log('[PayloadBuilder] Classified mappings - sync:', syncMappings.length, 'async:', asyncMappings.length);
         // 2. Nếu không có async → resolve ngay
         if (asyncMappings.length === 0) {
-            console.log('[PayloadBuilder] No async mappings, resolving sync only');
             const payload = this.resolveSyncMappings(syncMappings, triggerContext, rule);
-            console.log('[PayloadBuilder] Sync payload ready:', payload);
             onComplete(payload);
             return;
         }
         // 3. Có async data → tạo REC
         const requiredFields = asyncMappings.map(m => m.field);
-        console.log('[PayloadBuilder] Has async mappings, required fields:', requiredFields);
         const context = this.recManager.createContext(rule.id, requiredFields, triggerContext, (collectedData) => {
             // Khi async data đã thu thập xong
-            console.log('[PayloadBuilder] Async data collection complete:', collectedData);
             const syncPayload = this.resolveSyncMappings(syncMappings, triggerContext, rule);
             const finalPayload = { ...syncPayload, ...collectedData };
-            console.log('[PayloadBuilder] Final payload ready:', finalPayload);
             onComplete(finalPayload);
         });
-        console.log('[PayloadBuilder] Created REC context with ID:', context.executionId);
         // 4. Resolve sync data ngay và collect vào REC
         const syncPayload = this.resolveSyncMappings(syncMappings, triggerContext, rule);
         for (const [field, value] of Object.entries(syncPayload)) {
@@ -113,22 +105,16 @@ export class PayloadBuilder {
      * Resolve tất cả sync mappings
      */
     resolveSyncMappings(mappings, context, rule) {
-        console.log('[PayloadBuilder] resolveSyncMappings - mappings count:', mappings.length);
         const payload = {
             ruleId: rule.id,
             eventTypeId: rule.eventTypeId
         };
         for (const mapping of mappings) {
             const value = this.resolveSyncMapping(mapping, context);
-            console.log('[PayloadBuilder] Resolved sync mapping:', mapping.field, 'from source:', mapping.source, 'value:', value);
             if (this.isValidValue(value)) {
                 payload[mapping.field] = value;
             }
-            else {
-                console.log('[PayloadBuilder] Invalid value for field:', mapping.field);
-            }
         }
-        console.log('[PayloadBuilder] Final sync payload:', payload);
         return payload;
     }
     /**

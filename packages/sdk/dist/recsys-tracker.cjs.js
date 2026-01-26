@@ -3283,21 +3283,17 @@ const STORAGE_KEYS = {
     LAST_USER_ID: 'recsys_last_user_id',
     CACHED_USER_INFO: 'recsys_cached_user_info' // Lưu user info đã bắt được
 };
-function log(...args) {
-}
 /**
  * Lưu user info vào localStorage khi bắt được từ rule
  * @param userField - UserId hoặc Username
  * @param userValue - Giá trị user đã bắt được
  */
 function saveCachedUserInfo(userField, userValue) {
-    console.log('[plugin-utils] saveCachedUserInfo called - field:', userField, 'value:', userValue);
     // Chỉ lưu nếu userValue valid (không phải AnonymousId, guest, empty)
     if (!userValue ||
         userValue === 'guest' ||
         userValue.startsWith('anon_') ||
         userField === 'AnonymousId') {
-        console.log('[plugin-utils] Skipping save - invalid user value or AnonymousId');
         return;
     }
     try {
@@ -3307,11 +3303,9 @@ function saveCachedUserInfo(userField, userValue) {
             timestamp: Date.now()
         };
         localStorage.setItem(STORAGE_KEYS.CACHED_USER_INFO, JSON.stringify(cachedInfo));
-        console.log('[plugin-utils] Successfully saved cached user info:', cachedInfo);
-        log('Saved cached user info:', cachedInfo);
     }
     catch (error) {
-        console.error('[plugin-utils] Failed to save cached user info:', error);
+        // log('Failed to save cached user info:', error);
     }
 }
 /**
@@ -3321,24 +3315,17 @@ function saveCachedUserInfo(userField, userValue) {
 function getCachedUserInfo() {
     try {
         const cached = localStorage.getItem(STORAGE_KEYS.CACHED_USER_INFO);
-        console.log('[plugin-utils] getCachedUserInfo - raw cached value:', cached);
         if (!cached) {
-            console.log('[plugin-utils] No cached user info found');
             return null;
         }
         const userInfo = JSON.parse(cached);
-        console.log('[plugin-utils] Parsed cached user info:', userInfo);
         // Validate cached data
         if (userInfo.userField && userInfo.userValue && userInfo.timestamp) {
-            console.log('[plugin-utils] Valid cached user info:', userInfo);
-            log('Retrieved cached user info:', userInfo);
             return userInfo;
         }
-        console.log('[plugin-utils] Invalid cached user info structure');
         return null;
     }
     catch (error) {
-        console.error('[plugin-utils] Error reading cached user info:', error);
         return null;
     }
 }
@@ -3349,26 +3336,21 @@ function getCachedUserInfo() {
 function getOrCreateAnonymousId() {
     try {
         let anonId = localStorage.getItem(STORAGE_KEYS.ANON_USER_ID);
-        console.log('[plugin-utils] getOrCreateAnonymousId - existing anonId:', anonId);
         if (!anonId) {
             // Generate new anonymous ID: anon_timestamp_randomstring
             const timestamp = Date.now();
             const randomStr = Math.random().toString(36).substring(2, 10);
             anonId = `anon_${timestamp}_${randomStr}`;
             localStorage.setItem(STORAGE_KEYS.ANON_USER_ID, anonId);
-            console.log('[plugin-utils] Created new anonymous ID:', anonId);
-            log('Created new anonymous ID:', anonId);
         }
         else {
-            console.log('[plugin-utils] Using existing anonymous ID:', anonId);
+            // console.log('[plugin-utils] Using existing anonymous ID:', anonId);
         }
         return anonId;
     }
     catch (error) {
-        console.error('[plugin-utils] Error accessing localStorage for anonId:', error);
         // Fallback nếu localStorage không available
         const fallbackId = `anon_${Date.now()}_${Math.random().toString(36).substring(2, 10)}`;
-        console.log('[plugin-utils] Using fallback anonymous ID:', fallbackId);
         return fallbackId;
     }
 }
@@ -4625,30 +4607,22 @@ class PayloadBuilder {
      * @param onComplete - Callback khi payload sẵn sàng để dispatch
      */
     handleTrigger(rule, triggerContext, onComplete) {
-        console.log('[PayloadBuilder] handleTrigger started for rule:', rule.id, 'eventTypeId:', rule.eventTypeId);
         // 1. Phân tích mappings
         const { syncMappings, asyncMappings } = this.classifyMappings(rule);
-        console.log('[PayloadBuilder] Classified mappings - sync:', syncMappings.length, 'async:', asyncMappings.length);
         // 2. Nếu không có async → resolve ngay
         if (asyncMappings.length === 0) {
-            console.log('[PayloadBuilder] No async mappings, resolving sync only');
             const payload = this.resolveSyncMappings(syncMappings, triggerContext, rule);
-            console.log('[PayloadBuilder] Sync payload ready:', payload);
             onComplete(payload);
             return;
         }
         // 3. Có async data → tạo REC
         const requiredFields = asyncMappings.map(m => m.field);
-        console.log('[PayloadBuilder] Has async mappings, required fields:', requiredFields);
         const context = this.recManager.createContext(rule.id, requiredFields, triggerContext, (collectedData) => {
             // Khi async data đã thu thập xong
-            console.log('[PayloadBuilder] Async data collection complete:', collectedData);
             const syncPayload = this.resolveSyncMappings(syncMappings, triggerContext, rule);
             const finalPayload = { ...syncPayload, ...collectedData };
-            console.log('[PayloadBuilder] Final payload ready:', finalPayload);
             onComplete(finalPayload);
         });
-        console.log('[PayloadBuilder] Created REC context with ID:', context.executionId);
         // 4. Resolve sync data ngay và collect vào REC
         const syncPayload = this.resolveSyncMappings(syncMappings, triggerContext, rule);
         for (const [field, value] of Object.entries(syncPayload)) {
@@ -4696,22 +4670,16 @@ class PayloadBuilder {
      * Resolve tất cả sync mappings
      */
     resolveSyncMappings(mappings, context, rule) {
-        console.log('[PayloadBuilder] resolveSyncMappings - mappings count:', mappings.length);
         const payload = {
             ruleId: rule.id,
             eventTypeId: rule.eventTypeId
         };
         for (const mapping of mappings) {
             const value = this.resolveSyncMapping(mapping, context);
-            console.log('[PayloadBuilder] Resolved sync mapping:', mapping.field, 'from source:', mapping.source, 'value:', value);
             if (this.isValidValue(value)) {
                 payload[mapping.field] = value;
             }
-            else {
-                console.log('[PayloadBuilder] Invalid value for field:', mapping.field);
-            }
         }
-        console.log('[PayloadBuilder] Final sync payload:', payload);
         return payload;
     }
     /**

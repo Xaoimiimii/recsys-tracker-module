@@ -7,7 +7,6 @@ export declare const STORAGE_KEYS: {
     CACHED_USER_INFO: string;
 };
 export declare const DEBUG = false;
-export declare function log(...args: any[]): void;
 /**
  * Interface cho cached user info
  */
