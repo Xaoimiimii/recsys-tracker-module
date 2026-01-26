@@ -2503,7 +2503,6 @@ var RecSysTracker = (function (exports) {
 
     const ANON_USER_ID_KEY = 'recsys_anon_id';
     class DisplayManager {
-        // private searchKeywordPlugin: any = null;
         constructor(domainKey, apiBaseUrl = 'https://recsys-tracker-module.onrender.com') {
             this.popupDisplay = null;
             this.inlineDisplay = null;
@@ -2528,40 +2527,9 @@ var RecSysTracker = (function (exports) {
             }
             // Process each return method
             for (const method of returnMethods) {
-                // // Check if this method has SearchKeywordConfigID
-                // if (method.SearchKeywordConfigId && this.searchKeywordPlugin) {
-                //   await this.handleSearchKeywordReturnMethod(method);
-                // }
                 this.activateDisplayMethod(method);
             }
         }
-        /**
-         * Set SearchKeywordPlugin reference (called from RecSysTracker)
-         */
-        // public setSearchKeywordPlugin(plugin: any): void {
-        //   this.searchKeywordPlugin = plugin;
-        // }
-        /**
-         * Handle return method with SearchKeywordConfigID
-         */
-        // private async handleSearchKeywordReturnMethod(method: ReturnMethod): Promise<void> {
-        //   if (!method.SearchKeywordConfigId || !this.searchKeywordPlugin) return;
-        //   // Get saved keyword for this config ID
-        //   const keyword = this.searchKeywordPlugin.getKeyword(method.SearchKeywordConfigId);
-        //   if (keyword) {
-        //     // Get user info
-        //     const userInfo = (window as any).RecSysTracker?.userIdentityManager?.getUserInfo?.() || {};
-        //     const userId = userInfo.value || '';
-        //     const anonymousId = userInfo.anonymousId || '';
-        //     // Push keyword to server
-        //     await this.searchKeywordPlugin.pushKeywordToServer(
-        //       userId,
-        //       anonymousId,
-        //       this.domainKey,
-        //       keyword
-        //     );
-        //   }
-        // }
         // Phân loại và kích hoạt display method tương ứng
         activateDisplayMethod(method) {
             var _a;
@@ -2595,21 +2563,6 @@ var RecSysTracker = (function (exports) {
                 this.initializeInline(ConfigurationName, inlineConfig);
             }
         }
-        // Khởi tạo Popup Display với Config đầy đủ
-        // private initializePopup(slotName: string, config: PopupConfig): void {
-        //   try {
-        //     this.popupDisplay = new PopupDisplay(
-        //       this.domainKey,
-        //       slotName,
-        //       this.apiBaseUrl,
-        //       config, 
-        //       () => this.getRecommendations()
-        //     );
-        //     this.popupDisplay.start();
-        //   } catch (error) {
-        //     console.error('[DisplayManager] Error initializing popup:', error);
-        //   }
-        // }
         initializePopup(slotName, config) {
             try {
                 if (this.popupDisplay) {
@@ -3418,17 +3371,11 @@ var RecSysTracker = (function (exports) {
             super(...arguments);
             this.name = 'SearchKeywordPlugin';
             this.inputElement = null;
-            this.handleInputBound = this.handleInput.bind(this);
             this.handleKeyPressBound = this.handleKeyPress.bind(this);
-            this.debounceTimer = null;
-            this.debounceDelay = 400; // 400ms debounce
-            this.searchKeywordConfigId = null;
-            this.STORAGE_KEY_PREFIX = 'recsys_search_keyword_';
         }
         init(tracker) {
             this.errorBoundary.execute(() => {
                 super.init(tracker);
-                // console.log('[SearchKeywordPlugin] Initialized');
             }, 'SearchKeywordPlugin.init');
         }
         start() {
@@ -3440,8 +3387,6 @@ var RecSysTracker = (function (exports) {
                 if (!searchKeywordConfig) {
                     return;
                 }
-                // Lưu searchKeywordConfigId
-                this.searchKeywordConfigId = searchKeywordConfig.Id;
                 // Attach listeners
                 this.attachListeners(searchKeywordConfig.InputSelector);
                 this.active = true;
@@ -3449,11 +3394,6 @@ var RecSysTracker = (function (exports) {
         }
         stop() {
             this.errorBoundary.execute(() => {
-                // Clear debounce timer
-                if (this.debounceTimer !== null) {
-                    clearTimeout(this.debounceTimer);
-                    this.debounceTimer = null;
-                }
                 this.removeListeners();
                 super.stop();
             }, 'SearchKeywordPlugin.stop');
@@ -3515,8 +3455,6 @@ var RecSysTracker = (function (exports) {
         addEventListeners() {
             if (!this.inputElement)
                 return;
-            // Listen for input events (khi user nhập)
-            this.inputElement.addEventListener('input', this.handleInputBound);
             // Listen for keypress events (khi user nhấn Enter)
             this.inputElement.addEventListener('keypress', this.handleKeyPressBound);
         }
@@ -3525,69 +3463,24 @@ var RecSysTracker = (function (exports) {
          */
         removeListeners() {
             if (this.inputElement) {
-                this.inputElement.removeEventListener('input', this.handleInputBound);
+                // this.inputElement.removeEventListener('input', this.handleInputBound);
                 this.inputElement.removeEventListener('keypress', this.handleKeyPressBound);
                 this.inputElement = null;
             }
-        }
-        /**
-         * Handle input event - log với debounce 400ms
-         */
-        handleInput(event) {
-            // Clear existing timer
-            if (this.debounceTimer !== null) {
-                clearTimeout(this.debounceTimer);
-            }
-            const target = event.target;
-            const searchKeyword = target.value.trim();
-            // Set new timer
-            this.debounceTimer = window.setTimeout(() => {
-                if (searchKeyword) {
-                    console.log('[SearchKeywordPlugin] Search keyword (input):', searchKeyword);
-                    this.saveKeyword(searchKeyword);
-                }
-                this.debounceTimer = null;
-            }, this.debounceDelay);
         }
         /**
          * Handle keypress event - log khi user nhấn Enter (không debounce)
          */
         handleKeyPress(event) {
             if (event.key === 'Enter') {
-                // Clear debounce timer khi nhấn Enter
-                if (this.debounceTimer !== null) {
-                    clearTimeout(this.debounceTimer);
-                    this.debounceTimer = null;
-                }
                 const target = event.target;
                 const searchKeyword = target.value.trim();
                 if (searchKeyword) {
                     // console.log('[SearchKeywordPlugin] Search keyword (Enter pressed):', searchKeyword);
-                    this.saveKeyword(searchKeyword);
+                    // this.saveKeyword(searchKeyword);
                     // Trigger push keyword API ngay lập tức
                     this.triggerPushKeyword(searchKeyword);
                 }
-            }
-        }
-        /**
-         * Lưu keyword vào localStorage với SearchKeywordConfigID
-         */
-        saveKeyword(keyword) {
-            if (this.searchKeywordConfigId === null)
-                return;
-            const storageKey = `${this.STORAGE_KEY_PREFIX}${this.searchKeywordConfigId}`;
-            localStorage.setItem(storageKey, keyword);
-        }
-        /**
-         * Lấy keyword đã lưu cho SearchKeywordConfigID
-         */
-        getKeyword(configId) {
-            const storageKey = `${this.STORAGE_KEY_PREFIX}${configId}`;
-            try {
-                return localStorage.getItem(storageKey);
-            }
-            catch (error) {
-                return null;
             }
         }
         /**
@@ -5195,11 +5088,6 @@ var RecSysTracker = (function (exports) {
                     if (this.config.returnMethods && this.config.returnMethods.length > 0) {
                         const apiBaseUrl = "https://recsys-tracker-module.onrender.com";
                         this.displayManager = new DisplayManager(this.config.domainKey, apiBaseUrl);
-                        // Connect SearchKeywordPlugin với DisplayManager
-                        // const searchKeywordPlugin = this.pluginManager.get('SearchKeywordPlugin');
-                        // if (searchKeywordPlugin) {
-                        //   this.displayManager.setSearchKeywordPlugin(searchKeywordPlugin);
-                        // }
                         await this.displayManager.initialize(this.config.returnMethods);
                     }
                 }

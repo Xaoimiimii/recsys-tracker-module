@@ -10,12 +10,9 @@ export class DisplayManager {
   private inlineDisplay: InlineDisplay | null = null;
   private domainKey: string;
   private apiBaseUrl: string;
-  
   private recommendationFetcher: RecommendationFetcher;
-  
   private cachedRecommendations: RecommendationItem[] | null = null;
   private fetchPromise: Promise<RecommendationItem[]> | null = null;
-  // private searchKeywordPlugin: any = null;
 
   constructor(domainKey: string, apiBaseUrl: string = 'https://recsys-tracker-module.onrender.com') {
     this.domainKey = domainKey;
@@ -39,47 +36,10 @@ export class DisplayManager {
     }
 
     // Process each return method
-    for (const method of returnMethods) {
-      // // Check if this method has SearchKeywordConfigID
-      // if (method.SearchKeywordConfigId && this.searchKeywordPlugin) {
-      //   await this.handleSearchKeywordReturnMethod(method);
-      // }
-      
+    for (const method of returnMethods) {      
       this.activateDisplayMethod(method);
     }
   }
-
-  /**
-   * Set SearchKeywordPlugin reference (called from RecSysTracker)
-   */
-  // public setSearchKeywordPlugin(plugin: any): void {
-  //   this.searchKeywordPlugin = plugin;
-  // }
-
-  /**
-   * Handle return method with SearchKeywordConfigID
-   */
-  // private async handleSearchKeywordReturnMethod(method: ReturnMethod): Promise<void> {
-  //   if (!method.SearchKeywordConfigId || !this.searchKeywordPlugin) return;
-
-  //   // Get saved keyword for this config ID
-  //   const keyword = this.searchKeywordPlugin.getKeyword(method.SearchKeywordConfigId);
-    
-  //   if (keyword) {
-  //     // Get user info
-  //     const userInfo = (window as any).RecSysTracker?.userIdentityManager?.getUserInfo?.() || {};
-  //     const userId = userInfo.value || '';
-  //     const anonymousId = userInfo.anonymousId || '';
-
-  //     // Push keyword to server
-  //     await this.searchKeywordPlugin.pushKeywordToServer(
-  //       userId,
-  //       anonymousId,
-  //       this.domainKey,
-  //       keyword
-  //     );
-  //   }
-  // }
 
   // Phân loại và kích hoạt display method tương ứng
   private activateDisplayMethod(method: ReturnMethod): void {
@@ -116,23 +76,6 @@ export class DisplayManager {
       this.initializeInline(ConfigurationName, inlineConfig);
     }
   }
-
-  // Khởi tạo Popup Display với Config đầy đủ
-  // private initializePopup(slotName: string, config: PopupConfig): void {
-  //   try {
-  //     this.popupDisplay = new PopupDisplay(
-  //       this.domainKey,
-  //       slotName,
-  //       this.apiBaseUrl,
-  //       config, 
-  //       () => this.getRecommendations()
-  //     );
-      
-  //     this.popupDisplay.start();
-  //   } catch (error) {
-  //     console.error('[DisplayManager] Error initializing popup:', error);
-  //   }
-  // }
 
   private initializePopup(slotName: string, config: PopupConfig): void {
     try {
@@ -179,7 +122,6 @@ export class DisplayManager {
   }
 
   // --- LOGIC FETCH RECOMMENDATION (GIỮ NGUYÊN) ---
-
   private async fetchRecommendationsOnce(): Promise<RecommendationItem[]> {
     if (this.cachedRecommendations) return this.cachedRecommendations;
     if (this.fetchPromise) return this.fetchPromise;

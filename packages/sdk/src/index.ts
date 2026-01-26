@@ -100,12 +100,6 @@ export class RecSysTracker {
           const apiBaseUrl = process.env.API_URL || 'https://recsys-tracker-module.onrender.com';
           this.displayManager = new DisplayManager(this.config.domainKey, apiBaseUrl);
           
-          // Connect SearchKeywordPlugin với DisplayManager
-          // const searchKeywordPlugin = this.pluginManager.get('SearchKeywordPlugin');
-          // if (searchKeywordPlugin) {
-          //   this.displayManager.setSearchKeywordPlugin(searchKeywordPlugin);
-          // }
-          
           await this.displayManager.initialize(this.config.returnMethods);
         }
 

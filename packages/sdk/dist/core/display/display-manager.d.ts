@@ -10,12 +10,6 @@ export declare class DisplayManager {
     private fetchPromise;
     constructor(domainKey: string, apiBaseUrl?: string);
     initialize(returnMethods: ReturnMethod[]): Promise<void>;
-    /**
-     * Set SearchKeywordPlugin reference (called from RecSysTracker)
-     */
-    /**
-     * Handle return method with SearchKeywordConfigID
-     */
     private activateDisplayMethod;
     private initializePopup;
     private initializeInline;

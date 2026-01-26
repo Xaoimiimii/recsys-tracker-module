@@ -3,7 +3,6 @@ import { InlineDisplay } from './inline-display';
 import { RecommendationFetcher } from '../recommendation';
 const ANON_USER_ID_KEY = 'recsys_anon_id';
 export class DisplayManager {
-    // private searchKeywordPlugin: any = null;
     constructor(domainKey, apiBaseUrl = 'https://recsys-tracker-module.onrender.com') {
         this.popupDisplay = null;
         this.inlineDisplay = null;
@@ -28,40 +27,9 @@ export class DisplayManager {
         }
         // Process each return method
         for (const method of returnMethods) {
-            // // Check if this method has SearchKeywordConfigID
-            // if (method.SearchKeywordConfigId && this.searchKeywordPlugin) {
-            //   await this.handleSearchKeywordReturnMethod(method);
-            // }
             this.activateDisplayMethod(method);
         }
     }
-    /**
-     * Set SearchKeywordPlugin reference (called from RecSysTracker)
-     */
-    // public setSearchKeywordPlugin(plugin: any): void {
-    //   this.searchKeywordPlugin = plugin;
-    // }
-    /**
-     * Handle return method with SearchKeywordConfigID
-     */
-    // private async handleSearchKeywordReturnMethod(method: ReturnMethod): Promise<void> {
-    //   if (!method.SearchKeywordConfigId || !this.searchKeywordPlugin) return;
-    //   // Get saved keyword for this config ID
-    //   const keyword = this.searchKeywordPlugin.getKeyword(method.SearchKeywordConfigId);
-    //   if (keyword) {
-    //     // Get user info
-    //     const userInfo = (window as any).RecSysTracker?.userIdentityManager?.getUserInfo?.() || {};
-    //     const userId = userInfo.value || '';
-    //     const anonymousId = userInfo.anonymousId || '';
-    //     // Push keyword to server
-    //     await this.searchKeywordPlugin.pushKeywordToServer(
-    //       userId,
-    //       anonymousId,
-    //       this.domainKey,
-    //       keyword
-    //     );
-    //   }
-    // }
     // Phân loại và kích hoạt display method tương ứng
     activateDisplayMethod(method) {
         var _a;
@@ -95,21 +63,6 @@ export class DisplayManager {
             this.initializeInline(ConfigurationName, inlineConfig);
         }
     }
-    // Khởi tạo Popup Display với Config đầy đủ
-    // private initializePopup(slotName: string, config: PopupConfig): void {
-    //   try {
-    //     this.popupDisplay = new PopupDisplay(
-    //       this.domainKey,
-    //       slotName,
-    //       this.apiBaseUrl,
-    //       config, 
-    //       () => this.getRecommendations()
-    //     );
-    //     this.popupDisplay.start();
-    //   } catch (error) {
-    //     console.error('[DisplayManager] Error initializing popup:', error);
-    //   }
-    // }
     initializePopup(slotName, config) {
         try {
             if (this.popupDisplay) {
