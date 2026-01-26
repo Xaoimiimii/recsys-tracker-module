@@ -60,7 +60,7 @@ export class RecSysTracker {
                 if (this.eventDispatcher && this.config.domainUrl) {
                     this.eventDispatcher.setDomainUrl(this.config.domainUrl);
                 }
-                console.log(this.config);
+                // console.log(this.config);
                 // Tự động khởi tạo plugins dựa trên rules
                 this.autoInitializePlugins();
                 // Khởi tạo Display Manager nếu có returnMethods

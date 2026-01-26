@@ -90,7 +90,7 @@ export class RecSysTracker {
           this.eventDispatcher.setDomainUrl(this.config.domainUrl);
         }
 
-        console.log(this.config);
+        // console.log(this.config);
 
         // Tự động khởi tạo plugins dựa trên rules
         this.autoInitializePlugins();

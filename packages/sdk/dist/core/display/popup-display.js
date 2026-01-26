@@ -69,7 +69,6 @@ export class PopupDisplay {
     async showPopup() {
         try {
             const items = await this.fetchRecommendations();
-            console.log(items);
             // Chỉ hiện nếu chưa hiện (double check)
             if (items && items.length > 0 && !this.shadowHost) {
                 this.renderPopup(items);

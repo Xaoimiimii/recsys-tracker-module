@@ -37,7 +37,7 @@ export class EventDispatcher {
         };
         const payload = JSON.stringify(payloadObject);
         // Log payload sẽ gửi đi
-        console.log('[EventDispatcher] Sending payload to API:', payloadObject);
+        // console.log('[EventDispatcher] Sending payload to API:', payloadObject);
         // Thử từng phương thức gửi theo thứ tự ưu tiên
         const strategies = ['beacon', 'fetch'];
         for (const strategy of strategies) {

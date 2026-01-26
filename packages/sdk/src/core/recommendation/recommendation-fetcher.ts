@@ -80,7 +80,6 @@ export class RecommendationFetcher {
       if (_options.autoRefresh && _options.onRefresh) {
         // Check if auto-refresh already enabled for this key
         if (!this.autoRefreshTimers.has(cacheKey)) {
-          console.log(`[RecSysTracker] Auto-refresh enabled for ${cacheKey}`);
           this.enableAutoRefresh(userValue, userField, _options.onRefresh, _options);
         }
       }
@@ -88,7 +87,6 @@ export class RecommendationFetcher {
       return items;
 
     } catch (error) {
-      console.error('[RecSysTracker] Failed to fetch recommendations:', error);
       throw error;
     }
   }
@@ -105,9 +103,6 @@ export class RecommendationFetcher {
   ): () => void {
     const cacheKey = this.getCacheKey(userValue, userField);
 
-    console.log(`[RecSysTracker] Starting auto-refresh for ${cacheKey}`);
-    console.log(`[RecSysTracker] Refresh interval: ${this.AUTO_REFRESH_INTERVAL}ms (${this.AUTO_REFRESH_INTERVAL / 1000}s)`);
-
     // Stop existing auto-refresh if any
     this.stopAutoRefresh(cacheKey);
 
@@ -115,39 +110,29 @@ export class RecommendationFetcher {
     this.refreshCallbacks.set(cacheKey, callback);
 
     // Fetch immediately
-    console.log('[RecSysTracker] Fetching initial recommendations...');
     this.fetchRecommendations(userValue, userField, options)
       .then(items => {
-        console.log(`[RecSysTracker] Initial fetch successful, received ${items.length} items`);
         callback(items);
       })
-      .catch(error => console.error('[RecSysTracker] Initial fetch failed:', error));
 
     // Set up auto-refresh timer
     const timerId = setInterval(async () => {
-      console.log(`[RecSysTracker] Auto-refresh triggered at ${new Date().toLocaleTimeString()}`);
       try {
         // Force fresh fetch by clearing cache for this key
         this.cache.delete(cacheKey);
-        console.log(`[RecSysTracker] Cache cleared for ${cacheKey}, fetching fresh data...`);
         
         const items = await this.fetchRecommendations(userValue, userField, options);
-        console.log(`[RecSysTracker] Auto-refresh successful, received ${items.length} items`);
         
         const cb = this.refreshCallbacks.get(cacheKey);
         if (cb) {
-          console.log('[RecSysTracker] Calling callback with new data');
           cb(items);
-        } else {
-          console.warn('[RecSysTracker] Callback not found for', cacheKey);
         }
       } catch (error) {
-        console.error('[RecSysTracker] Auto-refresh failed:', error);
+        // console.error('[RecSysTracker] Auto-refresh failed:', error);
       }
     }, this.AUTO_REFRESH_INTERVAL);
 
     this.autoRefreshTimers.set(cacheKey, timerId);
-    console.log(`[RecSysTracker] Auto-refresh timer set, timer ID:`, timerId);
 
     // Return function to stop auto-refresh
     return () => this.stopAutoRefresh(cacheKey);
@@ -157,7 +142,6 @@ export class RecommendationFetcher {
   private stopAutoRefresh(cacheKey: string): void {
     const timerId = this.autoRefreshTimers.get(cacheKey);
     if (timerId) {
-      console.log(`[RecSysTracker] Stopping auto-refresh for ${cacheKey}`);
       clearInterval(timerId as NodeJS.Timeout);
       this.autoRefreshTimers.delete(cacheKey);
       this.refreshCallbacks.delete(cacheKey);
@@ -283,7 +267,6 @@ export class RecommendationFetcher {
       }
       return null;
     } catch (error) {
-      console.warn('[RecSysTracker] Failed to get cached user info:', error);
       return null;
     }
   }
