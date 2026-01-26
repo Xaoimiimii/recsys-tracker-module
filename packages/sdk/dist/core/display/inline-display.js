@@ -62,7 +62,7 @@ export class InlineDisplay {
             }
         }
         catch (error) {
-            console.error('[InlineDisplay] Error processing container', error);
+            // console.error('[InlineDisplay] Error processing container', error);
         }
     }
     async fetchRecommendations() {
@@ -426,7 +426,6 @@ export class InlineDisplay {
         const layout = this.config.layoutJson || {};
         const modeConfig = ((_a = layout.modes) === null || _a === void 0 ? void 0 : _a.carousel) || {};
         const itemsPerView = modeConfig.itemsPerView || modeConfig.columns || 5;
-        console.log(itemsPerView);
         let currentIndex = 0;
         const slideContainer = shadow.querySelector('.recsys-container');
         if (!slideContainer)

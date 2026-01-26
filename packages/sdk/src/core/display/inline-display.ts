@@ -81,7 +81,7 @@ export class InlineDisplay {
         this.renderWidget(container, items);
       }
     } catch (error) {
-      console.error('[InlineDisplay] Error processing container', error);
+      // console.error('[InlineDisplay] Error processing container', error);
     }
   }
 
@@ -463,7 +463,6 @@ export class InlineDisplay {
     const layout = this.config.layoutJson || {} as any;
     const modeConfig = layout.modes?.carousel || {};
     const itemsPerView = modeConfig.itemsPerView || modeConfig.columns || 5;
-    console.log(itemsPerView);
 
     let currentIndex = 0;
     const slideContainer = shadow.querySelector('.recsys-container') as HTMLElement;

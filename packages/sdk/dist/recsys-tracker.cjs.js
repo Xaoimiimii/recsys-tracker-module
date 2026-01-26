@@ -154,12 +154,10 @@ class ConfigLoader {
     loadFromWindow() {
         try {
             if (typeof window === 'undefined' || !window.__RECSYS_DOMAIN_KEY__) {
-                console.error('[RecSysTracker] window.__RECSYS_DOMAIN_KEY__ not found');
                 return null;
             }
             const domainKey = window.__RECSYS_DOMAIN_KEY__;
             if (!domainKey || typeof domainKey !== 'string') {
-                console.error('[RecSysTracker] Invalid domain key');
                 return null;
             }
             this.domainKey = domainKey;
@@ -239,7 +237,6 @@ class ConfigLoader {
                 if (this.config.domainUrl) {
                     const isOriginValid = OriginVerifier.verify(this.config.domainUrl);
                     if (!isOriginValid) {
-                        console.error('[RecSysTracker] Origin verification failed. SDK will not function.');
                         this.config = null;
                         return null;
                     }
@@ -1109,7 +1106,6 @@ class PopupDisplay {
     async showPopup() {
         try {
             const items = await this.fetchRecommendations();
-            console.log('Fetched items for popup:', items);
             // Chỉ hiện nếu chưa hiện (double check)
             if (items && items.length > 0 && !this.shadowHost) {
                 this.renderPopup(items);
@@ -1632,7 +1628,7 @@ class InlineDisplay {
             }
         }
         catch (error) {
-            console.error('[InlineDisplay] Error processing container', error);
+            // console.error('[InlineDisplay] Error processing container', error);
         }
     }
     async fetchRecommendations() {
@@ -1977,7 +1973,6 @@ class InlineDisplay {
         const layout = this.config.layoutJson || {};
         const modeConfig = ((_a = layout.modes) === null || _a === void 0 ? void 0 : _a.carousel) || {};
         const itemsPerView = modeConfig.itemsPerView || modeConfig.columns || 5;
-        console.log(itemsPerView);
         let currentIndex = 0;
         const slideContainer = shadow.querySelector('.recsys-container');
         if (!slideContainer)
@@ -2447,9 +2442,7 @@ class DisplayManager {
     // Khởi tạo display methods dựa trên danh sách config
     async initialize(returnMethods) {
         this.destroy();
-        console.log("return", returnMethods);
         if (!returnMethods || !Array.isArray(returnMethods) || returnMethods.length === 0) {
-            console.warn('[DisplayManager] No return methods provided for initialization.');
             return;
         }
         // Fetch recommendations once for all display methods
@@ -2457,7 +2450,7 @@ class DisplayManager {
             await this.fetchRecommendationsOnce();
         }
         catch (error) {
-            console.error('[DisplayManager] Failed to fetch recommendations.');
+            // console.error('[DisplayManager] Failed to fetch recommendations.');
         }
         // Process each return method
         for (const method of returnMethods) {
@@ -2550,7 +2543,7 @@ class DisplayManager {
             this.popupDisplay.start();
         }
         catch (error) {
-            console.error('[DisplayManager] Error initializing popup:', error);
+            // console.error('[DisplayManager] Error initializing popup:', error);
         }
     }
     // Khởi tạo Inline Display với Config đầy đủ
@@ -2567,7 +2560,7 @@ class DisplayManager {
             this.inlineDisplay.start();
         }
         catch (error) {
-            console.error('[DisplayManager] Error initializing inline:', error);
+            // console.error('[DisplayManager] Error initializing inline:', error);
         }
     }
     // --- LOGIC FETCH RECOMMENDATION (GIỮ NGUYÊN) ---
@@ -2594,20 +2587,8 @@ class DisplayManager {
                 numberItems: 6,
                 autoRefresh: true,
                 onRefresh: (newItems) => {
-                    console.log('🔄 [DisplayManager] Auto-refreshed recommendations at', new Date().toLocaleTimeString());
-                    console.log('📦 [DisplayManager] New items count:', newItems.length);
                     // Update cached recommendations
                     this.cachedRecommendations = newItems;
-                    // Re-render popup if it's currently visible
-                    if (this.popupDisplay) {
-                        console.log('🔄 [DisplayManager] Updating popup with new recommendations');
-                        // Popup will use getRecommendations() which returns cached data
-                    }
-                    // Re-render inline if it's currently visible
-                    if (this.inlineDisplay) {
-                        console.log('🔄 [DisplayManager] Updating inline with new recommendations');
-                        // Inline will use getRecommendations() which returns cached data
-                    }
                 }
             });
         }

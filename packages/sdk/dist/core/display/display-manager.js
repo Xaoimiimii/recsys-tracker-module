@@ -16,9 +16,7 @@ export class DisplayManager {
     // Khởi tạo display methods dựa trên danh sách config
     async initialize(returnMethods) {
         this.destroy();
-        console.log("return", returnMethods);
         if (!returnMethods || !Array.isArray(returnMethods) || returnMethods.length === 0) {
-            console.warn('[DisplayManager] No return methods provided for initialization.');
             return;
         }
         // Fetch recommendations once for all display methods
@@ -26,7 +24,7 @@ export class DisplayManager {
             await this.fetchRecommendationsOnce();
         }
         catch (error) {
-            console.error('[DisplayManager] Failed to fetch recommendations.');
+            // console.error('[DisplayManager] Failed to fetch recommendations.');
         }
         // Process each return method
         for (const method of returnMethods) {
@@ -119,7 +117,7 @@ export class DisplayManager {
             this.popupDisplay.start();
         }
         catch (error) {
-            console.error('[DisplayManager] Error initializing popup:', error);
+            // console.error('[DisplayManager] Error initializing popup:', error);
         }
     }
     // Khởi tạo Inline Display với Config đầy đủ
@@ -136,7 +134,7 @@ export class DisplayManager {
             this.inlineDisplay.start();
         }
         catch (error) {
-            console.error('[DisplayManager] Error initializing inline:', error);
+            // console.error('[DisplayManager] Error initializing inline:', error);
         }
     }
     // --- LOGIC FETCH RECOMMENDATION (GIỮ NGUYÊN) ---
@@ -163,20 +161,8 @@ export class DisplayManager {
                 numberItems: 6,
                 autoRefresh: true,
                 onRefresh: (newItems) => {
-                    console.log('🔄 [DisplayManager] Auto-refreshed recommendations at', new Date().toLocaleTimeString());
-                    console.log('📦 [DisplayManager] New items count:', newItems.length);
                     // Update cached recommendations
                     this.cachedRecommendations = newItems;
-                    // Re-render popup if it's currently visible
-                    if (this.popupDisplay) {
-                        console.log('🔄 [DisplayManager] Updating popup with new recommendations');
-                        // Popup will use getRecommendations() which returns cached data
-                    }
-                    // Re-render inline if it's currently visible
-                    if (this.inlineDisplay) {
-                        console.log('🔄 [DisplayManager] Updating inline with new recommendations');
-                        // Inline will use getRecommendations() which returns cached data
-                    }
                 }
             });
         }

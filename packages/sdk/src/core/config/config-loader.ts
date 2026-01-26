@@ -19,14 +19,12 @@ export class ConfigLoader {
   loadFromWindow(): TrackerConfig | null {
     try {
       if (typeof window === 'undefined' || !window.__RECSYS_DOMAIN_KEY__) {
-        console.error('[RecSysTracker] window.__RECSYS_DOMAIN_KEY__ not found');
         return null;
       }
 
       const domainKey = window.__RECSYS_DOMAIN_KEY__;
 
       if (!domainKey || typeof domainKey !== 'string') {
-        console.error('[RecSysTracker] Invalid domain key');
         return null;
       }
 
@@ -115,7 +113,6 @@ export class ConfigLoader {
         if (this.config.domainUrl) {
           const isOriginValid = OriginVerifier.verify(this.config.domainUrl);
           if (!isOriginValid) {
-            console.error('[RecSysTracker] Origin verification failed. SDK will not function.');
             this.config = null;
             return null;
           }
