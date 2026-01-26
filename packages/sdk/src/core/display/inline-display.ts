@@ -264,7 +264,7 @@ export class InlineDisplay {
 
     .recsys-wrapper {
       width: 100%;
-      background: ${getColor(components.canvas?.backgroundToken || 'transparent')};
+      background: ${getColor('surface') || 'transparent'};
       padding: 16px 0;
       border-radius: 8px;
     }
@@ -278,38 +278,38 @@ export class InlineDisplay {
       justify-content: space-between; align-items: center;
     }
     .recsys-header-title {
-        font-size: ${tokens.typography?.title?.fontSize || 18}px;
-        font-weight: ${tokens.typography?.title?.fontWeight || 600};
-        color: ${colorTitle};
+      font-size: ${tokens.typography?.title?.fontSize || 18}px;
+      font-weight: ${tokens.typography?.title?.fontWeight || 600};
+      color: ${colorTitle};
     }
 
     .recsys-container { ${containerCSS} }
 
     .recsys-item {
-        display: flex; flex-direction: ${itemDir}; align-items: ${itemAlign};
-        gap: ${tokens.spacingScale?.sm || 8}px;
-        background: ${cardBg}; border: ${cardBorder}; border-radius: ${cardRadius};
-        box-shadow: ${cardShadow}; padding: ${cardPadding}px;
-        cursor: pointer; transition: all 0.2s;
-        ${itemWidthCSS}
-        min-width: 0; /* Fix flex overflow */
+      display: flex; flex-direction: ${itemDir}; align-items: ${itemAlign};
+      gap: ${tokens.spacingScale?.sm || 8}px;
+      background: ${cardBg}; border: ${cardBorder}; border-radius: ${cardRadius};
+      box-shadow: ${cardShadow}; padding: ${cardPadding}px;
+      cursor: pointer; transition: all 0.2s;
+      ${itemWidthCSS}
+      min-width: 0; /* Fix flex overflow */
     }
 
     .recsys-item:hover .recsys-name {
-        color: ${colorPrimary}; 
+      color: ${colorPrimary}; 
     }
 
     ${cardComp.hover?.enabled ? `
     .recsys-item:hover {
-        transform: translateY(-${cardComp.hover.liftPx || 2}px);
-        box-shadow: ${getShadow(cardComp.hover.shadowToken || 'cardHover')};
+      transform: translateY(-${cardComp.hover.liftPx || 2}px);
+      box-shadow: ${getShadow(cardComp.hover.shadowToken || 'cardHover')};
     }
     ` : ''}
 
     .recsys-img-box {
-        width: ${imgWidth}; height: ${imgHeight};
-        border-radius: ${getRadius(components.image?.radiusFollowsCard ? cardComp.radiusToken : 'image')};
-        overflow: hidden; background: ${getColor('muted')}; flex-shrink: 0; display: flex;
+      width: ${imgWidth}; height: ${imgHeight};
+      border-radius: ${getRadius(components.image?.radiusFollowsCard ? cardComp.radiusToken : 'image')};
+      overflow: hidden; background: ${getColor('muted')}; flex-shrink: 0; display: flex;
     }
     .recsys-img-box img { width: 100%; height: 100%; object-fit: ${components.image?.objectFit || 'contain'}; }
 
@@ -318,16 +318,16 @@ export class InlineDisplay {
 
     /* Buttons for Carousel */
     .recsys-nav {
-        position: absolute; top: 50%; transform: translateY(-50%);
-        width: 32px; height: 32px;
-        border-radius: 50%;
-        background: ${btnBg};
-        border: 1px solid ${getColor('border')};
-        display: flex; align-items: center; justify-content: center;
-        z-index: 10; cursor: pointer; color: ${colorTitle};
-        box-shadow: 0 2px 8px rgba(0,0,0,0.15);
-        font-size: 18px; padding-bottom: 2px;
-        opacity: 0.9; transition: opacity 0.2s;
+      position: absolute; top: 50%; transform: translateY(-50%);
+      width: 32px; height: 32px;
+      border-radius: 50%;
+      background: ${btnBg};
+      border: 1px solid ${getColor('border')};
+      display: flex; align-items: center; justify-content: center;
+      z-index: 10; cursor: pointer; color: ${colorTitle};
+      box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+      font-size: 18px; padding-bottom: 2px;
+      opacity: 0.9; transition: opacity 0.2s;
     }
     .recsys-nav:hover { opacity: 1; }
     .recsys-prev { left: 0; }
