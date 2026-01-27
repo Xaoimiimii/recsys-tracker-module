@@ -2206,7 +2206,7 @@ var RecSysTracker = (function (exports) {
     }
 
     class RecommendationFetcher {
-        constructor(domainKey, apiBaseUrl = 'https://recsys-tracker-module.onrender.com') {
+        constructor(domainKey, apiBaseUrl = 'http://localhost:3000') {
             this.CACHE_TTL = 5 * 60 * 1000; // 5 minutes cache
             this.AUTO_REFRESH_INTERVAL = 60 * 1000; // 1 minute auto-refresh
             this.domainKey = domainKey;

@@ -12,9 +12,9 @@ export class RecommendationController {
         const { UserId, AnonymousId, DomainKey, NumberItems } = body;
         
         return await this.recommendationService.getRecommendations(
-            AnonymousId,
             DomainKey,
             NumberItems ?? 10,
+            AnonymousId,
             UserId,
         );
     }

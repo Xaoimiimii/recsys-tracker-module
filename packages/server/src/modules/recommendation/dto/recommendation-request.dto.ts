@@ -11,11 +11,12 @@ export class RecommendationRequestDto {
 
     @ApiProperty({ example: 'anonymous_id_123123123' })
     @IsString()
-    @IsNotEmpty()
-    AnonymousId: string;
+    @IsOptional()
+    AnonymousId?: string;
 
     @ApiProperty({ example: 'domain_key' })
     @IsString()
+    @IsNotEmpty()
     DomainKey: string;
     
     @ApiProperty({ example: 10, required: false })

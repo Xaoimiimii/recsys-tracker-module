@@ -18,7 +18,8 @@ export class RecommendationService {
         @Inject(CACHE_MANAGER) private cacheManager: Cache
     ) { }
 
-    async getRecommendations(anonymousId: string, domainKey: string, numberItems: number = 10, userId?: string) {
+    async getRecommendations(domainKey: string, numberItems: number = 10, anonymousId?: string, userId?: string) {
+        console.log(2);
         const domain = await this.prisma.domain.findUnique({ where: { Key: domainKey } });
         if (!domain) {
             throw new NotFoundException(`Domain with key '${domainKey}' does not exist.`);
@@ -28,20 +29,16 @@ export class RecommendationService {
         let itemHistory: Event[] | null = null;
 
         if (userId) {
-            user = await this.prisma.user.findUnique({
+            user = await this.prisma.user.findFirst({
                 where: {
-                    AnonymousId_UserId_DomainId: {
-                        AnonymousId: anonymousId,
-                        UserId: userId,
-                        DomainId: domain.Id,    
-                    }
+                    UserId: userId,
+                    DomainId: domain.Id,    
                 },
             });
 
             itemHistory = await this.prisma.event.findMany({
                 where: {
                     UserId: userId,
-                    AnonymousId: anonymousId,
                     TrackingRule: {
                         DomainID: domain.Id
                     },
@@ -80,7 +77,69 @@ export class RecommendationService {
         }
 
         if (!user) {
-            return [];
+            // return top k items based on other user
+            const topItemsByAvgPredict = await this.prisma.predict.groupBy({
+                by: ['ItemId'],
+                _avg: {
+                    Value: true
+                },
+                orderBy: {
+                    _avg: {
+                        Value: 'desc'
+                    }
+                },
+                take: numberItems * 2
+            });
+
+            const topItemIds = topItemsByAvgPredict
+                .filter(item => !ratedItemsIds.includes(item.ItemId))
+                .map(item => item.ItemId);
+
+            let recommendations = topItemIds.map((itemId, index) => ({
+                ItemId: itemId,
+                UserId: user!.Id,
+                Value: topItemsByAvgPredict[index]._avg.Value || 0
+            }));
+
+            const detailedRecommendations = await Promise.all(
+                recommendations.map(async (recommendation) => {
+                    const item = await this.prisma.item.findUnique({
+                        where:
+                        {
+                            Id: recommendation.ItemId 
+                        },
+                        select: {
+                            Id: true,
+                            DomainItemId: true,
+                            Title: true,
+                            Description: true,
+                            ImageUrl: true,
+                            ItemCategories: {
+                                select: {
+                                    Category: {
+                                        select: {
+                                            Name: true
+                                        }
+                                    }
+                                }
+                            },
+                            Attributes: true
+                        }
+                    });
+
+                    return {
+                        Id: item?.Id,
+                        DomainItemId: item?.DomainItemId,
+                        Title: item?.Title,
+                        Description: item?.Description,
+                        ImageUrl: item?.ImageUrl,
+                        Categories: item?.ItemCategories.map(ic => ic.Category.Name),
+                        ...((item?.Attributes as Record<string, any>) || {})
+                    };
+                })
+            );
+            console.log(1);
+            return detailedRecommendations.slice(0, numberItems);
         }
 
         let priorityCategoryIds: number[] = [];
