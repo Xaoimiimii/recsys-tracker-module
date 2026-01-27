@@ -78,6 +78,11 @@ export class RecommendationService {
         if (!user) {
             // return top k items based on other user
             const topItemsByAvgPredict = await this.prisma.predict.groupBy({
+                where: {
+                    Item: {
+                        DomainId: domain.Id
+                    }
+                },
                 by: ['ItemId'],
                 _avg: {
                     Value: true
