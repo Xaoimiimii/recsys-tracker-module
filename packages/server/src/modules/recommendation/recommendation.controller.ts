@@ -29,4 +29,9 @@ export class RecommendationController {
             UserId,
         );
     }
+
+    @Post('trigger-train')
+    async triggerTrainModels() {
+        await this.recommendationService.triggerTrainModels();
+    }
 }

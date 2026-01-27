@@ -90,6 +90,34 @@ export class RecommendationService {
                 take: numberItems * 2
             });
 
+            if (!topItemsByAvgPredict || topItemsByAvgPredict.length <= 0) {
+                let recommendation = await this.prisma.item.findMany({
+                    where: {
+                        DomainId: domain.Id,
+                    },
+                    select: {
+                        Id: true,
+                        DomainItemId: true,
+                        Title: true,
+                        Description: true,
+                        ImageUrl: true,
+                        ItemCategories: {
+                            select: {
+                                Category: {
+                                    select: {
+                                        Name: true
+                                    }
+                                }
+                            }
+                        },
+                        Attributes: true
+                    },
+                    take: numberItems
+                });
+
+                return recommendation;
+            }
+
             const topItemIds = topItemsByAvgPredict
                 .map(item => item.ItemId);
 
@@ -297,7 +325,6 @@ export class RecommendationService {
             } catch (error) {
                 this.logger.error(`Domain ${domain.Id} train failed`);
             }
-            
         }
     }
 
