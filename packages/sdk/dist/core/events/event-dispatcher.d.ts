@@ -11,6 +11,7 @@ export declare class EventDispatcher {
     private domainUrl;
     private timeout;
     private headers;
+    private sendingEvents;
     constructor(options: DispatchOptions);
     send(event: TrackedEvent): Promise<boolean>;
     sendBatch(events: TrackedEvent[]): Promise<boolean>;

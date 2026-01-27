@@ -25,7 +25,7 @@ export class RecSysTracker {
         this.metadataNormalizer = new MetadataNormalizer();
         this.pluginManager = new PluginManager(this);
         this.payloadBuilder = new PayloadBuilder();
-        this.eventDeduplicator = new EventDeduplicator(3000); // 3 second window
+        this.eventDeduplicator = new EventDeduplicator(1000); // 1 second window
         this.loopGuard = new LoopGuard({ maxRequestsPerSecond: 5 });
         this.userIdentityManager = new UserIdentityManager();
     }
@@ -129,23 +129,16 @@ export class RecSysTracker {
             const ruleId = payload.ruleId || payload.RuleId;
             // Lấy user info từ UserIdentityManager
             const userInfo = this.userIdentityManager.getUserInfo();
-            // User field cho deduplication - sử dụng user info từ UserIdentityManager
-            const userValue = userInfo.value ||
-                payload.userId || payload.UserId ||
-                payload.username || payload.Username ||
-                payload.userValue || payload.UserValue;
+            // // User field cho deduplication - sử dụng user info từ UserIdentityManager
+            // const userValue = userInfo.value || 
+            //                  payload.userId || payload.UserId || 
+            //                  payload.username || payload.Username ||
+            //                  payload.userValue || payload.UserValue;
             // Item ID - try multiple variants
             const itemId = payload.itemId || payload.ItemId ||
                 payload.itemTitle || payload.ItemTitle ||
                 payload.itemValue || payload.ItemValue ||
                 undefined;
-            // Check for duplicate event (fingerprint-based deduplication)
-            if (ruleId && userValue && itemId) {
-                const isDuplicate = this.eventDeduplicator.isDuplicate(eventData.eventType, ruleId, userValue, itemId);
-                if (isDuplicate) {
-                    return;
-                }
-            }
             // Extract rating value
             const ratingValue = payload.Rating !== undefined ? payload.Rating :
                 (eventData.eventType === this.getEventTypeId('Rating') && payload.Value !== undefined) ? payload.Value :
@@ -154,15 +147,25 @@ export class RecSysTracker {
             const reviewText = payload.Review !== undefined ? payload.Review :
                 (eventData.eventType === this.getEventTypeId('Review') && payload.Value !== undefined) ? payload.Value :
                     undefined;
+            // Extract action type
+            const actionType = payload.actionType || null;
+            // Get anonymous ID
+            const anonymousId = userInfo.field === 'AnonymousId' ? userInfo.value : getOrCreateAnonymousId();
+            const userId = userInfo.field === 'UserId' && userInfo.value ? userInfo.value : null;
+            // Check for duplicate event - so sánh TẤT CẢ fields quan trọng
+            const isDuplicate = this.eventDeduplicator.isDuplicate(eventData.eventType, Number(ruleId) || 0, userId, anonymousId, itemId, actionType, this.config.domainKey);
+            if (isDuplicate) {
+                return;
+            }
             const trackedEvent = {
                 id: this.metadataNormalizer.generateEventId(),
                 timestamp: new Date(eventData.timestamp),
                 eventTypeId: eventData.eventType,
-                actionType: payload.actionType || null,
+                actionType: actionType,
                 trackingRuleId: Number(ruleId) || 0,
                 domainKey: this.config.domainKey,
-                anonymousId: userInfo.field === 'AnonymousId' ? userInfo.value : getOrCreateAnonymousId(),
-                ...(userInfo.field === 'UserId' && userInfo.value && { userId: userInfo.value }),
+                anonymousId: anonymousId,
+                ...(userId && { userId }),
                 ...(itemId && { itemId }),
                 ...(ratingValue !== undefined && {
                     ratingValue: ratingValue
@@ -212,11 +215,18 @@ export class RecSysTracker {
     }
     // Setup page unload handler để gửi remaining events
     setupUnloadHandler() {
+        let unloadHandled = false; // Flag để tránh gửi nhiều lần
         const sendOnUnload = () => {
             this.errorBoundary.execute(() => {
+                if (unloadHandled) {
+                    //console.log('[RecSysTracker] Unload already handled, skipping');
+                    return;
+                }
                 if (this.eventBuffer.isEmpty() || !this.eventDispatcher) {
                     return;
                 }
+                //console.log('[RecSysTracker] Sending events on unload, buffer size:', this.eventBuffer.size());
+                unloadHandled = true;
                 // Send all remaining events dùng sendBeacon
                 const allEvents = this.eventBuffer.getAll();
                 this.eventDispatcher.sendBatch(allEvents);

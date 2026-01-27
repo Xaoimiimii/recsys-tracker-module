@@ -2,10 +2,10 @@ export declare class EventDeduplicator {
     private fingerprints;
     private timeWindow;
     private cleanupInterval;
+    private fingerprintRetentionTime;
     constructor(timeWindow?: number);
     private generateFingerprint;
-    private simpleHash;
-    isDuplicate(eventTypeId: number, trackingRuleId: number, userId: string, itemId: string): boolean;
+    isDuplicate(eventTypeId: number, trackingRuleId: number, userId: string | null, anonymousId: string, itemId: string | undefined, actionType: string | null, domainKey: string): boolean;
     private cleanup;
     clear(): void;
 }

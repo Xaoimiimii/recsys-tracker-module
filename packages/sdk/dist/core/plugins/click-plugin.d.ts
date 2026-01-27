@@ -15,6 +15,8 @@ import { RecSysTracker } from '../..';
 export declare class ClickPlugin extends BasePlugin {
     readonly name = "ClickPlugin";
     private handleClickBound;
+    private lastClickTimestamp;
+    private debounceTime;
     init(tracker: RecSysTracker): void;
     start(): void;
     stop(): void;
@@ -22,6 +24,7 @@ export declare class ClickPlugin extends BasePlugin {
      * Handle click event - TRIGGER PHASE
      */
     private handleClick;
+    private getElementKey;
     /**
      * Find element matching rule selector
      */

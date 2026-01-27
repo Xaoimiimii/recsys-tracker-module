@@ -571,6 +571,7 @@ class EventDispatcher {
         this.domainUrl = null;
         this.timeout = 5000;
         this.headers = {};
+        this.sendingEvents = new Set(); // Track events đang gửi để tránh duplicate
         this.endpoint = options.endpoint;
         this.domainUrl = options.domainUrl || null;
         this.timeout = options.timeout || 5000;
@@ -581,44 +582,64 @@ class EventDispatcher {
         if (!event) {
             return false;
         }
-        // Verify origin trước khi gửi event
-        if (this.domainUrl) {
-            const isOriginValid = OriginVerifier.verify(this.domainUrl);
-            if (!isOriginValid) {
-                return false;
-            }
+        // Check nếu event đang được gửi
+        if (this.sendingEvents.has(event.id)) {
+            //console.log('[EventDispatcher] Event already being sent, skipping:', event.id);
+            return true; // Return true để không retry
         }
-        // Chuyển đổi TrackedEvent sang định dạng CreateEventDto
-        const payloadObject = {
-            Timestamp: event.timestamp,
-            EventTypeId: event.eventTypeId,
-            ActionType: event.actionType || null,
-            TrackingRuleId: event.trackingRuleId,
-            DomainKey: event.domainKey,
-            AnonymousId: event.anonymousId,
-            ...(event.userId && { UserId: event.userId }),
-            ...(event.itemId && { ItemId: event.itemId }),
-            ...(event.ratingValue !== undefined && { RatingValue: event.ratingValue }),
-            ...(event.ratingReview !== undefined && { RatingReview: event.ratingReview })
-        };
-        const payload = JSON.stringify(payloadObject);
-        // Log payload sẽ gửi đi
-        // console.log('[EventDispatcher] Sending payload to API:', payloadObject);
-        // Thử từng phương thức gửi theo thứ tự ưu tiên
-        const strategies = ['beacon', 'fetch'];
-        for (const strategy of strategies) {
-            try {
-                const success = await this.sendWithStrategy(payload, strategy);
-                if (success) {
-                    return true;
+        // Mark event as being sent
+        this.sendingEvents.add(event.id);
+        try {
+            // Verify origin trước khi gửi event
+            if (this.domainUrl) {
+                const isOriginValid = OriginVerifier.verify(this.domainUrl);
+                if (!isOriginValid) {
+                    return false;
                 }
             }
-            catch (error) {
-                // Thử phương thức tiếp theo
+            // Chuyển đổi TrackedEvent sang định dạng CreateEventDto
+            const payloadObject = {
+                Timestamp: event.timestamp,
+                EventTypeId: event.eventTypeId,
+                ActionType: event.actionType || null,
+                TrackingRuleId: event.trackingRuleId,
+                DomainKey: event.domainKey,
+                AnonymousId: event.anonymousId,
+                ...(event.userId && { UserId: event.userId }),
+                ...(event.itemId && { ItemId: event.itemId }),
+                ...(event.ratingValue !== undefined && { RatingValue: event.ratingValue }),
+                ...(event.ratingReview !== undefined && { RatingReview: event.ratingReview })
+            };
+            const payload = JSON.stringify(payloadObject);
+            // Log payload sẽ gửi đi
+            // console.log('[EventDispatcher] Sending payload to API:', payloadObject);
+            // Thử từng phương thức gửi theo thứ tự ưu tiên
+            const strategies = ['beacon', 'fetch'];
+            for (const strategy of strategies) {
+                try {
+                    //console.log('[EventDispatcher] Trying strategy:', strategy);
+                    const success = await this.sendWithStrategy(payload, strategy);
+                    //console.log('[EventDispatcher] Strategy', strategy, 'result:', success);
+                    if (success) {
+                        //console.log('[EventDispatcher] ✅ Event sent successfully with', strategy);
+                        return true;
+                    }
+                }
+                catch (error) {
+                    //console.log('[EventDispatcher] Strategy', strategy, 'failed with error:', error);
+                    // Thử phương thức tiếp theo
+                }
             }
+            //console.log('[EventDispatcher] ❌ All strategies failed');
+            // Trả về false nếu tất cả phương thức gửi đều thất bại
+            return false;
         }
-        // Trả về false nếu tất cả phương thức gửi đều thất bại
-        return false;
+        finally {
+            // Remove from sending set after a delay để tránh retry ngay lập tức
+            setTimeout(() => {
+                this.sendingEvents.delete(event.id);
+            }, 1000);
+        }
     }
     // Gửi nhiều events cùng lúc (gọi send cho từng event)
     async sendBatch(events) {
@@ -859,61 +880,68 @@ class MetadataNormalizer {
 }
 
 // Event Deduplication Utility
-// Ngăn chặn các sự kiện trùng lặp trong một khoảng thời gian ngắn
-// Generate fingerprint từ eventType + itemId + userId + ruleId
-// Drops events nếu same fingerprint được gửi trong timeWindow (3s mặc định)
+// Ngăn chặn các sự kiện hoàn toàn giống nhau được gửi nhiều lần
+// So sánh TẤT CẢ fields quan trọng: eventType, ruleId, userId, anonId, itemId, actionType, domainKey
+// Chặn nếu 2 events giống nhau đến trong vòng 1 giây (theo thời gian thực, không phải event timestamp)
 class EventDeduplicator {
     constructor(timeWindow) {
         this.fingerprints = new Map();
-        this.timeWindow = 3000; // 3 seconds
-        this.cleanupInterval = 5000; // cleanup every 5s
+        this.timeWindow = 1000; // 1 second - khoảng thời gian chặn duplicate
+        this.cleanupInterval = 30000; // cleanup every 30s (tăng từ 5s)
+        this.fingerprintRetentionTime = 15000; // Giữ fingerprints 15s (đủ lâu để catch duplicates)
         if (timeWindow !== undefined) {
             this.timeWindow = timeWindow;
         }
+        //console.log('[EventDeduplicator] Created with timeWindow:', this.timeWindow);
         // Periodic cleanup of old fingerprints
         if (typeof window !== 'undefined') {
             setInterval(() => this.cleanup(), this.cleanupInterval);
         }
     }
-    // Generate fingerprint for an event
-    generateFingerprint(eventTypeId, trackingRuleId, userId, itemId) {
-        // Simple hash: combine all identifiers
-        const raw = `${eventTypeId}:${trackingRuleId}:${userId}:${itemId}`;
-        return this.simpleHash(raw);
+    // Generate fingerprint từ TẤT CẢ fields quan trọng (trừ timestamp)
+    generateFingerprint(eventTypeId, trackingRuleId, userId, anonymousId, itemId, actionType, domainKey) {
+        // Dùng raw string để tránh hash collision
+        return `${eventTypeId}:${trackingRuleId}:${userId || ''}:${anonymousId}:${itemId || ''}:${actionType || ''}:${domainKey}`;
     }
-    // Simple hash function (not cryptographic, just for deduplication)
-    simpleHash(str) {
-        let hash = 0;
-        for (let i = 0; i < str.length; i++) {
-            const char = str.charCodeAt(i);
-            hash = ((hash << 5) - hash) + char;
-            hash = hash & hash; // Convert to 32bit integer
-        }
-        return hash.toString(36);
-    }
-    // Check if event is duplicate within time window
+    // Check if event is duplicate
     // Returns true if event should be DROPPED (is duplicate)
-    isDuplicate(eventTypeId, trackingRuleId, userId, itemId) {
-        const fingerprint = this.generateFingerprint(eventTypeId, trackingRuleId, userId, itemId);
+    isDuplicate(eventTypeId, trackingRuleId, userId, anonymousId, itemId, actionType, domainKey) {
+        const fingerprint = this.generateFingerprint(eventTypeId, trackingRuleId, userId, anonymousId, itemId, actionType, domainKey);
         const now = Date.now();
         const lastSeen = this.fingerprints.get(fingerprint);
-        if (lastSeen && (now - lastSeen) < this.timeWindow) {
-            return true; // Is duplicate
+        if (lastSeen) {
+            // Check nếu event giống hệt đến trong vòng timeWindow (theo thời gian thực)
+            const timeDiff = now - lastSeen.lastSeenTime;
+            if (timeDiff < this.timeWindow) {
+                // console.log('[EventDeduplicator] ❌ DROPPED duplicate event');
+                // Update time để reset window
+                this.fingerprints.set(fingerprint, { lastSeenTime: now });
+                return true; // Is duplicate - event giống hệt đến quá nhanh
+            }
         }
-        // Record this fingerprint
-        this.fingerprints.set(fingerprint, now);
+        // Record fingerprint với thời điểm hiện tại NGAY LẬP TỨC
+        // Điều này đảm bảo event tiếp theo sẽ thấy fingerprint này
+        this.fingerprints.set(fingerprint, {
+            lastSeenTime: now
+        });
+        //console.log('[EventDeduplicator] ✅ New event recorded');
         return false; // Not duplicate
     }
     // Cleanup old fingerprints to prevent memory leak
     cleanup() {
         const now = Date.now();
         const toDelete = [];
-        this.fingerprints.forEach((timestamp, fingerprint) => {
-            if (now - timestamp > this.timeWindow) {
+        console.log('[EventDeduplicator] Cleanup starting, Map size:', this.fingerprints.size);
+        this.fingerprints.forEach((data, fingerprint) => {
+            const age = now - data.lastSeenTime;
+            // Chỉ xóa fingerprints cũ hơn fingerprintRetentionTime (15s)
+            if (age > this.fingerprintRetentionTime) {
+                //console.log('[EventDeduplicator] Deleting old fingerprint, age:', age, 'threshold:', this.fingerprintRetentionTime);
                 toDelete.push(fingerprint);
             }
         });
         toDelete.forEach(fp => this.fingerprints.delete(fp));
+        //console.log('[EventDeduplicator] Cleanup done, deleted:', toDelete.length, 'remaining:', this.fingerprints.size);
     }
     // Clear all fingerprints (for testing)
     clear() {
@@ -2207,7 +2235,7 @@ class PlaceholderImage {
 }
 
 class RecommendationFetcher {
-    constructor(domainKey, apiBaseUrl = 'http://localhost:3000') {
+    constructor(domainKey, apiBaseUrl = 'https://recsys-tracker-module.onrender.com') {
         this.CACHE_TTL = 5 * 60 * 1000; // 5 minutes cache
         this.AUTO_REFRESH_INTERVAL = 60 * 1000; // 1 minute auto-refresh
         this.domainKey = domainKey;
@@ -2897,6 +2925,8 @@ class ClickPlugin extends BasePlugin {
         super(...arguments);
         this.name = 'ClickPlugin';
         this.handleClickBound = this.handleClick.bind(this);
+        this.lastClickTimestamp = new Map(); // Track last click time per element
+        this.debounceTime = 300; // 300ms debounce
     }
     init(tracker) {
         this.errorBoundary.execute(() => {
@@ -2908,8 +2938,13 @@ class ClickPlugin extends BasePlugin {
         this.errorBoundary.execute(() => {
             if (!this.ensureInitialized())
                 return;
+            if (this.active) {
+                //console.warn('[ClickPlugin] Already active, skipping duplicate start');
+                return;
+            }
             document.addEventListener('click', this.handleClickBound, true);
             this.active = true;
+            //console.log('[ClickPlugin] Started');
         }, 'ClickPlugin.start');
     }
     stop() {
@@ -2942,6 +2977,15 @@ class ClickPlugin extends BasePlugin {
             if (!matchedElement) {
                 continue;
             }
+            // Debounce: Bỏ qua clicks liên tiếp trên cùng element trong thời gian ngắn
+            const elementKey = this.getElementKey(matchedElement, rule.id);
+            const now = Date.now();
+            const lastClick = this.lastClickTimestamp.get(elementKey);
+            if (lastClick && (now - lastClick) < this.debounceTime) {
+                //console.log('[ClickPlugin] Debounced - ignoring rapid click on', elementKey);
+                return;
+            }
+            this.lastClickTimestamp.set(elementKey, now);
             // Create trigger context
             const triggerContext = {
                 element: matchedElement,
@@ -2958,6 +3002,16 @@ class ClickPlugin extends BasePlugin {
             // Chỉ track rule đầu tiên match
             return;
         }
+    }
+    // Generate unique key cho mỗi element + rule combination
+    getElementKey(element, ruleId) {
+        var _a;
+        // Sử dụng data attributes hoặc textContent để identify element
+        const itemId = element.getAttribute('data-item-id') ||
+            element.getAttribute('data-id') ||
+            ((_a = element.textContent) === null || _a === void 0 ? void 0 : _a.substring(0, 20)) ||
+            '';
+        return `${ruleId}:${itemId}`;
     }
     /**
      * Find element matching rule selector
@@ -3095,10 +3149,15 @@ class ReviewPlugin extends BasePlugin {
         this.errorBoundary.execute(() => {
             if (!this.ensureInitialized())
                 return;
+            if (this.active) {
+                //console.warn('[ReviewPlugin] Already active, skipping duplicate start');
+                return;
+            }
             // Listen for both click and submit events
             document.addEventListener('click', this.handleClickBound, true);
             document.addEventListener('submit', this.handleSubmitBound, true);
             this.active = true;
+            //console.log('[ReviewPlugin] Started');
         }, 'ReviewPlugin.start');
     }
     stop() {
@@ -4893,10 +4952,15 @@ class RatingPlugin extends BasePlugin {
         this.errorBoundary.execute(() => {
             if (!this.ensureInitialized())
                 return;
+            if (this.active) {
+                //console.warn('[RatingPlugin] Already active, skipping duplicate start');
+                return;
+            }
             // Listen for both click and submit events
             document.addEventListener('click', this.handleClickBound, true);
             document.addEventListener('submit', this.handleSubmitBound, true);
             this.active = true;
+            //console.log('[RatingPlugin] Started');
         }, 'RatingPlugin.start');
     }
     stop() {
@@ -5047,7 +5111,7 @@ class RecSysTracker {
         this.metadataNormalizer = new MetadataNormalizer();
         this.pluginManager = new PluginManager(this);
         this.payloadBuilder = new PayloadBuilder();
-        this.eventDeduplicator = new EventDeduplicator(3000); // 3 second window
+        this.eventDeduplicator = new EventDeduplicator(1000); // 1 second window
         this.loopGuard = new LoopGuard({ maxRequestsPerSecond: 5 });
         this.userIdentityManager = new UserIdentityManager();
     }
@@ -5151,23 +5215,16 @@ class RecSysTracker {
             const ruleId = payload.ruleId || payload.RuleId;
             // Lấy user info từ UserIdentityManager
             const userInfo = this.userIdentityManager.getUserInfo();
-            // User field cho deduplication - sử dụng user info từ UserIdentityManager
-            const userValue = userInfo.value ||
-                payload.userId || payload.UserId ||
-                payload.username || payload.Username ||
-                payload.userValue || payload.UserValue;
+            // // User field cho deduplication - sử dụng user info từ UserIdentityManager
+            // const userValue = userInfo.value || 
+            //                  payload.userId || payload.UserId || 
+            //                  payload.username || payload.Username ||
+            //                  payload.userValue || payload.UserValue;
             // Item ID - try multiple variants
             const itemId = payload.itemId || payload.ItemId ||
                 payload.itemTitle || payload.ItemTitle ||
                 payload.itemValue || payload.ItemValue ||
                 undefined;
-            // Check for duplicate event (fingerprint-based deduplication)
-            if (ruleId && userValue && itemId) {
-                const isDuplicate = this.eventDeduplicator.isDuplicate(eventData.eventType, ruleId, userValue, itemId);
-                if (isDuplicate) {
-                    return;
-                }
-            }
             // Extract rating value
             const ratingValue = payload.Rating !== undefined ? payload.Rating :
                 (eventData.eventType === this.getEventTypeId('Rating') && payload.Value !== undefined) ? payload.Value :
@@ -5176,15 +5233,25 @@ class RecSysTracker {
             const reviewText = payload.Review !== undefined ? payload.Review :
                 (eventData.eventType === this.getEventTypeId('Review') && payload.Value !== undefined) ? payload.Value :
                     undefined;
+            // Extract action type
+            const actionType = payload.actionType || null;
+            // Get anonymous ID
+            const anonymousId = userInfo.field === 'AnonymousId' ? userInfo.value : getOrCreateAnonymousId();
+            const userId = userInfo.field === 'UserId' && userInfo.value ? userInfo.value : null;
+            // Check for duplicate event - so sánh TẤT CẢ fields quan trọng
+            const isDuplicate = this.eventDeduplicator.isDuplicate(eventData.eventType, Number(ruleId) || 0, userId, anonymousId, itemId, actionType, this.config.domainKey);
+            if (isDuplicate) {
+                return;
+            }
             const trackedEvent = {
                 id: this.metadataNormalizer.generateEventId(),
                 timestamp: new Date(eventData.timestamp),
                 eventTypeId: eventData.eventType,
-                actionType: payload.actionType || null,
+                actionType: actionType,
                 trackingRuleId: Number(ruleId) || 0,
                 domainKey: this.config.domainKey,
-                anonymousId: userInfo.field === 'AnonymousId' ? userInfo.value : getOrCreateAnonymousId(),
-                ...(userInfo.field === 'UserId' && userInfo.value && { userId: userInfo.value }),
+                anonymousId: anonymousId,
+                ...(userId && { userId }),
                 ...(itemId && { itemId }),
                 ...(ratingValue !== undefined && {
                     ratingValue: ratingValue
@@ -5234,11 +5301,18 @@ class RecSysTracker {
     }
     // Setup page unload handler để gửi remaining events
     setupUnloadHandler() {
+        let unloadHandled = false; // Flag để tránh gửi nhiều lần
         const sendOnUnload = () => {
             this.errorBoundary.execute(() => {
+                if (unloadHandled) {
+                    //console.log('[RecSysTracker] Unload already handled, skipping');
+                    return;
+                }
                 if (this.eventBuffer.isEmpty() || !this.eventDispatcher) {
                     return;
                 }
+                //console.log('[RecSysTracker] Sending events on unload, buffer size:', this.eventBuffer.size());
+                unloadHandled = true;
                 // Send all remaining events dùng sendBeacon
                 const allEvents = this.eventBuffer.getAll();
                 this.eventDispatcher.sendBatch(allEvents);
