@@ -19,7 +19,6 @@ export class RecommendationService {
     ) { }
 
     async getRecommendations(anonymousId: string, domainKey: string, numberItems: number = 10, userId?: string) {
-        console.log(1);
         const domain = await this.prisma.domain.findUnique({ where: { Key: domainKey } });
         if (!domain) {
             throw new NotFoundException(`Domain with key '${domainKey}' does not exist.`);
@@ -134,7 +133,8 @@ export class RecommendationService {
                 keywordToSearch, 
                 priorityCategoryIds
             );
-            const priorityItemIds = searchResult.items.map(item => item.Id);
+            const priorityItemIds = searchResult.items.map(item => item.id);
+
             // priority items (in search result) and other items
             priorityItems = allItems.filter(item => priorityItemIds.includes(item.ItemId));
             const otherItems = allItems.filter(item => !priorityItemIds.includes(item.ItemId));

@@ -22,72 +22,90 @@ export class SearchService {
         keyword?: string,
         priorityCategoryIds?: number[]
     ): Promise<{ items: any[]; total: any }> {
-        let mustQuery: any[] = [];
-        
-        if (keyword && keyword.trim() !== '') {
-            mustQuery.push({
-                multi_match: {
-                    query: keyword,
-                    fields: ['title^3', 'description', 'category_names'],
-                    operator: 'or',
-                    fuzziness: 'AUTO',
-                },
-            });
-        } else {
-            mustQuery.push({ match_all: {} });
-        }
+        const hasKeyword = keyword && keyword.trim() !== '';
+        const hasPriorityCategories = priorityCategoryIds && priorityCategoryIds.length > 0;
 
-        const shouldQuery: any[] = [];
-        if (priorityCategoryIds && priorityCategoryIds.length > 0) {
+        // Build keyword query
+        const keywordQuery = hasKeyword ? {
+            multi_match: {
+                query: keyword,
+                fields: ['title^3', 'description', 'category_names'],
+                operator: 'or',
+                fuzziness: 'AUTO',
+            },
+        } : null;
+
+        // Build priority category queries
+        const categoryQueries: any[] = [];
+        if (hasPriorityCategories) {
             priorityCategoryIds.forEach((catId) => {
-                shouldQuery.push({
+                categoryQueries.push({
                     constant_score: {
                         filter: {
                             term: { category_ids: catId }
                         },
-                        boost: 10.0
+                        boost: 5.0
                     }
                 });
             });
         }
 
-        let result = await this.elasticsearchService.search({
-            index: this.INDEX_NAME,
-            query: {
+        let query: any;
+
+        // Case 1: Only keyword - search by keyword
+        if (hasKeyword && !hasPriorityCategories) {
+            query = {
+                bool: {
+                    filter: [{ match: { domainId: domainId } }],
+                    must: [keywordQuery],
+                },
+            };
+        }
+        // Case 2: Only priority categories - search by categories (more matches = higher score)
+        else if (!hasKeyword && hasPriorityCategories) {
+            query = {
+                bool: {
+                    filter: [{ match: { domainId: domainId } }],
+                    should: categoryQueries,
+                    minimum_should_match: 1, // Must match at least 1 category
+                },
+            };
+        }
+        // Case 3: Both keyword and priority categories - hybrid search
+        else if (hasKeyword && hasPriorityCategories) {
+            query = {
+                bool: {
+                    filter: [{ match: { domainId: domainId } }],
+                    should: [
+                        // Keyword matching with boost
+                        {
+                            bool: {
+                                must: [keywordQuery],
+                                boost: 2.0
+                            }
+                        },
+                        // Category matching (multiple matches get higher score)
+                        ...categoryQueries
+                    ],
+                    minimum_should_match: 1, // Must match keyword OR at least 1 category
+                },
+            };
+        }
+        // Case 4: Neither - return all items for domain
+        else {
+            query = {
                 bool: {
                     filter: [{ term: { domainId: domainId } }],
-                    must: mustQuery,
-                    should: shouldQuery,
+                    must: [{ match_all: {} }],
                 },
-            },
-            sort: [
-                { _score: { order: 'desc' } } 
-            ]
-        });
-
-        const totalHits = typeof result.hits.total === 'number' 
-            ? result.hits.total 
-            : result.hits.total?.value || 0;
-
-        
-        if (totalHits === 0 && keyword && keyword.trim() !== '') {
-            this.logger.log(`Keyword "${keyword}" not found. Fallback to Category Priority.`);
-
-            mustQuery = [{ match_all: {} }];
-
-            result = await this.elasticsearchService.search({
-                index: this.INDEX_NAME,
-                query: {
-                    bool: {
-                        filter: [{ term: { domainId: domainId } }],
-                        must: mustQuery,
-                        should: shouldQuery,
-                        minimum_should_match: 1
-                    },
-                },
-                sort: [{ _score: { order: 'desc' } }]
-            });
+            };
         }
+
+        const result = await this.elasticsearchService.search({
+            index: this.INDEX_NAME,
+            query: query,
+            sort: [{ _score: { order: 'desc' } }]
+        });
 
         return {
             items: result.hits.hits.map((hit) => hit._source),
