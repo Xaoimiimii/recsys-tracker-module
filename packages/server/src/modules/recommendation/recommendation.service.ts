@@ -324,6 +324,16 @@ export class RecommendationService {
                     }
                 },
             });
+
+            if (!user) {
+                user = await this.prisma.user.create({
+                    data: {
+                        UserId: userId,
+                        DomainId: domain.Id,
+                        CreatedAt: new Date()
+                    }
+                })
+            }
         }
         else {
             user = await this.prisma.user.findFirst({
@@ -332,10 +342,16 @@ export class RecommendationService {
                     DomainId: domain.Id,
                 },
             });
-        }
 
-        if (!user) {
-            throw new NotFoundException(`User with AnonymousId '${anonymousId}' does not exist in domain '${domainKey}'.`);
+            if (!user) {
+                user = await this.prisma.user.create({
+                    data: {
+                        AnonymousId: anonymousId,
+                        DomainId: domain.Id,
+                        CreatedAt: new Date()
+                    }
+                })
+            }
         }
 
         const cacheKeywordKey = `recommendation_keyword_${user.Id}`;
