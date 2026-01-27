@@ -92,7 +92,6 @@ export class RecommendationService {
             });
 
             const topItemIds = topItemsByAvgPredict
-                .filter(item => !ratedItemsIds.includes(item.ItemId))
                 .map(item => item.ItemId);
 
             let recommendations = topItemIds.map((itemId, index) => ({
