@@ -35,6 +35,10 @@ export class RecommendationService {
                 },
             });
 
+            // Note: Adding 7-hour offset to compensate for timezone mismatch in database
+            // Database stores local time (GMT+7) but marks it as UTC
+            const fifteenMinutesAgo = new Date(Date.now() - 15 * 60 * 1000 + 7 * 60 * 60 * 1000);
+            
             itemHistory = await this.prisma.event.findMany({
                 where: {
                     UserId: userId,
@@ -42,7 +46,7 @@ export class RecommendationService {
                         DomainID: domain.Id
                     },
                     Timestamp: {
-                        gte: new Date(Date.now() - 15 * 60 * 1000)
+                        gte: fifteenMinutesAgo
                     }
                 },
                 orderBy: {
@@ -58,6 +62,9 @@ export class RecommendationService {
                 },
             });
 
+            // Note: Adding 7-hour offset to compensate for timezone mismatch in database
+            const fifteenMinutesAgo = new Date(Date.now() - 15 * 60 * 1000 + 7 * 60 * 60 * 1000);
+            
             itemHistory = await this.prisma.event.findMany({
                 where: {
                     AnonymousId: anonymousId,
@@ -65,7 +72,7 @@ export class RecommendationService {
                         DomainID: domain.Id
                     },
                     Timestamp: {
-                        gte: new Date(Date.now() - 15 * 60 * 1000)
+                        gte: fifteenMinutesAgo
                     },
                 },
                 orderBy: {
@@ -120,7 +127,15 @@ export class RecommendationService {
                     take: numberItems
                 });
 
-                return recommendation;
+                return recommendation.map(item => ({
+                    Id: item?.Id,
+                    DomainItemId: item?.DomainItemId,
+                    Title: item?.Title,
+                    Description: item?.Description,
+                    ImageUrl: item?.ImageUrl,
+                    Categories: item?.ItemCategories.map(ic => ic.Category.Name),
+                    ...((item?.Attributes as Record<string, any>) || {})
+                }));
             }
 
             const topItemIds = topItemsByAvgPredict
@@ -174,6 +189,8 @@ export class RecommendationService {
         let priorityCategoryIds: number[] = [];
 
         if (itemHistory && itemHistory.length > 0) {
+            this.logger.log(`Found ${itemHistory.length} events in history (within 15 min window)`);
+            
             const historyDomainItemIds = itemHistory
                 .map((event) => event.ItemId)
                 .filter((id): id is string => id !== null);
@@ -192,6 +209,7 @@ export class RecommendationService {
                 });
 
                 priorityCategoryIds = categories.map((c) => c.CategoryId);
+                this.logger.log(`Priority category IDs from history: [${priorityCategoryIds.join(', ')}]`);
             }
         }
 
@@ -213,7 +231,7 @@ export class RecommendationService {
             if (cachedKeyword) {
                 this.logger.log(`Cache hit keyword: "${cachedKeyword}"`);
             } else {
-                this.logger.log(`No cache keyword, searching by Priority Categories only.`);
+                this.logger.log(`No cache keyword, searching by Priority Categories: [${priorityCategoryIds.join(', ')}]`);
             }
 
             const searchResult = await this.searchService.search(
@@ -221,6 +239,9 @@ export class RecommendationService {
                 keywordToSearch, 
                 priorityCategoryIds
             );
+            
+            this.logger.log(`Search returned ${searchResult.items?.length || 0} items`);
+            
             const priorityItemIds = searchResult.items.map(item => item.id);
 
             // priority items (in search result) and other items
@@ -232,7 +253,7 @@ export class RecommendationService {
             
             this.logger.log(`Found ${priorityItems.length} priority items from search, ${otherItems.length} other items`);
         } else {
-            this.logger.log(`Cache miss for recommendation keyword for user ${user.Id}`);
+            this.logger.log(`No keyword or priority categories for user ${user.Id}`);
         }
 
         const ratedItems = await this.prisma.rating.findMany({
@@ -247,6 +268,11 @@ export class RecommendationService {
 
         if (!recommendations || recommendations.length === 0) {
             const topItemsByAvgPredict = await this.prisma.predict.groupBy({
+                where: {
+                    Item: {
+                        DomainId: domain.Id
+                    }
+                },
                 by: ['ItemId'],
                 _avg: {
                     Value: true

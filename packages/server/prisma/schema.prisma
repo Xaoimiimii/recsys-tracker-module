@@ -14,11 +14,17 @@ datasource db {
   provider = "postgresql"
 }
 
+enum TernantRole {
+  CUSTOMER
+  ADMIN
+}
+
 model Ternant {
   Id       Int    @id @default(autoincrement())
   Name     String
   Username String @unique
   Password String
+  Role TernantRole @default(CUSTOMER)
 
   Domains Domain[]
 }
