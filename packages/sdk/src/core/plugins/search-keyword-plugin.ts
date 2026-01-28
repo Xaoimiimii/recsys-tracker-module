@@ -1,12 +1,18 @@
 import { BasePlugin } from './base-plugin';
 import { RecSysTracker } from '../..';
 import { getOrCreateAnonymousId } from './utils/plugin-utils';
+import { SearchKeywordConfig } from '../../types';
+
+interface InputElementData {
+  element: HTMLInputElement;
+  config: SearchKeywordConfig;
+  handleKeyPress: (event: KeyboardEvent) => void;
+}
 
 export class SearchKeywordPlugin extends BasePlugin {
   public readonly name = 'SearchKeywordPlugin';
 
-  private inputElement: HTMLInputElement | null = null;
-  private handleKeyPressBound = this.handleKeyPress.bind(this);
+  private inputElements: Map<string, InputElementData> = new Map();
 
   public init(tracker: RecSysTracker): void {
     this.errorBoundary.execute(() => {
@@ -19,14 +25,17 @@ export class SearchKeywordPlugin extends BasePlugin {
       if (!this.ensureInitialized()) return;
 
       const config = this.tracker!.getConfig();
-      const searchKeywordConfig = config?.searchKeywordConfig;
+      const searchKeywordConfigs = config?.searchKeywordConfigs;
 
-      if (!searchKeywordConfig) {
+      if (!searchKeywordConfigs || searchKeywordConfigs.length === 0) {
         return;
       }
 
-      // Attach listeners
-      this.attachListeners(searchKeywordConfig.InputSelector);
+      // Attach listeners cho tất cả configs
+      searchKeywordConfigs.forEach(skConfig => {
+        this.attachListeners(skConfig);
+      });
+      
       this.active = true;
     }, 'SearchKeywordPlugin.start');
   }
@@ -41,22 +50,22 @@ export class SearchKeywordPlugin extends BasePlugin {
   /**
    * Attach event listeners to input element
    */
-  private attachListeners(selector: string): void {
+  private attachListeners(config: SearchKeywordConfig): void {
     // Tìm input element
-    this.inputElement = this.findInputElement(selector);
+    const inputElement = this.findInputElement(config.InputSelector);
 
-    if (!this.inputElement) {
+    if (!inputElement) {
       // Retry sau một khoảng thời gian (DOM có thể chưa load xong)
       setTimeout(() => {
-        this.inputElement = this.findInputElement(selector);
-        if (this.inputElement) {
-          this.addEventListeners();
+        const retryElement = this.findInputElement(config.InputSelector);
+        if (retryElement) {
+          this.addEventListeners(retryElement, config);
         }
       }, 1000);
       
       return;
     }
-    this.addEventListeners();
+    this.addEventListeners(inputElement, config);
   }
 
   /**
@@ -99,21 +108,49 @@ export class SearchKeywordPlugin extends BasePlugin {
   /**
    * Add event listeners to input element
    */
-  private addEventListeners(): void {
-    if (!this.inputElement) return;
+  private addEventListeners(element: HTMLInputElement, config: SearchKeywordConfig): void {
+    // Tạo unique key cho mỗi config
+    const key = `${config.Id}_${config.InputSelector}`;
+    
+    // Nếu đã tồn tại, remove listener cũ trước
+    if (this.inputElements.has(key)) {
+      this.removeListener(key);
+    }
+
+    // Tạo bound handler riêng cho từng input
+    const handleKeyPress = (event: KeyboardEvent) => {
+      this.handleKeyPress(event);
+    };
     
     // Listen for keypress events (khi user nhấn Enter)
-    this.inputElement.addEventListener('keypress', this.handleKeyPressBound);
+    element.addEventListener('keypress', handleKeyPress);
+    
+    // Lưu vào map
+    this.inputElements.set(key, {
+      element,
+      config,
+      handleKeyPress
+    });
   }
 
   /**
    * Remove event listeners
    */
   private removeListeners(): void {
-    if (this.inputElement) {
-      // this.inputElement.removeEventListener('input', this.handleInputBound);
-      this.inputElement.removeEventListener('keypress', this.handleKeyPressBound);
-      this.inputElement = null;
+    this.inputElements.forEach((_, key) => {
+      this.removeListener(key);
+    });
+    this.inputElements.clear();
+  }
+
+  /**
+   * Remove listener cho một config cụ thể
+   */
+  private removeListener(key: string): void {
+    const data = this.inputElements.get(key);
+    if (data) {
+      data.element.removeEventListener('keypress', data.handleKeyPress);
+      this.inputElements.delete(key);
     }
   }
 
@@ -126,7 +163,7 @@ export class SearchKeywordPlugin extends BasePlugin {
       const searchKeyword = target.value.trim();
 
       if (searchKeyword) {
-        // console.log('[SearchKeywordPlugin] Search keyword (Enter pressed):', searchKeyword);
+        // console.log('[SearchKeywordPlugin] Search keyword (Enter pressed):', searchKeyword, 'Config:', config.ConfigurationName);
         // this.saveKeyword(searchKeyword);
 
         // Trigger push keyword API ngay lập tức

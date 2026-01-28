@@ -5,7 +5,7 @@ export interface TrackerConfig {
   trackingRules?: TrackingRule[];
   returnMethods?: ReturnMethod[];
   eventTypes?: EventType[];
-  searchKeywordConfig?: SearchKeywordConfig;
+  searchKeywordConfigs?: SearchKeywordConfig[];
   userIdentityConfig?: UserIdentityConfig;
   options?: TrackerOptions;
 }

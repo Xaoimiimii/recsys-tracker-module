@@ -217,7 +217,7 @@ class ConfigLoader {
                     trackingRules: this.transformRules(rulesListData),
                     returnMethods: this.transformReturnMethods(returnMethodsData),
                     eventTypes: this.transformEventTypes(eventTypesData),
-                    searchKeywordConfig: searchKeywordData && searchKeywordData.length > 0 ? searchKeywordData[0] : undefined,
+                    searchKeywordConfigs: Array.isArray(searchKeywordData) ? searchKeywordData : [],
                     userIdentityConfig: userIdentityData ? {
                         id: userIdentityData.Id,
                         source: userIdentityData.Source,
@@ -3429,8 +3429,7 @@ class SearchKeywordPlugin extends BasePlugin {
     constructor() {
         super(...arguments);
         this.name = 'SearchKeywordPlugin';
-        this.inputElement = null;
-        this.handleKeyPressBound = this.handleKeyPress.bind(this);
+        this.inputElements = new Map();
     }
     init(tracker) {
         this.errorBoundary.execute(() => {
@@ -3442,12 +3441,14 @@ class SearchKeywordPlugin extends BasePlugin {
             if (!this.ensureInitialized())
                 return;
             const config = this.tracker.getConfig();
-            const searchKeywordConfig = config === null || config === void 0 ? void 0 : config.searchKeywordConfig;
-            if (!searchKeywordConfig) {
+            const searchKeywordConfigs = config === null || config === void 0 ? void 0 : config.searchKeywordConfigs;
+            if (!searchKeywordConfigs || searchKeywordConfigs.length === 0) {
                 return;
             }
-            // Attach listeners
-            this.attachListeners(searchKeywordConfig.InputSelector);
+            // Attach listeners cho tất cả configs
+            searchKeywordConfigs.forEach(skConfig => {
+                this.attachListeners(skConfig);
+            });
             this.active = true;
         }, 'SearchKeywordPlugin.start');
     }
@@ -3460,20 +3461,20 @@ class SearchKeywordPlugin extends BasePlugin {
     /**
      * Attach event listeners to input element
      */
-    attachListeners(selector) {
+    attachListeners(config) {
         // Tìm input element
-        this.inputElement = this.findInputElement(selector);
-        if (!this.inputElement) {
+        const inputElement = this.findInputElement(config.InputSelector);
+        if (!inputElement) {
             // Retry sau một khoảng thời gian (DOM có thể chưa load xong)
             setTimeout(() => {
-                this.inputElement = this.findInputElement(selector);
-                if (this.inputElement) {
-                    this.addEventListeners();
+                const retryElement = this.findInputElement(config.InputSelector);
+                if (retryElement) {
+                    this.addEventListeners(retryElement, config);
                 }
             }, 1000);
             return;
         }
-        this.addEventListeners();
+        this.addEventListeners(inputElement, config);
     }
     /**
      * Find input element with fallback strategies
@@ -3511,20 +3512,43 @@ class SearchKeywordPlugin extends BasePlugin {
     /**
      * Add event listeners to input element
      */
-    addEventListeners() {
-        if (!this.inputElement)
-            return;
+    addEventListeners(element, config) {
+        // Tạo unique key cho mỗi config
+        const key = `${config.Id}_${config.InputSelector}`;
+        // Nếu đã tồn tại, remove listener cũ trước
+        if (this.inputElements.has(key)) {
+            this.removeListener(key);
+        }
+        // Tạo bound handler riêng cho từng input
+        const handleKeyPress = (event) => {
+            this.handleKeyPress(event);
+        };
         // Listen for keypress events (khi user nhấn Enter)
-        this.inputElement.addEventListener('keypress', this.handleKeyPressBound);
+        element.addEventListener('keypress', handleKeyPress);
+        // Lưu vào map
+        this.inputElements.set(key, {
+            element,
+            config,
+            handleKeyPress
+        });
     }
     /**
      * Remove event listeners
      */
     removeListeners() {
-        if (this.inputElement) {
-            // this.inputElement.removeEventListener('input', this.handleInputBound);
-            this.inputElement.removeEventListener('keypress', this.handleKeyPressBound);
-            this.inputElement = null;
+        this.inputElements.forEach((_, key) => {
+            this.removeListener(key);
+        });
+        this.inputElements.clear();
+    }
+    /**
+     * Remove listener cho một config cụ thể
+     */
+    removeListener(key) {
+        const data = this.inputElements.get(key);
+        if (data) {
+            data.element.removeEventListener('keypress', data.handleKeyPress);
+            this.inputElements.delete(key);
         }
     }
     /**
@@ -3535,7 +3559,7 @@ class SearchKeywordPlugin extends BasePlugin {
             const target = event.target;
             const searchKeyword = target.value.trim();
             if (searchKeyword) {
-                // console.log('[SearchKeywordPlugin] Search keyword (Enter pressed):', searchKeyword);
+                // console.log('[SearchKeywordPlugin] Search keyword (Enter pressed):', searchKeyword, 'Config:', config.ConfigurationName);
                 // this.saveKeyword(searchKeyword);
                 // Trigger push keyword API ngay lập tức
                 this.triggerPushKeyword(searchKeyword);

@@ -2,8 +2,7 @@ import { BasePlugin } from './base-plugin';
 import { RecSysTracker } from '../..';
 export declare class SearchKeywordPlugin extends BasePlugin {
     readonly name = "SearchKeywordPlugin";
-    private inputElement;
-    private handleKeyPressBound;
+    private inputElements;
     init(tracker: RecSysTracker): void;
     start(): void;
     stop(): void;
@@ -26,6 +25,10 @@ export declare class SearchKeywordPlugin extends BasePlugin {
      * Remove event listeners
      */
     private removeListeners;
+    /**
+     * Remove listener cho một config cụ thể
+     */
+    private removeListener;
     /**
      * Handle keypress event - log khi user nhấn Enter (không debounce)
      */

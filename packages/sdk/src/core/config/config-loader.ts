@@ -92,7 +92,7 @@ export class ConfigLoader {
           trackingRules: this.transformRules(rulesListData),
           returnMethods: this.transformReturnMethods(returnMethodsData),
           eventTypes: this.transformEventTypes(eventTypesData),
-          searchKeywordConfig: searchKeywordData && searchKeywordData.length > 0 ? searchKeywordData[0] : undefined,
+          searchKeywordConfigs: Array.isArray(searchKeywordData) ? searchKeywordData : [],
           userIdentityConfig: userIdentityData ? {
             id: userIdentityData.Id,
             source: userIdentityData.Source,
