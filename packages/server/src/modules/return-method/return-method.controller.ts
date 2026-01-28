@@ -33,7 +33,6 @@ export class ReturnMethodController {
             dto.CustomizingFields || [],
             dto.LayoutJson,
             dto.StyleJson,
-            dto.SearchKeywordConfigId,
         );
 
         if (!result) {

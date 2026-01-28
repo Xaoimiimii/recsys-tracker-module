@@ -38,7 +38,6 @@ export class ReturnMethodService {
         customizingFields: CustomizingFieldDto[],
         layoutJson: Record<string, any>,
         styleJson: Record<string, any>,
-        SearchKeywordConfigId?: number,
     ) {
         if (delayDuration < 0) {
             throw new BadRequestException(
@@ -85,15 +84,6 @@ export class ReturnMethodService {
 
         if (!domain) throw new NotFoundException('Domain not found');
 
-        const searchKeywordConfig = this.prisma.searchKeywordConfig.findUnique({
-            where: {
-                Id: SearchKeywordConfigId,
-            },
-        });
-
-        if (SearchKeywordConfigId && !searchKeywordConfig)
-            throw new NotFoundException('Search keyword config not found');
-
         const domainReturn = await this.prisma.returnMethod.create({
             data: {
                 DomainID: domain.Id,
@@ -103,8 +93,7 @@ export class ReturnMethodService {
                 Customizing: customizingFields as any,
                 Layout: layoutJson,
                 Style: styleJson,
-                Delay: delayDuration,
-                SearchKeywordConfigID: SearchKeywordConfigId,
+                Delay: delayDuration
             },
         });
 
@@ -119,7 +108,6 @@ export class ReturnMethodService {
         layoutJson?: Record<string, any>,
         styleJson?: Record<string, any>,
         delayDuration?: number,
-        SearchKeywordConfigId?: number,
     ) {
         const existingReturnMethod = await this.prisma.returnMethod.findUnique({
             where: {
@@ -179,9 +167,6 @@ export class ReturnMethodService {
                 Layout: layoutJson,
                 Style: styleJson,
                 Delay: delayDuration,
-                SearchKeywordConfig: SearchKeywordConfigId
-                    ? { connect: { Id: SearchKeywordConfigId } }
-                    : undefined,
             },
         });
     }

@@ -40,6 +40,13 @@ export type StringFilter<$PrismaModel = never> = {
   not?: Prisma.NestedStringFilter<$PrismaModel> | string
 }
 
+export type EnumTernantRoleFilter<$PrismaModel = never> = {
+  equals?: $Enums.TernantRole | Prisma.EnumTernantRoleFieldRefInput<$PrismaModel>
+  in?: $Enums.TernantRole[] | Prisma.ListEnumTernantRoleFieldRefInput<$PrismaModel>
+  notIn?: $Enums.TernantRole[] | Prisma.ListEnumTernantRoleFieldRefInput<$PrismaModel>
+  not?: Prisma.NestedEnumTernantRoleFilter<$PrismaModel> | $Enums.TernantRole
+}
+
 export type IntWithAggregatesFilter<$PrismaModel = never> = {
   equals?: number | Prisma.IntFieldRefInput<$PrismaModel>
   in?: number[] | Prisma.ListIntFieldRefInput<$PrismaModel>
@@ -72,6 +79,16 @@ export type StringWithAggregatesFilter<$PrismaModel = never> = {
   _count?: Prisma.NestedIntFilter<$PrismaModel>
   _min?: Prisma.NestedStringFilter<$PrismaModel>
   _max?: Prisma.NestedStringFilter<$PrismaModel>
+}
+
+export type EnumTernantRoleWithAggregatesFilter<$PrismaModel = never> = {
+  equals?: $Enums.TernantRole | Prisma.EnumTernantRoleFieldRefInput<$PrismaModel>
+  in?: $Enums.TernantRole[] | Prisma.ListEnumTernantRoleFieldRefInput<$PrismaModel>
+  notIn?: $Enums.TernantRole[] | Prisma.ListEnumTernantRoleFieldRefInput<$PrismaModel>
+  not?: Prisma.NestedEnumTernantRoleWithAggregatesFilter<$PrismaModel> | $Enums.TernantRole
+  _count?: Prisma.NestedIntFilter<$PrismaModel>
+  _min?: Prisma.NestedEnumTernantRoleFilter<$PrismaModel>
+  _max?: Prisma.NestedEnumTernantRoleFilter<$PrismaModel>
 }
 
 export type IntNullableFilter<$PrismaModel = never> = {
@@ -447,6 +464,13 @@ export type NestedStringFilter<$PrismaModel = never> = {
   not?: Prisma.NestedStringFilter<$PrismaModel> | string
 }
 
+export type NestedEnumTernantRoleFilter<$PrismaModel = never> = {
+  equals?: $Enums.TernantRole | Prisma.EnumTernantRoleFieldRefInput<$PrismaModel>
+  in?: $Enums.TernantRole[] | Prisma.ListEnumTernantRoleFieldRefInput<$PrismaModel>
+  notIn?: $Enums.TernantRole[] | Prisma.ListEnumTernantRoleFieldRefInput<$PrismaModel>
+  not?: Prisma.NestedEnumTernantRoleFilter<$PrismaModel> | $Enums.TernantRole
+}
+
 export type NestedIntWithAggregatesFilter<$PrismaModel = never> = {
   equals?: number | Prisma.IntFieldRefInput<$PrismaModel>
   in?: number[] | Prisma.ListIntFieldRefInput<$PrismaModel>
@@ -489,6 +513,16 @@ export type NestedStringWithAggregatesFilter<$PrismaModel = never> = {
   _count?: Prisma.NestedIntFilter<$PrismaModel>
   _min?: Prisma.NestedStringFilter<$PrismaModel>
   _max?: Prisma.NestedStringFilter<$PrismaModel>
+}
+
+export type NestedEnumTernantRoleWithAggregatesFilter<$PrismaModel = never> = {
+  equals?: $Enums.TernantRole | Prisma.EnumTernantRoleFieldRefInput<$PrismaModel>
+  in?: $Enums.TernantRole[] | Prisma.ListEnumTernantRoleFieldRefInput<$PrismaModel>
+  notIn?: $Enums.TernantRole[] | Prisma.ListEnumTernantRoleFieldRefInput<$PrismaModel>
+  not?: Prisma.NestedEnumTernantRoleWithAggregatesFilter<$PrismaModel> | $Enums.TernantRole
+  _count?: Prisma.NestedIntFilter<$PrismaModel>
+  _min?: Prisma.NestedEnumTernantRoleFilter<$PrismaModel>
+  _max?: Prisma.NestedEnumTernantRoleFilter<$PrismaModel>
 }
 
 export type NestedIntNullableFilter<$PrismaModel = never> = {

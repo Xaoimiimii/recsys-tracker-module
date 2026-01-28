@@ -1946,7 +1946,8 @@ export const TernantScalarFieldEnum = {
   Id: 'Id',
   Name: 'Name',
   Username: 'Username',
-  Password: 'Password'
+  Password: 'Password',
+  Role: 'Role'
 } as const
 
 export type TernantScalarFieldEnum = (typeof TernantScalarFieldEnum)[keyof typeof TernantScalarFieldEnum]
@@ -1967,7 +1968,6 @@ export type DomainScalarFieldEnum = (typeof DomainScalarFieldEnum)[keyof typeof 
 export const ReturnMethodScalarFieldEnum = {
   Id: 'Id',
   DomainID: 'DomainID',
-  SearchKeywordConfigID: 'SearchKeywordConfigID',
   ReturnType: 'ReturnType',
   Value: 'Value',
   ConfigurationName: 'ConfigurationName',
@@ -2249,6 +2249,20 @@ export type StringFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 
  * Reference to a field of type 'String[]'
  */
 export type ListStringFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'String[]'>
+    
+
+
+/**
+ * Reference to a field of type 'TernantRole'
+ */
+export type EnumTernantRoleFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'TernantRole'>
+    
+
+
+/**
+ * Reference to a field of type 'TernantRole[]'
+ */
+export type ListEnumTernantRoleFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'TernantRole[]'>
     
 
 

@@ -39,6 +39,7 @@ export type TernantMinAggregateOutputType = {
   Name: string | null
   Username: string | null
   Password: string | null
+  Role: $Enums.TernantRole | null
 }
 
 export type TernantMaxAggregateOutputType = {
@@ -46,6 +47,7 @@ export type TernantMaxAggregateOutputType = {
   Name: string | null
   Username: string | null
   Password: string | null
+  Role: $Enums.TernantRole | null
 }
 
 export type TernantCountAggregateOutputType = {
@@ -53,6 +55,7 @@ export type TernantCountAggregateOutputType = {
   Name: number
   Username: number
   Password: number
+  Role: number
   _all: number
 }
 
@@ -70,6 +73,7 @@ export type TernantMinAggregateInputType = {
   Name?: true
   Username?: true
   Password?: true
+  Role?: true
 }
 
 export type TernantMaxAggregateInputType = {
@@ -77,6 +81,7 @@ export type TernantMaxAggregateInputType = {
   Name?: true
   Username?: true
   Password?: true
+  Role?: true
 }
 
 export type TernantCountAggregateInputType = {
@@ -84,6 +89,7 @@ export type TernantCountAggregateInputType = {
   Name?: true
   Username?: true
   Password?: true
+  Role?: true
   _all?: true
 }
 
@@ -178,6 +184,7 @@ export type TernantGroupByOutputType = {
   Name: string
   Username: string
   Password: string
+  Role: $Enums.TernantRole
   _count: TernantCountAggregateOutputType | null
   _avg: TernantAvgAggregateOutputType | null
   _sum: TernantSumAggregateOutputType | null
@@ -208,6 +215,7 @@ export type TernantWhereInput = {
   Name?: Prisma.StringFilter<"Ternant"> | string
   Username?: Prisma.StringFilter<"Ternant"> | string
   Password?: Prisma.StringFilter<"Ternant"> | string
+  Role?: Prisma.EnumTernantRoleFilter<"Ternant"> | $Enums.TernantRole
   Domains?: Prisma.DomainListRelationFilter
 }
 
@@ -216,6 +224,7 @@ export type TernantOrderByWithRelationInput = {
   Name?: Prisma.SortOrder
   Username?: Prisma.SortOrder
   Password?: Prisma.SortOrder
+  Role?: Prisma.SortOrder
   Domains?: Prisma.DomainOrderByRelationAggregateInput
 }
 
@@ -227,6 +236,7 @@ export type TernantWhereUniqueInput = Prisma.AtLeast<{
   NOT?: Prisma.TernantWhereInput | Prisma.TernantWhereInput[]
   Name?: Prisma.StringFilter<"Ternant"> | string
   Password?: Prisma.StringFilter<"Ternant"> | string
+  Role?: Prisma.EnumTernantRoleFilter<"Ternant"> | $Enums.TernantRole
   Domains?: Prisma.DomainListRelationFilter
 }, "Id" | "Username">
 
@@ -235,6 +245,7 @@ export type TernantOrderByWithAggregationInput = {
   Name?: Prisma.SortOrder
   Username?: Prisma.SortOrder
   Password?: Prisma.SortOrder
+  Role?: Prisma.SortOrder
   _count?: Prisma.TernantCountOrderByAggregateInput
   _avg?: Prisma.TernantAvgOrderByAggregateInput
   _max?: Prisma.TernantMaxOrderByAggregateInput
@@ -250,12 +261,14 @@ export type TernantScalarWhereWithAggregatesInput = {
   Name?: Prisma.StringWithAggregatesFilter<"Ternant"> | string
   Username?: Prisma.StringWithAggregatesFilter<"Ternant"> | string
   Password?: Prisma.StringWithAggregatesFilter<"Ternant"> | string
+  Role?: Prisma.EnumTernantRoleWithAggregatesFilter<"Ternant"> | $Enums.TernantRole
 }
 
 export type TernantCreateInput = {
   Name: string
   Username: string
   Password: string
+  Role?: $Enums.TernantRole
   Domains?: Prisma.DomainCreateNestedManyWithoutTernantInput
 }
 
@@ -264,6 +277,7 @@ export type TernantUncheckedCreateInput = {
   Name: string
   Username: string
   Password: string
+  Role?: $Enums.TernantRole
   Domains?: Prisma.DomainUncheckedCreateNestedManyWithoutTernantInput
 }
 
@@ -271,6 +285,7 @@ export type TernantUpdateInput = {
   Name?: Prisma.StringFieldUpdateOperationsInput | string
   Username?: Prisma.StringFieldUpdateOperationsInput | string
   Password?: Prisma.StringFieldUpdateOperationsInput | string
+  Role?: Prisma.EnumTernantRoleFieldUpdateOperationsInput | $Enums.TernantRole
   Domains?: Prisma.DomainUpdateManyWithoutTernantNestedInput
 }
 
@@ -279,6 +294,7 @@ export type TernantUncheckedUpdateInput = {
   Name?: Prisma.StringFieldUpdateOperationsInput | string
   Username?: Prisma.StringFieldUpdateOperationsInput | string
   Password?: Prisma.StringFieldUpdateOperationsInput | string
+  Role?: Prisma.EnumTernantRoleFieldUpdateOperationsInput | $Enums.TernantRole
   Domains?: Prisma.DomainUncheckedUpdateManyWithoutTernantNestedInput
 }
 
@@ -287,12 +303,14 @@ export type TernantCreateManyInput = {
   Name: string
   Username: string
   Password: string
+  Role?: $Enums.TernantRole
 }
 
 export type TernantUpdateManyMutationInput = {
   Name?: Prisma.StringFieldUpdateOperationsInput | string
   Username?: Prisma.StringFieldUpdateOperationsInput | string
   Password?: Prisma.StringFieldUpdateOperationsInput | string
+  Role?: Prisma.EnumTernantRoleFieldUpdateOperationsInput | $Enums.TernantRole
 }
 
 export type TernantUncheckedUpdateManyInput = {
@@ -300,6 +318,7 @@ export type TernantUncheckedUpdateManyInput = {
   Name?: Prisma.StringFieldUpdateOperationsInput | string
   Username?: Prisma.StringFieldUpdateOperationsInput | string
   Password?: Prisma.StringFieldUpdateOperationsInput | string
+  Role?: Prisma.EnumTernantRoleFieldUpdateOperationsInput | $Enums.TernantRole
 }
 
 export type TernantCountOrderByAggregateInput = {
@@ -307,6 +326,7 @@ export type TernantCountOrderByAggregateInput = {
   Name?: Prisma.SortOrder
   Username?: Prisma.SortOrder
   Password?: Prisma.SortOrder
+  Role?: Prisma.SortOrder
 }
 
 export type TernantAvgOrderByAggregateInput = {
@@ -318,6 +338,7 @@ export type TernantMaxOrderByAggregateInput = {
   Name?: Prisma.SortOrder
   Username?: Prisma.SortOrder
   Password?: Prisma.SortOrder
+  Role?: Prisma.SortOrder
 }
 
 export type TernantMinOrderByAggregateInput = {
@@ -325,6 +346,7 @@ export type TernantMinOrderByAggregateInput = {
   Name?: Prisma.SortOrder
   Username?: Prisma.SortOrder
   Password?: Prisma.SortOrder
+  Role?: Prisma.SortOrder
 }
 
 export type TernantSumOrderByAggregateInput = {
@@ -338,6 +360,10 @@ export type TernantScalarRelationFilter = {
 
 export type StringFieldUpdateOperationsInput = {
   set?: string
+}
+
+export type EnumTernantRoleFieldUpdateOperationsInput = {
+  set?: $Enums.TernantRole
 }
 
 export type IntFieldUpdateOperationsInput = {
@@ -366,6 +392,7 @@ export type TernantCreateWithoutDomainsInput = {
   Name: string
   Username: string
   Password: string
+  Role?: $Enums.TernantRole
 }
 
 export type TernantUncheckedCreateWithoutDomainsInput = {
@@ -373,6 +400,7 @@ export type TernantUncheckedCreateWithoutDomainsInput = {
   Name: string
   Username: string
   Password: string
+  Role?: $Enums.TernantRole
 }
 
 export type TernantCreateOrConnectWithoutDomainsInput = {
@@ -395,6 +423,7 @@ export type TernantUpdateWithoutDomainsInput = {
   Name?: Prisma.StringFieldUpdateOperationsInput | string
   Username?: Prisma.StringFieldUpdateOperationsInput | string
   Password?: Prisma.StringFieldUpdateOperationsInput | string
+  Role?: Prisma.EnumTernantRoleFieldUpdateOperationsInput | $Enums.TernantRole
 }
 
 export type TernantUncheckedUpdateWithoutDomainsInput = {
@@ -402,6 +431,7 @@ export type TernantUncheckedUpdateWithoutDomainsInput = {
   Name?: Prisma.StringFieldUpdateOperationsInput | string
   Username?: Prisma.StringFieldUpdateOperationsInput | string
   Password?: Prisma.StringFieldUpdateOperationsInput | string
+  Role?: Prisma.EnumTernantRoleFieldUpdateOperationsInput | $Enums.TernantRole
 }
 
 
@@ -440,6 +470,7 @@ export type TernantSelect<ExtArgs extends runtime.Types.Extensions.InternalArgs 
   Name?: boolean
   Username?: boolean
   Password?: boolean
+  Role?: boolean
   Domains?: boolean | Prisma.Ternant$DomainsArgs<ExtArgs>
   _count?: boolean | Prisma.TernantCountOutputTypeDefaultArgs<ExtArgs>
 }, ExtArgs["result"]["ternant"]>
@@ -449,6 +480,7 @@ export type TernantSelectCreateManyAndReturn<ExtArgs extends runtime.Types.Exten
   Name?: boolean
   Username?: boolean
   Password?: boolean
+  Role?: boolean
 }, ExtArgs["result"]["ternant"]>
 
 export type TernantSelectUpdateManyAndReturn<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetSelect<{
@@ -456,6 +488,7 @@ export type TernantSelectUpdateManyAndReturn<ExtArgs extends runtime.Types.Exten
   Name?: boolean
   Username?: boolean
   Password?: boolean
+  Role?: boolean
 }, ExtArgs["result"]["ternant"]>
 
 export type TernantSelectScalar = {
@@ -463,9 +496,10 @@ export type TernantSelectScalar = {
   Name?: boolean
   Username?: boolean
   Password?: boolean
+  Role?: boolean
 }
 
-export type TernantOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"Id" | "Name" | "Username" | "Password", ExtArgs["result"]["ternant"]>
+export type TernantOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"Id" | "Name" | "Username" | "Password" | "Role", ExtArgs["result"]["ternant"]>
 export type TernantInclude<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   Domains?: boolean | Prisma.Ternant$DomainsArgs<ExtArgs>
   _count?: boolean | Prisma.TernantCountOutputTypeDefaultArgs<ExtArgs>
@@ -483,6 +517,7 @@ export type $TernantPayload<ExtArgs extends runtime.Types.Extensions.InternalArg
     Name: string
     Username: string
     Password: string
+    Role: $Enums.TernantRole
   }, ExtArgs["result"]["ternant"]>
   composites: {}
 }
@@ -911,6 +946,7 @@ export interface TernantFieldRefs {
   readonly Name: Prisma.FieldRef<"Ternant", 'String'>
   readonly Username: Prisma.FieldRef<"Ternant", 'String'>
   readonly Password: Prisma.FieldRef<"Ternant", 'String'>
+  readonly Role: Prisma.FieldRef<"Ternant", 'TernantRole'>
 }
     
 

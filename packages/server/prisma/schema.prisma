@@ -75,9 +75,6 @@ model ReturnMethod {
   DomainID Int
   Domain   Domain @relation(fields: [DomainID], references: [Id])
   
-  SearchKeywordConfigID Int?
-  SearchKeywordConfig   SearchKeywordConfig? @relation(fields: [SearchKeywordConfigID], references: [Id])
-
   ReturnType        ReturnType
   Value             String
   ConfigurationName String
@@ -239,6 +236,7 @@ enum PayloadMappingField {
 enum PayloadMappingSource {
   request_body
   request_url
+  page_url
 }
 
 model PayloadMapping {
@@ -327,8 +325,6 @@ model SearchKeywordConfig {
 
   ConfigurationName String
   InputSelector String
-
-  ReturnMethods ReturnMethod[]
 }
 
 model Category {

@@ -213,7 +213,6 @@ export type SearchKeywordConfigWhereInput = {
   ConfigurationName?: Prisma.StringFilter<"SearchKeywordConfig"> | string
   InputSelector?: Prisma.StringFilter<"SearchKeywordConfig"> | string
   Domain?: Prisma.XOR<Prisma.DomainScalarRelationFilter, Prisma.DomainWhereInput>
-  ReturnMethods?: Prisma.ReturnMethodListRelationFilter
 }
 
 export type SearchKeywordConfigOrderByWithRelationInput = {
@@ -222,7 +221,6 @@ export type SearchKeywordConfigOrderByWithRelationInput = {
   ConfigurationName?: Prisma.SortOrder
   InputSelector?: Prisma.SortOrder
   Domain?: Prisma.DomainOrderByWithRelationInput
-  ReturnMethods?: Prisma.ReturnMethodOrderByRelationAggregateInput
 }
 
 export type SearchKeywordConfigWhereUniqueInput = Prisma.AtLeast<{
@@ -234,7 +232,6 @@ export type SearchKeywordConfigWhereUniqueInput = Prisma.AtLeast<{
   ConfigurationName?: Prisma.StringFilter<"SearchKeywordConfig"> | string
   InputSelector?: Prisma.StringFilter<"SearchKeywordConfig"> | string
   Domain?: Prisma.XOR<Prisma.DomainScalarRelationFilter, Prisma.DomainWhereInput>
-  ReturnMethods?: Prisma.ReturnMethodListRelationFilter
 }, "Id">
 
 export type SearchKeywordConfigOrderByWithAggregationInput = {
@@ -263,7 +260,6 @@ export type SearchKeywordConfigCreateInput = {
   ConfigurationName: string
   InputSelector: string
   Domain: Prisma.DomainCreateNestedOneWithoutSearchKeywordConfigsInput
-  ReturnMethods?: Prisma.ReturnMethodCreateNestedManyWithoutSearchKeywordConfigInput
 }
 
 export type SearchKeywordConfigUncheckedCreateInput = {
@@ -271,14 +267,12 @@ export type SearchKeywordConfigUncheckedCreateInput = {
   DomainID: number
   ConfigurationName: string
   InputSelector: string
-  ReturnMethods?: Prisma.ReturnMethodUncheckedCreateNestedManyWithoutSearchKeywordConfigInput
 }
 
 export type SearchKeywordConfigUpdateInput = {
   ConfigurationName?: Prisma.StringFieldUpdateOperationsInput | string
   InputSelector?: Prisma.StringFieldUpdateOperationsInput | string
   Domain?: Prisma.DomainUpdateOneRequiredWithoutSearchKeywordConfigsNestedInput
-  ReturnMethods?: Prisma.ReturnMethodUpdateManyWithoutSearchKeywordConfigNestedInput
 }
 
 export type SearchKeywordConfigUncheckedUpdateInput = {
@@ -286,7 +280,6 @@ export type SearchKeywordConfigUncheckedUpdateInput = {
   DomainID?: Prisma.IntFieldUpdateOperationsInput | number
   ConfigurationName?: Prisma.StringFieldUpdateOperationsInput | string
   InputSelector?: Prisma.StringFieldUpdateOperationsInput | string
-  ReturnMethods?: Prisma.ReturnMethodUncheckedUpdateManyWithoutSearchKeywordConfigNestedInput
 }
 
 export type SearchKeywordConfigCreateManyInput = {
@@ -316,11 +309,6 @@ export type SearchKeywordConfigListRelationFilter = {
 
 export type SearchKeywordConfigOrderByRelationAggregateInput = {
   _count?: Prisma.SortOrder
-}
-
-export type SearchKeywordConfigNullableScalarRelationFilter = {
-  is?: Prisma.SearchKeywordConfigWhereInput | null
-  isNot?: Prisma.SearchKeywordConfigWhereInput | null
 }
 
 export type SearchKeywordConfigCountOrderByAggregateInput = {
@@ -396,33 +384,15 @@ export type SearchKeywordConfigUncheckedUpdateManyWithoutDomainNestedInput = {
   deleteMany?: Prisma.SearchKeywordConfigScalarWhereInput | Prisma.SearchKeywordConfigScalarWhereInput[]
 }
 
-export type SearchKeywordConfigCreateNestedOneWithoutReturnMethodsInput = {
-  create?: Prisma.XOR<Prisma.SearchKeywordConfigCreateWithoutReturnMethodsInput, Prisma.SearchKeywordConfigUncheckedCreateWithoutReturnMethodsInput>
-  connectOrCreate?: Prisma.SearchKeywordConfigCreateOrConnectWithoutReturnMethodsInput
-  connect?: Prisma.SearchKeywordConfigWhereUniqueInput
-}
-
-export type SearchKeywordConfigUpdateOneWithoutReturnMethodsNestedInput = {
-  create?: Prisma.XOR<Prisma.SearchKeywordConfigCreateWithoutReturnMethodsInput, Prisma.SearchKeywordConfigUncheckedCreateWithoutReturnMethodsInput>
-  connectOrCreate?: Prisma.SearchKeywordConfigCreateOrConnectWithoutReturnMethodsInput
-  upsert?: Prisma.SearchKeywordConfigUpsertWithoutReturnMethodsInput
-  disconnect?: Prisma.SearchKeywordConfigWhereInput | boolean
-  delete?: Prisma.SearchKeywordConfigWhereInput | boolean
-  connect?: Prisma.SearchKeywordConfigWhereUniqueInput
-  update?: Prisma.XOR<Prisma.XOR<Prisma.SearchKeywordConfigUpdateToOneWithWhereWithoutReturnMethodsInput, Prisma.SearchKeywordConfigUpdateWithoutReturnMethodsInput>, Prisma.SearchKeywordConfigUncheckedUpdateWithoutReturnMethodsInput>
-}
-
 export type SearchKeywordConfigCreateWithoutDomainInput = {
   ConfigurationName: string
   InputSelector: string
-  ReturnMethods?: Prisma.ReturnMethodCreateNestedManyWithoutSearchKeywordConfigInput
 }
 
 export type SearchKeywordConfigUncheckedCreateWithoutDomainInput = {
   Id?: number
   ConfigurationName: string
   InputSelector: string
-  ReturnMethods?: Prisma.ReturnMethodUncheckedCreateNestedManyWithoutSearchKeywordConfigInput
 }
 
 export type SearchKeywordConfigCreateOrConnectWithoutDomainInput = {
@@ -461,48 +431,6 @@ export type SearchKeywordConfigScalarWhereInput = {
   InputSelector?: Prisma.StringFilter<"SearchKeywordConfig"> | string
 }
 
-export type SearchKeywordConfigCreateWithoutReturnMethodsInput = {
-  ConfigurationName: string
-  InputSelector: string
-  Domain: Prisma.DomainCreateNestedOneWithoutSearchKeywordConfigsInput
-}
-
-export type SearchKeywordConfigUncheckedCreateWithoutReturnMethodsInput = {
-  Id?: number
-  DomainID: number
-  ConfigurationName: string
-  InputSelector: string
-}
-
-export type SearchKeywordConfigCreateOrConnectWithoutReturnMethodsInput = {
-  where: Prisma.SearchKeywordConfigWhereUniqueInput
-  create: Prisma.XOR<Prisma.SearchKeywordConfigCreateWithoutReturnMethodsInput, Prisma.SearchKeywordConfigUncheckedCreateWithoutReturnMethodsInput>
-}
-
-export type SearchKeywordConfigUpsertWithoutReturnMethodsInput = {
-  update: Prisma.XOR<Prisma.SearchKeywordConfigUpdateWithoutReturnMethodsInput, Prisma.SearchKeywordConfigUncheckedUpdateWithoutReturnMethodsInput>
-  create: Prisma.XOR<Prisma.SearchKeywordConfigCreateWithoutReturnMethodsInput, Prisma.SearchKeywordConfigUncheckedCreateWithoutReturnMethodsInput>
-  where?: Prisma.SearchKeywordConfigWhereInput
-}
-
-export type SearchKeywordConfigUpdateToOneWithWhereWithoutReturnMethodsInput = {
-  where?: Prisma.SearchKeywordConfigWhereInput
-  data: Prisma.XOR<Prisma.SearchKeywordConfigUpdateWithoutReturnMethodsInput, Prisma.SearchKeywordConfigUncheckedUpdateWithoutReturnMethodsInput>
-}
-
-export type SearchKeywordConfigUpdateWithoutReturnMethodsInput = {
-  ConfigurationName?: Prisma.StringFieldUpdateOperationsInput | string
-  InputSelector?: Prisma.StringFieldUpdateOperationsInput | string
-  Domain?: Prisma.DomainUpdateOneRequiredWithoutSearchKeywordConfigsNestedInput
-}
-
-export type SearchKeywordConfigUncheckedUpdateWithoutReturnMethodsInput = {
-  Id?: Prisma.IntFieldUpdateOperationsInput | number
-  DomainID?: Prisma.IntFieldUpdateOperationsInput | number
-  ConfigurationName?: Prisma.StringFieldUpdateOperationsInput | string
-  InputSelector?: Prisma.StringFieldUpdateOperationsInput | string
-}
-
 export type SearchKeywordConfigCreateManyDomainInput = {
   Id?: number
   ConfigurationName: string
@@ -512,14 +440,12 @@ export type SearchKeywordConfigCreateManyDomainInput = {
 export type SearchKeywordConfigUpdateWithoutDomainInput = {
   ConfigurationName?: Prisma.StringFieldUpdateOperationsInput | string
   InputSelector?: Prisma.StringFieldUpdateOperationsInput | string
-  ReturnMethods?: Prisma.ReturnMethodUpdateManyWithoutSearchKeywordConfigNestedInput
 }
 
 export type SearchKeywordConfigUncheckedUpdateWithoutDomainInput = {
   Id?: Prisma.IntFieldUpdateOperationsInput | number
   ConfigurationName?: Prisma.StringFieldUpdateOperationsInput | string
   InputSelector?: Prisma.StringFieldUpdateOperationsInput | string
-  ReturnMethods?: Prisma.ReturnMethodUncheckedUpdateManyWithoutSearchKeywordConfigNestedInput
 }
 
 export type SearchKeywordConfigUncheckedUpdateManyWithoutDomainInput = {
@@ -529,35 +455,6 @@ export type SearchKeywordConfigUncheckedUpdateManyWithoutDomainInput = {
 }
 
 
-/**
- * Count Type SearchKeywordConfigCountOutputType
- */
-
-export type SearchKeywordConfigCountOutputType = {
-  ReturnMethods: number
-}
-
-export type SearchKeywordConfigCountOutputTypeSelect<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
-  ReturnMethods?: boolean | SearchKeywordConfigCountOutputTypeCountReturnMethodsArgs
-}
-
-/**
- * SearchKeywordConfigCountOutputType without action
- */
-export type SearchKeywordConfigCountOutputTypeDefaultArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
-  /**
-   * Select specific fields to fetch from the SearchKeywordConfigCountOutputType
-   */
-  select?: Prisma.SearchKeywordConfigCountOutputTypeSelect<ExtArgs> | null
-}
-
-/**
- * SearchKeywordConfigCountOutputType without action
- */
-export type SearchKeywordConfigCountOutputTypeCountReturnMethodsArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
-  where?: Prisma.ReturnMethodWhereInput
-}
-
 
 export type SearchKeywordConfigSelect<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetSelect<{
   Id?: boolean
@@ -565,8 +462,6 @@ export type SearchKeywordConfigSelect<ExtArgs extends runtime.Types.Extensions.I
   ConfigurationName?: boolean
   InputSelector?: boolean
   Domain?: boolean | Prisma.DomainDefaultArgs<ExtArgs>
-  ReturnMethods?: boolean | Prisma.SearchKeywordConfig$ReturnMethodsArgs<ExtArgs>
-  _count?: boolean | Prisma.SearchKeywordConfigCountOutputTypeDefaultArgs<ExtArgs>
 }, ExtArgs["result"]["searchKeywordConfig"]>
 
 export type SearchKeywordConfigSelectCreateManyAndReturn<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetSelect<{
@@ -595,8 +490,6 @@ export type SearchKeywordConfigSelectScalar = {
 export type SearchKeywordConfigOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"Id" | "DomainID" | "ConfigurationName" | "InputSelector", ExtArgs["result"]["searchKeywordConfig"]>
 export type SearchKeywordConfigInclude<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   Domain?: boolean | Prisma.DomainDefaultArgs<ExtArgs>
-  ReturnMethods?: boolean | Prisma.SearchKeywordConfig$ReturnMethodsArgs<ExtArgs>
-  _count?: boolean | Prisma.SearchKeywordConfigCountOutputTypeDefaultArgs<ExtArgs>
 }
 export type SearchKeywordConfigIncludeCreateManyAndReturn<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   Domain?: boolean | Prisma.DomainDefaultArgs<ExtArgs>
@@ -609,7 +502,6 @@ export type $SearchKeywordConfigPayload<ExtArgs extends runtime.Types.Extensions
   name: "SearchKeywordConfig"
   objects: {
     Domain: Prisma.$DomainPayload<ExtArgs>
-    ReturnMethods: Prisma.$ReturnMethodPayload<ExtArgs>[]
   }
   scalars: runtime.Types.Extensions.GetPayloadResult<{
     Id: number
@@ -1011,7 +903,6 @@ readonly fields: SearchKeywordConfigFieldRefs;
 export interface Prisma__SearchKeywordConfigClient<T, Null = never, ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs, GlobalOmitOptions = {}> extends Prisma.PrismaPromise<T> {
   readonly [Symbol.toStringTag]: "PrismaPromise"
   Domain<T extends Prisma.DomainDefaultArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.DomainDefaultArgs<ExtArgs>>): Prisma.Prisma__DomainClient<runtime.Types.Result.GetResult<Prisma.$DomainPayload<ExtArgs>, T, "findUniqueOrThrow", GlobalOmitOptions> | Null, Null, ExtArgs, GlobalOmitOptions>
-  ReturnMethods<T extends Prisma.SearchKeywordConfig$ReturnMethodsArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.SearchKeywordConfig$ReturnMethodsArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$ReturnMethodPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
   /**
    * Attaches callbacks for the resolution and/or rejection of the Promise.
    * @param onfulfilled The callback to execute when the Promise is resolved.
@@ -1438,30 +1329,6 @@ export type SearchKeywordConfigDeleteManyArgs<ExtArgs extends runtime.Types.Exte
    * Limit how many SearchKeywordConfigs to delete.
    */
   limit?: number
-}
-
-/**
- * SearchKeywordConfig.ReturnMethods
- */
-export type SearchKeywordConfig$ReturnMethodsArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
-  /**
-   * Select specific fields to fetch from the ReturnMethod
-   */
-  select?: Prisma.ReturnMethodSelect<ExtArgs> | null
-  /**
-   * Omit specific fields from the ReturnMethod
-   */
-  omit?: Prisma.ReturnMethodOmit<ExtArgs> | null
-  /**
-   * Choose, which related nodes to fetch as well
-   */
-  include?: Prisma.ReturnMethodInclude<ExtArgs> | null
-  where?: Prisma.ReturnMethodWhereInput
-  orderBy?: Prisma.ReturnMethodOrderByWithRelationInput | Prisma.ReturnMethodOrderByWithRelationInput[]
-  cursor?: Prisma.ReturnMethodWhereUniqueInput
-  take?: number
-  skip?: number
-  distinct?: Prisma.ReturnMethodScalarFieldEnum | Prisma.ReturnMethodScalarFieldEnum[]
 }
 
 /**

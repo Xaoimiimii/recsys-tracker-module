@@ -9,6 +9,14 @@
 * 🟢 You can import this file directly.
 */
 
+export const TernantRole = {
+  CUSTOMER: 'CUSTOMER',
+  ADMIN: 'ADMIN'
+} as const
+
+export type TernantRole = (typeof TernantRole)[keyof typeof TernantRole]
+
+
 export const ReturnType = {
   POPUP: 'POPUP',
   INLINE_INJECTION: 'INLINE_INJECTION'
@@ -40,7 +48,8 @@ export type PayloadMappingField = (typeof PayloadMappingField)[keyof typeof Payl
 
 export const PayloadMappingSource = {
   request_body: 'request_body',
-  request_url: 'request_url'
+  request_url: 'request_url',
+  page_url: 'page_url'
 } as const
 
 export type PayloadMappingSource = (typeof PayloadMappingSource)[keyof typeof PayloadMappingSource]
