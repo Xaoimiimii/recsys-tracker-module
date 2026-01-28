@@ -23,6 +23,7 @@ import {
   extractFromCookie,
   extractFromLocalStorage,
   extractFromSessionStorage,
+  extractFromUrl,
   getElementValue
 } from '../utils/data-extractors';
 
@@ -175,16 +176,23 @@ export class PayloadBuilder {
         return this.extractFromCookie(mapping);
       
       case 'localstorage':
+      case 'local_storage':
         return this.extractFromLocalStorage(mapping);
       
       case 'sessionstorage':
+      case 'session_storage':
         return this.extractFromSessionStorage(mapping);
+
+      case 'pageurl':
+      case 'page_url':
+        return this.extractFromPageUrl(mapping);
       
       case 'static':
         return mapping.config?.Value;
       
       case 'login_detector':
         return this.extractFromLoginDetector(mapping);
+      
       
       default:
         return null;
@@ -270,6 +278,33 @@ export class PayloadBuilder {
       return user || 'guest';
     } catch {
       return 'guest';
+    }
+  }
+
+  /**
+   * Extract từ page URL (current page)
+   * Supports extracting dynamic parameters from URL patterns like /song/:id
+   */
+  private extractFromPageUrl(mapping: PayloadMapping): any {
+    if (typeof window === 'undefined' || !window.location) {
+      return null;
+    }
+
+    const { PageUrlPattern, PageUrlExtractType, Value } = mapping.config || {};
+    
+    if (!PageUrlPattern || !Value) {
+      return null;
+    }
+
+    try {
+      const currentUrl = window.location.href;
+      const extractType = (PageUrlExtractType || 'pathname').toLowerCase();
+
+      // Use existing extractFromUrl utility with page_url specific config
+      return extractFromUrl(currentUrl, Value, extractType, PageUrlPattern);
+    } catch (error) {
+      // console.error('[PayloadBuilder] Error extracting from page URL:', error);
+      return null;
     }
   }
 

@@ -15,6 +15,7 @@ export enum PayloadSource {
     SESSION_STORAGE = 'SessionStorage',
     URL = 'Url',
     REQUEST_URL = 'RequestUrl',
+    PAGE_URL = 'PageUrl',
 }
 
 export enum PayloadRequestMethod {

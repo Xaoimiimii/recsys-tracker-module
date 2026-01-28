@@ -915,7 +915,6 @@
                 // Check nếu event giống hệt đến trong vòng timeWindow (theo thời gian thực)
                 const timeDiff = now - lastSeen.lastSeenTime;
                 if (timeDiff < this.timeWindow) {
-                    // console.log('[EventDeduplicator] ❌ DROPPED duplicate event');
                     // Update time để reset window
                     this.fingerprints.set(fingerprint, { lastSeenTime: now });
                     return true; // Is duplicate - event giống hệt đến quá nhanh
@@ -933,7 +932,7 @@
         cleanup() {
             const now = Date.now();
             const toDelete = [];
-            console.log('[EventDeduplicator] Cleanup starting, Map size:', this.fingerprints.size);
+            // console.log('[EventDeduplicator] Cleanup starting, Map size:', this.fingerprints.size);
             this.fingerprints.forEach((data, fingerprint) => {
                 const age = now - data.lastSeenTime;
                 // Chỉ xóa fingerprints cũ hơn fingerprintRetentionTime (15s)
@@ -4669,9 +4668,14 @@
                 case 'cookie':
                     return this.extractFromCookie(mapping);
                 case 'localstorage':
+                case 'local_storage':
                     return this.extractFromLocalStorage(mapping);
                 case 'sessionstorage':
+                case 'session_storage':
                     return this.extractFromSessionStorage(mapping);
+                case 'pageurl':
+                case 'page_url':
+                    return this.extractFromPageUrl(mapping);
                 case 'static':
                     return (_a = mapping.config) === null || _a === void 0 ? void 0 : _a.Value;
                 case 'login_detector':
@@ -4756,6 +4760,29 @@
             }
             catch {
                 return 'guest';
+            }
+        }
+        /**
+         * Extract từ page URL (current page)
+         * Supports extracting dynamic parameters from URL patterns like /song/:id
+         */
+        extractFromPageUrl(mapping) {
+            if (typeof window === 'undefined' || !window.location) {
+                return null;
+            }
+            const { PageUrlPattern, PageUrlExtractType, Value } = mapping.config || {};
+            if (!PageUrlPattern || !Value) {
+                return null;
+            }
+            try {
+                const currentUrl = window.location.href;
+                const extractType = (PageUrlExtractType || 'pathname').toLowerCase();
+                // Use existing extractFromUrl utility with page_url specific config
+                return extractFromUrl(currentUrl, Value, extractType, PageUrlPattern);
+            }
+            catch (error) {
+                // console.error('[PayloadBuilder] Error extracting from page URL:', error);
+                return null;
             }
         }
         /**

@@ -32,7 +32,6 @@ export class EventDeduplicator {
             // Check nếu event giống hệt đến trong vòng timeWindow (theo thời gian thực)
             const timeDiff = now - lastSeen.lastSeenTime;
             if (timeDiff < this.timeWindow) {
-                // console.log('[EventDeduplicator] ❌ DROPPED duplicate event');
                 // Update time để reset window
                 this.fingerprints.set(fingerprint, { lastSeenTime: now });
                 return true; // Is duplicate - event giống hệt đến quá nhanh
@@ -50,7 +49,7 @@ export class EventDeduplicator {
     cleanup() {
         const now = Date.now();
         const toDelete = [];
-        console.log('[EventDeduplicator] Cleanup starting, Map size:', this.fingerprints.size);
+        // console.log('[EventDeduplicator] Cleanup starting, Map size:', this.fingerprints.size);
         this.fingerprints.forEach((data, fingerprint) => {
             const age = now - data.lastSeenTime;
             // Chỉ xóa fingerprints cũ hơn fingerprintRetentionTime (15s)

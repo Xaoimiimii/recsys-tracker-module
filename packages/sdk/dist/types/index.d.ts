@@ -35,6 +35,8 @@ export interface PayloadMappingConfig {
     Value?: string;
     ExtractType?: 'pathname' | 'query';
     SelectorPattern?: string;
+    PageUrlPattern?: string;
+    PageUrlExtractType?: 'pathname' | 'query' | 'hash';
 }
 export interface UserIdentityConfig {
     id?: number;

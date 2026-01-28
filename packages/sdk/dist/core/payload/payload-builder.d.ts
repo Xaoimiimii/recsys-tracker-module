@@ -69,6 +69,11 @@ export declare class PayloadBuilder {
      */
     private extractFromLoginDetector;
     /**
+     * Extract từ page URL (current page)
+     * Supports extracting dynamic parameters from URL patterns like /song/:id
+     */
+    private extractFromPageUrl;
+    /**
      * Check if value is valid (not null, undefined, empty string)
      */
     private isValidValue;
