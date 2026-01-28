@@ -4,8 +4,8 @@ import { RecommendationFetcher } from '../recommendation';
 const ANON_USER_ID_KEY = 'recsys_anon_id';
 export class DisplayManager {
     constructor(domainKey, apiBaseUrl = 'https://recsys-tracker-module.onrender.com') {
-        this.popupDisplay = null;
-        this.inlineDisplay = null;
+        this.popupDisplays = new Map();
+        this.inlineDisplays = new Map();
         this.cachedRecommendations = null;
         this.fetchPromise = null;
         this.domainKey = domainKey;
@@ -63,43 +63,47 @@ export class DisplayManager {
             this.initializeInline(ConfigurationName, inlineConfig);
         }
     }
-    initializePopup(slotName, config) {
+    initializePopup(key, config) {
+        var _a;
         try {
-            if (this.popupDisplay) {
-                this.popupDisplay.stop();
-                this.popupDisplay = null;
+            if (this.popupDisplays.has(key)) {
+                (_a = this.popupDisplays.get(key)) === null || _a === void 0 ? void 0 : _a.stop();
+                this.popupDisplays.delete(key);
             }
-            this.popupDisplay = new PopupDisplay(this.domainKey, slotName, this.apiBaseUrl, config, () => this.getRecommendations());
-            this.popupDisplay.start();
+            const popupDisplay = new PopupDisplay(this.domainKey, key, this.apiBaseUrl, config, (limit) => this.getRecommendations(limit !== null && limit !== void 0 ? limit : 50));
+            this.popupDisplays.set(key, popupDisplay);
+            popupDisplay.start();
         }
         catch (error) {
             // console.error('[DisplayManager] Error initializing popup:', error);
         }
     }
     // Khởi tạo Inline Display với Config đầy đủ
-    initializeInline(slotName, config) {
+    initializeInline(key, config) {
+        var _a;
         try {
-            if (this.inlineDisplay) {
-                this.inlineDisplay.stop();
-                this.inlineDisplay = null;
+            if (this.inlineDisplays.has(key)) {
+                (_a = this.inlineDisplays.get(key)) === null || _a === void 0 ? void 0 : _a.stop();
+                this.inlineDisplays.delete(key);
             }
             if (!config.selector)
                 return;
-            this.inlineDisplay = new InlineDisplay(this.domainKey, slotName, config.selector, this.apiBaseUrl, config, // Truyền object config
-            () => this.getRecommendations());
-            this.inlineDisplay.start();
+            const inlineDisplay = new InlineDisplay(this.domainKey, key, config.selector, this.apiBaseUrl, config, // Truyền object config
+            (limit) => this.getRecommendations(limit !== null && limit !== void 0 ? limit : 50));
+            this.inlineDisplays.set(key, inlineDisplay);
+            inlineDisplay.start();
         }
         catch (error) {
             // console.error('[DisplayManager] Error initializing inline:', error);
         }
     }
     // --- LOGIC FETCH RECOMMENDATION (GIỮ NGUYÊN) ---
-    async fetchRecommendationsOnce() {
+    async fetchRecommendationsOnce(limit = 50) {
         if (this.cachedRecommendations)
             return this.cachedRecommendations;
         if (this.fetchPromise)
             return this.fetchPromise;
-        this.fetchPromise = this.fetchRecommendationsInternal();
+        this.fetchPromise = this.fetchRecommendationsInternal(limit);
         try {
             this.cachedRecommendations = await this.fetchPromise;
             return this.cachedRecommendations;
@@ -108,13 +112,13 @@ export class DisplayManager {
             this.fetchPromise = null;
         }
     }
-    async fetchRecommendationsInternal() {
+    async fetchRecommendationsInternal(limit) {
         try {
             const anonymousId = this.getAnonymousId();
             if (!anonymousId)
                 return [];
             return await this.recommendationFetcher.fetchRecommendations(anonymousId, 'AnonymousId', {
-                numberItems: 6,
+                numberItems: limit,
                 autoRefresh: true,
                 onRefresh: (newItems) => {
                     // Update cached recommendations
@@ -134,18 +138,17 @@ export class DisplayManager {
             return null;
         }
     }
-    async getRecommendations() {
+    async getRecommendations(limit = 50) {
+        if (limit) {
+            return this.fetchRecommendationsInternal(limit);
+        }
         return this.fetchRecommendationsOnce();
     }
     destroy() {
-        if (this.popupDisplay) {
-            this.popupDisplay.stop();
-            this.popupDisplay = null;
-        }
-        if (this.inlineDisplay) {
-            this.inlineDisplay.stop();
-            this.inlineDisplay = null;
-        }
+        this.popupDisplays.forEach(popup => popup.stop());
+        this.popupDisplays.clear();
+        this.inlineDisplays.forEach(inline => inline.stop());
+        this.inlineDisplays.clear();
     }
 }
 //# sourceMappingURL=display-manager.js.map

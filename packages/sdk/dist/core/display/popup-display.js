@@ -5,11 +5,13 @@ export class PopupDisplay {
         this.autoCloseTimeout = null;
         this.autoSlideTimeout = null;
         this.shadowHost = null;
+        this.hostId = ''; // Unique host ID cho mỗi PopupDisplay
         this.spaCheckInterval = null;
         this.isPendingShow = false;
         this.isManuallyClosed = false;
         this.DEFAULT_DELAY = 5000;
         this.recommendationGetter = recommendationGetter;
+        this.hostId = `recsys-popup-host-${_slotName}-${Date.now()}`; // Unique ID based on slotName
         this.config = {
             delay: (_a = config.delay) !== null && _a !== void 0 ? _a : this.DEFAULT_DELAY,
             autoCloseDelay: config.autoCloseDelay,
@@ -121,8 +123,10 @@ export class PopupDisplay {
         }, delay);
     }
     async fetchRecommendations() {
+        var _a;
         try {
-            return await this.recommendationGetter();
+            const numberItems = ((_a = this.config.layoutJson) === null || _a === void 0 ? void 0 : _a.maxItems) || 50;
+            return await this.recommendationGetter(numberItems);
         }
         catch {
             return [];
@@ -448,7 +452,7 @@ export class PopupDisplay {
         var _a;
         this.removePopup();
         const host = document.createElement('div');
-        host.id = 'recsys-popup-host';
+        host.id = this.hostId;
         document.body.appendChild(host);
         const shadow = host.attachShadow({ mode: 'open' });
         const style = document.createElement('style');

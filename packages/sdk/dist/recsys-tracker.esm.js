@@ -1038,11 +1038,13 @@ class PopupDisplay {
         this.autoCloseTimeout = null;
         this.autoSlideTimeout = null;
         this.shadowHost = null;
+        this.hostId = ''; // Unique host ID cho mỗi PopupDisplay
         this.spaCheckInterval = null;
         this.isPendingShow = false;
         this.isManuallyClosed = false;
         this.DEFAULT_DELAY = 5000;
         this.recommendationGetter = recommendationGetter;
+        this.hostId = `recsys-popup-host-${_slotName}-${Date.now()}`; // Unique ID based on slotName
         this.config = {
             delay: (_a = config.delay) !== null && _a !== void 0 ? _a : this.DEFAULT_DELAY,
             autoCloseDelay: config.autoCloseDelay,
@@ -1154,8 +1156,10 @@ class PopupDisplay {
         }, delay);
     }
     async fetchRecommendations() {
+        var _a;
         try {
-            return await this.recommendationGetter();
+            const numberItems = ((_a = this.config.layoutJson) === null || _a === void 0 ? void 0 : _a.maxItems) || 50;
+            return await this.recommendationGetter(numberItems);
         }
         catch {
             return [];
@@ -1481,7 +1485,7 @@ class PopupDisplay {
         var _a;
         this.removePopup();
         const host = document.createElement('div');
-        host.id = 'recsys-popup-host';
+        host.id = this.hostId;
         document.body.appendChild(host);
         const shadow = host.attachShadow({ mode: 'open' });
         const style = document.createElement('style');
@@ -1680,7 +1684,8 @@ class InlineDisplay {
     }
     async fetchRecommendations() {
         try {
-            return await this.recommendationGetter();
+            const numberItems = this.config.layoutJson.maxItems || 50;
+            return await this.recommendationGetter(numberItems);
         }
         catch {
             return [];
@@ -2092,7 +2097,9 @@ class InlineDisplay {
     handleItemClick(id) {
         if (!id)
             return;
-        window.location.href = `/song/${id}`;
+        let urlPattern = this.config.layoutJson.itemUrlPattern || '/song/{:id}';
+        const finalUrl = urlPattern.replace('{:id}', id.toString());
+        window.location.href = finalUrl;
     }
 }
 
@@ -2203,7 +2210,7 @@ class PlaceholderImage {
 }
 
 class RecommendationFetcher {
-    constructor(domainKey, apiBaseUrl = 'http://localhost:3000') {
+    constructor(domainKey, apiBaseUrl = 'https://recsys-tracker-module.onrender.com') {
         this.CACHE_TTL = 5 * 60 * 1000; // 5 minutes cache
         this.AUTO_REFRESH_INTERVAL = 60 * 1000; // 1 minute auto-refresh
         this.domainKey = domainKey;
@@ -2224,11 +2231,12 @@ class RecommendationFetcher {
             if (cached) {
                 return cached;
             }
+            const limit = _options.numberItems || 50;
             // Prepare request payload
             const requestBody = {
                 AnonymousId: this.getOrCreateAnonymousId(),
                 DomainKey: this.domainKey,
-                NumberItems: 50,
+                NumberItems: limit,
             };
             // Check for cached user info in localStorage
             const cachedUserId = this.getCachedUserId();
@@ -2501,8 +2509,8 @@ class RecommendationFetcher {
 const ANON_USER_ID_KEY = 'recsys_anon_id';
 class DisplayManager {
     constructor(domainKey, apiBaseUrl = 'https://recsys-tracker-module.onrender.com') {
-        this.popupDisplay = null;
-        this.inlineDisplay = null;
+        this.popupDisplays = new Map();
+        this.inlineDisplays = new Map();
         this.cachedRecommendations = null;
         this.fetchPromise = null;
         this.domainKey = domainKey;
@@ -2560,43 +2568,47 @@ class DisplayManager {
             this.initializeInline(ConfigurationName, inlineConfig);
         }
     }
-    initializePopup(slotName, config) {
+    initializePopup(key, config) {
+        var _a;
         try {
-            if (this.popupDisplay) {
-                this.popupDisplay.stop();
-                this.popupDisplay = null;
+            if (this.popupDisplays.has(key)) {
+                (_a = this.popupDisplays.get(key)) === null || _a === void 0 ? void 0 : _a.stop();
+                this.popupDisplays.delete(key);
             }
-            this.popupDisplay = new PopupDisplay(this.domainKey, slotName, this.apiBaseUrl, config, () => this.getRecommendations());
-            this.popupDisplay.start();
+            const popupDisplay = new PopupDisplay(this.domainKey, key, this.apiBaseUrl, config, (limit) => this.getRecommendations(limit !== null && limit !== void 0 ? limit : 50));
+            this.popupDisplays.set(key, popupDisplay);
+            popupDisplay.start();
         }
         catch (error) {
             // console.error('[DisplayManager] Error initializing popup:', error);
         }
     }
     // Khởi tạo Inline Display với Config đầy đủ
-    initializeInline(slotName, config) {
+    initializeInline(key, config) {
+        var _a;
         try {
-            if (this.inlineDisplay) {
-                this.inlineDisplay.stop();
-                this.inlineDisplay = null;
+            if (this.inlineDisplays.has(key)) {
+                (_a = this.inlineDisplays.get(key)) === null || _a === void 0 ? void 0 : _a.stop();
+                this.inlineDisplays.delete(key);
             }
             if (!config.selector)
                 return;
-            this.inlineDisplay = new InlineDisplay(this.domainKey, slotName, config.selector, this.apiBaseUrl, config, // Truyền object config
-            () => this.getRecommendations());
-            this.inlineDisplay.start();
+            const inlineDisplay = new InlineDisplay(this.domainKey, key, config.selector, this.apiBaseUrl, config, // Truyền object config
+            (limit) => this.getRecommendations(limit !== null && limit !== void 0 ? limit : 50));
+            this.inlineDisplays.set(key, inlineDisplay);
+            inlineDisplay.start();
         }
         catch (error) {
             // console.error('[DisplayManager] Error initializing inline:', error);
         }
     }
     // --- LOGIC FETCH RECOMMENDATION (GIỮ NGUYÊN) ---
-    async fetchRecommendationsOnce() {
+    async fetchRecommendationsOnce(limit = 50) {
         if (this.cachedRecommendations)
             return this.cachedRecommendations;
         if (this.fetchPromise)
             return this.fetchPromise;
-        this.fetchPromise = this.fetchRecommendationsInternal();
+        this.fetchPromise = this.fetchRecommendationsInternal(limit);
         try {
             this.cachedRecommendations = await this.fetchPromise;
             return this.cachedRecommendations;
@@ -2605,13 +2617,13 @@ class DisplayManager {
             this.fetchPromise = null;
         }
     }
-    async fetchRecommendationsInternal() {
+    async fetchRecommendationsInternal(limit) {
         try {
             const anonymousId = this.getAnonymousId();
             if (!anonymousId)
                 return [];
             return await this.recommendationFetcher.fetchRecommendations(anonymousId, 'AnonymousId', {
-                numberItems: 6,
+                numberItems: limit,
                 autoRefresh: true,
                 onRefresh: (newItems) => {
                     // Update cached recommendations
@@ -2631,18 +2643,17 @@ class DisplayManager {
             return null;
         }
     }
-    async getRecommendations() {
+    async getRecommendations(limit = 50) {
+        if (limit) {
+            return this.fetchRecommendationsInternal(limit);
+        }
         return this.fetchRecommendationsOnce();
     }
     destroy() {
-        if (this.popupDisplay) {
-            this.popupDisplay.stop();
-            this.popupDisplay = null;
-        }
-        if (this.inlineDisplay) {
-            this.inlineDisplay.stop();
-            this.inlineDisplay = null;
-        }
+        this.popupDisplays.forEach(popup => popup.stop());
+        this.popupDisplays.clear();
+        this.inlineDisplays.forEach(inline => inline.stop());
+        this.inlineDisplays.clear();
     }
 }
 

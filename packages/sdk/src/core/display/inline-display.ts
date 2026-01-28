@@ -4,7 +4,7 @@ import { RecommendationItem } from '../recommendation';
 export class InlineDisplay {
   private selector: string;
   private config: InlineConfig;
-  private recommendationGetter: () => Promise<RecommendationItem[]>;
+  private recommendationGetter: (limit: number) => Promise<RecommendationItem[]>;
   private observer: MutationObserver | null = null;
   private debounceTimer: NodeJS.Timeout | null = null;
   private autoSlideTimeout: NodeJS.Timeout | null = null;
@@ -17,7 +17,7 @@ export class InlineDisplay {
     selector: string,
     _apiBaseUrl: string,
     config: InlineConfig = {} as InlineConfig,
-    recommendationGetter: () => Promise<RecommendationItem[]>
+    recommendationGetter: (limit: number) => Promise<RecommendationItem[]>
   ) {
     this.selector = selector;
     this.recommendationGetter = recommendationGetter;
@@ -113,7 +113,8 @@ export class InlineDisplay {
 
   private async fetchRecommendations(): Promise<RecommendationItem[]> {
     try {
-      return await this.recommendationGetter();
+      const numberItems = this.config.layoutJson.maxItems || 50;
+      return await this.recommendationGetter(numberItems);
     } catch { return []; }
   }
 
@@ -568,6 +569,8 @@ export class InlineDisplay {
 
   private handleItemClick(id: string | number): void {
       if (!id) return;
-      window.location.href = `/song/${id}`; 
+      let urlPattern = this.config.layoutJson.itemUrlPattern || '/song/{:id}';
+      const finalUrl = urlPattern.replace('{:id}', id.toString());
+      window.location.href = finalUrl;
   }
 }

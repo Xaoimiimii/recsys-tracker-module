@@ -85,7 +85,8 @@ export class InlineDisplay {
     }
     async fetchRecommendations() {
         try {
-            return await this.recommendationGetter();
+            const numberItems = this.config.layoutJson.maxItems || 50;
+            return await this.recommendationGetter(numberItems);
         }
         catch {
             return [];
@@ -516,7 +517,9 @@ export class InlineDisplay {
     handleItemClick(id) {
         if (!id)
             return;
-        window.location.href = `/song/${id}`;
+        let urlPattern = this.config.layoutJson.itemUrlPattern || '/song/{:id}';
+        const finalUrl = urlPattern.replace('{:id}', id.toString());
+        window.location.href = finalUrl;
     }
 }
 //# sourceMappingURL=inline-display.js.map

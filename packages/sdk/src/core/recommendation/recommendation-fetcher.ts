@@ -41,12 +41,14 @@ export class RecommendationFetcher {
       if (cached) {
         return cached;
       }
+      
+      const limit = _options.numberItems || 50;
 
       // Prepare request payload
       const requestBody: RecommendationRequest = {
         AnonymousId: this.getOrCreateAnonymousId(),
         DomainKey: this.domainKey,
-        NumberItems: 50,
+        NumberItems: limit,
       };
 
       // Check for cached user info in localStorage

@@ -1,6 +1,6 @@
 import { PlaceholderImage } from './placeholder-image';
 export class RecommendationFetcher {
-    constructor(domainKey, apiBaseUrl = 'http://localhost:3000') {
+    constructor(domainKey, apiBaseUrl = 'https://recsys-tracker-module.onrender.com') {
         this.CACHE_TTL = 5 * 60 * 1000; // 5 minutes cache
         this.AUTO_REFRESH_INTERVAL = 60 * 1000; // 1 minute auto-refresh
         this.domainKey = domainKey;
@@ -21,11 +21,12 @@ export class RecommendationFetcher {
             if (cached) {
                 return cached;
             }
+            const limit = _options.numberItems || 50;
             // Prepare request payload
             const requestBody = {
                 AnonymousId: this.getOrCreateAnonymousId(),
                 DomainKey: this.domainKey,
-                NumberItems: 50,
+                NumberItems: limit,
             };
             // Check for cached user info in localStorage
             const cachedUserId = this.getCachedUserId();

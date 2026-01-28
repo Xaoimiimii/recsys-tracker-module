@@ -3,11 +3,12 @@ import { RecommendationItem } from '../recommendation';
 
 export class PopupDisplay {
   private config: PopupConfig;
-  private recommendationGetter: () => Promise<RecommendationItem[]>;
+  private recommendationGetter: (limit: number) => Promise<RecommendationItem[]>;
   private popupTimeout: NodeJS.Timeout | null = null;
   private autoCloseTimeout: NodeJS.Timeout | null = null;
   private autoSlideTimeout: NodeJS.Timeout | null = null;
   private shadowHost: HTMLElement | null = null;
+  private hostId: string = ''; // Unique host ID cho mỗi PopupDisplay
 
   private spaCheckInterval: NodeJS.Timeout | null = null;
   private isPendingShow: boolean = false;
@@ -20,9 +21,10 @@ export class PopupDisplay {
     _slotName: string,
     _apiBaseUrl: string,
     config: PopupConfig = {} as PopupConfig,
-    recommendationGetter: () => Promise<RecommendationItem[]>
+    recommendationGetter: (limit: number) => Promise<RecommendationItem[]>
   ) {
     this.recommendationGetter = recommendationGetter;
+    this.hostId = `recsys-popup-host-${_slotName}-${Date.now()}`; // Unique ID based on slotName
     this.config = {
       delay: config.delay ?? this.DEFAULT_DELAY,
       autoCloseDelay: config.autoCloseDelay,
@@ -153,7 +155,8 @@ export class PopupDisplay {
 
   private async fetchRecommendations(): Promise<RecommendationItem[]> {
     try {
-      return await this.recommendationGetter();
+      const numberItems = this.config.layoutJson?.maxItems || 50;
+      return await this.recommendationGetter(numberItems);
     } catch { return []; }
   }
 
@@ -491,7 +494,7 @@ export class PopupDisplay {
     this.removePopup();
 
     const host = document.createElement('div');
-    host.id = 'recsys-popup-host';
+    host.id = this.hostId;
     document.body.appendChild(host);
     const shadow = host.attachShadow({ mode: 'open' });
 

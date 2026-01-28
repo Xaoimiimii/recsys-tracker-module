@@ -1,8 +1,8 @@
 import { ReturnMethod } from '../../types';
 import { RecommendationItem } from '../recommendation';
 export declare class DisplayManager {
-    private popupDisplay;
-    private inlineDisplay;
+    private popupDisplays;
+    private inlineDisplays;
     private domainKey;
     private apiBaseUrl;
     private recommendationFetcher;
@@ -16,7 +16,7 @@ export declare class DisplayManager {
     private fetchRecommendationsOnce;
     private fetchRecommendationsInternal;
     private getAnonymousId;
-    getRecommendations(): Promise<RecommendationItem[]>;
+    getRecommendations(limit?: number): Promise<RecommendationItem[]>;
     destroy(): void;
 }
 //# sourceMappingURL=display-manager.d.ts.map

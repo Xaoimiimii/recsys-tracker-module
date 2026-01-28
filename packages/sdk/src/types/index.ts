@@ -207,7 +207,8 @@ export interface ModeConfig {
 export interface LayoutJson {
     displayMode: DisplayType;
     contentMode?: string; 
-    
+    maxItems: number;
+    itemUrlPattern: string;
     wrapper?: {
         popup?: PopupWrapperConfig;
         inline?: InlineWrapperConfig;

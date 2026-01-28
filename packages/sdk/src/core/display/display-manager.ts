@@ -6,8 +6,8 @@ import { RecommendationFetcher, RecommendationItem } from '../recommendation';
 const ANON_USER_ID_KEY = 'recsys_anon_id';
 
 export class DisplayManager {
-  private popupDisplay: PopupDisplay | null = null;
-  private inlineDisplay: InlineDisplay | null = null;
+  private popupDisplays: Map<string, PopupDisplay> = new Map();
+  private inlineDisplays: Map<string, InlineDisplay> = new Map();
   private domainKey: string;
   private apiBaseUrl: string;
   private recommendationFetcher: RecommendationFetcher;
@@ -77,56 +77,58 @@ export class DisplayManager {
     }
   }
 
-  private initializePopup(slotName: string, config: PopupConfig): void {
+  private initializePopup(key: string, config: PopupConfig): void {
     try {
-      if (this.popupDisplay) {
-        this.popupDisplay.stop();
-        this.popupDisplay = null;
+      if (this.popupDisplays.has(key)) {
+        this.popupDisplays.get(key)?.stop();
+        this.popupDisplays.delete(key);
       }
-      this.popupDisplay = new PopupDisplay(
+      const popupDisplay = new PopupDisplay(
         this.domainKey,
-        slotName,
+        key,
         this.apiBaseUrl,
         config, 
-        () => this.getRecommendations()
+        (limit?: number) => this.getRecommendations(limit ?? 50)
       );
       
-      this.popupDisplay.start();
+      this.popupDisplays.set(key, popupDisplay);
+      popupDisplay.start();
     } catch (error) {
       // console.error('[DisplayManager] Error initializing popup:', error);
     }
   }
 
   // Khởi tạo Inline Display với Config đầy đủ
-  private initializeInline(slotName: string, config: InlineConfig): void {
+  private initializeInline(key: string, config: InlineConfig): void {
     try {
-      if (this.inlineDisplay) {
-        this.inlineDisplay.stop();
-        this.inlineDisplay = null;
+      if (this.inlineDisplays.has(key)) {
+        this.inlineDisplays.get(key)?.stop();
+        this.inlineDisplays.delete(key);
       }
       if (!config.selector) return;
 
-      this.inlineDisplay = new InlineDisplay(
+      const inlineDisplay = new InlineDisplay(
         this.domainKey,
-        slotName,
+        key,
         config.selector,
         this.apiBaseUrl,
         config, // Truyền object config
-        () => this.getRecommendations()
+        (limit?: number) => this.getRecommendations(limit ?? 50)
       );
       
-      this.inlineDisplay.start();
+      this.inlineDisplays.set(key, inlineDisplay);
+      inlineDisplay.start();
     } catch (error) {
       // console.error('[DisplayManager] Error initializing inline:', error);
     }
   }
 
   // --- LOGIC FETCH RECOMMENDATION (GIỮ NGUYÊN) ---
-  private async fetchRecommendationsOnce(): Promise<RecommendationItem[]> {
+  private async fetchRecommendationsOnce(limit: number = 50): Promise<RecommendationItem[]> {
     if (this.cachedRecommendations) return this.cachedRecommendations;
     if (this.fetchPromise) return this.fetchPromise;
 
-    this.fetchPromise = this.fetchRecommendationsInternal();
+    this.fetchPromise = this.fetchRecommendationsInternal(limit);
     try {
       this.cachedRecommendations = await this.fetchPromise;
       return this.cachedRecommendations;
@@ -135,7 +137,7 @@ export class DisplayManager {
     }
   }
 
-  private async fetchRecommendationsInternal(): Promise<RecommendationItem[]> {
+  private async fetchRecommendationsInternal(limit: number): Promise<RecommendationItem[]> {
     try {
       const anonymousId = this.getAnonymousId();
       if (!anonymousId) return [];
@@ -144,7 +146,7 @@ export class DisplayManager {
         anonymousId,
         'AnonymousId',
         { 
-          numberItems: 6,
+          numberItems: limit,
           autoRefresh: true,
           onRefresh: (newItems) => {            
             // Update cached recommendations
@@ -165,18 +167,18 @@ export class DisplayManager {
     }
   }
 
-  async getRecommendations(): Promise<RecommendationItem[]> {
+  async getRecommendations(limit: number = 50): Promise<RecommendationItem[]> {
+    if (limit) {
+        return this.fetchRecommendationsInternal(limit);
+    }
     return this.fetchRecommendationsOnce();
   }
 
   destroy(): void {
-    if (this.popupDisplay) {
-      this.popupDisplay.stop();
-      this.popupDisplay = null;
-    }
-    if (this.inlineDisplay) {
-      this.inlineDisplay.stop();
-      this.inlineDisplay = null;
-    }
+    this.popupDisplays.forEach(popup => popup.stop());
+    this.popupDisplays.clear();
+
+    this.inlineDisplays.forEach(inline => inline.stop());
+    this.inlineDisplays.clear();
   }
 }
