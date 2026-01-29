@@ -3588,10 +3588,20 @@ var RecSysTracker = (function (exports) {
             const config = this.tracker.getConfig();
             if (!config)
                 return;
-            const userInfo = this.tracker.userIdentityManager.getUserInfo();
-            const userId = userInfo.value || '';
-            const anonymousId = userInfo.field === 'AnonymousId' ? userInfo.value : getOrCreateAnonymousId();
+            const cached = getCachedUserInfo();
+            const userId = cached && cached.userValue ? cached.userValue : null;
+            const anonymousId = getOrCreateAnonymousId();
+            // const userId = userInfo ? userInfo.value : null;
+            console.log('[SearchKeywordPlugin] Triggering push keyword:', {
+                userId,
+                anonymousId,
+                domainKey: config.domainKey,
+                keyword
+            });
             await this.pushKeywordToServer(userId, anonymousId, config.domainKey, keyword);
+            // const userId = userInfo.value || '';
+            // const anonymousId = userInfo.field === 'AnonymousId' ? userInfo.value : getOrCreateAnonymousId();
+            // await this.pushKeywordToServer(userId, anonymousId, config.domainKey, keyword);
         }
         /**
          * Call API POST recommendation/push-keyword
@@ -3606,7 +3616,7 @@ var RecSysTracker = (function (exports) {
                 Keyword: keyword
             };
             try {
-                // console.log('[SearchKeywordPlugin] Pushing keyword to server:', payload);
+                console.log('[SearchKeywordPlugin] MeomeoPushing keyword to server:', payload);
                 const response = await fetch(url, {
                     method: 'POST',
                     headers: {

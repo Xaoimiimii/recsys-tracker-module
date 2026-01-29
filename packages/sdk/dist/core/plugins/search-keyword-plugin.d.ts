@@ -40,6 +40,6 @@ export declare class SearchKeywordPlugin extends BasePlugin {
     /**
      * Call API POST recommendation/push-keyword
      */
-    pushKeywordToServer(userId: string, anonymousId: string, domainKey: string, keyword: string): Promise<void>;
+    pushKeywordToServer(userId: string | null, anonymousId: string, domainKey: string, keyword: string): Promise<void>;
 }
 //# sourceMappingURL=search-keyword-plugin.d.ts.map
