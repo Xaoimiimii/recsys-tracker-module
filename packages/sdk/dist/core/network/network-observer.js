@@ -43,11 +43,11 @@ export class NetworkObserver {
      * Set UserIdentityManager reference
      */
     setUserIdentityManager(userIdentityManager) {
-        console.log('[NetworkObserver] Setting UserIdentityManager');
+        //console.log('[NetworkObserver] Setting UserIdentityManager');
         this.userIdentityManager = userIdentityManager;
         // Process any pending requests that were buffered
         if (this.pendingUserIdentityRequests.length > 0) {
-            console.log('[NetworkObserver] Processing', this.pendingUserIdentityRequests.length, 'pending requests');
+            //console.log('[NetworkObserver] Processing', this.pendingUserIdentityRequests.length, 'pending requests');
             for (const requestInfo of this.pendingUserIdentityRequests) {
                 this.processUserIdentityRequest(requestInfo);
             }
@@ -60,14 +60,14 @@ export class NetworkObserver {
      */
     async processUserIdentityRequest(requestInfo) {
         if (!this.userIdentityManager) {
-            console.log('[NetworkObserver] No UserIdentityManager set');
+            //console.log('[NetworkObserver] No UserIdentityManager set');
             return;
         }
-        console.log('[NetworkObserver] Checking if request matches user identity:', requestInfo.url);
+        //console.log('[NetworkObserver] Checking if request matches user identity:', requestInfo.url);
         const matchesUserIdentity = this.userIdentityManager.matchesUserIdentityRequest(requestInfo.url, requestInfo.method);
-        console.log('[NetworkObserver] Match result:', matchesUserIdentity);
+        //console.log('[NetworkObserver] Match result:', matchesUserIdentity);
         if (matchesUserIdentity) {
-            console.log('[NetworkObserver] ✅ Request matches user identity config, extracting...');
+            //console.log('[NetworkObserver] ✅ Request matches user identity config, extracting...');
             // Parse response body nếu cần
             let responseBodyText = null;
             if (requestInfo.responseBody) {
@@ -79,7 +79,7 @@ export class NetworkObserver {
                     requestInfo.responseBody = responseBodyText;
                 }
             }
-            console.log('[NetworkObserver] Calling UserIdentityManager.extractFromNetworkRequest');
+            //console.log('[NetworkObserver] Calling UserIdentityManager.extractFromNetworkRequest');
             // Extract user info
             this.userIdentityManager.extractFromNetworkRequest(requestInfo.url, requestInfo.method, requestInfo.requestBody, responseBodyText);
         }
@@ -90,15 +90,15 @@ export class NetworkObserver {
      */
     initialize(recManager) {
         if (this.isActive) {
-            console.log('[NetworkObserver] Already active, skipping initialization');
+            //console.log('[NetworkObserver] Already active, skipping initialization');
             return;
         }
-        console.log('[NetworkObserver] Initializing...');
+        //console.log('[NetworkObserver] Initializing...');
         this.recManager = recManager;
         this.hookFetch();
         this.hookXHR();
         this.isActive = true;
-        console.log('[NetworkObserver] ✅ Initialized and hooked fetch/XHR');
+        //console.log('[NetworkObserver] ✅ Initialized and hooked fetch/XHR');
     }
     /**
      * Register một rule cần network data
@@ -126,7 +126,7 @@ export class NetworkObserver {
             const method = ((_a = init === null || init === void 0 ? void 0 : init.method) === null || _a === void 0 ? void 0 : _a.toUpperCase()) || 'GET';
             const requestBody = init === null || init === void 0 ? void 0 : init.body;
             const timestamp = Date.now();
-            console.log('[NetworkObserver] Intercepted fetch:', method, url);
+            //console.log('[NetworkObserver] Intercepted fetch:', method, url);
             // Call original fetch
             const response = await observer.originalFetch.call(window, input, init);
             // Clone để đọc response mà không ảnh hưởng stream

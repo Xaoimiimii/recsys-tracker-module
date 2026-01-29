@@ -97,38 +97,52 @@ export class UserIdentityManager {
      * Called by NetworkObserver khi match được request
      */
     extractFromNetworkRequest(url, method, requestBody, responseBody) {
-        console.log('[UserIdentityManager] extractFromNetworkRequest called');
+        //console.log('[UserIdentityManager] extractFromNetworkRequest called');
         if (!this.userIdentityConfig || !this.userIdentityConfig.requestConfig) {
-            console.log('[UserIdentityManager] No config or requestConfig');
+            //console.log('[UserIdentityManager] No config or requestConfig');
             return;
         }
         const { source, field, requestConfig } = this.userIdentityConfig;
         const { Value, ExtractType } = requestConfig;
-        console.log('[UserIdentityManager] Config - source:', source, 'field:', field, 'value:', Value);
+        //console.log('[UserIdentityManager] Config - source:', source, 'field:', field, 'value:', Value);
         let extractedValue = null;
         try {
             if (source === 'request_body') {
-                // Extract từ response body (for GET) or request body (for POST/PUT)
-                const body = method.toUpperCase() === 'GET' ? responseBody : requestBody;
-                console.log('[UserIdentityManager] Extracting from body:', body);
-                extractedValue = extractByPath(parseBody(body), Value);
+                // Flexible extraction logic based on request method
+                if (method.toUpperCase() === 'GET') {
+                    // GET requests: always extract from response
+                    //console.log('[UserIdentityManager] GET request - extracting from response');
+                    extractedValue = extractByPath(parseBody(responseBody), Value);
+                }
+                else {
+                    // POST/PUT/PATCH/DELETE: try request body first, then response body
+                    //console.log('[UserIdentityManager] Non-GET request - trying request body first');
+                    const parsedRequestBody = parseBody(requestBody);
+                    extractedValue = extractByPath(parsedRequestBody, Value);
+                    if (!extractedValue) {
+                        //console.log('[UserIdentityManager] Not found in request body, trying response body');
+                        const parsedResponseBody = parseBody(responseBody);
+                        extractedValue = extractByPath(parsedResponseBody, Value);
+                    }
+                }
+                //console.log('[UserIdentityManager] Extracting from body - final value:', extractedValue);
             }
             else if (source === 'request_url') {
                 // Extract từ URL
-                console.log('[UserIdentityManager] Extracting from URL:', url);
+                //console.log('[UserIdentityManager] Extracting from URL:', url);
                 extractedValue = extractFromUrl(url, Value, ExtractType, requestConfig.RequestUrlPattern);
             }
-            console.log('[UserIdentityManager] Extracted value:', extractedValue);
+            //console.log('[UserIdentityManager] Extracted value:', extractedValue);
             if (extractedValue) {
-                console.log('[UserIdentityManager] Saving to cache:', field, '=', extractedValue);
+                //console.log('[UserIdentityManager] Saving to cache:', field, '=', extractedValue);
                 saveCachedUserInfo(field, String(extractedValue));
             }
             else {
-                console.log('[UserIdentityManager] No value extracted');
+                //console.log('[UserIdentityManager] No value extracted');
             }
         }
         catch (error) {
-            console.error('[UserIdentityManager] Error extracting from network:', error);
+            //console.error('[UserIdentityManager] Error extracting from network:', error);
         }
     }
     /**
