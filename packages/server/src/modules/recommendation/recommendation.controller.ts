@@ -1,4 +1,4 @@
-import { Controller, Body, Post } from '@nestjs/common';
+import { Controller, Body, Post, BadRequestException } from '@nestjs/common';
 import { RecommendationService } from './recommendation.service';
 import { RecommendationRequestDto } from './dto/recommendation-request.dto';
 import { RecommendationPushKeywordDto } from './dto/recommend-push-keyword.dto';
@@ -10,6 +10,11 @@ export class RecommendationController {
     @Post()
     async getRecommendations(@Body() body: RecommendationRequestDto) {
         const { UserId, AnonymousId, DomainKey, NumberItems } = body;
+        
+        // Validate at least one identifier is provided
+        if (!UserId && !AnonymousId) {
+            throw new BadRequestException('Either UserId or AnonymousId must be provided');
+        }
         
         return await this.recommendationService.getRecommendations(
             DomainKey,

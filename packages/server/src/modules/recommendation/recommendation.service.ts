@@ -34,15 +34,8 @@ export class RecommendationService {
                 },
             });
 
-            const fifteenMinutesAgo = new Date(Date.now() - 15 * 60 * 1000)
-                .toLocaleTimeString('en-US', {
-                    hour: '2-digit',
-                    minute: '2-digit',
-                    second: '2-digit',
-                });
-            console.log(fifteenMinutesAgo);
+            const fifteenMinutesAgo = new Date(Date.now() - 15 * 60 * 1000 + 7 * 60 * 60 * 1000);
 
-            
             itemHistory = await this.prisma.event.findMany({
                 where: {
                     UserId: userId,
@@ -58,6 +51,7 @@ export class RecommendationService {
                 },
                 take: 10
             });
+
         } else {
             user = await this.prisma.user.findFirst({
                 where: {
@@ -66,15 +60,7 @@ export class RecommendationService {
                 },
             });
 
-            // Note: Adding 7-hour offset to compensate for timezone mismatch in database
-            const fifteenMinutesAgo = new Date(Date.now() - 15 * 60 * 1000)
-                .toLocaleTimeString('en-US', {
-                    hour: '2-digit',
-                    minute: '2-digit',
-                    second: '2-digit',
-                    timeZone: 'Asia/Ho_Chi_Minh',
-                });
-
+            const fifteenMinutesAgo = new Date(Date.now() - 15 * 60 * 1000 + 7 * 60 * 60 * 1000);
             console.log(fifteenMinutesAgo);
             itemHistory = await this.prisma.event.findMany({
                 where: {
@@ -92,7 +78,6 @@ export class RecommendationService {
                 take: 10
             })
         }
-
         if (!user) {
             // return top k items based on other user
             const topItemsByAvgPredict = await this.prisma.predict.groupBy({
