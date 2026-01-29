@@ -252,11 +252,25 @@ export class RecommendationService {
                 // Get items from search results that haven't been rated
                 const searchItemIds = searchResult.items
                     .map(item => item.id)
-                    .filter(id => !ratedItemsIds.includes(id))
-                    .slice(0, numberItems);
+                    .filter(id => !ratedItemsIds.includes(id));
+                
+                // If not enough from search, get more items from domain
+                let finalItemIds = searchItemIds.slice(0, numberItems);
+                
+                if (finalItemIds.length < numberItems) {
+                    const additionalItems = await this.prisma.item.findMany({
+                        where: {
+                            DomainId: domain.Id,
+                            Id: { notIn: [...searchItemIds, ...ratedItemsIds] }
+                        },
+                        select: { Id: true },
+                        take: numberItems - finalItemIds.length
+                    });
+                    finalItemIds = [...finalItemIds, ...additionalItems.map(i => i.Id)];
+                }
                 
                 const detailedRecommendations = await Promise.all(
-                    searchItemIds.map(async (itemId) => {
+                    finalItemIds.map(async (itemId) => {
                         const item = await this.prisma.item.findUnique({
                             where: { Id: itemId },
                             select: {
@@ -323,7 +337,10 @@ export class RecommendationService {
 
         let recommendations = allItems.filter((item) => !ratedItemsIds.includes(item.ItemId));
 
-        if (!recommendations || recommendations.length === 0) {
+        // If not enough recommendations, fetch more from average predictions
+        if (recommendations.length < numberItems) {
+            const existingItemIds = recommendations.map(r => r.ItemId);
+            
             const topItemsByAvgPredict = await this.prisma.predict.groupBy({
                 where: {
                     Item: {
@@ -343,49 +360,39 @@ export class RecommendationService {
             });
 
             const topItemIds = topItemsByAvgPredict
-                .filter(item => !ratedItemsIds.includes(item.ItemId))
+                .filter(item => !ratedItemsIds.includes(item.ItemId) && !existingItemIds.includes(item.ItemId))
                 .map(item => item.ItemId);
 
-            recommendations = topItemIds.map((itemId, index) => ({
+            const additionalRecommendations = topItemIds.map((itemId) => ({
                 ItemId: itemId,
                 UserId: user!.Id,
-                Value: topItemsByAvgPredict[index]._avg.Value || 0
+                Value: topItemsByAvgPredict.find(p => p.ItemId === itemId)?._avg.Value || 0
             }));
 
-            if (recommendations.length <= 0) {
-                recommendations = await this.prisma.item.findMany({
+            recommendations = [...recommendations, ...additionalRecommendations];
+
+            // Still not enough? Get random items from domain
+            if (recommendations.length < numberItems) {
+                const allExistingIds = recommendations.map(r => r.ItemId);
+                const randomItems = await this.prisma.item.findMany({
                     where: {
                         DomainId: domain.Id,
+                        Id: { notIn: [...allExistingIds, ...ratedItemsIds] }
                     },
                     select: {
                         Id: true,
-                        DomainItemId: true,
-                        Title: true,
-                        Description: true,
-                        ImageUrl: true,
-                        ItemCategories: {
-                            select: {
-                                Category: {
-                                    select: {
-                                        Name: true
-                                    }
-                                }
-                            }
-                        },
-                        Attributes: true
                     },
-                    take: numberItems
+                    take: numberItems - recommendations.length
                 });
 
-                return recommendations.map(item => ({
-                    Id: item?.Id,
-                    DomainItemId: item?.DomainItemId,
-                    Title: item?.Title,
-                    Description: item?.Description,
-                    ImageUrl: item?.ImageUrl,
-                    Categories: item?.ItemCategories.map(ic => ic.Category.Name),
-                    ...((item?.Attributes as Record<string, any>) || {})
-                }));
+                // Add random items to recommendations
+                for (const item of randomItems) {
+                    recommendations.push({
+                        ItemId: item.Id,
+                        UserId: user!.Id,
+                        Value: 0
+                    });
+                }
             }
         }
 
