@@ -2956,7 +2956,7 @@
                 }
                 document.addEventListener('click', this.handleClickBound, true);
                 this.active = true;
-                //console.log('[ClickPlugin] Started');
+                console.log('[ClickPlugin] ✅ Started and listening for clicks');
             }, 'ClickPlugin.start');
         }
         stop() {
@@ -2972,6 +2972,7 @@
          */
         handleClick(event) {
             var _a;
+            console.log('[ClickPlugin] Click detected on:', event.target);
             if (!this.tracker)
                 return;
             const clickedElement = event.target;
@@ -2989,6 +2990,7 @@
                 if (!matchedElement) {
                     continue;
                 }
+                console.log('[ClickPlugin] Matched element for rule:', rule.name, matchedElement);
                 // Debounce: Bỏ qua clicks liên tiếp trên cùng element trong thời gian ngắn
                 const elementKey = this.getElementKey(matchedElement, rule.id);
                 const now = Date.now();
@@ -3115,6 +3117,7 @@
         dispatchEvent(payload, rule, eventId) {
             if (!this.tracker)
                 return;
+            console.log('[ClickPlugin] Dispatching event with payload:', payload);
             this.tracker.track({
                 eventType: eventId,
                 eventData: {
@@ -3647,7 +3650,7 @@
         constructor() {
             this.contexts = new Map();
             this.TIME_WINDOW = 3000; // 3s - Request phải xảy ra trong window này
-            this.MAX_WAIT_TIME = 5000; // 5s - Tự động expire nếu quá thời gian
+            this.MAX_WAIT_TIME = 1000; // 1s - Tự động expire nếu quá thời gian (giảm từ 5s để UX tốt hơn)
         }
         /**
          * Tạo REC mới cho một trigger
@@ -3784,13 +3787,26 @@
         }
         /**
          * Đánh dấu context là expired (timeout)
+         * QUAN TRỌNG: Vẫn gọi callback với data đã có, kể cả khi không đủ required fields
+         * Điều này đảm bảo event vẫn được gửi ngay cả khi user không đăng nhập
          */
         expireContext(executionId) {
             const context = this.contexts.get(executionId);
             if (!context || context.status !== 'pending') {
                 return;
             }
+            console.log('[REC] Context expired, calling callback with collected data:', executionId);
             context.status = 'expired';
+            // Build payload từ collected fields (dù có đủ hay không)
+            const payload = {};
+            context.collectedFields.forEach((value, key) => {
+                payload[key] = value;
+            });
+            console.log('[REC] Collected payload on timeout:', payload);
+            // Trigger callback với data đã có
+            if (context.onComplete) {
+                context.onComplete(payload);
+            }
             // Cleanup
             setTimeout(() => {
                 this.contexts.delete(executionId);
@@ -4222,9 +4238,11 @@
          * Set UserIdentityManager reference
          */
         setUserIdentityManager(userIdentityManager) {
+            console.log('[NetworkObserver] Setting UserIdentityManager');
             this.userIdentityManager = userIdentityManager;
             // Process any pending requests that were buffered
             if (this.pendingUserIdentityRequests.length > 0) {
+                console.log('[NetworkObserver] Processing', this.pendingUserIdentityRequests.length, 'pending requests');
                 for (const requestInfo of this.pendingUserIdentityRequests) {
                     this.processUserIdentityRequest(requestInfo);
                 }
@@ -4237,10 +4255,14 @@
          */
         async processUserIdentityRequest(requestInfo) {
             if (!this.userIdentityManager) {
+                console.log('[NetworkObserver] No UserIdentityManager set');
                 return;
             }
+            console.log('[NetworkObserver] Checking if request matches user identity:', requestInfo.url);
             const matchesUserIdentity = this.userIdentityManager.matchesUserIdentityRequest(requestInfo.url, requestInfo.method);
+            console.log('[NetworkObserver] Match result:', matchesUserIdentity);
             if (matchesUserIdentity) {
+                console.log('[NetworkObserver] ✅ Request matches user identity config, extracting...');
                 // Parse response body nếu cần
                 let responseBodyText = null;
                 if (requestInfo.responseBody) {
@@ -4252,6 +4274,7 @@
                         requestInfo.responseBody = responseBodyText;
                     }
                 }
+                console.log('[NetworkObserver] Calling UserIdentityManager.extractFromNetworkRequest');
                 // Extract user info
                 this.userIdentityManager.extractFromNetworkRequest(requestInfo.url, requestInfo.method, requestInfo.requestBody, responseBodyText);
             }
@@ -4262,12 +4285,15 @@
          */
         initialize(recManager) {
             if (this.isActive) {
+                console.log('[NetworkObserver] Already active, skipping initialization');
                 return;
             }
+            console.log('[NetworkObserver] Initializing...');
             this.recManager = recManager;
             this.hookFetch();
             this.hookXHR();
             this.isActive = true;
+            console.log('[NetworkObserver] ✅ Initialized and hooked fetch/XHR');
         }
         /**
          * Register một rule cần network data
@@ -4295,6 +4321,7 @@
                 const method = ((_a = init === null || init === void 0 ? void 0 : init.method) === null || _a === void 0 ? void 0 : _a.toUpperCase()) || 'GET';
                 const requestBody = init === null || init === void 0 ? void 0 : init.body;
                 const timestamp = Date.now();
+                console.log('[NetworkObserver] Intercepted fetch:', method, url);
                 // Call original fetch
                 const response = await observer.originalFetch.call(window, input, init);
                 // Clone để đọc response mà không ảnh hưởng stream
@@ -4616,11 +4643,16 @@
          * @param onComplete - Callback khi payload sẵn sàng để dispatch
          */
         handleTrigger(rule, triggerContext, onComplete) {
+            console.log('[PayloadBuilder] handleTrigger called for rule:', rule.name);
             // 1. Phân tích mappings
             const { syncMappings, asyncMappings } = this.classifyMappings(rule);
+            console.log('[PayloadBuilder] syncMappings:', syncMappings.length, 'asyncMappings:', asyncMappings.length);
             // 2. Nếu không có async → resolve ngay
             if (asyncMappings.length === 0) {
+                console.log('[PayloadBuilder] No async mappings, resolving sync only');
                 const payload = this.resolveSyncMappings(syncMappings, triggerContext, rule);
+                console.log('[PayloadBuilder] Resolved payload:', payload);
+                console.log('[PayloadBuilder] Calling onComplete callback');
                 onComplete(payload);
                 return;
             }
@@ -4679,14 +4711,19 @@
          * Resolve tất cả sync mappings
          */
         resolveSyncMappings(mappings, context, rule) {
+            console.log('[PayloadBuilder] resolveSyncMappings called with', mappings.length, 'mappings');
             const payload = {
                 ruleId: rule.id,
                 eventTypeId: rule.eventTypeId
             };
             for (const mapping of mappings) {
                 const value = this.resolveSyncMapping(mapping, context);
+                console.log('[PayloadBuilder] Resolved', mapping.field, '=', value, 'from source:', mapping.source);
                 if (this.isValidValue(value)) {
                     payload[mapping.field] = value;
+                }
+                else {
+                    console.log('[PayloadBuilder] Value is invalid for', mapping.field);
                 }
             }
             return payload;
@@ -4936,28 +4973,38 @@
          * Called by NetworkObserver khi match được request
          */
         extractFromNetworkRequest(url, method, requestBody, responseBody) {
+            console.log('[UserIdentityManager] extractFromNetworkRequest called');
             if (!this.userIdentityConfig || !this.userIdentityConfig.requestConfig) {
+                console.log('[UserIdentityManager] No config or requestConfig');
                 return;
             }
             const { source, field, requestConfig } = this.userIdentityConfig;
             const { Value, ExtractType } = requestConfig;
+            console.log('[UserIdentityManager] Config - source:', source, 'field:', field, 'value:', Value);
             let extractedValue = null;
             try {
                 if (source === 'request_body') {
                     // Extract từ response body (for GET) or request body (for POST/PUT)
                     const body = method.toUpperCase() === 'GET' ? responseBody : requestBody;
+                    console.log('[UserIdentityManager] Extracting from body:', body);
                     extractedValue = extractByPath(parseBody(body), Value);
                 }
                 else if (source === 'request_url') {
                     // Extract từ URL
+                    console.log('[UserIdentityManager] Extracting from URL:', url);
                     extractedValue = extractFromUrl(url, Value, ExtractType, requestConfig.RequestUrlPattern);
                 }
+                console.log('[UserIdentityManager] Extracted value:', extractedValue);
                 if (extractedValue) {
+                    console.log('[UserIdentityManager] Saving to cache:', field, '=', extractedValue);
                     saveCachedUserInfo(field, String(extractedValue));
+                }
+                else {
+                    console.log('[UserIdentityManager] No value extracted');
                 }
             }
             catch (error) {
-                // console.error('[UserIdentityManager] Error extracting from network:', error);
+                console.error('[UserIdentityManager] Error extracting from network:', error);
             }
         }
         /**
@@ -5233,6 +5280,7 @@
                 // Khởi tạo Anonymous ID ngay khi SDK init
                 getOrCreateAnonymousId();
                 this.isInitialized = true;
+                console.log('[RecSysTracker] ✅ SDK initialized successfully');
             }, 'init');
         }
         // Tự động khởi tạo plugins dựa trên tracking rules
@@ -5269,8 +5317,10 @@
         }
         // Track custom event - NEW SIGNATURE (supports flexible payload)
         track(eventData) {
+            console.log('[RecSysTracker] track() called with eventData:', eventData);
             this.errorBoundary.execute(() => {
                 if (!this.isInitialized || !this.config) {
+                    console.log('[RecSysTracker] ❌ SDK not initialized or no config');
                     return;
                 }
                 // Extract required fields for deduplication
@@ -5279,6 +5329,7 @@
                 const ruleId = payload.ruleId || payload.RuleId;
                 // Lấy user info từ UserIdentityManager
                 const userInfo = this.userIdentityManager.getUserInfo();
+                console.log('[RecSysTracker] User info from UserIdentityManager:', userInfo);
                 // // User field cho deduplication - sử dụng user info từ UserIdentityManager
                 // const userValue = userInfo.value || 
                 //                  payload.userId || payload.UserId || 
@@ -5302,11 +5353,15 @@
                 // Get anonymous ID
                 const anonymousId = userInfo.field === 'AnonymousId' ? userInfo.value : getOrCreateAnonymousId();
                 const userId = userInfo.field === 'UserId' && userInfo.value ? userInfo.value : null;
+                console.log('[RecSysTracker] Final userId:', userId, 'anonymousId:', anonymousId);
                 // Check for duplicate event - so sánh TẤT CẢ fields quan trọng
                 const isDuplicate = this.eventDeduplicator.isDuplicate(eventData.eventType, Number(ruleId) || 0, userId, anonymousId, itemId, actionType, this.config.domainKey);
+                console.log('[RecSysTracker] isDuplicate:', isDuplicate);
                 if (isDuplicate) {
+                    console.log('[RecSysTracker] ❌ Event is duplicate, skipping');
                     return;
                 }
+                console.log('[RecSysTracker] ✅ Creating TrackedEvent');
                 const trackedEvent = {
                     id: this.metadataNormalizer.generateEventId(),
                     timestamp: new Date(eventData.timestamp),
@@ -5324,6 +5379,7 @@
                         ratingReview: reviewText
                     }),
                 };
+                console.log('[RecSysTracker] Adding event to buffer:', trackedEvent);
                 this.eventBuffer.add(trackedEvent);
             }, 'track');
         }

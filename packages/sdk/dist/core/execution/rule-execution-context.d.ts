@@ -78,6 +78,8 @@ export declare class RuleExecutionContextManager {
     private completeContext;
     /**
      * Đánh dấu context là expired (timeout)
+     * QUAN TRỌNG: Vẫn gọi callback với data đã có, kể cả khi không đủ required fields
+     * Điều này đảm bảo event vẫn được gửi ngay cả khi user không đăng nhập
      */
     private expireContext;
     /**

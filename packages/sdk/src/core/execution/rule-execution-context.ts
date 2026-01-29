@@ -49,7 +49,7 @@ export interface RuleExecutionContext {
 export class RuleExecutionContextManager {
   private contexts: Map<string, RuleExecutionContext> = new Map();
   private readonly TIME_WINDOW = 3000; // 3s - Request phải xảy ra trong window này
-  private readonly MAX_WAIT_TIME = 5000; // 5s - Tự động expire nếu quá thời gian
+  private readonly MAX_WAIT_TIME = 1000; // 1s - Tự động expire nếu quá thời gian (giảm từ 5s để UX tốt hơn)
 
   /**
    * Tạo REC mới cho một trigger
@@ -224,6 +224,8 @@ export class RuleExecutionContextManager {
 
   /**
    * Đánh dấu context là expired (timeout)
+   * QUAN TRỌNG: Vẫn gọi callback với data đã có, kể cả khi không đủ required fields
+   * Điều này đảm bảo event vẫn được gửi ngay cả khi user không đăng nhập
    */
   private expireContext(executionId: string): void {
     const context = this.contexts.get(executionId);
@@ -231,7 +233,22 @@ export class RuleExecutionContextManager {
       return;
     }
 
+    console.log('[REC] Context expired, calling callback with collected data:', executionId);
+
     context.status = 'expired';
+
+    // Build payload từ collected fields (dù có đủ hay không)
+    const payload: Record<string, any> = {};
+    context.collectedFields.forEach((value, key) => {
+      payload[key] = value;
+    });
+
+    console.log('[REC] Collected payload on timeout:', payload);
+
+    // Trigger callback với data đã có
+    if (context.onComplete) {
+      context.onComplete(payload);
+    }
 
     // Cleanup
     setTimeout(() => {

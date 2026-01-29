@@ -120,6 +120,7 @@ export class RecSysTracker {
       getOrCreateAnonymousId();
 
       this.isInitialized = true;
+      console.log('[RecSysTracker] ✅ SDK initialized successfully');
     }, 'init');
   }
 
@@ -170,8 +171,10 @@ export class RecSysTracker {
     url: string;
     metadata?: Record<string, any>;
   }): void {
+    console.log('[RecSysTracker] track() called with eventData:', eventData);
     this.errorBoundary.execute(() => {
       if (!this.isInitialized || !this.config) {
+        console.log('[RecSysTracker] ❌ SDK not initialized or no config');
         return;
       }
 
@@ -182,6 +185,7 @@ export class RecSysTracker {
       
       // Lấy user info từ UserIdentityManager
       const userInfo = this.userIdentityManager.getUserInfo();
+      console.log('[RecSysTracker] User info from UserIdentityManager:', userInfo);
       
       // // User field cho deduplication - sử dụng user info từ UserIdentityManager
       // const userValue = userInfo.value || 
@@ -212,6 +216,8 @@ export class RecSysTracker {
       const anonymousId = userInfo.field === 'AnonymousId' ? userInfo.value : getOrCreateAnonymousId();
       const userId = userInfo.field === 'UserId' && userInfo.value ? userInfo.value : null;
 
+      console.log('[RecSysTracker] Final userId:', userId, 'anonymousId:', anonymousId);
+
       // Check for duplicate event - so sánh TẤT CẢ fields quan trọng
       const isDuplicate = this.eventDeduplicator.isDuplicate(
         eventData.eventType,
@@ -223,9 +229,14 @@ export class RecSysTracker {
         this.config.domainKey
       );
 
+      console.log('[RecSysTracker] isDuplicate:', isDuplicate);
+
       if (isDuplicate) {
+        console.log('[RecSysTracker] ❌ Event is duplicate, skipping');
         return;
       }
+
+      console.log('[RecSysTracker] ✅ Creating TrackedEvent');
 
       const trackedEvent: TrackedEvent = {
         id: this.metadataNormalizer.generateEventId(),
@@ -245,6 +256,7 @@ export class RecSysTracker {
         }),
       };
 
+      console.log('[RecSysTracker] Adding event to buffer:', trackedEvent);
       this.eventBuffer.add(trackedEvent);
     }, 'track');
   }
