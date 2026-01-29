@@ -23,7 +23,6 @@ export class RecommendationService {
         if (!domain) {
             throw new NotFoundException(`Domain with key '${domainKey}' does not exist.`);
         }
-
         let user: User | null = null;
         let itemHistory: Event[] | null = null;
 
@@ -294,6 +293,42 @@ export class RecommendationService {
                 UserId: user!.Id,
                 Value: topItemsByAvgPredict[index]._avg.Value || 0
             }));
+
+            if (recommendations.length <= 0) {
+                recommendations = await this.prisma.item.findMany({
+                    where: {
+                        DomainId: domain.Id,
+                    },
+                    select: {
+                        Id: true,
+                        DomainItemId: true,
+                        Title: true,
+                        Description: true,
+                        ImageUrl: true,
+                        ItemCategories: {
+                            select: {
+                                Category: {
+                                    select: {
+                                        Name: true
+                                    }
+                                }
+                            }
+                        },
+                        Attributes: true
+                    },
+                    take: numberItems
+                });
+
+                return recommendations.map(item => ({
+                    Id: item?.Id,
+                    DomainItemId: item?.DomainItemId,
+                    Title: item?.Title,
+                    Description: item?.Description,
+                    ImageUrl: item?.ImageUrl,
+                    Categories: item?.ItemCategories.map(ic => ic.Category.Name),
+                    ...((item?.Attributes as Record<string, any>) || {})
+                }));
+            }
         }
 
         const detailedRecommendations = await Promise.all(
