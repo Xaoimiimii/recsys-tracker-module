@@ -199,8 +199,8 @@ export class PopupDisplay {
 
     // Popup Wrapper logic
     const popupWrapper = layout.wrapper?.popup || {} as any;
-    //const popupWidth = popupWrapper.width ? `${popupWrapper.width}px` : '340px';
-    const popupWidth = '340px';
+    const popupWidth = popupWrapper.width ? `${popupWrapper.width}px` : '340px';
+    // const popupWidth = '340px';
     
     // Xử lý Height từ Config (Nếu JSON có height thì dùng, ko thì max-height)
     const popupHeightCSS = popupWrapper.height 
