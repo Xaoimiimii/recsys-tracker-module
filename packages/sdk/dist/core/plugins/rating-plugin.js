@@ -29,10 +29,15 @@ export class RatingPlugin extends BasePlugin {
         this.errorBoundary.execute(() => {
             if (!this.ensureInitialized())
                 return;
+            if (this.active) {
+                //console.warn('[RatingPlugin] Already active, skipping duplicate start');
+                return;
+            }
             // Listen for both click and submit events
             document.addEventListener('click', this.handleClickBound, true);
             document.addEventListener('submit', this.handleSubmitBound, true);
             this.active = true;
+            //console.log('[RatingPlugin] Started');
         }, 'RatingPlugin.start');
     }
     stop() {

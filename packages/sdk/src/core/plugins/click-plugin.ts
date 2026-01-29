@@ -19,6 +19,8 @@ export class ClickPlugin extends BasePlugin {
   public readonly name = 'ClickPlugin';
 
   private handleClickBound = this.handleClick.bind(this);
+  private lastClickTimestamp: Map<string, number> = new Map(); // Track last click time per element
+  private debounceTime: number = 300; // 300ms debounce
 
   public init(tracker: RecSysTracker): void {
     this.errorBoundary.execute(() => {
@@ -30,9 +32,14 @@ export class ClickPlugin extends BasePlugin {
   public start(): void {
     this.errorBoundary.execute(() => {
       if (!this.ensureInitialized()) return;
+      if (this.active) {
+        //console.warn('[ClickPlugin] Already active, skipping duplicate start');
+        return;
+      }
 
       document.addEventListener('click', this.handleClickBound, true);
       this.active = true;
+      //console.log('[ClickPlugin] Started');
     }, 'ClickPlugin.start');
   }
 
@@ -69,6 +76,18 @@ export class ClickPlugin extends BasePlugin {
         continue;
       }
 
+      // Debounce: Bỏ qua clicks liên tiếp trên cùng element trong thời gian ngắn
+      const elementKey = this.getElementKey(matchedElement, rule.id);
+      const now = Date.now();
+      const lastClick = this.lastClickTimestamp.get(elementKey);
+      
+      if (lastClick && (now - lastClick) < this.debounceTime) {
+        //console.log('[ClickPlugin] Debounced - ignoring rapid click on', elementKey);
+        return;
+      }
+      
+      this.lastClickTimestamp.set(elementKey, now);
+
       // Create trigger context
       const triggerContext = {
         element: matchedElement,
@@ -91,6 +110,16 @@ export class ClickPlugin extends BasePlugin {
       // Chỉ track rule đầu tiên match
       return;
     }
+  }
+
+  // Generate unique key cho mỗi element + rule combination
+  private getElementKey(element: HTMLElement, ruleId: number): string {
+    // Sử dụng data attributes hoặc textContent để identify element
+    const itemId = element.getAttribute('data-item-id') || 
+                   element.getAttribute('data-id') ||
+                   element.textContent?.substring(0, 20) ||
+                   '';
+    return `${ruleId}:${itemId}`;
   }
 
   /**

@@ -27,6 +27,7 @@ export class EventDispatcher {
   private domainUrl: string | null = null;
   private timeout: number = 5000;
   private headers: Record<string, string> = {};
+  private sendingEvents: Set<string> = new Set(); // Track events đang gửi để tránh duplicate
 
   constructor(options: DispatchOptions) {
     this.endpoint = options.endpoint;
@@ -41,49 +42,70 @@ export class EventDispatcher {
       return false;
     }
 
-    // Verify origin trước khi gửi event
-    if (this.domainUrl) {
-      const isOriginValid = OriginVerifier.verify(this.domainUrl);
-      if (!isOriginValid) {
-        return false;
-      }
+    // Check nếu event đang được gửi
+    if (this.sendingEvents.has(event.id)) {
+      //console.log('[EventDispatcher] Event already being sent, skipping:', event.id);
+      return true; // Return true để không retry
     }
 
-    // Chuyển đổi TrackedEvent sang định dạng CreateEventDto
-    const payloadObject = {
-      Timestamp: event.timestamp,
-      EventTypeId: event.eventTypeId,
-      ActionType: event.actionType || null,
-      TrackingRuleId: event.trackingRuleId,
-      DomainKey: event.domainKey,
-      AnonymousId: event.anonymousId,
-      ...(event.userId && { UserId: event.userId }),
-      ...(event.itemId && { ItemId: event.itemId }),
-      ...(event.ratingValue !== undefined && { RatingValue: event.ratingValue }),
-      ...(event.ratingReview !== undefined && { RatingReview: event.ratingReview })
-    };
+    // Mark event as being sent
+    this.sendingEvents.add(event.id);
 
-    const payload = JSON.stringify(payloadObject);
+    try {
+      // Verify origin trước khi gửi event
+      if (this.domainUrl) {
+        const isOriginValid = OriginVerifier.verify(this.domainUrl);
+        if (!isOriginValid) {
+          return false;
+        }
+      }
+
+      // Chuyển đổi TrackedEvent sang định dạng CreateEventDto
+      const payloadObject = {
+        Timestamp: event.timestamp,
+        EventTypeId: event.eventTypeId,
+        ActionType: event.actionType || null,
+        TrackingRuleId: event.trackingRuleId,
+        DomainKey: event.domainKey,
+        AnonymousId: event.anonymousId,
+        ...(event.userId && { UserId: event.userId }),
+        ...(event.itemId && { ItemId: event.itemId }),
+        ...(event.ratingValue !== undefined && { RatingValue: event.ratingValue }),
+        ...(event.ratingReview !== undefined && { RatingReview: event.ratingReview })
+      };
+
+      const payload = JSON.stringify(payloadObject);
 
     // Log payload sẽ gửi đi
     // console.log('[EventDispatcher] Sending payload to API:', payloadObject);
 
-    // Thử từng phương thức gửi theo thứ tự ưu tiên
-    const strategies: SendStrategy[] = ['beacon', 'fetch'];
+      // Thử từng phương thức gửi theo thứ tự ưu tiên
+      const strategies: SendStrategy[] = ['beacon', 'fetch'];
 
-    for (const strategy of strategies) {
-      try {
-        const success = await this.sendWithStrategy(payload, strategy);
-        if (success) {
-          return true;
+      for (const strategy of strategies) {
+        try {
+          //console.log('[EventDispatcher] Trying strategy:', strategy);
+          const success = await this.sendWithStrategy(payload, strategy);
+          //console.log('[EventDispatcher] Strategy', strategy, 'result:', success);
+          if (success) {
+            //console.log('[EventDispatcher] ✅ Event sent successfully with', strategy);
+            return true;
+          }
+        } catch (error) {
+          //console.log('[EventDispatcher] Strategy', strategy, 'failed with error:', error);
+          // Thử phương thức tiếp theo
         }
-      } catch (error) {
-        // Thử phương thức tiếp theo
       }
-    }
 
-    // Trả về false nếu tất cả phương thức gửi đều thất bại
-    return false;
+      //console.log('[EventDispatcher] ❌ All strategies failed');
+      // Trả về false nếu tất cả phương thức gửi đều thất bại
+      return false;
+    } finally {
+      // Remove from sending set after a delay để tránh retry ngay lập tức
+      setTimeout(() => {
+        this.sendingEvents.delete(event.id);
+      }, 1000);
+    }
   }
 
   // Gửi nhiều events cùng lúc (gọi send cho từng event)

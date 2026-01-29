@@ -16,6 +16,8 @@ export class ClickPlugin extends BasePlugin {
         super(...arguments);
         this.name = 'ClickPlugin';
         this.handleClickBound = this.handleClick.bind(this);
+        this.lastClickTimestamp = new Map(); // Track last click time per element
+        this.debounceTime = 300; // 300ms debounce
     }
     init(tracker) {
         this.errorBoundary.execute(() => {
@@ -27,8 +29,13 @@ export class ClickPlugin extends BasePlugin {
         this.errorBoundary.execute(() => {
             if (!this.ensureInitialized())
                 return;
+            if (this.active) {
+                //console.warn('[ClickPlugin] Already active, skipping duplicate start');
+                return;
+            }
             document.addEventListener('click', this.handleClickBound, true);
             this.active = true;
+            //console.log('[ClickPlugin] Started');
         }, 'ClickPlugin.start');
     }
     stop() {
@@ -61,6 +68,15 @@ export class ClickPlugin extends BasePlugin {
             if (!matchedElement) {
                 continue;
             }
+            // Debounce: Bỏ qua clicks liên tiếp trên cùng element trong thời gian ngắn
+            const elementKey = this.getElementKey(matchedElement, rule.id);
+            const now = Date.now();
+            const lastClick = this.lastClickTimestamp.get(elementKey);
+            if (lastClick && (now - lastClick) < this.debounceTime) {
+                //console.log('[ClickPlugin] Debounced - ignoring rapid click on', elementKey);
+                return;
+            }
+            this.lastClickTimestamp.set(elementKey, now);
             // Create trigger context
             const triggerContext = {
                 element: matchedElement,
@@ -77,6 +93,16 @@ export class ClickPlugin extends BasePlugin {
             // Chỉ track rule đầu tiên match
             return;
         }
+    }
+    // Generate unique key cho mỗi element + rule combination
+    getElementKey(element, ruleId) {
+        var _a;
+        // Sử dụng data attributes hoặc textContent để identify element
+        const itemId = element.getAttribute('data-item-id') ||
+            element.getAttribute('data-id') ||
+            ((_a = element.textContent) === null || _a === void 0 ? void 0 : _a.substring(0, 20)) ||
+            '';
+        return `${ruleId}:${itemId}`;
     }
     /**
      * Find element matching rule selector

@@ -1,59 +1,65 @@
 // Event Deduplication Utility
-// Ngăn chặn các sự kiện trùng lặp trong một khoảng thời gian ngắn
-// Generate fingerprint từ eventType + itemId + userId + ruleId
-// Drops events nếu same fingerprint được gửi trong timeWindow (3s mặc định)
+// Ngăn chặn các sự kiện hoàn toàn giống nhau được gửi nhiều lần
+// So sánh TẤT CẢ fields quan trọng: eventType, ruleId, userId, anonId, itemId, actionType, domainKey
+// Chặn nếu 2 events giống nhau đến trong vòng 1 giây (theo thời gian thực, không phải event timestamp)
 export class EventDeduplicator {
     constructor(timeWindow) {
         this.fingerprints = new Map();
-        this.timeWindow = 3000; // 3 seconds
-        this.cleanupInterval = 5000; // cleanup every 5s
+        this.timeWindow = 1000; // 1 second - khoảng thời gian chặn duplicate
+        this.cleanupInterval = 30000; // cleanup every 30s (tăng từ 5s)
+        this.fingerprintRetentionTime = 15000; // Giữ fingerprints 15s (đủ lâu để catch duplicates)
         if (timeWindow !== undefined) {
             this.timeWindow = timeWindow;
         }
+        //console.log('[EventDeduplicator] Created with timeWindow:', this.timeWindow);
         // Periodic cleanup of old fingerprints
         if (typeof window !== 'undefined') {
             setInterval(() => this.cleanup(), this.cleanupInterval);
         }
     }
-    // Generate fingerprint for an event
-    generateFingerprint(eventTypeId, trackingRuleId, userId, itemId) {
-        // Simple hash: combine all identifiers
-        const raw = `${eventTypeId}:${trackingRuleId}:${userId}:${itemId}`;
-        return this.simpleHash(raw);
+    // Generate fingerprint từ TẤT CẢ fields quan trọng (trừ timestamp)
+    generateFingerprint(eventTypeId, trackingRuleId, userId, anonymousId, itemId, actionType, domainKey) {
+        // Dùng raw string để tránh hash collision
+        return `${eventTypeId}:${trackingRuleId}:${userId || ''}:${anonymousId}:${itemId || ''}:${actionType || ''}:${domainKey}`;
     }
-    // Simple hash function (not cryptographic, just for deduplication)
-    simpleHash(str) {
-        let hash = 0;
-        for (let i = 0; i < str.length; i++) {
-            const char = str.charCodeAt(i);
-            hash = ((hash << 5) - hash) + char;
-            hash = hash & hash; // Convert to 32bit integer
-        }
-        return hash.toString(36);
-    }
-    // Check if event is duplicate within time window
+    // Check if event is duplicate
     // Returns true if event should be DROPPED (is duplicate)
-    isDuplicate(eventTypeId, trackingRuleId, userId, itemId) {
-        const fingerprint = this.generateFingerprint(eventTypeId, trackingRuleId, userId, itemId);
+    isDuplicate(eventTypeId, trackingRuleId, userId, anonymousId, itemId, actionType, domainKey) {
+        const fingerprint = this.generateFingerprint(eventTypeId, trackingRuleId, userId, anonymousId, itemId, actionType, domainKey);
         const now = Date.now();
         const lastSeen = this.fingerprints.get(fingerprint);
-        if (lastSeen && (now - lastSeen) < this.timeWindow) {
-            return true; // Is duplicate
+        if (lastSeen) {
+            // Check nếu event giống hệt đến trong vòng timeWindow (theo thời gian thực)
+            const timeDiff = now - lastSeen.lastSeenTime;
+            if (timeDiff < this.timeWindow) {
+                // Update time để reset window
+                this.fingerprints.set(fingerprint, { lastSeenTime: now });
+                return true; // Is duplicate - event giống hệt đến quá nhanh
+            }
         }
-        // Record this fingerprint
-        this.fingerprints.set(fingerprint, now);
+        // Record fingerprint với thời điểm hiện tại NGAY LẬP TỨC
+        // Điều này đảm bảo event tiếp theo sẽ thấy fingerprint này
+        this.fingerprints.set(fingerprint, {
+            lastSeenTime: now
+        });
+        //console.log('[EventDeduplicator] ✅ New event recorded');
         return false; // Not duplicate
     }
     // Cleanup old fingerprints to prevent memory leak
     cleanup() {
         const now = Date.now();
         const toDelete = [];
-        this.fingerprints.forEach((timestamp, fingerprint) => {
-            if (now - timestamp > this.timeWindow) {
+        // console.log('[EventDeduplicator] Cleanup starting, Map size:', this.fingerprints.size);
+        this.fingerprints.forEach((data, fingerprint) => {
+            const age = now - data.lastSeenTime;
+            // Chỉ xóa fingerprints cũ hơn fingerprintRetentionTime (15s)
+            if (age > this.fingerprintRetentionTime) {
+                //console.log('[EventDeduplicator] Deleting old fingerprint, age:', age, 'threshold:', this.fingerprintRetentionTime);
                 toDelete.push(fingerprint);
             }
         });
         toDelete.forEach(fp => this.fingerprints.delete(fp));
+        //console.log('[EventDeduplicator] Cleanup done, deleted:', toDelete.length, 'remaining:', this.fingerprints.size);
     }
     // Clear all fingerprints (for testing)
     clear() {

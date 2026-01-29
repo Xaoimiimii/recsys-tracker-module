@@ -5,7 +5,7 @@ export interface TrackerConfig {
   trackingRules?: TrackingRule[];
   returnMethods?: ReturnMethod[];
   eventTypes?: EventType[];
-  searchKeywordConfig?: SearchKeywordConfig;
+  searchKeywordConfigs?: SearchKeywordConfig[];
   userIdentityConfig?: UserIdentityConfig;
   options?: TrackerOptions;
 }
@@ -34,35 +34,29 @@ export interface PayloadMapping {
 }
 
 export interface PayloadMappingConfig {
-  // For request_url source
   RequestUrlPattern?: string;
   RequestMethod?: string;
-  Value?: string; // For pathname: segment index, for query: param name, for request_body: JSON path
-  ExtractType?: 'pathname' | 'query'; // Only for request_url
-  
-  // For request_body/response_body source
-  // (RequestUrlPattern and RequestMethod already covered above)
-  // Value used as JSON path for body extraction
-  
-  // For element source
+  Value?: string;
+  ExtractType?: 'pathname' | 'query';
   SelectorPattern?: string;
+  PageUrlPattern?: string;
+  PageUrlExtractType?: 'pathname' | 'query' | 'hash';
 }
 
-// User Identity configuration
 export interface UserIdentityConfig {
   id?: number;
   source: 'request_body' | 'request_url' | 'local_storage' | 'session_storage' | 'cookie' | 'element';
   domainId: number;
   requestConfig?: UserIdentityRequestConfig | null;
-  value?: string | null; // For element/cookie/local_storage/session_storage
+  value?: string | null;
   field: 'UserId' | 'AnonymousId';
 }
 
 export interface UserIdentityRequestConfig {
   RequestUrlPattern: string;
   RequestMethod: string;
-  Value: string; // JSON path for request_body, segment index for request_url pathname
-  ExtractType?: 'pathname' | 'query'; // Only for request_url
+  Value: string;
+  ExtractType?: 'pathname' | 'query';
 }
 
 export interface ReturnMethod {
