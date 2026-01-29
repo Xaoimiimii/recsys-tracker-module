@@ -202,7 +202,7 @@ export class EventService {
                 AnonymousId: event.AnonymousId,
                 RatingValue: event.RatingValue,
                 ReviewValue: event.RatingReview,
-                Timestamp: event.Timestamp,
+                Timestamp: new Date(new Date(event.Timestamp).toLocaleString('en-US', { timeZone: 'Asia/Ho_Chi_Minh' })),
                 TrackingRuleId: event.TrackingRuleId,
             }
         });

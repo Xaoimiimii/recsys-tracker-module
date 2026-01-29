@@ -33,15 +33,15 @@ export class CreateEventDto {
     @IsNumber()
     EventTypeId: number;
 
-    @ApiProperty({ example: "user-123" })
+    @ApiPropertyOptional({ example: "user-123" })
     @IsOptional()
     @IsString()
-    UserId: string;
+    UserId?: string;
 
-    @ApiProperty({ example: "anonymous-123" })
-    @IsNotEmpty()
+    @ApiPropertyOptional({ example: "anonymous-123" })
+    @IsOptional()
     @IsString()
-    AnonymousId: string;
+    AnonymousId?: string;
 
     @ApiProperty({ example: "1" })
     @IsNotEmpty()

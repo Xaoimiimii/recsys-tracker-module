@@ -12,7 +12,7 @@ import { TaskModule } from './modules/task/task.module';
 import { SearchModule } from './modules/search/search.module';
 import { ElasticConfigModule } from './common/elastic/elastic-config.module';
 import { CacheModule } from '@nestjs/cache-manager';
-import { redisStore } from 'cache-manager-redis-store';
+import KeyvRedis from '@keyv/redis';
 import { SearchKeywordConfigModule } from './modules/search-keyword-config/search-keyword-config.module';
 
 @Module({
@@ -37,16 +37,19 @@ import { SearchKeywordConfigModule } from './modules/search-keyword-config/searc
     CacheModule.registerAsync({
       isGlobal: true,
       imports: [ConfigModule],
-      useFactory: async (configService: ConfigService) => ({
-        store: await redisStore({
-          socket: {
-            host: configService.getOrThrow('REDIS_HOST'),
-            port: configService.getOrThrow<number>('REDIS_PORT')
-          },
-          username: configService.getOrThrow('REDIS_USERNAME'),
-          password: configService.getOrThrow('REDIS_PASSWORD')
-        })
-      }),
+      useFactory: async (configService: ConfigService) => {
+        const redisHost = configService.getOrThrow('REDIS_HOST');
+        const redisPort = configService.getOrThrow<number>('REDIS_PORT');
+        const redisUsername = configService.get('REDIS_USERNAME') || 'default';
+        const redisPassword = configService.getOrThrow('REDIS_PASSWORD');
+        
+        const redisUrl = `redis://${redisUsername}:${redisPassword}@${redisHost}:${redisPort}`;
+        
+        return {
+          stores: [new KeyvRedis(redisUrl)],
+          ttl: 30 * 60 * 1000 // 30 minutes in milliseconds
+        };
+      },
       inject: [ConfigService],
     }),
     SearchKeywordConfigModule

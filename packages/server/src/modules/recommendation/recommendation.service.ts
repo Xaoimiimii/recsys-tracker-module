@@ -34,9 +34,14 @@ export class RecommendationService {
                 },
             });
 
-            // Note: Adding 7-hour offset to compensate for timezone mismatch in database
-            // Database stores local time (GMT+7) but marks it as UTC
-            const fifteenMinutesAgo = new Date(Date.now() - 15 * 60 * 1000 + 7 * 60 * 60 * 1000);
+            const fifteenMinutesAgo = new Date(Date.now() - 15 * 60 * 1000)
+                .toLocaleTimeString('en-US', {
+                    hour: '2-digit',
+                    minute: '2-digit',
+                    second: '2-digit',
+                });
+            console.log(fifteenMinutesAgo);
+
             
             itemHistory = await this.prisma.event.findMany({
                 where: {
@@ -62,8 +67,15 @@ export class RecommendationService {
             });
 
             // Note: Adding 7-hour offset to compensate for timezone mismatch in database
-            const fifteenMinutesAgo = new Date(Date.now() - 15 * 60 * 1000 + 7 * 60 * 60 * 1000);
-            
+            const fifteenMinutesAgo = new Date(Date.now() - 15 * 60 * 1000)
+                .toLocaleTimeString('en-US', {
+                    hour: '2-digit',
+                    minute: '2-digit',
+                    second: '2-digit',
+                    timeZone: 'Asia/Ho_Chi_Minh',
+                });
+
+            console.log(fifteenMinutesAgo);
             itemHistory = await this.prisma.event.findMany({
                 where: {
                     AnonymousId: anonymousId,
@@ -224,6 +236,8 @@ export class RecommendationService {
             orderBy: { Value: 'desc' },
         });
 
+        this.logger.log(`User ${user.Id} has ${allItems.length} predict items in database`);
+
         if (cachedKeyword || priorityCategoryIds.length > 0) {
             const keywordToSearch = cachedKeyword || "";
             
@@ -241,7 +255,66 @@ export class RecommendationService {
             
             this.logger.log(`Search returned ${searchResult.items?.length || 0} items`);
             
+            // If no predict data, use search results directly
+            if (allItems.length === 0 && searchResult.items?.length > 0) {
+                this.logger.log(`No predict data available, using search results directly`);
+                
+                const ratedItems = await this.prisma.rating.findMany({
+                    where: { UserId: user.Id },
+                });
+                const ratedItemsIds = ratedItems.map(item => item.ItemId);
+                
+                // Get items from search results that haven't been rated
+                const searchItemIds = searchResult.items
+                    .map(item => item.id)
+                    .filter(id => !ratedItemsIds.includes(id))
+                    .slice(0, numberItems);
+                
+                const detailedRecommendations = await Promise.all(
+                    searchItemIds.map(async (itemId) => {
+                        const item = await this.prisma.item.findUnique({
+                            where: { Id: itemId },
+                            select: {
+                                Id: true,
+                                DomainItemId: true,
+                                Title: true,
+                                Description: true,
+                                ImageUrl: true,
+                                ItemCategories: {
+                                    select: {
+                                        Category: {
+                                            select: {
+                                                Name: true
+                                            }
+                                        }
+                                    }
+                                },
+                                Attributes: true
+                            }
+                        });
+
+                        return {
+                            Id: item?.Id,
+                            DomainItemId: item?.DomainItemId,
+                            Title: item?.Title,
+                            Description: item?.Description,
+                            ImageUrl: item?.ImageUrl,
+                            Categories: item?.ItemCategories.map(ic => ic.Category.Name),
+                            ...((item?.Attributes as Record<string, any>) || {})
+                        };
+                    })
+                );
+                
+                return detailedRecommendations;
+            }
+            
             const priorityItemIds = searchResult.items.map(item => item.id);
+            this.logger.log(`Search item IDs: [${priorityItemIds.slice(0, 5).join(', ')}${priorityItemIds.length > 5 ? '...' : ''}]`);
+            
+            if (allItems.length > 0) {
+                const predictItemIds = allItems.slice(0, 5).map(p => p.ItemId);
+                this.logger.log(`Predict item IDs (first 5): [${predictItemIds.join(', ')}]`);
+            }
 
             // priority items (in search result) and other items
             priorityItems = allItems.filter(item => priorityItemIds.includes(item.ItemId));
@@ -449,6 +522,7 @@ export class RecommendationService {
 
         const cacheKeywordKey = `recommendation_keyword_${user.Id}`;
         const ttl = 30 * 60 * 1000; // 30 minutes in milliseconds
+        
         await this.cacheManager.set(cacheKeywordKey, keyword, ttl);
         this.logger.log(`Set recommendation keyword cache for user ${user.Id} with keyword '${keyword}'`);
     }
