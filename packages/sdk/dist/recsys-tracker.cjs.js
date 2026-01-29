@@ -2257,12 +2257,12 @@ class RecommendationFetcher {
     async fetchRecommendations(userValue, userField = 'AnonymousId', _options = {}) {
         try {
             // Check cache first
+            const limit = _options.numberItems || 50;
             const cacheKey = this.getCacheKey(userValue, userField);
             const cached = this.getFromCache(cacheKey);
-            if (cached) {
-                return cached;
+            if (cached && cached.length >= limit) {
+                return cached.slice(0, limit);
             }
-            const limit = _options.numberItems || 50;
             // Prepare request payload
             const requestBody = {
                 AnonymousId: this.getOrCreateAnonymousId(),
