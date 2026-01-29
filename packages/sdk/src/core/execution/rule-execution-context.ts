@@ -233,7 +233,7 @@ export class RuleExecutionContextManager {
       return;
     }
 
-    console.log('[REC] Context expired, calling callback with collected data:', executionId);
+    //console.log('[REC] Context expired, calling callback with collected data:', executionId);
 
     context.status = 'expired';
 
@@ -243,7 +243,7 @@ export class RuleExecutionContextManager {
       payload[key] = value;
     });
 
-    console.log('[REC] Collected payload on timeout:', payload);
+    //console.log('[REC] Collected payload on timeout:', payload);
 
     // Trigger callback với data đã có
     if (context.onComplete) {

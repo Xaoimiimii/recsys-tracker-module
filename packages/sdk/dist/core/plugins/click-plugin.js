@@ -35,7 +35,7 @@ export class ClickPlugin extends BasePlugin {
             }
             document.addEventListener('click', this.handleClickBound, true);
             this.active = true;
-            console.log('[ClickPlugin] ✅ Started and listening for clicks');
+            //console.log('[ClickPlugin] ✅ Started and listening for clicks');
         }, 'ClickPlugin.start');
     }
     stop() {
@@ -51,7 +51,7 @@ export class ClickPlugin extends BasePlugin {
      */
     handleClick(event) {
         var _a;
-        console.log('[ClickPlugin] Click detected on:', event.target);
+        //console.log('[ClickPlugin] Click detected on:', event.target);
         if (!this.tracker)
             return;
         const clickedElement = event.target;
@@ -69,7 +69,7 @@ export class ClickPlugin extends BasePlugin {
             if (!matchedElement) {
                 continue;
             }
-            console.log('[ClickPlugin] Matched element for rule:', rule.name, matchedElement);
+            //console.log('[ClickPlugin] Matched element for rule:', rule.name, matchedElement);
             // Debounce: Bỏ qua clicks liên tiếp trên cùng element trong thời gian ngắn
             const elementKey = this.getElementKey(matchedElement, rule.id);
             const now = Date.now();
@@ -196,7 +196,7 @@ export class ClickPlugin extends BasePlugin {
     dispatchEvent(payload, rule, eventId) {
         if (!this.tracker)
             return;
-        console.log('[ClickPlugin] Dispatching event with payload:', payload);
+        //console.log('[ClickPlugin] Dispatching event with payload:', payload);
         this.tracker.track({
             eventType: eventId,
             eventData: {

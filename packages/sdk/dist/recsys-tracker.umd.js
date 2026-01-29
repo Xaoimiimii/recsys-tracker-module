@@ -2956,7 +2956,7 @@
                 }
                 document.addEventListener('click', this.handleClickBound, true);
                 this.active = true;
-                console.log('[ClickPlugin] ✅ Started and listening for clicks');
+                //console.log('[ClickPlugin] ✅ Started and listening for clicks');
             }, 'ClickPlugin.start');
         }
         stop() {
@@ -2972,7 +2972,7 @@
          */
         handleClick(event) {
             var _a;
-            console.log('[ClickPlugin] Click detected on:', event.target);
+            //console.log('[ClickPlugin] Click detected on:', event.target);
             if (!this.tracker)
                 return;
             const clickedElement = event.target;
@@ -2990,7 +2990,7 @@
                 if (!matchedElement) {
                     continue;
                 }
-                console.log('[ClickPlugin] Matched element for rule:', rule.name, matchedElement);
+                //console.log('[ClickPlugin] Matched element for rule:', rule.name, matchedElement);
                 // Debounce: Bỏ qua clicks liên tiếp trên cùng element trong thời gian ngắn
                 const elementKey = this.getElementKey(matchedElement, rule.id);
                 const now = Date.now();
@@ -3117,7 +3117,7 @@
         dispatchEvent(payload, rule, eventId) {
             if (!this.tracker)
                 return;
-            console.log('[ClickPlugin] Dispatching event with payload:', payload);
+            //console.log('[ClickPlugin] Dispatching event with payload:', payload);
             this.tracker.track({
                 eventType: eventId,
                 eventData: {
@@ -3446,6 +3446,9 @@
             super(...arguments);
             this.name = 'SearchKeywordPlugin';
             this.inputElements = new Map();
+            this.mutationObserver = null;
+            this.searchKeywordConfigs = [];
+            this.reattachDebounceTimer = null;
         }
         init(tracker) {
             this.errorBoundary.execute(() => {
@@ -3459,37 +3462,55 @@
                 const config = this.tracker.getConfig();
                 const searchKeywordConfigs = config === null || config === void 0 ? void 0 : config.searchKeywordConfigs;
                 if (!searchKeywordConfigs || searchKeywordConfigs.length === 0) {
+                    //console.log('[SearchKeywordPlugin] No search keyword configs found');
                     return;
                 }
+                //console.log('[SearchKeywordPlugin] Starting with configs:', searchKeywordConfigs);
+                // Lưu configs để dùng lại khi DOM thay đổi
+                this.searchKeywordConfigs = searchKeywordConfigs;
                 // Attach listeners cho tất cả configs
                 searchKeywordConfigs.forEach(skConfig => {
                     this.attachListeners(skConfig);
                 });
+                // Setup MutationObserver để theo dõi DOM changes
+                this.setupMutationObserver();
                 this.active = true;
             }, 'SearchKeywordPlugin.start');
         }
         stop() {
             this.errorBoundary.execute(() => {
                 this.removeListeners();
+                // Disconnect MutationObserver
+                if (this.mutationObserver) {
+                    this.mutationObserver.disconnect();
+                    this.mutationObserver = null;
+                }
+                // Clear debounce timer
+                if (this.reattachDebounceTimer) {
+                    clearTimeout(this.reattachDebounceTimer);
+                    this.reattachDebounceTimer = null;
+                }
                 super.stop();
             }, 'SearchKeywordPlugin.stop');
         }
         /**
          * Attach event listeners to input element
          */
-        attachListeners(config) {
+        attachListeners(config, retryCount = 0) {
             // Tìm input element
             const inputElement = this.findInputElement(config.InputSelector);
             if (!inputElement) {
-                // Retry sau một khoảng thời gian (DOM có thể chưa load xong)
-                setTimeout(() => {
-                    const retryElement = this.findInputElement(config.InputSelector);
-                    if (retryElement) {
-                        this.addEventListeners(retryElement, config);
-                    }
-                }, 1000);
+                const maxRetries = 5; // Tăng số lần retry lên 5
+                if (retryCount < maxRetries) {
+                    const delay = 1000 * (retryCount + 1); // Tăng dần delay: 1s, 2s, 3s, 4s, 5s
+                    //console.log(`[SearchKeywordPlugin] Input element not found for selector: ${config.InputSelector}, retry ${retryCount + 1}/${maxRetries} in ${delay}ms...`);
+                    setTimeout(() => {
+                        this.attachListeners(config, retryCount + 1);
+                    }, delay);
+                }
                 return;
             }
+            //console.log('[SearchKeywordPlugin] Input element found for selector:', config.InputSelector);
             this.addEventListeners(inputElement, config);
         }
         /**
@@ -3533,6 +3554,7 @@
             const key = `${config.Id}_${config.InputSelector}`;
             // Nếu đã tồn tại, remove listener cũ trước
             if (this.inputElements.has(key)) {
+                //console.log('[SearchKeywordPlugin] Removing old listener for:', key);
                 this.removeListener(key);
             }
             // Tạo bound handler riêng cho từng input
@@ -3541,6 +3563,7 @@
             };
             // Listen for keypress events (khi user nhấn Enter)
             element.addEventListener('keypress', handleKeyPress);
+            //console.log('[SearchKeywordPlugin] Event listener attached for:', key);
             // Lưu vào map
             this.inputElements.set(key, {
                 element,
@@ -3575,8 +3598,7 @@
                 const target = event.target;
                 const searchKeyword = target.value.trim();
                 if (searchKeyword) {
-                    // console.log('[SearchKeywordPlugin] Search keyword (Enter pressed):', searchKeyword, 'Config:', config.ConfigurationName);
-                    // this.saveKeyword(searchKeyword);
+                    //console.log('[SearchKeywordPlugin] Search keyword (Enter pressed):', searchKeyword);
                     // Trigger push keyword API ngay lập tức
                     this.triggerPushKeyword(searchKeyword);
                 }
@@ -3595,16 +3617,59 @@
             const userId = cached && cached.userValue ? cached.userValue : null;
             const anonymousId = getOrCreateAnonymousId();
             // const userId = userInfo ? userInfo.value : null;
-            console.log('[SearchKeywordPlugin] Triggering push keyword:', {
-                userId,
-                anonymousId,
-                domainKey: config.domainKey,
-                keyword
-            });
+            // console.log('[SearchKeywordPlugin] Triggering push keyword:', {
+            //   userId,
+            //   anonymousId,
+            //   domainKey: config.domainKey,
+            //   keyword
+            // });
             await this.pushKeywordToServer(userId, anonymousId, config.domainKey, keyword);
             // const userId = userInfo.value || '';
             // const anonymousId = userInfo.field === 'AnonymousId' ? userInfo.value : getOrCreateAnonymousId();
             // await this.pushKeywordToServer(userId, anonymousId, config.domainKey, keyword);
+        }
+        /**
+         * Setup MutationObserver để theo dõi DOM changes
+         * Re-attach listeners khi DOM thay đổi (ví dụ: sau khi login, DOM có thể re-render)
+         */
+        setupMutationObserver() {
+            // Cleanup existing observer
+            if (this.mutationObserver) {
+                this.mutationObserver.disconnect();
+            }
+            this.mutationObserver = new MutationObserver(() => {
+                // Kiểm tra xem có input elements nào bị mất không
+                let needsReattach = false;
+                this.inputElements.forEach((data) => {
+                    // Kiểm tra xem element còn trong DOM không
+                    if (!document.body.contains(data.element)) {
+                        //console.log('[SearchKeywordPlugin] Detected DOM change - element removed:', key);
+                        needsReattach = true;
+                    }
+                });
+                // Nếu có element bị mất, debounce re-attach để chờ DOM settle
+                if (needsReattach) {
+                    // Clear timeout cũ nếu có
+                    if (this.reattachDebounceTimer) {
+                        clearTimeout(this.reattachDebounceTimer);
+                    }
+                    // Chờ 500ms để DOM render xong trước khi re-attach
+                    this.reattachDebounceTimer = window.setTimeout(() => {
+                        //console.log('[SearchKeywordPlugin] Re-attaching listeners due to DOM changes');
+                        this.removeListeners();
+                        this.searchKeywordConfigs.forEach(config => {
+                            this.attachListeners(config);
+                        });
+                        this.reattachDebounceTimer = null;
+                    }, 500);
+                }
+            });
+            // Observe toàn bộ body để bắt mọi thay đổi DOM
+            this.mutationObserver.observe(document.body, {
+                childList: true,
+                subtree: true
+            });
+            //console.log('[SearchKeywordPlugin] MutationObserver setup complete');
         }
         /**
          * Call API POST recommendation/push-keyword
@@ -3619,7 +3684,7 @@
                 Keyword: keyword
             };
             try {
-                console.log('[SearchKeywordPlugin] MeomeoPushing keyword to server:', payload);
+                //console.log('[SearchKeywordPlugin] MeomeoPushing keyword to server:', payload);
                 const response = await fetch(url, {
                     method: 'POST',
                     headers: {
@@ -3805,14 +3870,14 @@
             if (!context || context.status !== 'pending') {
                 return;
             }
-            console.log('[REC] Context expired, calling callback with collected data:', executionId);
+            //console.log('[REC] Context expired, calling callback with collected data:', executionId);
             context.status = 'expired';
             // Build payload từ collected fields (dù có đủ hay không)
             const payload = {};
             context.collectedFields.forEach((value, key) => {
                 payload[key] = value;
             });
-            console.log('[REC] Collected payload on timeout:', payload);
+            //console.log('[REC] Collected payload on timeout:', payload);
             // Trigger callback với data đã có
             if (context.onComplete) {
                 context.onComplete(payload);
@@ -4653,16 +4718,16 @@
          * @param onComplete - Callback khi payload sẵn sàng để dispatch
          */
         handleTrigger(rule, triggerContext, onComplete) {
-            console.log('[PayloadBuilder] handleTrigger called for rule:', rule.name);
+            //console.log('[PayloadBuilder] handleTrigger called for rule:', rule.name);
             // 1. Phân tích mappings
             const { syncMappings, asyncMappings } = this.classifyMappings(rule);
-            console.log('[PayloadBuilder] syncMappings:', syncMappings.length, 'asyncMappings:', asyncMappings.length);
+            //console.log('[PayloadBuilder] syncMappings:', syncMappings.length, 'asyncMappings:', asyncMappings.length);
             // 2. Nếu không có async → resolve ngay
             if (asyncMappings.length === 0) {
-                console.log('[PayloadBuilder] No async mappings, resolving sync only');
+                //console.log('[PayloadBuilder] No async mappings, resolving sync only');
                 const payload = this.resolveSyncMappings(syncMappings, triggerContext, rule);
-                console.log('[PayloadBuilder] Resolved payload:', payload);
-                console.log('[PayloadBuilder] Calling onComplete callback');
+                //console.log('[PayloadBuilder] Resolved payload:', payload);
+                //console.log('[PayloadBuilder] Calling onComplete callback');
                 onComplete(payload);
                 return;
             }
@@ -4721,19 +4786,16 @@
          * Resolve tất cả sync mappings
          */
         resolveSyncMappings(mappings, context, rule) {
-            console.log('[PayloadBuilder] resolveSyncMappings called with', mappings.length, 'mappings');
+            //console.log('[PayloadBuilder] resolveSyncMappings called with', mappings.length, 'mappings');
             const payload = {
                 ruleId: rule.id,
                 eventTypeId: rule.eventTypeId
             };
             for (const mapping of mappings) {
                 const value = this.resolveSyncMapping(mapping, context);
-                console.log('[PayloadBuilder] Resolved', mapping.field, '=', value, 'from source:', mapping.source);
+                //console.log('[PayloadBuilder] Resolved', mapping.field, '=', value, 'from source:', mapping.source);
                 if (this.isValidValue(value)) {
                     payload[mapping.field] = value;
-                }
-                else {
-                    console.log('[PayloadBuilder] Value is invalid for', mapping.field);
                 }
             }
             return payload;
@@ -5304,7 +5366,7 @@
                 // Khởi tạo Anonymous ID ngay khi SDK init
                 getOrCreateAnonymousId();
                 this.isInitialized = true;
-                console.log('[RecSysTracker] ✅ SDK initialized successfully');
+                //console.log('[RecSysTracker] ✅ SDK initialized successfully');
             }, 'init');
         }
         // Tự động khởi tạo plugins dựa trên tracking rules
@@ -5341,10 +5403,10 @@
         }
         // Track custom event - NEW SIGNATURE (supports flexible payload)
         track(eventData) {
-            console.log('[RecSysTracker] track() called with eventData:', eventData);
+            //console.log('[RecSysTracker] track() called with eventData:', eventData);
             this.errorBoundary.execute(() => {
                 if (!this.isInitialized || !this.config) {
-                    console.log('[RecSysTracker] ❌ SDK not initialized or no config');
+                    //console.log('[RecSysTracker] ❌ SDK not initialized or no config');
                     return;
                 }
                 // Extract required fields for deduplication
@@ -5353,7 +5415,7 @@
                 const ruleId = payload.ruleId || payload.RuleId;
                 // Lấy user info từ UserIdentityManager
                 const userInfo = this.userIdentityManager.getUserInfo();
-                console.log('[RecSysTracker] User info from UserIdentityManager:', userInfo);
+                //console.log('[RecSysTracker] User info from UserIdentityManager:', userInfo);
                 // // User field cho deduplication - sử dụng user info từ UserIdentityManager
                 // const userValue = userInfo.value || 
                 //                  payload.userId || payload.UserId || 
@@ -5377,15 +5439,15 @@
                 // Get anonymous ID
                 const anonymousId = userInfo.field === 'AnonymousId' ? userInfo.value : getOrCreateAnonymousId();
                 const userId = userInfo.field === 'UserId' && userInfo.value ? userInfo.value : null;
-                console.log('[RecSysTracker] Final userId:', userId, 'anonymousId:', anonymousId);
+                //console.log('[RecSysTracker] Final userId:', userId, 'anonymousId:', anonymousId);
                 // Check for duplicate event - so sánh TẤT CẢ fields quan trọng
                 const isDuplicate = this.eventDeduplicator.isDuplicate(eventData.eventType, Number(ruleId) || 0, userId, anonymousId, itemId, actionType, this.config.domainKey);
-                console.log('[RecSysTracker] isDuplicate:', isDuplicate);
+                //console.log('[RecSysTracker] isDuplicate:', isDuplicate);
                 if (isDuplicate) {
-                    console.log('[RecSysTracker] ❌ Event is duplicate, skipping');
+                    //console.log('[RecSysTracker] ❌ Event is duplicate, skipping');
                     return;
                 }
-                console.log('[RecSysTracker] ✅ Creating TrackedEvent');
+                //console.log('[RecSysTracker] ✅ Creating TrackedEvent');
                 const trackedEvent = {
                     id: this.metadataNormalizer.generateEventId(),
                     timestamp: new Date(eventData.timestamp),
@@ -5403,7 +5465,7 @@
                         ratingReview: reviewText
                     }),
                 };
-                console.log('[RecSysTracker] Adding event to buffer:', trackedEvent);
+                //console.log('[RecSysTracker] Adding event to buffer:', trackedEvent);
                 this.eventBuffer.add(trackedEvent);
             }, 'track');
         }

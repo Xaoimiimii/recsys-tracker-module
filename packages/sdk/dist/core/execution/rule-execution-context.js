@@ -163,14 +163,14 @@ export class RuleExecutionContextManager {
         if (!context || context.status !== 'pending') {
             return;
         }
-        console.log('[REC] Context expired, calling callback with collected data:', executionId);
+        //console.log('[REC] Context expired, calling callback with collected data:', executionId);
         context.status = 'expired';
         // Build payload từ collected fields (dù có đủ hay không)
         const payload = {};
         context.collectedFields.forEach((value, key) => {
             payload[key] = value;
         });
-        console.log('[REC] Collected payload on timeout:', payload);
+        //console.log('[REC] Collected payload on timeout:', payload);
         // Trigger callback với data đã có
         if (context.onComplete) {
             context.onComplete(payload);

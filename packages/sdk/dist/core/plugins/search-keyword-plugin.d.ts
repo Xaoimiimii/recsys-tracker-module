@@ -3,6 +3,9 @@ import { RecSysTracker } from '../..';
 export declare class SearchKeywordPlugin extends BasePlugin {
     readonly name = "SearchKeywordPlugin";
     private inputElements;
+    private mutationObserver;
+    private searchKeywordConfigs;
+    private reattachDebounceTimer;
     init(tracker: RecSysTracker): void;
     start(): void;
     stop(): void;
@@ -37,6 +40,11 @@ export declare class SearchKeywordPlugin extends BasePlugin {
      * Trigger push keyword API (được gọi khi nhấn Enter hoặc từ DisplayManager)
      */
     private triggerPushKeyword;
+    /**
+     * Setup MutationObserver để theo dõi DOM changes
+     * Re-attach listeners khi DOM thay đổi (ví dụ: sau khi login, DOM có thể re-render)
+     */
+    private setupMutationObserver;
     /**
      * Call API POST recommendation/push-keyword
      */
