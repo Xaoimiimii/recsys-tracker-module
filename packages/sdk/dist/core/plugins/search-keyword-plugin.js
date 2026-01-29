@@ -205,7 +205,7 @@ export class SearchKeywordPlugin extends BasePlugin {
             this.inputElements.forEach((data) => {
                 // Kiểm tra xem element còn trong DOM không
                 if (!document.body.contains(data.element)) {
-                    //console.log('[SearchKeywordPlugin] Detected DOM change - element removed:', key);
+                    //console.log('[SearchKeywordPlugin] Detected DOM change - element removed');
                     needsReattach = true;
                 }
             });

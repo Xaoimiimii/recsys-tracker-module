@@ -167,8 +167,8 @@ export class PopupDisplay {
         const imgWidth = typeof imgWidthRaw === 'number' ? `${imgWidthRaw}px` : imgWidthRaw;
         // Popup Wrapper logic
         const popupWrapper = ((_f = layout.wrapper) === null || _f === void 0 ? void 0 : _f.popup) || {};
-        //const popupWidth = popupWrapper.width ? `${popupWrapper.width}px` : '340px';
-        const popupWidth = '340px';
+        const popupWidth = popupWrapper.width ? `${popupWrapper.width}px` : '340px';
+        // const popupWidth = '340px';
         // Xử lý Height từ Config (Nếu JSON có height thì dùng, ko thì max-height)
         const popupHeightCSS = popupWrapper.height
             ? `height: ${popupWrapper.height}px;`

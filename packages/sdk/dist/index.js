@@ -89,27 +89,27 @@ export class RecSysTracker {
     // Tự động khởi tạo plugins dựa trên tracking rules
     async autoInitializePlugins() {
         var _a;
-        if (!((_a = this.config) === null || _a === void 0 ? void 0 : _a.trackingRules) || this.config.trackingRules.length === 0) {
-            return;
-        }
-        // Get dynamic IDs with fallbacks
-        const clickId = this.getEventTypeId('Click') || 1;
-        const rateId = this.getEventTypeId('Rating') || 2;
-        const reviewId = this.getEventTypeId('Review') || 3;
-        // Check specific rules (chỉ check nếu tìm thấy ID)
-        const hasClickRules = clickId ? this.config.trackingRules.some(rule => rule.eventTypeId === clickId) : false;
-        const hasRateRules = rateId ? this.config.trackingRules.some(rule => rule.eventTypeId === rateId) : false;
-        const hasReviewRules = reviewId ? this.config.trackingRules.some(rule => rule.eventTypeId === reviewId) : false;
         // Chỉ tự động đăng ký nếu chưa có plugin nào được đăng ký
         if (this.pluginManager.getPluginNames().length === 0) {
-            if (hasClickRules && this.config) {
-                this.use(new ClickPlugin());
-            }
-            if (hasRateRules) {
-                this.use(new RatingPlugin());
-            }
-            if (hasReviewRules) {
-                this.use(new ReviewPlugin());
+            // Khởi tạo plugins dựa trên tracking rules nếu có
+            if (((_a = this.config) === null || _a === void 0 ? void 0 : _a.trackingRules) && this.config.trackingRules.length > 0) {
+                // Get dynamic IDs with fallbacks
+                const clickId = this.getEventTypeId('Click') || 1;
+                const rateId = this.getEventTypeId('Rating') || 2;
+                const reviewId = this.getEventTypeId('Review') || 3;
+                // Check specific rules (chỉ check nếu tìm thấy ID)
+                const hasClickRules = clickId ? this.config.trackingRules.some(rule => rule.eventTypeId === clickId) : false;
+                const hasRateRules = rateId ? this.config.trackingRules.some(rule => rule.eventTypeId === rateId) : false;
+                const hasReviewRules = reviewId ? this.config.trackingRules.some(rule => rule.eventTypeId === reviewId) : false;
+                if (hasClickRules && this.config) {
+                    this.use(new ClickPlugin());
+                }
+                if (hasRateRules) {
+                    this.use(new RatingPlugin());
+                }
+                if (hasReviewRules) {
+                    this.use(new ReviewPlugin());
+                }
             }
             // Always load SearchKeywordPlugin to check for search keyword config
             this.use(new SearchKeywordPlugin());

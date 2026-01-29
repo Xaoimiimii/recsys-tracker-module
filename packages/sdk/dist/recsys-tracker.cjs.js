@@ -1231,8 +1231,8 @@ class PopupDisplay {
         const imgWidth = typeof imgWidthRaw === 'number' ? `${imgWidthRaw}px` : imgWidthRaw;
         // Popup Wrapper logic
         const popupWrapper = ((_f = layout.wrapper) === null || _f === void 0 ? void 0 : _f.popup) || {};
-        //const popupWidth = popupWrapper.width ? `${popupWrapper.width}px` : '340px';
-        const popupWidth = '340px';
+        const popupWidth = popupWrapper.width ? `${popupWrapper.width}px` : '340px';
+        // const popupWidth = '340px';
         // Xử lý Height từ Config (Nếu JSON có height thì dùng, ko thì max-height)
         const popupHeightCSS = popupWrapper.height
             ? `height: ${popupWrapper.height}px;`
@@ -3641,7 +3641,7 @@ class SearchKeywordPlugin extends BasePlugin {
             this.inputElements.forEach((data) => {
                 // Kiểm tra xem element còn trong DOM không
                 if (!document.body.contains(data.element)) {
-                    //console.log('[SearchKeywordPlugin] Detected DOM change - element removed:', key);
+                    //console.log('[SearchKeywordPlugin] Detected DOM change - element removed');
                     needsReattach = true;
                 }
             });
@@ -5370,27 +5370,27 @@ class RecSysTracker {
     // Tự động khởi tạo plugins dựa trên tracking rules
     async autoInitializePlugins() {
         var _a;
-        if (!((_a = this.config) === null || _a === void 0 ? void 0 : _a.trackingRules) || this.config.trackingRules.length === 0) {
-            return;
-        }
-        // Get dynamic IDs with fallbacks
-        const clickId = this.getEventTypeId('Click') || 1;
-        const rateId = this.getEventTypeId('Rating') || 2;
-        const reviewId = this.getEventTypeId('Review') || 3;
-        // Check specific rules (chỉ check nếu tìm thấy ID)
-        const hasClickRules = this.config.trackingRules.some(rule => rule.eventTypeId === clickId) ;
-        const hasRateRules = this.config.trackingRules.some(rule => rule.eventTypeId === rateId) ;
-        const hasReviewRules = this.config.trackingRules.some(rule => rule.eventTypeId === reviewId) ;
         // Chỉ tự động đăng ký nếu chưa có plugin nào được đăng ký
         if (this.pluginManager.getPluginNames().length === 0) {
-            if (hasClickRules && this.config) {
-                this.use(new ClickPlugin());
-            }
-            if (hasRateRules) {
-                this.use(new RatingPlugin());
-            }
-            if (hasReviewRules) {
-                this.use(new ReviewPlugin());
+            // Khởi tạo plugins dựa trên tracking rules nếu có
+            if (((_a = this.config) === null || _a === void 0 ? void 0 : _a.trackingRules) && this.config.trackingRules.length > 0) {
+                // Get dynamic IDs with fallbacks
+                const clickId = this.getEventTypeId('Click') || 1;
+                const rateId = this.getEventTypeId('Rating') || 2;
+                const reviewId = this.getEventTypeId('Review') || 3;
+                // Check specific rules (chỉ check nếu tìm thấy ID)
+                const hasClickRules = this.config.trackingRules.some(rule => rule.eventTypeId === clickId) ;
+                const hasRateRules = this.config.trackingRules.some(rule => rule.eventTypeId === rateId) ;
+                const hasReviewRules = this.config.trackingRules.some(rule => rule.eventTypeId === reviewId) ;
+                if (hasClickRules && this.config) {
+                    this.use(new ClickPlugin());
+                }
+                if (hasRateRules) {
+                    this.use(new RatingPlugin());
+                }
+                if (hasReviewRules) {
+                    this.use(new ReviewPlugin());
+                }
             }
             // Always load SearchKeywordPlugin to check for search keyword config
             this.use(new SearchKeywordPlugin());
