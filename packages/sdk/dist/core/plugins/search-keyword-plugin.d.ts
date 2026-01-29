@@ -3,6 +3,9 @@ import { RecSysTracker } from '../..';
 export declare class SearchKeywordPlugin extends BasePlugin {
     readonly name = "SearchKeywordPlugin";
     private inputElements;
+    private mutationObserver;
+    private searchKeywordConfigs;
+    private reattachDebounceTimer;
     init(tracker: RecSysTracker): void;
     start(): void;
     stop(): void;
@@ -38,8 +41,13 @@ export declare class SearchKeywordPlugin extends BasePlugin {
      */
     private triggerPushKeyword;
     /**
+     * Setup MutationObserver để theo dõi DOM changes
+     * Re-attach listeners khi DOM thay đổi (ví dụ: sau khi login, DOM có thể re-render)
+     */
+    private setupMutationObserver;
+    /**
      * Call API POST recommendation/push-keyword
      */
-    pushKeywordToServer(userId: string, anonymousId: string, domainKey: string, keyword: string): Promise<void>;
+    pushKeywordToServer(userId: string | null, anonymousId: string, domainKey: string, keyword: string): Promise<void>;
 }
 //# sourceMappingURL=search-keyword-plugin.d.ts.map

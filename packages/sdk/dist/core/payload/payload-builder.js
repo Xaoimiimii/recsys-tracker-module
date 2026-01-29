@@ -42,11 +42,16 @@ export class PayloadBuilder {
      * @param onComplete - Callback khi payload sẵn sàng để dispatch
      */
     handleTrigger(rule, triggerContext, onComplete) {
+        //console.log('[PayloadBuilder] handleTrigger called for rule:', rule.name);
         // 1. Phân tích mappings
         const { syncMappings, asyncMappings } = this.classifyMappings(rule);
+        //console.log('[PayloadBuilder] syncMappings:', syncMappings.length, 'asyncMappings:', asyncMappings.length);
         // 2. Nếu không có async → resolve ngay
         if (asyncMappings.length === 0) {
+            //console.log('[PayloadBuilder] No async mappings, resolving sync only');
             const payload = this.resolveSyncMappings(syncMappings, triggerContext, rule);
+            //console.log('[PayloadBuilder] Resolved payload:', payload);
+            //console.log('[PayloadBuilder] Calling onComplete callback');
             onComplete(payload);
             return;
         }
@@ -105,14 +110,19 @@ export class PayloadBuilder {
      * Resolve tất cả sync mappings
      */
     resolveSyncMappings(mappings, context, rule) {
+        //console.log('[PayloadBuilder] resolveSyncMappings called with', mappings.length, 'mappings');
         const payload = {
             ruleId: rule.id,
             eventTypeId: rule.eventTypeId
         };
         for (const mapping of mappings) {
             const value = this.resolveSyncMapping(mapping, context);
+            //console.log('[PayloadBuilder] Resolved', mapping.field, '=', value, 'from source:', mapping.source);
             if (this.isValidValue(value)) {
                 payload[mapping.field] = value;
+            }
+            else {
+                //console.log('[PayloadBuilder] Value is invalid for', mapping.field);
             }
         }
         return payload;

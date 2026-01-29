@@ -83,6 +83,7 @@ export class RecSysTracker {
             // Khởi tạo Anonymous ID ngay khi SDK init
             getOrCreateAnonymousId();
             this.isInitialized = true;
+            //console.log('[RecSysTracker] ✅ SDK initialized successfully');
         }, 'init');
     }
     // Tự động khởi tạo plugins dựa trên tracking rules
@@ -119,8 +120,10 @@ export class RecSysTracker {
     }
     // Track custom event - NEW SIGNATURE (supports flexible payload)
     track(eventData) {
+        //console.log('[RecSysTracker] track() called with eventData:', eventData);
         this.errorBoundary.execute(() => {
             if (!this.isInitialized || !this.config) {
+                //console.log('[RecSysTracker] ❌ SDK not initialized or no config');
                 return;
             }
             // Extract required fields for deduplication
@@ -129,6 +132,7 @@ export class RecSysTracker {
             const ruleId = payload.ruleId || payload.RuleId;
             // Lấy user info từ UserIdentityManager
             const userInfo = this.userIdentityManager.getUserInfo();
+            //console.log('[RecSysTracker] User info from UserIdentityManager:', userInfo);
             // // User field cho deduplication - sử dụng user info từ UserIdentityManager
             // const userValue = userInfo.value || 
             //                  payload.userId || payload.UserId || 
@@ -152,11 +156,15 @@ export class RecSysTracker {
             // Get anonymous ID
             const anonymousId = userInfo.field === 'AnonymousId' ? userInfo.value : getOrCreateAnonymousId();
             const userId = userInfo.field === 'UserId' && userInfo.value ? userInfo.value : null;
+            //console.log('[RecSysTracker] Final userId:', userId, 'anonymousId:', anonymousId);
             // Check for duplicate event - so sánh TẤT CẢ fields quan trọng
             const isDuplicate = this.eventDeduplicator.isDuplicate(eventData.eventType, Number(ruleId) || 0, userId, anonymousId, itemId, actionType, this.config.domainKey);
+            //console.log('[RecSysTracker] isDuplicate:', isDuplicate);
             if (isDuplicate) {
+                //console.log('[RecSysTracker] ❌ Event is duplicate, skipping');
                 return;
             }
+            //console.log('[RecSysTracker] ✅ Creating TrackedEvent');
             const trackedEvent = {
                 id: this.metadataNormalizer.generateEventId(),
                 timestamp: new Date(eventData.timestamp),
@@ -174,6 +182,7 @@ export class RecSysTracker {
                     ratingReview: reviewText
                 }),
             };
+            //console.log('[RecSysTracker] Adding event to buffer:', trackedEvent);
             this.eventBuffer.add(trackedEvent);
         }, 'track');
     }
