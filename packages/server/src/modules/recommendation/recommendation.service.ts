@@ -473,13 +473,10 @@ export class RecommendationService {
         let user: User | null = null;
 
         if (userId) {
-            user = await this.prisma.user.findUnique({
+            user = await this.prisma.user.findFirst({
                 where: {
-                    AnonymousId_UserId_DomainId: {
-                        AnonymousId: anonymousId,
-                        UserId: userId,
-                        DomainId: domain.Id,
-                    }
+                    UserId: userId,
+                    DomainId: domain.Id,
                 },
             });
 
