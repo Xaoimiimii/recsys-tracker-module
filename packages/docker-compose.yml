@@ -1,0 +1,19 @@
+services:
+  app:
+    build:
+      context: ./server
+      dockerfile: Dockerfile
+    ports:
+      - "3000:3000"
+    env_file:
+      - ./server/.env
+    restart: unless-stopped
+
+  migrate:
+    build:
+      context: ./server
+      dockerfile: Dockerfile
+    env_file:
+      - ./server/.env
+    command: ["npx", "prisma", "migrate", "deploy"]
+    restart: "no"

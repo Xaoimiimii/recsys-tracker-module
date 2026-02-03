@@ -1,47 +1,49 @@
 # Build stage
-FROM node:24-alpine AS builder
+FROM node:20-alpine AS builder
 
 WORKDIR /app
 
-# Copy package files
-COPY package.json ./
-COPY prisma ./prisma/
+# Install OpenSSL for Prisma
+RUN apk add --no-cache openssl
 
-# Install dependencies
+# Copy package.json
+COPY package.json ./
+
+# Install all dependencies
 RUN npm install
 
-# Generate Prisma client
+# Copy prisma schema and generate client
+COPY prisma ./prisma/
 RUN npx prisma generate
 
-# Copy source code
+# Copy source code and build
 COPY . .
-
-# Build the application
 RUN npm run build
 
 # Production stage
-FROM node:24-alpine AS production
+FROM node:20-alpine
 
 WORKDIR /app
 
-# Copy package files
-COPY package.json ./
+# Install OpenSSL for Prisma
+RUN apk add --no-cache openssl
 
-# Install only production dependencies
-RUN npm install --omit=dev
+# Copy from builder
+COPY --from=builder /app/package.json ./
+COPY --from=builder /app/node_modules ./node_modules
+COPY --from=builder /app/prisma ./prisma
+COPY --from=builder /app/dist ./dist
+COPY --from=builder /app/src ./src
+COPY --from=builder /app/tsconfig.json ./tsconfig.json
 
-# Copy Prisma schema and generate client
-COPY prisma ./prisma/
+# Regenerate Prisma client for linux
 RUN npx prisma generate
 
-# Copy built application from builder stage
-COPY --from=builder /app/dist ./dist
+# Recompile only the generated prisma files
+RUN rm -rf /app/dist/src/generated && npx tsc src/generated/prisma/*.ts src/generated/prisma/**/*.ts --outDir dist/src/generated/prisma --skipLibCheck --declaration --esModuleInterop --module commonjs --target ES2020 --moduleResolution node 2>/dev/null || npm run build
 
 # Expose port
 EXPOSE 3000
 
-# Set environment to production
-ENV NODE_ENV=production
-
-# Start the application
+# Start application
 CMD ["node", "dist/src/main.js"]
