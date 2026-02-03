@@ -194,5 +194,6 @@ export class RatingPlugin extends BasePlugin {
         plugin: this.name
       }
     });
+    this.triggerRefresh();
   }
 }

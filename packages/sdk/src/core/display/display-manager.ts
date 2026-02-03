@@ -13,6 +13,7 @@ export class DisplayManager {
   private recommendationFetcher: RecommendationFetcher;
   private cachedRecommendations: RecommendationItem[] | null = null;
   private fetchPromise: Promise<RecommendationItem[]> | null = null;
+  private refreshTimer: NodeJS.Timeout | null = null;
 
   constructor(domainKey: string, apiBaseUrl: string = 'https://recsys-tracker-module.onrender.com') {
     this.domainKey = domainKey;
@@ -39,6 +40,25 @@ export class DisplayManager {
     for (const method of returnMethods) {      
       this.activateDisplayMethod(method);
     }
+  }
+
+  public notifyActionTriggered(): void {
+    if (this.refreshTimer) clearTimeout(this.refreshTimer);
+
+    // Chống spam API bằng Debounce (đợi 500ms sau hành động cuối cùng)
+    this.refreshTimer = setTimeout(async () => {
+      await this.refreshAllDisplays();
+    }, 500);
+  }
+
+  private async refreshAllDisplays(): Promise<void> {
+    this.cachedRecommendations = null;
+    this.fetchPromise = null;
+    this.recommendationFetcher.clearCache();
+
+    const newItems = await this.getRecommendations(50);
+    this.popupDisplays.forEach(popup => (popup as any).updateContent?.(newItems));
+    this.inlineDisplays.forEach(inline => (inline as any).updateContent?.(newItems));
   }
 
   // Phân loại và kích hoạt display method tương ứng
@@ -148,9 +168,18 @@ export class DisplayManager {
         { 
           numberItems: limit,
           autoRefresh: true,
-          onRefresh: (newItems) => {            
-            // Update cached recommendations
+          onRefresh: (newItems) => {
             this.cachedRecommendations = newItems;
+            this.popupDisplays.forEach(popup => {
+              if (typeof (popup as any).updateContent === 'function') {
+                (popup as any).updateContent(newItems);
+              }
+            });
+            this.inlineDisplays.forEach(inline => {
+              if (typeof (inline as any).updateContent === 'function') {
+                (inline as any).updateContent(newItems);
+              }
+            });
           }
         }
       );
