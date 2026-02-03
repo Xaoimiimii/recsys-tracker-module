@@ -45,6 +45,20 @@ export class PopupDisplay {
     this.removePopup();
   }
 
+  public updateContent(newItems: RecommendationItem[]): void {
+    if (!this.shadowHost || !this.shadowHost.shadowRoot) return;
+    
+    const shadow = this.shadowHost.shadowRoot;
+    const layout = (this.config.layoutJson as any) || {};
+    const contentMode = layout.contentMode || 'carousel';
+
+    if (contentMode === 'carousel') {
+      this.setupCarousel(shadow, newItems);
+    } else {
+      this.renderStaticItems(shadow, newItems);
+    }
+  }
+
   private startWatcher(): void {
     if (this.spaCheckInterval) clearInterval(this.spaCheckInterval);
 

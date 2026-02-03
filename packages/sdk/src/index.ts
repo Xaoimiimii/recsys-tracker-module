@@ -90,18 +90,15 @@ export class RecSysTracker {
           this.eventDispatcher.setDomainUrl(this.config.domainUrl);
         }
 
-        // console.log(this.config);
-
-        // Tự động khởi tạo plugins dựa trên rules
-        this.autoInitializePlugins();
-
         // Khởi tạo Display Manager nếu có returnMethods
         if (this.config.returnMethods && this.config.returnMethods.length > 0) {
           const apiBaseUrl = process.env.API_URL || 'https://recsys-tracker-module.onrender.com';
           this.displayManager = new DisplayManager(this.config.domainKey, apiBaseUrl);
-          
           await this.displayManager.initialize(this.config.returnMethods);
         }
+
+        // Tự động khởi tạo plugins dựa trên rules
+        this.autoInitializePlugins();
 
       } else {
         // Nếu origin verification thất bại, không khởi tạo SDK

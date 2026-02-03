@@ -42,6 +42,23 @@ export class InlineDisplay {
     }
   }
 
+  public updateContent(newItems: RecommendationItem[]): void {
+    const containers = document.querySelectorAll(`${this.selector}[data-recsys-loaded="true"]`);
+    
+    containers.forEach(container => {
+      if (container.shadowRoot) {
+        const shadow = container.shadowRoot;
+        const contentMode = (this.config.layoutJson as any).contentMode || 'grid';
+        
+        if (contentMode === 'carousel') {
+          this.setupCarousel(shadow, newItems);
+        } else {
+          this.renderStaticItems(shadow, newItems);
+        }
+      }
+    });
+  }
+
   // --- CORE INLINE LOGIC (Mutation Observer) ---
   private setupObserver(): void {
     this.observer = new MutationObserver(() => {
