@@ -1,5 +1,9 @@
+name: recsys-module
+
 services:
-  app:
+  recsys-module:
+    image: recsys-module
+    container_name: recsys-module-server
     build:
       context: ./server
       dockerfile: Dockerfile
@@ -8,12 +12,3 @@ services:
     env_file:
       - ./server/.env
     restart: unless-stopped
-
-  migrate:
-    build:
-      context: ./server
-      dockerfile: Dockerfile
-    env_file:
-      - ./server/.env
-    command: ["npx", "prisma", "migrate", "deploy"]
-    restart: "no"
