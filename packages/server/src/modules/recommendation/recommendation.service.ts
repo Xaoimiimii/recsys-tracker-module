@@ -5,7 +5,7 @@ import { firstValueFrom } from 'rxjs';
 import { HttpService } from '@nestjs/axios';
 import { Event, Item, User } from 'src/generated/prisma/client';
 import { SearchService } from '../search/search.service';
-import { CACHE_MANAGER } from '@nestjs/cache-manager';
+import { CACHE_MANAGER, CacheModule } from '@nestjs/cache-manager';
 import type { Cache } from 'cache-manager';
 
 @Injectable()
@@ -25,6 +25,8 @@ export class RecommendationService {
         }
         let user: User | null = null;
         let itemHistory: Event[] | null = null;
+        let keyword: string = "";
+        let lastItem: string = "";
 
         if (userId) {
             user = await this.prisma.user.findFirst({
@@ -51,7 +53,6 @@ export class RecommendationService {
                 },
                 take: 10
             });
-
         } else {
             user = await this.prisma.user.findFirst({
                 where: {
@@ -99,6 +100,12 @@ export class RecommendationService {
             });
 
             if (!topItemsByAvgPredict || topItemsByAvgPredict.length <= 0) {
+                const itemCount = await this.prisma.item.findMany({
+                    where: {
+                        DomainId: domain.Id
+                    }
+                });
+                const skip = Math.floor(Math.random() * itemCount.length);
                 let recommendation = await this.prisma.item.findMany({
                     where: {
                         DomainId: domain.Id,
@@ -120,10 +127,11 @@ export class RecommendationService {
                         },
                         Attributes: true
                     },
+                    skip: skip,
                     take: numberItems
                 });
 
-                return recommendation.map(item => ({
+                let item = recommendation.map(item => ({
                     Id: item?.Id,
                     DomainItemId: item?.DomainItemId,
                     Title: item?.Title,
@@ -132,6 +140,12 @@ export class RecommendationService {
                     Categories: item?.ItemCategories.map(ic => ic.Category.Name),
                     ...((item?.Attributes as Record<string, any>) || {})
                 }));
+
+                return {
+                    item: item,
+                    keyword: keyword,
+                    lastItem: lastItem
+                }
             }
 
             const topItemIds = topItemsByAvgPredict
@@ -179,14 +193,32 @@ export class RecommendationService {
                     };
                 })
             );
-            return detailedRecommendations.slice(0, numberItems);
+
+            return {
+                item: detailedRecommendations.slice(0, numberItems),
+                search: "",
+                lastItem: ""
+            }
         }
 
         let priorityCategoryIds: number[] = [];
 
         if (itemHistory && itemHistory.length > 0) {
             this.logger.log(`Found ${itemHistory.length} events in history (within 15 min window)`);
-            
+            const lastItemId = itemHistory[0].ItemId || "";
+            if (lastItemId) {
+                const lastItemInfo = await this.prisma.item.findFirst({
+                    where: {
+                        DomainItemId: lastItemId,
+                        DomainId: domain.Id
+                    },
+                    select: {
+                        Title: true
+                    }
+                });
+                lastItem = lastItemInfo?.Title || "";
+            }
+
             const historyDomainItemIds = itemHistory
                 .map((event) => event.ItemId)
                 .filter((id): id is string => id !== null);
@@ -225,9 +257,10 @@ export class RecommendationService {
 
         if (cachedKeyword || priorityCategoryIds.length > 0) {
             const keywordToSearch = cachedKeyword || "";
-            
+
             if (cachedKeyword) {
                 this.logger.log(`Cache hit keyword: "${cachedKeyword}"`);
+                keyword = cachedKeyword;
             } else {
                 this.logger.log(`No cache keyword, searching by Priority Categories: [${priorityCategoryIds.join(', ')}]`);
             }
@@ -299,12 +332,17 @@ export class RecommendationService {
                             Description: item?.Description,
                             ImageUrl: item?.ImageUrl,
                             Categories: item?.ItemCategories.map(ic => ic.Category.Name),
-                            ...((item?.Attributes as Record<string, any>) || {})
+                            ...((item?.Attributes as Record<string, any>) || {}), 
                         };
                     })
                 );
-                
-                return detailedRecommendations;
+                // {item: [], search: "keyword", lastItem: "abcd"}
+                // {}
+                return {
+                    items: detailedRecommendations,
+                    search: keyword,
+                    lastItem: lastItem
+                }
             }
             
             const priorityItemIds = searchResult.items.map(item => item.id);
@@ -434,7 +472,11 @@ export class RecommendationService {
             })
         );
 
-        return detailedRecommendations.slice(0, numberItems);
+        return {
+            item: detailedRecommendations.slice(0, numberItems),
+            keyword: keyword,
+            lastItem: lastItem
+        };
     }
 
     async triggerTrainModels() {
