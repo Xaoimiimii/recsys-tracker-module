@@ -475,14 +475,16 @@ export class InlineDisplay {
         const container = shadow.querySelector('.recsys-container');
         if (!container)
             return;
-        container.innerHTML = items.map(item => this.renderItemContent(item)).join('');
-        container.querySelectorAll('.recsys-item').forEach((element) => {
-            element.addEventListener('click', (e) => {
-                const target = e.currentTarget;
-                const id = target.getAttribute('data-id');
-                if (id)
-                    this.handleItemClick(id);
+        container.innerHTML = '';
+        items.forEach((item) => {
+            const itemWrapper = document.createElement('div');
+            itemWrapper.className = 'recsys-item';
+            itemWrapper.innerHTML = this.renderItemContent(item);
+            itemWrapper.addEventListener('click', () => {
+                const targetId = item.DomainItemId;
+                this.handleItemClick(targetId);
             });
+            container.appendChild(itemWrapper);
         });
     }
     // --- CAROUSEL LOGIC ---
@@ -497,21 +499,21 @@ export class InlineDisplay {
         if (!slideContainer)
             return;
         const renderSlide = () => {
-            let html = '';
-            // [FIX] Vòng lặp lấy N item liên tiếp thay vì chỉ 1 item
+            slideContainer.innerHTML = '';
             for (let i = 0; i < itemsPerView; i++) {
                 const index = (currentIndex + i) % items.length;
-                html += this.renderItemContent(items[index]);
-            }
-            slideContainer.innerHTML = html;
-            slideContainer.querySelectorAll('.recsys-item').forEach((element) => {
-                element.addEventListener('click', (e) => {
-                    const target = e.currentTarget;
-                    const id = target.getAttribute('data-id');
-                    if (id)
-                        this.handleItemClick(id);
+                const item = items[index];
+                const itemWrapper = document.createElement('div');
+                itemWrapper.className = 'recsys-item';
+                itemWrapper.innerHTML = this.renderItemContent(item);
+                itemWrapper.addEventListener('click', () => {
+                    const targetId = item.DomainItemId;
+                    if (targetId) {
+                        this.handleItemClick(targetId);
+                    }
                 });
-            });
+                slideContainer.appendChild(itemWrapper);
+            }
         };
         const next = () => {
             currentIndex = (currentIndex + 1) % items.length;

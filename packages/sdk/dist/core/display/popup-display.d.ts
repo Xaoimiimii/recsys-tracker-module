@@ -11,6 +11,7 @@ export declare class PopupDisplay {
     private spaCheckInterval;
     private isPendingShow;
     private isManuallyClosed;
+    private lastCheckedUrl;
     private readonly DEFAULT_DELAY;
     constructor(_domainKey: string, _slotName: string, _apiBaseUrl: string, config: PopupConfig | undefined, recommendationGetter: (limit: number) => Promise<RecommendationResponse>);
     start(): void;

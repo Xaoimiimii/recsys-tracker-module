@@ -9,6 +9,7 @@ export class PopupDisplay {
         this.spaCheckInterval = null;
         this.isPendingShow = false;
         this.isManuallyClosed = false;
+        this.lastCheckedUrl = '';
         this.DEFAULT_DELAY = 5000;
         this.recommendationGetter = recommendationGetter;
         this.hostId = `recsys-popup-host-${_slotName}-${Date.now()}`; // Unique ID based on slotName
@@ -29,13 +30,13 @@ export class PopupDisplay {
         }
         this.removePopup();
     }
-    generateTitle(keyword, lastItem) {
+    generateTitle(search, lastItem) {
         var _a;
         const context = (_a = this.config.triggerConfig) === null || _a === void 0 ? void 0 : _a.targetValue;
         const title = "Vì bạn đã trải nghiệm";
         const searchTitle = "Vì bạn đã tìm kiếm";
         if ((context === null || context === void 0 ? void 0 : context.includes('search')) || (context === null || context === void 0 ? void 0 : context.includes('query'))) {
-            return `${searchTitle} "${keyword}"`;
+            return `${searchTitle} "${search}"`;
         }
         if (lastItem && lastItem.trim() !== "") {
             return `${title} "${lastItem}"`;
@@ -45,10 +46,12 @@ export class PopupDisplay {
     updateContent(response) {
         if (!this.shadowHost || !this.shadowHost.shadowRoot)
             return;
-        const { items, keyword, lastItem } = response;
+        const { items, search, lastItem } = response;
+        if (!search)
+            console.log("thiếu search");
         const titleElement = this.shadowHost.shadowRoot.querySelector('.recsys-header-title');
         if (titleElement) {
-            titleElement.textContent = this.generateTitle(keyword, lastItem);
+            titleElement.textContent = this.generateTitle(search, lastItem);
             const layout = this.config.layoutJson || {};
             if (layout.contentMode === 'carousel') {
                 this.setupCarousel(this.shadowHost.shadowRoot, items);
@@ -61,38 +64,45 @@ export class PopupDisplay {
     startWatcher() {
         if (this.spaCheckInterval)
             clearInterval(this.spaCheckInterval);
-        this.spaCheckInterval = setInterval(() => {
-            const shouldShow = this.shouldShowPopup(); // Check URL hiện tại
-            const isVisible = this.shadowHost !== null; // Check xem Popup có đang hiện không
-            if (!shouldShow) {
+        this.spaCheckInterval = setInterval(async () => {
+            const shouldShow = this.shouldShowPopup();
+            const isVisible = this.shadowHost !== null;
+            const currentUrl = window.location.pathname;
+            // Nếu URL thay đổi, reset lại trạng thái để cho phép hiện ở trang mới
+            if (currentUrl !== this.lastCheckedUrl) {
                 this.isManuallyClosed = false;
-            }
-            // CASE 1: URL KHÔNG khớp nhưng Popup đang hiện -> ĐÓNG NGAY
-            if (!shouldShow && isVisible) {
-                this.removePopup();
                 this.isPendingShow = false;
-                this.clearTimeouts(); // Hủy luôn nếu có timer nào đang chạy ngầm
+                this.lastCheckedUrl = currentUrl;
+            }
+            if (!shouldShow) {
+                if (isVisible || this.isPendingShow) {
+                    this.removePopup();
+                    this.clearTimeouts();
+                    this.isPendingShow = false;
+                }
                 return;
             }
-            // CASE 2: URL KHÔNG khớp nhưng đang đếm ngược để hiện -> HỦY ĐẾM NGƯỢC
-            if (!shouldShow && this.isPendingShow) {
-                this.clearTimeouts();
-                this.isPendingShow = false;
-                return;
-            }
-            // CASE 3: URL KHỚP, Popup CHƯA hiện và CHƯA đếm ngược -> BẮT ĐẦU ĐẾM
+            // CHỈ BẮT ĐẦU ĐẾM NGƯỢC NẾU:
+            // URL khớp + Chưa hiện + Chưa đang đợi + Chưa đóng tay
             if (shouldShow && !isVisible && !this.isPendingShow && !this.isManuallyClosed) {
                 this.isPendingShow = true; // KHÓA NGAY LẬP TỨC
                 const delay = this.config.delay || 0;
-                this.popupTimeout = setTimeout(() => {
-                    // Kiểm tra lại URL lần cuối trước khi gọi API
-                    if (this.shouldShowPopup() && !this.shadowHost) {
-                        this.showPopup();
+                this.popupTimeout = setTimeout(async () => {
+                    try {
+                        if (this.shouldShowPopup() && !this.shadowHost) {
+                            await this.showPopup();
+                        }
                     }
-                    this.isPendingShow = false; // MỞ KHÓA sau khi đã chạy xong
+                    finally {
+                        // KHÔNG reset isPendingShow về false nếu showPopup không tạo ra shadowHost
+                        // Điều này ngăn việc chu kỳ Watcher sau lại nhảy vào đây khi items rỗng
+                        if (this.shadowHost) {
+                            this.isPendingShow = false;
+                        }
+                    }
                 }, delay);
             }
-        }, 500);
+        }, 1000);
     }
     // Hàm lên lịch hiển thị (tách riêng logic delay)
     // private scheduleShow(): void {
@@ -109,10 +119,9 @@ export class PopupDisplay {
         try {
             const response = await this.fetchRecommendations();
             const items = response.items;
-            console.log(items);
             // Chỉ hiện nếu chưa hiện (double check)
             if (items && items.length > 0 && !this.shadowHost) {
-                this.renderPopup(items, response.keyword, response.lastItem);
+                this.renderPopup(items, response.search, response.lastItem);
                 // Logic autoClose (tự đóng sau X giây)
                 if (this.config.autoCloseDelay && this.config.autoCloseDelay > 0) {
                     this.autoCloseTimeout = setTimeout(() => {
@@ -162,23 +171,22 @@ export class PopupDisplay {
         }, delay);
     }
     async fetchRecommendations() {
-        var _a, _b;
+        var _a;
         try {
             const limit = ((_a = this.config.layoutJson) === null || _a === void 0 ? void 0 : _a.maxItems) || 50;
             console.log('[PopupDisplay] Calling recommendationGetter with limit:', limit);
             const result = await this.recommendationGetter(limit);
             console.log('[PopupDisplay] recommendationGetter result:', result);
             // recommendationGetter now returns full RecommendationResponse
-            if (result && typeof result === 'object' && 'items' in result) {
-                console.log('[PopupDisplay] items length:', (_b = result.items) === null || _b === void 0 ? void 0 : _b.length);
+            if (result && result.items && Array.isArray(result.items)) {
                 return result;
             }
             console.log('[PopupDisplay] Invalid result, returning empty');
-            return { items: [], keyword: '', lastItem: '' };
+            return { items: [], search: '', lastItem: '' };
         }
         catch (e) {
             console.error('[PopupDisplay] fetchRecommendations error:', e);
-            return { items: [], keyword: '', lastItem: '' };
+            return { items: [], search: '', lastItem: '' };
         }
     }
     // --- LOGIC 2: DYNAMIC CSS GENERATOR ---
@@ -497,11 +505,11 @@ export class PopupDisplay {
         html += `</div></div>`;
         return html;
     }
-    renderPopup(items, keyword, lastItem) {
+    renderPopup(items, search, lastItem) {
         var _a;
         this.removePopup();
         //const returnMethodValue = (this.config as any).value || "";
-        const dynamicTitle = this.generateTitle(keyword, lastItem);
+        const dynamicTitle = this.generateTitle(search, lastItem);
         const host = document.createElement('div');
         host.id = this.hostId;
         document.body.appendChild(host);
@@ -544,14 +552,16 @@ export class PopupDisplay {
         const container = shadow.querySelector('.recsys-container');
         if (!container)
             return;
-        container.innerHTML = items.map(item => this.renderItemContent(item)).join('');
-        container.querySelectorAll('.recsys-item').forEach((element) => {
-            element.addEventListener('click', (e) => {
-                const target = e.currentTarget;
-                const id = target.getAttribute('data-id');
-                if (id)
-                    this.handleItemClick(id);
+        container.innerHTML = '';
+        items.forEach((item) => {
+            const itemWrapper = document.createElement('div');
+            itemWrapper.className = 'recsys-item';
+            itemWrapper.innerHTML = this.renderItemContent(item);
+            itemWrapper.addEventListener('click', () => {
+                const targetId = item.DomainItemId;
+                this.handleItemClick(targetId);
             });
+            container.appendChild(itemWrapper);
         });
     }
     setupCarousel(shadow, items) {
@@ -560,15 +570,16 @@ export class PopupDisplay {
         const slideContainer = shadow.querySelector('.recsys-slide');
         const renderSlide = () => {
             const item = items[currentIndex];
-            // GỌI HÀM RENDER ĐỘNG
-            slideContainer.innerHTML = this.renderItemContent(item);
-            const itemElement = slideContainer.querySelector('.recsys-item');
-            if (itemElement) {
-                const id = item.id || item.Id;
-                if (id !== undefined && id !== null) {
-                    this.handleItemClick(id);
-                }
-            }
+            slideContainer.innerHTML = '';
+            const slideElement = document.createElement('div');
+            slideElement.className = 'recsys-item';
+            slideElement.innerHTML = this.renderItemContent(item);
+            slideElement.addEventListener('click', () => {
+                const targetId = item.DomainItemId || item.id || item.Id;
+                if (targetId)
+                    this.handleItemClick(targetId);
+            });
+            slideContainer.appendChild(slideElement);
         };
         const next = () => {
             currentIndex = (currentIndex + 1) % items.length;

@@ -49,6 +49,7 @@ export class DisplayManager {
             console.log("Dữ liệu từ server trả về giống hệt cũ, không cần render lại.");
             return;
         }
+        this.cachedRecommendations = newItems;
         this.popupDisplays.forEach(popup => { var _a, _b; return (_b = (_a = popup).updateContent) === null || _b === void 0 ? void 0 : _b.call(_a, newItems); });
         this.inlineDisplays.forEach(inline => { var _a, _b; return (_b = (_a = inline).updateContent) === null || _b === void 0 ? void 0 : _b.call(_a, newItems); });
     }
@@ -149,7 +150,7 @@ export class DisplayManager {
         try {
             const anonymousId = this.getAnonymousId();
             if (!anonymousId)
-                return { items: [], keyword: '', lastItem: '' };
+                return { items: [], search: '', lastItem: '' };
             // Chỉ fetch 1 lần, không enable autoRefresh ở đây để tránh vòng lặp
             const response = await this.recommendationFetcher.fetchRecommendations(anonymousId, 'AnonymousId', {
                 numberItems: limit,
@@ -158,7 +159,7 @@ export class DisplayManager {
             return response;
         }
         catch (error) {
-            return { items: [], keyword: '', lastItem: '' };
+            return { items: [], search: '', lastItem: '' };
         }
     }
     getAnonymousId() {

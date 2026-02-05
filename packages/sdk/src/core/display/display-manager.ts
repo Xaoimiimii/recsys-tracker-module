@@ -62,6 +62,7 @@ export class DisplayManager {
       console.log("Dữ liệu từ server trả về giống hệt cũ, không cần render lại.");
       return;
     }
+    this.cachedRecommendations = newItems;
     this.popupDisplays.forEach(popup => (popup as any).updateContent?.(newItems));
     this.inlineDisplays.forEach(inline => (inline as any).updateContent?.(newItems));
   }
@@ -176,14 +177,14 @@ export class DisplayManager {
   private async fetchRecommendationsInternal(limit: number): Promise<RecommendationResponse> {
     try {
       const anonymousId = this.getAnonymousId();
-      if (!anonymousId) return {items: [], keyword: '', lastItem: ''};
+      if (!anonymousId) return {items: [], search: '', lastItem: ''};
       // Chỉ fetch 1 lần, không enable autoRefresh ở đây để tránh vòng lặp
       const response = await this.recommendationFetcher.fetchRecommendations(anonymousId, 'AnonymousId', { 
         numberItems: limit,
         autoRefresh: false
       });
       return response; 
-    } catch (error) { return {items: [], keyword: '', lastItem: ''}; }
+    } catch (error) { return {items: [], search: '', lastItem: ''}; }
   }
 
   private getAnonymousId(): string | null {

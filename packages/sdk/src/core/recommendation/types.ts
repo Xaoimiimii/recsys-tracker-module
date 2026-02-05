@@ -9,7 +9,7 @@ export interface RecommendationRequest {
 
 export interface RecommendationResponse {
   items: RecommendationItem[];
-  keyword: string;
+  search: string;
   lastItem: string;
 }
 

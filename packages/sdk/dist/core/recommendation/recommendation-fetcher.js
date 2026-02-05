@@ -16,7 +16,7 @@ export class RecommendationFetcher {
             if (cached && cached.length >= limit) {
                 return {
                     items: cached,
-                    keyword: '',
+                    search: '',
                     lastItem: ''
                 };
             }
@@ -41,7 +41,7 @@ export class RecommendationFetcher {
             const transformedItems = this.transformResponse(data.items || []);
             const finalResponse = {
                 items: transformedItems,
-                keyword: data.keyword || '',
+                search: data.search || '',
                 lastItem: data.lastItem || ''
             };
             this.saveToCache(cacheKey, transformedItems);
@@ -54,7 +54,7 @@ export class RecommendationFetcher {
             return finalResponse;
         }
         catch (error) {
-            return { items: [], keyword: '', lastItem: '' };
+            return { items: [], search: '', lastItem: '' };
         }
     }
     enableAutoRefresh(userValue, userField = 'AnonymousId', callback, options = {}) {
