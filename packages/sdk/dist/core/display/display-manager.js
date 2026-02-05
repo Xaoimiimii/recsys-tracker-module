@@ -40,17 +40,17 @@ export class DisplayManager {
         }, 500);
     }
     async refreshAllDisplays() {
-        var _a, _b, _c, _d, _e;
         this.recommendationFetcher.clearCache();
         const newItems = await this.getRecommendations(50);
-        const oldId = (_c = (_b = (_a = this.cachedRecommendations) === null || _a === void 0 ? void 0 : _a.item) === null || _b === void 0 ? void 0 : _b[0]) === null || _c === void 0 ? void 0 : _c.id;
-        const newId = (_e = (_d = newItems === null || newItems === void 0 ? void 0 : newItems.item) === null || _d === void 0 ? void 0 : _d[0]) === null || _e === void 0 ? void 0 : _e.id;
-        if (oldId === newId) {
-            console.log("Dữ liệu từ server trả về giống hệt cũ, không cần render lại.");
-            return;
-        }
+        console.log(newItems);
+        // const oldId = (this.cachedRecommendations as any)?.item?.[0]?.id;
+        // const newId = (newItems as any)?.item?.[0]?.id;
         this.cachedRecommendations = newItems;
-        this.popupDisplays.forEach(popup => { var _a, _b; return (_b = (_a = popup).updateContent) === null || _b === void 0 ? void 0 : _b.call(_a, newItems); });
+        this.popupDisplays.forEach(popup => {
+            var _a, _b, _c, _d;
+            (_b = (_a = popup).updateContent) === null || _b === void 0 ? void 0 : _b.call(_a, newItems);
+            (_d = (_c = popup).forceShow) === null || _d === void 0 ? void 0 : _d.call(_c);
+        });
         this.inlineDisplays.forEach(inline => { var _a, _b; return (_b = (_a = inline).updateContent) === null || _b === void 0 ? void 0 : _b.call(_a, newItems); });
     }
     // Phân loại và kích hoạt display method tương ứng

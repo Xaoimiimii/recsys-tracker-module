@@ -13,12 +13,8 @@ export class RecommendationFetcher {
             const limit = _options.numberItems || 50;
             const cacheKey = this.getCacheKey(userValue, userField);
             const cached = this.getFromCache(cacheKey);
-            if (cached && cached.length >= limit) {
-                return {
-                    item: cached,
-                    keyword: '',
-                    lastItem: ''
-                };
+            if (cached && cached.item.length >= limit) {
+                return cached;
             }
             const requestBody = {
                 AnonymousId: this.getOrCreateAnonymousId(),
@@ -38,13 +34,15 @@ export class RecommendationFetcher {
                 throw new Error(`API Error: ${response.status}`);
             }
             const data = await response.json();
+            console.log('>>> RAW DATA FROM API:', data);
             const transformedItems = this.transformResponse(data.item || data.items || []);
             const finalResponse = {
                 item: transformedItems,
                 keyword: data.keyword || data.search || '',
                 lastItem: data.lastItem || ''
             };
-            this.saveToCache(cacheKey, transformedItems);
+            console.log("FINAL RESPONSE: ", finalResponse);
+            this.saveToCache(cacheKey, finalResponse);
             // Giữ nguyên logic đăng ký auto-refresh của bạn
             if (_options.autoRefresh && _options.onRefresh) {
                 if (!this.autoRefreshTimers.has(cacheKey)) {

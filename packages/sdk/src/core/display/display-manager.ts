@@ -33,7 +33,7 @@ export class DisplayManager {
     try {
       await this.fetchRecommendationsOnce();
     } catch (error) {
-      // console.error('[DisplayManager] Failed to fetch recommendations.');
+      // //console.error('[DisplayManager] Failed to fetch recommendations.');
     }
 
     // Process each return method
@@ -54,16 +54,17 @@ export class DisplayManager {
   private async refreshAllDisplays(): Promise<void> {
     this.recommendationFetcher.clearCache();
     const newItems = await this.getRecommendations(50);
-    
-    const oldId = (this.cachedRecommendations as any)?.item?.[0]?.id;
-    const newId = (newItems as any)?.item?.[0]?.id;
 
-    if (oldId === newId) {
-      console.log("Dữ liệu từ server trả về giống hệt cũ, không cần render lại.");
-      return;
-    }
+    //console.log(newItems);
+    
+    // const oldId = (this.cachedRecommendations as any)?.item?.[0]?.id;
+    // const newId = (newItems as any)?.item?.[0]?.id;
+
     this.cachedRecommendations = newItems;
-    this.popupDisplays.forEach(popup => (popup as any).updateContent?.(newItems));
+    this.popupDisplays.forEach(popup => {
+      (popup as any).updateContent?.(newItems);
+      (popup as any).forceShow?.(); 
+    });
     this.inlineDisplays.forEach(inline => (inline as any).updateContent?.(newItems));
   }
 
@@ -115,7 +116,7 @@ export class DisplayManager {
         this.apiBaseUrl,
         config, 
         (limit: number) => {
-          console.log('[DisplayManager] recommendationGetter called with limit:', limit);
+          //console.log('[DisplayManager] recommendationGetter called with limit:', limit);
           // Fetch directly from recommendationFetcher instead of using cache
           return this.recommendationFetcher.fetchForAnonymousUser({ 
             numberItems: limit,
@@ -127,7 +128,7 @@ export class DisplayManager {
       this.popupDisplays.set(key, popupDisplay);
       popupDisplay.start();
     } catch (error) {
-      // console.error('[DisplayManager] Error initializing popup:', error);
+      // //console.error('[DisplayManager] Error initializing popup:', error);
     }
   }
 
@@ -156,7 +157,7 @@ export class DisplayManager {
       this.inlineDisplays.set(key, inlineDisplay);
       inlineDisplay.start();
     } catch (error) {
-      // console.error('[DisplayManager] Error initializing inline:', error);
+      // //console.error('[DisplayManager] Error initializing inline:', error);
     }
   }
 

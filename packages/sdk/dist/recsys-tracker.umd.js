@@ -1716,6 +1716,14 @@
                 window.location.href = targetUrl;
             }
         }
+        forceShow() {
+            this.isManuallyClosed = false;
+            this.isPendingShow = false;
+            this.removePopup();
+            if (this.shouldShowPopup()) {
+                this.showPopup();
+            }
+        }
     }
 
     class InlineDisplay {
@@ -2297,12 +2305,8 @@
                 const limit = _options.numberItems || 50;
                 const cacheKey = this.getCacheKey(userValue, userField);
                 const cached = this.getFromCache(cacheKey);
-                if (cached && cached.length >= limit) {
-                    return {
-                        item: cached,
-                        keyword: '',
-                        lastItem: ''
-                    };
+                if (cached && cached.item.length >= limit) {
+                    return cached;
                 }
                 const requestBody = {
                     AnonymousId: this.getOrCreateAnonymousId(),
@@ -2322,13 +2326,15 @@
                     throw new Error(`API Error: ${response.status}`);
                 }
                 const data = await response.json();
+                console.log('>>> RAW DATA FROM API:', data);
                 const transformedItems = this.transformResponse(data.item || data.items || []);
                 const finalResponse = {
                     item: transformedItems,
                     keyword: data.keyword || data.search || '',
                     lastItem: data.lastItem || ''
                 };
-                this.saveToCache(cacheKey, transformedItems);
+                console.log("FINAL RESPONSE: ", finalResponse);
+                this.saveToCache(cacheKey, finalResponse);
                 // Giữ nguyên logic đăng ký auto-refresh của bạn
                 if (_options.autoRefresh && _options.onRefresh) {
                     if (!this.autoRefreshTimers.has(cacheKey)) {
@@ -2488,17 +2494,17 @@
             }, 500);
         }
         async refreshAllDisplays() {
-            var _a, _b, _c, _d, _e;
             this.recommendationFetcher.clearCache();
             const newItems = await this.getRecommendations(50);
-            const oldId = (_c = (_b = (_a = this.cachedRecommendations) === null || _a === void 0 ? void 0 : _a.item) === null || _b === void 0 ? void 0 : _b[0]) === null || _c === void 0 ? void 0 : _c.id;
-            const newId = (_e = (_d = newItems === null || newItems === void 0 ? void 0 : newItems.item) === null || _d === void 0 ? void 0 : _d[0]) === null || _e === void 0 ? void 0 : _e.id;
-            if (oldId === newId) {
-                console.log("Dữ liệu từ server trả về giống hệt cũ, không cần render lại.");
-                return;
-            }
+            console.log(newItems);
+            // const oldId = (this.cachedRecommendations as any)?.item?.[0]?.id;
+            // const newId = (newItems as any)?.item?.[0]?.id;
             this.cachedRecommendations = newItems;
-            this.popupDisplays.forEach(popup => { var _a, _b; return (_b = (_a = popup).updateContent) === null || _b === void 0 ? void 0 : _b.call(_a, newItems); });
+            this.popupDisplays.forEach(popup => {
+                var _a, _b, _c, _d;
+                (_b = (_a = popup).updateContent) === null || _b === void 0 ? void 0 : _b.call(_a, newItems);
+                (_d = (_c = popup).forceShow) === null || _d === void 0 ? void 0 : _d.call(_c);
+            });
             this.inlineDisplays.forEach(inline => { var _a, _b; return (_b = (_a = inline).updateContent) === null || _b === void 0 ? void 0 : _b.call(_a, newItems); });
         }
         // Phân loại và kích hoạt display method tương ứng
