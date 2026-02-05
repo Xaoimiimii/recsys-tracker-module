@@ -6,8 +6,8 @@ export interface RecommendationRequest {
     NumberItems: number;
 }
 export interface RecommendationResponse {
-    items: RecommendationItem[];
-    search: string;
+    item: RecommendationItem[];
+    keyword: string;
     lastItem: string;
 }
 export interface RecommendationItem {

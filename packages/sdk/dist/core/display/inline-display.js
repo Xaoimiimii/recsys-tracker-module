@@ -89,7 +89,9 @@ export class InlineDisplay {
         }
         container.setAttribute('data-recsys-loaded', 'true');
         try {
-            const items = await this.fetchRecommendations();
+            const response = await this.fetchRecommendations();
+            const items = response.item;
+            console.log(items);
             if (items && items.length > 0) {
                 this.renderWidget(container, items);
             }
@@ -99,16 +101,22 @@ export class InlineDisplay {
         }
     }
     async fetchRecommendations() {
+        var _a;
         try {
+            const limit = ((_a = this.config.layoutJson) === null || _a === void 0 ? void 0 : _a.maxItems) || 50;
+            console.log('[PopupDisplay] Calling recommendationGetter with limit:', limit);
             const result = await this.recommendationGetter();
+            console.log('[PopupDisplay] recommendationGetter result:', result);
             // recommendationGetter now returns full RecommendationResponse
-            if (result && typeof result === 'object' && 'items' in result) {
-                return result.items;
+            if (result && result.item && Array.isArray(result.item)) {
+                return result;
             }
-            return [];
+            console.log('[PopupDisplay] Invalid result, returning empty');
+            return { item: [], keyword: '', lastItem: '' };
         }
-        catch {
-            return [];
+        catch (e) {
+            console.error('[PopupDisplay] fetchRecommendations error:', e);
+            return { item: [], keyword: '', lastItem: '' };
         }
     }
     // --- DYNAMIC CSS GENERATOR (SYNCED WITH POPUP) ---

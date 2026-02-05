@@ -66,16 +66,15 @@ export class PopupDisplay {
   public updateContent(response: RecommendationResponse): void {
     if (!this.shadowHost || !this.shadowHost.shadowRoot) return;
 
-    const { items, search, lastItem } = response;
-    if(!search) console.log("thiếu search");
+    const { item, keyword, lastItem } = response;
     const titleElement = this.shadowHost.shadowRoot.querySelector('.recsys-header-title');
       if (titleElement) {
-      titleElement.textContent = this.generateTitle(search, lastItem);
+      titleElement.textContent = this.generateTitle(keyword, lastItem);
       const layout = (this.config.layoutJson as any) || {};
       if (layout.contentMode === 'carousel') {
-        this.setupCarousel(this.shadowHost.shadowRoot, items);
+        this.setupCarousel(this.shadowHost.shadowRoot, item);
       } else {
-        this.renderStaticItems(this.shadowHost.shadowRoot, items);
+        this.renderStaticItems(this.shadowHost.shadowRoot, item);
       }
     }
   }
@@ -142,10 +141,10 @@ export class PopupDisplay {
   private async showPopup(): Promise<void> {
     try {
       const response = await this.fetchRecommendations();
-      const items = response.items;
+      const items = response.item;
       // Chỉ hiện nếu chưa hiện (double check)
       if (items && items.length > 0 && !this.shadowHost) {
-        this.renderPopup(items, response.search, response.lastItem);
+        this.renderPopup(items, response.keyword, response.lastItem);
         
         // Logic autoClose (tự đóng sau X giây)
         if (this.config.autoCloseDelay && this.config.autoCloseDelay > 0) {
@@ -204,18 +203,18 @@ export class PopupDisplay {
   private async fetchRecommendations(): Promise<RecommendationResponse> {
     try {
       const limit = (this.config.layoutJson as any)?.maxItems || 50;
-      console.log('[PopupDisplay] Calling recommendationGetter with limit:', limit);
+      //console.log('[PopupDisplay] Calling recommendationGetter with limit:', limit);
       const result = await this.recommendationGetter(limit);
-      console.log('[PopupDisplay] recommendationGetter result:', result);
+      //console.log('[PopupDisplay] recommendationGetter result:', result);
       // recommendationGetter now returns full RecommendationResponse
-      if (result && result.items && Array.isArray(result.items)) {
+      if (result && result.item && Array.isArray(result.item)) {
         return result; 
       }
-      console.log('[PopupDisplay] Invalid result, returning empty');
-      return { items: [], search: '', lastItem: '' };
+      //console.log('[PopupDisplay] Invalid result, returning empty');
+      return { item: [], keyword: '', lastItem: '' };
     } catch (e) { 
-      console.error('[PopupDisplay] fetchRecommendations error:', e);
-      return { items: [], search: '', lastItem: '' }; 
+      //console.error('[PopupDisplay] fetchRecommendations error:', e);
+      return { item: [], keyword: '', lastItem: '' }; 
     }
   }
 

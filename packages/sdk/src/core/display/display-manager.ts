@@ -55,8 +55,8 @@ export class DisplayManager {
     this.recommendationFetcher.clearCache();
     const newItems = await this.getRecommendations(50);
     
-    const oldId = this.cachedRecommendations?.items[0]?.id;
-    const newId = newItems?.items[0]?.id;
+    const oldId = this.cachedRecommendations?.item[0]?.id;
+    const newId = newItems?.item[0]?.id;
 
     if (oldId === newId) {
       console.log("Dữ liệu từ server trả về giống hệt cũ, không cần render lại.");
@@ -177,14 +177,14 @@ export class DisplayManager {
   private async fetchRecommendationsInternal(limit: number): Promise<RecommendationResponse> {
     try {
       const anonymousId = this.getAnonymousId();
-      if (!anonymousId) return {items: [], search: '', lastItem: ''};
+      if (!anonymousId) return {item: [], keyword: '', lastItem: ''};
       // Chỉ fetch 1 lần, không enable autoRefresh ở đây để tránh vòng lặp
       const response = await this.recommendationFetcher.fetchRecommendations(anonymousId, 'AnonymousId', { 
         numberItems: limit,
         autoRefresh: false
       });
       return response; 
-    } catch (error) { return {items: [], search: '', lastItem: ''}; }
+    } catch (error) { return {item: [], keyword: '', lastItem: ''}; }
   }
 
   private getAnonymousId(): string | null {

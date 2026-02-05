@@ -118,25 +118,34 @@ export class InlineDisplay {
     container.setAttribute('data-recsys-loaded', 'true');
 
     try {
-      const items = await this.fetchRecommendations();
+      const response = await this.fetchRecommendations();
+      const items = response.item;
+      //console.log(items);
 
       if (items && items.length > 0) {
         this.renderWidget(container, items);
       }
     } catch (error) {
-      // console.error('[InlineDisplay] Error processing container', error);
+      // //console.error('[InlineDisplay] Error processing container', error);
     }
   }
 
-  private async fetchRecommendations(): Promise<RecommendationItem[]> {
+  private async fetchRecommendations(): Promise<RecommendationResponse> {
     try {
+      //const limit = (this.config.layoutJson as any)?.maxItems || 50;
+      //console.log('[PopupDisplay] Calling recommendationGetter with limit:', limit);
       const result = await this.recommendationGetter();
+      //console.log('[PopupDisplay] recommendationGetter result:', result);
       // recommendationGetter now returns full RecommendationResponse
-      if (result && typeof result === 'object' && 'items' in result) {
-        return result.items;
+      if (result && result.item && Array.isArray(result.item)) {
+        return result; 
       }
-      return [];
-    } catch { return []; }
+      //console.log('[PopupDisplay] Invalid result, returning empty');
+      return { item: [], keyword: '', lastItem: '' };
+    } catch (e) { 
+      //console.error('[PopupDisplay] fetchRecommendations error:', e);
+      return { item: [], keyword: '', lastItem: '' }; 
+    }
   }
 
   // --- DYNAMIC CSS GENERATOR (SYNCED WITH POPUP) ---

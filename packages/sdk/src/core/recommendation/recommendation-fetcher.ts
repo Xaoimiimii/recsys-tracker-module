@@ -35,8 +35,8 @@ export class RecommendationFetcher {
       const cached = this.getFromCache(cacheKey);
       if (cached && cached.length >= limit) {
         return {
-          items: cached,
-          search: '', 
+          item: cached,
+          keyword: '', 
           lastItem: ''
         };
       }
@@ -62,11 +62,11 @@ export class RecommendationFetcher {
         throw new Error(`API Error: ${response.status}`);
       }
       const data: RecommendationResponse = await response.json();
-      const transformedItems = this.transformResponse(data.items || []);
+      const transformedItems = this.transformResponse(data.item || []);
       
       const finalResponse: RecommendationResponse = {
-        items: transformedItems,
-        search: data.search || '',
+        item: transformedItems,
+        keyword: data.keyword || '',
         lastItem: data.lastItem || ''
       };
       this.saveToCache(cacheKey, transformedItems);
@@ -80,7 +80,7 @@ export class RecommendationFetcher {
 
       return finalResponse;
     } catch (error) {
-      return { items: [], search: '', lastItem: '' };
+      return { item: [], keyword: '', lastItem: '' };
     }
   }
 

@@ -1102,18 +1102,16 @@ class PopupDisplay {
     updateContent(response) {
         if (!this.shadowHost || !this.shadowHost.shadowRoot)
             return;
-        const { items, search, lastItem } = response;
-        if (!search)
-            console.log("thiếu search");
+        const { item, keyword, lastItem } = response;
         const titleElement = this.shadowHost.shadowRoot.querySelector('.recsys-header-title');
         if (titleElement) {
-            titleElement.textContent = this.generateTitle(search, lastItem);
+            titleElement.textContent = this.generateTitle(keyword, lastItem);
             const layout = this.config.layoutJson || {};
             if (layout.contentMode === 'carousel') {
-                this.setupCarousel(this.shadowHost.shadowRoot, items);
+                this.setupCarousel(this.shadowHost.shadowRoot, item);
             }
             else {
-                this.renderStaticItems(this.shadowHost.shadowRoot, items);
+                this.renderStaticItems(this.shadowHost.shadowRoot, item);
             }
         }
     }
@@ -1174,10 +1172,10 @@ class PopupDisplay {
     async showPopup() {
         try {
             const response = await this.fetchRecommendations();
-            const items = response.items;
+            const items = response.item;
             // Chỉ hiện nếu chưa hiện (double check)
             if (items && items.length > 0 && !this.shadowHost) {
-                this.renderPopup(items, response.search, response.lastItem);
+                this.renderPopup(items, response.keyword, response.lastItem);
                 // Logic autoClose (tự đóng sau X giây)
                 if (this.config.autoCloseDelay && this.config.autoCloseDelay > 0) {
                     this.autoCloseTimeout = setTimeout(() => {
@@ -1234,15 +1232,15 @@ class PopupDisplay {
             const result = await this.recommendationGetter(limit);
             console.log('[PopupDisplay] recommendationGetter result:', result);
             // recommendationGetter now returns full RecommendationResponse
-            if (result && result.items && Array.isArray(result.items)) {
+            if (result && result.item && Array.isArray(result.item)) {
                 return result;
             }
             console.log('[PopupDisplay] Invalid result, returning empty');
-            return { items: [], search: '', lastItem: '' };
+            return { item: [], keyword: '', lastItem: '' };
         }
         catch (e) {
             console.error('[PopupDisplay] fetchRecommendations error:', e);
-            return { items: [], search: '', lastItem: '' };
+            return { item: [], keyword: '', lastItem: '' };
         }
     }
     // --- LOGIC 2: DYNAMIC CSS GENERATOR ---
@@ -1805,7 +1803,9 @@ class InlineDisplay {
         }
         container.setAttribute('data-recsys-loaded', 'true');
         try {
-            const items = await this.fetchRecommendations();
+            const response = await this.fetchRecommendations();
+            const items = response.item;
+            console.log(items);
             if (items && items.length > 0) {
                 this.renderWidget(container, items);
             }
@@ -1815,16 +1815,22 @@ class InlineDisplay {
         }
     }
     async fetchRecommendations() {
+        var _a;
         try {
+            const limit = ((_a = this.config.layoutJson) === null || _a === void 0 ? void 0 : _a.maxItems) || 50;
+            console.log('[PopupDisplay] Calling recommendationGetter with limit:', limit);
             const result = await this.recommendationGetter();
+            console.log('[PopupDisplay] recommendationGetter result:', result);
             // recommendationGetter now returns full RecommendationResponse
-            if (result && typeof result === 'object' && 'items' in result) {
-                return result.items;
+            if (result && result.item && Array.isArray(result.item)) {
+                return result;
             }
-            return [];
+            console.log('[PopupDisplay] Invalid result, returning empty');
+            return { item: [], keyword: '', lastItem: '' };
         }
-        catch {
-            return [];
+        catch (e) {
+            console.error('[PopupDisplay] fetchRecommendations error:', e);
+            return { item: [], keyword: '', lastItem: '' };
         }
     }
     // --- DYNAMIC CSS GENERATOR (SYNCED WITH POPUP) ---
@@ -2287,8 +2293,8 @@ class RecommendationFetcher {
             const cached = this.getFromCache(cacheKey);
             if (cached && cached.length >= limit) {
                 return {
-                    items: cached,
-                    search: '',
+                    item: cached,
+                    keyword: '',
                     lastItem: ''
                 };
             }
@@ -2310,10 +2316,10 @@ class RecommendationFetcher {
                 throw new Error(`API Error: ${response.status}`);
             }
             const data = await response.json();
-            const transformedItems = this.transformResponse(data.items || []);
+            const transformedItems = this.transformResponse(data.item || []);
             const finalResponse = {
-                items: transformedItems,
-                search: data.search || '',
+                item: transformedItems,
+                keyword: data.keyword || '',
                 lastItem: data.lastItem || ''
             };
             this.saveToCache(cacheKey, transformedItems);
@@ -2326,7 +2332,7 @@ class RecommendationFetcher {
             return finalResponse;
         }
         catch (error) {
-            return { items: [], search: '', lastItem: '' };
+            return { item: [], keyword: '', lastItem: '' };
         }
     }
     enableAutoRefresh(userValue, userField = 'AnonymousId', callback, options = {}) {
@@ -2479,8 +2485,8 @@ class DisplayManager {
         var _a, _b, _c;
         this.recommendationFetcher.clearCache();
         const newItems = await this.getRecommendations(50);
-        const oldId = (_b = (_a = this.cachedRecommendations) === null || _a === void 0 ? void 0 : _a.items[0]) === null || _b === void 0 ? void 0 : _b.id;
-        const newId = (_c = newItems === null || newItems === void 0 ? void 0 : newItems.items[0]) === null || _c === void 0 ? void 0 : _c.id;
+        const oldId = (_b = (_a = this.cachedRecommendations) === null || _a === void 0 ? void 0 : _a.item[0]) === null || _b === void 0 ? void 0 : _b.id;
+        const newId = (_c = newItems === null || newItems === void 0 ? void 0 : newItems.item[0]) === null || _c === void 0 ? void 0 : _c.id;
         if (oldId === newId) {
             console.log("Dữ liệu từ server trả về giống hệt cũ, không cần render lại.");
             return;
@@ -2586,7 +2592,7 @@ class DisplayManager {
         try {
             const anonymousId = this.getAnonymousId();
             if (!anonymousId)
-                return { items: [], search: '', lastItem: '' };
+                return { item: [], keyword: '', lastItem: '' };
             // Chỉ fetch 1 lần, không enable autoRefresh ở đây để tránh vòng lặp
             const response = await this.recommendationFetcher.fetchRecommendations(anonymousId, 'AnonymousId', {
                 numberItems: limit,
@@ -2595,7 +2601,7 @@ class DisplayManager {
             return response;
         }
         catch (error) {
-            return { items: [], search: '', lastItem: '' };
+            return { item: [], keyword: '', lastItem: '' };
         }
     }
     getAnonymousId() {

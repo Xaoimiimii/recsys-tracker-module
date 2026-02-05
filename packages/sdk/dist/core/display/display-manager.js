@@ -43,8 +43,8 @@ export class DisplayManager {
         var _a, _b, _c;
         this.recommendationFetcher.clearCache();
         const newItems = await this.getRecommendations(50);
-        const oldId = (_b = (_a = this.cachedRecommendations) === null || _a === void 0 ? void 0 : _a.items[0]) === null || _b === void 0 ? void 0 : _b.id;
-        const newId = (_c = newItems === null || newItems === void 0 ? void 0 : newItems.items[0]) === null || _c === void 0 ? void 0 : _c.id;
+        const oldId = (_b = (_a = this.cachedRecommendations) === null || _a === void 0 ? void 0 : _a.item[0]) === null || _b === void 0 ? void 0 : _b.id;
+        const newId = (_c = newItems === null || newItems === void 0 ? void 0 : newItems.item[0]) === null || _c === void 0 ? void 0 : _c.id;
         if (oldId === newId) {
             console.log("Dữ liệu từ server trả về giống hệt cũ, không cần render lại.");
             return;
@@ -150,7 +150,7 @@ export class DisplayManager {
         try {
             const anonymousId = this.getAnonymousId();
             if (!anonymousId)
-                return { items: [], search: '', lastItem: '' };
+                return { item: [], keyword: '', lastItem: '' };
             // Chỉ fetch 1 lần, không enable autoRefresh ở đây để tránh vòng lặp
             const response = await this.recommendationFetcher.fetchRecommendations(anonymousId, 'AnonymousId', {
                 numberItems: limit,
@@ -159,7 +159,7 @@ export class DisplayManager {
             return response;
         }
         catch (error) {
-            return { items: [], search: '', lastItem: '' };
+            return { item: [], keyword: '', lastItem: '' };
         }
     }
     getAnonymousId() {
