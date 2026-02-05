@@ -290,7 +290,8 @@ export class SearchKeywordPlugin extends BasePlugin {
     domainKey: string, 
     keyword: string
   ): Promise<void> {
-    const baseUrl = process.env.API_URL || 'https://recsys-tracker-module.onrender.com';
+    // const baseUrl = process.env.API_URL || 'https://recsys-tracker-module.onrender.com';
+    const baseUrl = process.env.MODULE_API_URL;
     const url = `${baseUrl}/recommendation/push-keyword`;
 
     const payload = {

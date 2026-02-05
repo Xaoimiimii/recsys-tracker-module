@@ -9,7 +9,6 @@ import {
   PluginManager
 } from './core';
 import { TrackerConfig } from './types';
-import { DEFAULT_API_URL, DEFAULT_TRACK_ENDPOINT_PATH } from './core/constants';
 import { PayloadBuilder } from './core/payload/payload-builder';
 import { EventDeduplicator } from './core/utils/event-deduplicator';
 import { LoopGuard } from './core/utils/loop-guard';
@@ -69,9 +68,11 @@ export class RecSysTracker {
       }
 
       // Khởi tạo EventDispatcher
-      const baseUrl = process.env.API_URL || DEFAULT_API_URL;
+      // const baseUrl = process.env.MODULE_API_URL || 'https://recsys-tracker-module.onrender.com';
+      const baseUrl = process.env.MODULE_API_URL || '';
+      console.log('[RecSysTracker] Using MODULE_API_URL:', baseUrl);
       this.eventDispatcher = new EventDispatcher({
-        endpoint: `${baseUrl}${DEFAULT_TRACK_ENDPOINT_PATH}`,
+        endpoint: `${baseUrl}/event`,
       });
 
       // Fetch remote config và verify origin
@@ -92,8 +93,8 @@ export class RecSysTracker {
 
         // Khởi tạo Display Manager nếu có returnMethods
         if (this.config.returnMethods && this.config.returnMethods.length > 0) {
-          const apiBaseUrl = process.env.API_URL || 'https://recsys-tracker-module.onrender.com';
-          this.displayManager = new DisplayManager(this.config.domainKey, apiBaseUrl);
+          // const apiBaseUrl = process.env.API_URL || 'https://recsys-tracker-module.onrender.com';
+          this.displayManager = new DisplayManager(this.config.domainKey, baseUrl);
           await this.displayManager.initialize(this.config.returnMethods);
         }
 

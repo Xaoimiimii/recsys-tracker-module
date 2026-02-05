@@ -75,7 +75,8 @@ export default defineConfig({
   plugins: [
     replace({
       preventAssignment: true,
-      'process.env.API_URL': JSON.stringify(process.env.API_URL || 'https://recsys-tracker-module.onrender.com'),
+      'process.env.MODULE_API_URL': JSON.stringify(process.env.MODULE_API_URL || ''),
+      'process.env.WEB_CONFIG_API_URL': JSON.stringify(process.env.WEB_CONFIG_API_URL || ''),
     }),
     typescript({
       tsconfig: './tsconfig.json',

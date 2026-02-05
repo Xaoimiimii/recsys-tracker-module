@@ -15,7 +15,7 @@ export class DisplayManager {
   private fetchPromise: Promise<RecommendationItem[]> | null = null;
   private refreshTimer: NodeJS.Timeout | null = null;
 
-  constructor(domainKey: string, apiBaseUrl: string = 'https://recsys-tracker-module.onrender.com') {
+  constructor(domainKey: string, apiBaseUrl: string) {
     this.domainKey = domainKey;
     this.apiBaseUrl = apiBaseUrl;
     this.recommendationFetcher = new RecommendationFetcher(domainKey, apiBaseUrl);

@@ -1,6 +1,5 @@
 import { TrackerConfig, TrackingRule, ReturnMethod, PayloadMapping } from '../../types';
 import { OriginVerifier } from '../utils/origin-verifier';
-import { DEFAULT_API_URL } from '../constants';
 
 // Luồng hoạt động
 // 1. SDK khởi tạo
@@ -57,17 +56,18 @@ export class ConfigLoader {
       return this.config;
     }
 
-    const baseUrl = process.env.API_URL || DEFAULT_API_URL;
+    const moduleBaseUrl = process.env.MODULE_API_URL;
+    const webConfigBaseUrl = process.env.WEB_CONFIG_API_URL;
 
     try {
       // Bước 1: Gọi các API song song để lấy domain, return methods, event types và search keyword config
       const [domainResponse, rulesListResponse, returnMethodsResponse, eventTypesResponse, searchKeywordResponse, userIdentityResponse] = await Promise.all([
-        fetch(`${baseUrl}/domain/${this.domainKey}`),
-        fetch(`${baseUrl}/rule/domain/${this.domainKey}`),
-        fetch(`${baseUrl}/return-method/${this.domainKey}`),
-        fetch(`${baseUrl}/rule/event-type`),
-        fetch(`${baseUrl}/search-keyword-config?domainKey=${this.domainKey}`),
-        fetch(`https://recsys-tracker-web-config.onrender.com/domain/user-identity?key=${this.domainKey}`),
+        fetch(`${moduleBaseUrl}/domain/${this.domainKey}`),
+        fetch(`${moduleBaseUrl}/rule/domain/${this.domainKey}`),
+        fetch(`${moduleBaseUrl}/return-method/${this.domainKey}`),
+        fetch(`${moduleBaseUrl}/rule/event-type`),
+        fetch(`${moduleBaseUrl}/search-keyword-config?domainKey=${this.domainKey}`),
+        fetch(`${webConfigBaseUrl}/domain/user-identity?key=${this.domainKey}`),
       ]);
 
       // Kiểm tra response

@@ -88,7 +88,6 @@ export class EventDispatcher {
           const success = await this.sendWithStrategy(payload, strategy);
           //console.log('[EventDispatcher] Strategy', strategy, 'result:', success);
           if (success) {
-            //console.log('[EventDispatcher] ✅ Event sent successfully with', strategy);
             return true;
           }
         } catch (error) {
@@ -97,7 +96,6 @@ export class EventDispatcher {
         }
       }
 
-      //console.log('[EventDispatcher] ❌ All strategies failed');
       // Trả về false nếu tất cả phương thức gửi đều thất bại
       return false;
     } finally {
