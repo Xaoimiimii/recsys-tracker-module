@@ -6,12 +6,13 @@ export interface RecommendationRequest {
     NumberItems: number;
 }
 export interface RecommendationResponse {
-    id: number;
-    [key: string]: any;
+    item: RecommendationItem[];
+    keyword: string;
+    lastItem: string;
 }
 export interface RecommendationItem {
-    id?: number | string;
-    Id?: number | string;
+    Id: number | string;
+    DomainItemId: string;
     [key: string]: any;
 }
 export interface RecommendationOptions {

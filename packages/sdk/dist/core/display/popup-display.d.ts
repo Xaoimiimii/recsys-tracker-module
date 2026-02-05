@@ -1,5 +1,5 @@
 import { PopupConfig } from '../../types';
-import { RecommendationItem } from '../recommendation';
+import { RecommendationResponse } from '../recommendation';
 export declare class PopupDisplay {
     private config;
     private recommendationGetter;
@@ -11,12 +11,14 @@ export declare class PopupDisplay {
     private spaCheckInterval;
     private isPendingShow;
     private isManuallyClosed;
+    private lastCheckedUrl;
     private readonly DEFAULT_DELAY;
-    constructor(_domainKey: string, _slotName: string, _apiBaseUrl: string, config: PopupConfig | undefined, recommendationGetter: (limit: number) => Promise<RecommendationItem[]>);
+    constructor(_domainKey: string, _slotName: string, _apiBaseUrl: string, config: PopupConfig | undefined, recommendationGetter: (limit: number) => Promise<RecommendationResponse>);
     start(): void;
     stop(): void;
+    private generateTitle;
+    updateContent(response: RecommendationResponse): void;
     private startWatcher;
-    private scheduleShow;
     private showPopup;
     private shouldShowPopup;
     private scheduleNextPopup;

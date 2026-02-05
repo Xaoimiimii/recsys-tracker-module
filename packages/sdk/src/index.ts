@@ -103,6 +103,11 @@ export class RecSysTracker {
           await this.displayManager.initialize(this.config.returnMethods);
         }
 
+        // console.log(this.config);
+
+        // // Tự động khởi tạo plugins dựa trên rules
+        // this.autoInitializePlugins();
+
       } else {
         // Nếu origin verification thất bại, không khởi tạo SDK
         this.config = null;

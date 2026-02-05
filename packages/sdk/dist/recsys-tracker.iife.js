@@ -1068,6 +1068,7 @@ var RecSysTracker = (function (exports) {
             this.spaCheckInterval = null;
             this.isPendingShow = false;
             this.isManuallyClosed = false;
+            this.lastCheckedUrl = '';
             this.DEFAULT_DELAY = 5000;
             this.recommendationGetter = recommendationGetter;
             this.hostId = `recsys-popup-host-${_slotName}-${Date.now()}`; // Unique ID based on slotName
@@ -1088,51 +1089,96 @@ var RecSysTracker = (function (exports) {
             }
             this.removePopup();
         }
+        generateTitle(search, lastItem) {
+            var _a;
+            const context = (_a = this.config.triggerConfig) === null || _a === void 0 ? void 0 : _a.targetValue;
+            const title = "Vì bạn đã trải nghiệm";
+            const searchTitle = "Vì bạn đã tìm kiếm";
+            if ((context === null || context === void 0 ? void 0 : context.includes('search')) || (context === null || context === void 0 ? void 0 : context.includes('query'))) {
+                return `${searchTitle} "${search}"`;
+            }
+            if (lastItem && lastItem.trim() !== "") {
+                return `${title} "${lastItem}"`;
+            }
+            return "Gợi ý dành riêng cho bạn";
+        }
+        updateContent(response) {
+            if (!this.shadowHost || !this.shadowHost.shadowRoot)
+                return;
+            const { item, keyword, lastItem } = response;
+            const titleElement = this.shadowHost.shadowRoot.querySelector('.recsys-header-title');
+            if (titleElement) {
+                titleElement.textContent = this.generateTitle(keyword, lastItem);
+                const layout = this.config.layoutJson || {};
+                if (layout.contentMode === 'carousel') {
+                    this.setupCarousel(this.shadowHost.shadowRoot, item);
+                }
+                else {
+                    this.renderStaticItems(this.shadowHost.shadowRoot, item);
+                }
+            }
+        }
         startWatcher() {
             if (this.spaCheckInterval)
                 clearInterval(this.spaCheckInterval);
-            this.spaCheckInterval = setInterval(() => {
-                const shouldShow = this.shouldShowPopup(); // Check URL hiện tại
-                const isVisible = this.shadowHost !== null; // Check xem Popup có đang hiện không
-                if (!shouldShow) {
+            this.spaCheckInterval = setInterval(async () => {
+                const shouldShow = this.shouldShowPopup();
+                const isVisible = this.shadowHost !== null;
+                const currentUrl = window.location.pathname;
+                // Nếu URL thay đổi, reset lại trạng thái để cho phép hiện ở trang mới
+                if (currentUrl !== this.lastCheckedUrl) {
                     this.isManuallyClosed = false;
-                }
-                // CASE 1: URL KHÔNG khớp nhưng Popup đang hiện -> ĐÓNG NGAY
-                if (!shouldShow && isVisible) {
-                    this.removePopup();
                     this.isPendingShow = false;
-                    this.clearTimeouts(); // Hủy luôn nếu có timer nào đang chạy ngầm
+                    this.lastCheckedUrl = currentUrl;
+                }
+                if (!shouldShow) {
+                    if (isVisible || this.isPendingShow) {
+                        this.removePopup();
+                        this.clearTimeouts();
+                        this.isPendingShow = false;
+                    }
                     return;
                 }
-                // CASE 2: URL KHÔNG khớp nhưng đang đếm ngược để hiện -> HỦY ĐẾM NGƯỢC
-                if (!shouldShow && this.isPendingShow) {
-                    this.clearTimeouts();
-                    this.isPendingShow = false;
-                    return;
-                }
-                // CASE 3: URL KHỚP, Popup CHƯA hiện và CHƯA đếm ngược -> BẮT ĐẦU ĐẾM
+                // CHỈ BẮT ĐẦU ĐẾM NGƯỢC NẾU:
+                // URL khớp + Chưa hiện + Chưa đang đợi + Chưa đóng tay
                 if (shouldShow && !isVisible && !this.isPendingShow && !this.isManuallyClosed) {
-                    this.scheduleShow();
+                    this.isPendingShow = true; // KHÓA NGAY LẬP TỨC
+                    const delay = this.config.delay || 0;
+                    this.popupTimeout = setTimeout(async () => {
+                        try {
+                            if (this.shouldShowPopup() && !this.shadowHost) {
+                                await this.showPopup();
+                            }
+                        }
+                        finally {
+                            // KHÔNG reset isPendingShow về false nếu showPopup không tạo ra shadowHost
+                            // Điều này ngăn việc chu kỳ Watcher sau lại nhảy vào đây khi items rỗng
+                            if (this.shadowHost) {
+                                this.isPendingShow = false;
+                            }
+                        }
+                    }, delay);
                 }
-            }, 500);
+            }, 1000);
         }
         // Hàm lên lịch hiển thị (tách riêng logic delay)
-        scheduleShow() {
-            const delay = this.config.delay || 0;
-            this.isPendingShow = true;
-            this.popupTimeout = setTimeout(() => {
-                if (this.shouldShowPopup()) {
-                    this.showPopup();
-                }
-                this.isPendingShow = false;
-            }, delay);
-        }
+        // private scheduleShow(): void {
+        //     const delay = this.config.delay || 0;
+        //     this.isPendingShow = true;
+        //     this.popupTimeout = setTimeout(() => {
+        //         if (this.shouldShowPopup()) {
+        //             this.showPopup();
+        //         }
+        //         this.isPendingShow = false;
+        //     }, delay);
+        // }
         async showPopup() {
             try {
-                const items = await this.fetchRecommendations();
+                const response = await this.fetchRecommendations();
+                const items = response.item;
                 // Chỉ hiện nếu chưa hiện (double check)
                 if (items && items.length > 0 && !this.shadowHost) {
-                    this.renderPopup(items);
+                    this.renderPopup(items, response.keyword, response.lastItem);
                     // Logic autoClose (tự đóng sau X giây)
                     if (this.config.autoCloseDelay && this.config.autoCloseDelay > 0) {
                         this.autoCloseTimeout = setTimeout(() => {
@@ -1184,11 +1230,20 @@ var RecSysTracker = (function (exports) {
         async fetchRecommendations() {
             var _a;
             try {
-                const numberItems = ((_a = this.config.layoutJson) === null || _a === void 0 ? void 0 : _a.maxItems) || 50;
-                return await this.recommendationGetter(numberItems);
+                const limit = ((_a = this.config.layoutJson) === null || _a === void 0 ? void 0 : _a.maxItems) || 50;
+                //console.log('[PopupDisplay] Calling recommendationGetter with limit:', limit);
+                const result = await this.recommendationGetter(limit);
+                //console.log('[PopupDisplay] recommendationGetter result:', result);
+                // recommendationGetter now returns full RecommendationResponse
+                if (result && result.item && Array.isArray(result.item)) {
+                    return result;
+                }
+                //console.log('[PopupDisplay] Invalid result, returning empty');
+                return { item: [], keyword: '', lastItem: '' };
             }
-            catch {
-                return [];
+            catch (e) {
+                //console.error('[PopupDisplay] fetchRecommendations error:', e);
+                return { item: [], keyword: '', lastItem: '' };
             }
         }
         // --- LOGIC 2: DYNAMIC CSS GENERATOR ---
@@ -1507,9 +1562,11 @@ var RecSysTracker = (function (exports) {
             html += `</div></div>`;
             return html;
         }
-        renderPopup(items) {
+        renderPopup(items, search, lastItem) {
             var _a;
             this.removePopup();
+            //const returnMethodValue = (this.config as any).value || "";
+            const dynamicTitle = this.generateTitle(search, lastItem);
             const host = document.createElement('div');
             host.id = this.hostId;
             document.body.appendChild(host);
@@ -1524,7 +1581,7 @@ var RecSysTracker = (function (exports) {
             popup.className = 'recsys-popup';
             popup.innerHTML = `
       <div class="recsys-header">
-        <span class="recsys-header-title">Gợi ý cho bạn</span>
+        <span class="recsys-header-title">${dynamicTitle}</span>
         <button class="recsys-close">✕</button>
       </div>
       <div class="recsys-body">${contentMode === 'carousel' ? '<button class="recsys-nav recsys-prev">‹</button>' : ''}  
@@ -1552,14 +1609,16 @@ var RecSysTracker = (function (exports) {
             const container = shadow.querySelector('.recsys-container');
             if (!container)
                 return;
-            container.innerHTML = items.map(item => this.renderItemContent(item)).join('');
-            container.querySelectorAll('.recsys-item').forEach((element) => {
-                element.addEventListener('click', (e) => {
-                    const target = e.currentTarget;
-                    const id = target.getAttribute('data-id');
-                    if (id)
-                        this.handleItemClick(id);
+            container.innerHTML = '';
+            items.forEach((item) => {
+                const itemWrapper = document.createElement('div');
+                itemWrapper.className = 'recsys-item';
+                itemWrapper.innerHTML = this.renderItemContent(item);
+                itemWrapper.addEventListener('click', () => {
+                    const targetId = item.DomainItemId;
+                    this.handleItemClick(targetId);
                 });
+                container.appendChild(itemWrapper);
             });
         }
         setupCarousel(shadow, items) {
@@ -1568,15 +1627,16 @@ var RecSysTracker = (function (exports) {
             const slideContainer = shadow.querySelector('.recsys-slide');
             const renderSlide = () => {
                 const item = items[currentIndex];
-                // GỌI HÀM RENDER ĐỘNG
-                slideContainer.innerHTML = this.renderItemContent(item);
-                const itemElement = slideContainer.querySelector('.recsys-item');
-                if (itemElement) {
-                    const id = item.id || item.Id;
-                    if (id !== undefined && id !== null) {
-                        this.handleItemClick(id);
-                    }
-                }
+                slideContainer.innerHTML = '';
+                const slideElement = document.createElement('div');
+                slideElement.className = 'recsys-item';
+                slideElement.innerHTML = this.renderItemContent(item);
+                slideElement.addEventListener('click', () => {
+                    const targetId = item.DomainItemId || item.id || item.Id;
+                    if (targetId)
+                        this.handleItemClick(targetId);
+                });
+                slideContainer.appendChild(slideElement);
             };
             const next = () => {
                 currentIndex = (currentIndex + 1) % items.length;
@@ -1731,22 +1791,33 @@ var RecSysTracker = (function (exports) {
             }
             container.setAttribute('data-recsys-loaded', 'true');
             try {
-                const items = await this.fetchRecommendations();
+                const response = await this.fetchRecommendations();
+                const items = response.item;
+                //console.log(items);
                 if (items && items.length > 0) {
                     this.renderWidget(container, items);
                 }
             }
             catch (error) {
-                // console.error('[InlineDisplay] Error processing container', error);
+                // //console.error('[InlineDisplay] Error processing container', error);
             }
         }
         async fetchRecommendations() {
             try {
-                const numberItems = this.config.layoutJson.maxItems || 50;
-                return await this.recommendationGetter(numberItems);
+                //const limit = (this.config.layoutJson as any)?.maxItems || 50;
+                //console.log('[PopupDisplay] Calling recommendationGetter with limit:', limit);
+                const result = await this.recommendationGetter();
+                //console.log('[PopupDisplay] recommendationGetter result:', result);
+                // recommendationGetter now returns full RecommendationResponse
+                if (result && result.item && Array.isArray(result.item)) {
+                    return result;
+                }
+                //console.log('[PopupDisplay] Invalid result, returning empty');
+                return { item: [], keyword: '', lastItem: '' };
             }
-            catch {
-                return [];
+            catch (e) {
+                //console.error('[PopupDisplay] fetchRecommendations error:', e);
+                return { item: [], keyword: '', lastItem: '' };
             }
         }
         // --- DYNAMIC CSS GENERATOR (SYNCED WITH POPUP) ---
@@ -2094,14 +2165,16 @@ var RecSysTracker = (function (exports) {
             const container = shadow.querySelector('.recsys-container');
             if (!container)
                 return;
-            container.innerHTML = items.map(item => this.renderItemContent(item)).join('');
-            container.querySelectorAll('.recsys-item').forEach((element) => {
-                element.addEventListener('click', (e) => {
-                    const target = e.currentTarget;
-                    const id = target.getAttribute('data-id');
-                    if (id)
-                        this.handleItemClick(id);
+            container.innerHTML = '';
+            items.forEach((item) => {
+                const itemWrapper = document.createElement('div');
+                itemWrapper.className = 'recsys-item';
+                itemWrapper.innerHTML = this.renderItemContent(item);
+                itemWrapper.addEventListener('click', () => {
+                    const targetId = item.DomainItemId;
+                    this.handleItemClick(targetId);
                 });
+                container.appendChild(itemWrapper);
             });
         }
         // --- CAROUSEL LOGIC ---
@@ -2116,21 +2189,21 @@ var RecSysTracker = (function (exports) {
             if (!slideContainer)
                 return;
             const renderSlide = () => {
-                let html = '';
-                // [FIX] Vòng lặp lấy N item liên tiếp thay vì chỉ 1 item
+                slideContainer.innerHTML = '';
                 for (let i = 0; i < itemsPerView; i++) {
                     const index = (currentIndex + i) % items.length;
-                    html += this.renderItemContent(items[index]);
-                }
-                slideContainer.innerHTML = html;
-                slideContainer.querySelectorAll('.recsys-item').forEach((element) => {
-                    element.addEventListener('click', (e) => {
-                        const target = e.currentTarget;
-                        const id = target.getAttribute('data-id');
-                        if (id)
-                            this.handleItemClick(id);
+                    const item = items[index];
+                    const itemWrapper = document.createElement('div');
+                    itemWrapper.className = 'recsys-item';
+                    itemWrapper.innerHTML = this.renderItemContent(item);
+                    itemWrapper.addEventListener('click', () => {
+                        const targetId = item.DomainItemId;
+                        if (targetId) {
+                            this.handleItemClick(targetId);
+                        }
                     });
-                });
+                    slideContainer.appendChild(itemWrapper);
+                }
             };
             const next = () => {
                 currentIndex = (currentIndex + 1) % items.length;
@@ -2190,116 +2263,10 @@ var RecSysTracker = (function (exports) {
         }
     }
 
-    class PlaceholderImage {
-        /**
-         * Tạo base64 placeholder image với text
-         * @param width - Width của image
-         * @param height - Height của image
-         * @param text - Text hiển thị trên image
-         * @param bgColor - Background color (hex)
-         * @param textColor - Text color (hex)
-         * @returns Base64 data URL của image
-         */
-        static generate(width = 180, height = 130, text = 'No Image', bgColor = '#e0e0e0', textColor = '#666') {
-            // Create canvas element
-            const canvas = document.createElement('canvas');
-            canvas.width = width;
-            canvas.height = height;
-            const ctx = canvas.getContext('2d');
-            if (!ctx) {
-                return this.getFallbackImage();
-            }
-            // Fill background
-            ctx.fillStyle = bgColor;
-            ctx.fillRect(0, 0, width, height);
-            // Add text
-            ctx.fillStyle = textColor;
-            ctx.font = 'bold 16px Arial';
-            ctx.textAlign = 'center';
-            ctx.textBaseline = 'middle';
-            ctx.fillText(text, width / 2, height / 2);
-            // Convert to data URL
-            return canvas.toDataURL('image/png');
-        }
-        /**
-         * Tạo gradient placeholder image
-         * @param width - Width của image
-         * @param height - Height của image
-         * @returns Base64 data URL của image
-         */
-        static generateGradient(width = 180, height = 130) {
-            const canvas = document.createElement('canvas');
-            canvas.width = width;
-            canvas.height = height;
-            const ctx = canvas.getContext('2d');
-            if (!ctx) {
-                return this.getFallbackImage();
-            }
-            // Create gradient
-            const gradient = ctx.createLinearGradient(0, 0, width, height);
-            gradient.addColorStop(0, '#f5f5f5');
-            gradient.addColorStop(0.5, '#e0e0e0');
-            gradient.addColorStop(1, '#d5d5d5');
-            // Fill with gradient
-            ctx.fillStyle = gradient;
-            ctx.fillRect(0, 0, width, height);
-            // Add icon
-            ctx.fillStyle = '#999';
-            ctx.font = 'bold 48px Arial';
-            ctx.textAlign = 'center';
-            ctx.textBaseline = 'middle';
-            ctx.fillText('📦', width / 2, height / 2);
-            return canvas.toDataURL('image/png');
-        }
-        /**
-         * SVG placeholder image (nhỏ gọn hơn)
-         * @param width - Width của image
-         * @param height - Height của image
-         * @param text - Text hiển thị
-         * @returns SVG data URL
-         */
-        static generateSVG(width = 180, height = 130, text = 'No Image') {
-            const svg = `
-      <svg width="${width}" height="${height}" xmlns="http://www.w3.org/2000/svg">
-        <rect width="100%" height="100%" fill="#e0e0e0"/>
-        <text 
-          x="50%" 
-          y="50%" 
-          font-family="Arial, sans-serif" 
-          font-size="16" 
-          font-weight="bold" 
-          fill="#666" 
-          text-anchor="middle" 
-          dominant-baseline="middle"
-        >
-          ${text}
-        </text>
-      </svg>
-    `;
-            // Use URL encoding instead of btoa to support Unicode characters
-            return `data:image/svg+xml;charset=utf-8,${encodeURIComponent(svg)}`;
-        }
-        /**
-         * Fallback image khi không thể tạo canvas
-         * @returns Base64 data URL của 1x1 transparent pixel
-         */
-        static getFallbackImage() {
-            // 1x1 transparent pixel
-            return 'data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7';
-        }
-        /**
-         * Get default placeholder cho recommendation items
-         * @returns Base64 data URL
-         */
-        static getDefaultRecommendation() {
-            return this.generateSVG(180, 130, '📦');
-        }
-    }
-
     class RecommendationFetcher {
         constructor(domainKey, apiBaseUrl) {
-            this.CACHE_TTL = 5 * 60 * 1000; // 5 minutes cache
-            this.AUTO_REFRESH_INTERVAL = 60 * 1000; // 1 minute auto-refresh
+            this.CACHE_TTL = 5 * 60 * 1000;
+            this.AUTO_REFRESH_INTERVAL = 60 * 1000;
             this.domainKey = domainKey;
             this.apiBaseUrl = apiBaseUrl;
             this.cache = new Map();
@@ -2308,88 +2275,75 @@ var RecSysTracker = (function (exports) {
         }
         async fetchRecommendations(userValue, userField = 'AnonymousId', _options = {}) {
             try {
-                // Check cache first
                 const limit = _options.numberItems || 50;
                 const cacheKey = this.getCacheKey(userValue, userField);
                 const cached = this.getFromCache(cacheKey);
                 if (cached && cached.length >= limit) {
-                    return cached.slice(0, limit);
+                    return {
+                        item: cached,
+                        keyword: '',
+                        lastItem: ''
+                    };
                 }
-                // Prepare request payload
                 const requestBody = {
                     AnonymousId: this.getOrCreateAnonymousId(),
                     DomainKey: this.domainKey,
                     NumberItems: limit,
                 };
-                // Check for cached user info in localStorage
                 const cachedUserId = this.getCachedUserId();
                 if (cachedUserId) {
                     requestBody.UserId = cachedUserId;
                 }
-                // Call API
                 const response = await fetch(`${this.apiBaseUrl}/recommendation`, {
                     method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                    },
+                    headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify(requestBody),
                 });
                 if (!response.ok) {
-                    throw new Error(`API Error: ${response.status} ${response.statusText}`);
+                    throw new Error(`API Error: ${response.status}`);
                 }
                 const data = await response.json();
-                // Transform response to RecommendationItem
-                const items = this.transformResponse(data);
-                // Cache results
-                this.saveToCache(cacheKey, items);
-                // Enable auto-refresh if option is set
+                const transformedItems = this.transformResponse(data.item || []);
+                const finalResponse = {
+                    item: transformedItems,
+                    keyword: data.keyword || '',
+                    lastItem: data.lastItem || ''
+                };
+                this.saveToCache(cacheKey, transformedItems);
+                // Giữ nguyên logic đăng ký auto-refresh của bạn
                 if (_options.autoRefresh && _options.onRefresh) {
-                    // Check if auto-refresh already enabled for this key
                     if (!this.autoRefreshTimers.has(cacheKey)) {
                         this.enableAutoRefresh(userValue, userField, _options.onRefresh, _options);
                     }
                 }
-                return items;
+                return finalResponse;
             }
             catch (error) {
-                throw error;
+                return { item: [], keyword: '', lastItem: '' };
             }
         }
-        /**
-         * Enable auto-refresh for recommendations
-         * Tự động fetch recommendations mới mỗi 1 phút
-         */
         enableAutoRefresh(userValue, userField = 'AnonymousId', callback, options = {}) {
             const cacheKey = this.getCacheKey(userValue, userField);
-            // Stop existing auto-refresh if any
             this.stopAutoRefresh(cacheKey);
-            // Store callback
             this.refreshCallbacks.set(cacheKey, callback);
-            // Fetch immediately
             this.fetchRecommendations(userValue, userField, options)
-                .then(items => {
-                callback(items);
-            });
-            // Set up auto-refresh timer
+                .then(data => callback(data));
             const timerId = setInterval(async () => {
                 try {
-                    // Force fresh fetch by clearing cache for this key
                     this.cache.delete(cacheKey);
-                    const items = await this.fetchRecommendations(userValue, userField, options);
+                    const data = await this.fetchRecommendations(userValue, userField, {
+                        ...options,
+                        autoRefresh: false
+                    });
                     const cb = this.refreshCallbacks.get(cacheKey);
-                    if (cb) {
-                        cb(items);
-                    }
+                    if (cb)
+                        cb(data);
                 }
-                catch (error) {
-                    // console.error('[RecSysTracker] Auto-refresh failed:', error);
-                }
+                catch (error) { }
             }, this.AUTO_REFRESH_INTERVAL);
             this.autoRefreshTimers.set(cacheKey, timerId);
-            // Return function to stop auto-refresh
             return () => this.stopAutoRefresh(cacheKey);
         }
-        // Stop auto-refresh for a specific cache key
         stopAutoRefresh(cacheKey) {
             const timerId = this.autoRefreshTimers.get(cacheKey);
             if (timerId) {
@@ -2398,195 +2352,82 @@ var RecSysTracker = (function (exports) {
                 this.refreshCallbacks.delete(cacheKey);
             }
         }
-        /**
-         * Stop all auto-refresh timers
-         */
         stopAllAutoRefresh() {
-            this.autoRefreshTimers.forEach((timerId) => {
-                clearInterval(timerId);
-            });
+            this.autoRefreshTimers.forEach((timerId) => clearInterval(timerId));
             this.autoRefreshTimers.clear();
             this.refreshCallbacks.clear();
         }
-        /**
-         * Get recommendations cho anonymous user (auto-detect)
-         * @param options - Optional configuration
-         * @returns Promise<RecommendationItem[]>
-         */
         async fetchForAnonymousUser(options = {}) {
-            // Get or generate anonymous ID
             const anonymousId = this.getOrCreateAnonymousId();
             return this.fetchRecommendations(anonymousId, 'AnonymousId', options);
         }
-        /**
-         * Get recommendations cho logged-in user by ID
-         * @param userId - User ID
-         * @param options - Optional configuration
-         * @returns Promise<RecommendationItem[]>
-         */
         async fetchForUserId(userId, options = {}) {
             return this.fetchRecommendations(userId, 'UserId', options);
         }
-        /**
-         * Get recommendations cho logged-in user by Username
-         * @param username - Username
-         * @param options - Optional configuration
-         * @returns Promise<RecommendationItem[]>
-         */
         async fetchForUsername(username, options = {}) {
             return this.fetchRecommendations(username, 'Username', options);
         }
-        /**
-         * Enable auto-refresh cho anonymous user
-         * @param callback - Callback function được gọi khi có data mới
-         * @param options - Optional configuration
-         * @returns Function to stop auto-refresh
-         */
-        enableAutoRefreshForAnonymousUser(callback, options = {}) {
-            const anonymousId = this.getOrCreateAnonymousId();
-            return this.enableAutoRefresh(anonymousId, 'AnonymousId', callback, options);
-        }
-        /**
-         * Enable auto-refresh cho logged-in user by ID
-         * @param userId - User ID
-         * @param callback - Callback function được gọi khi có data mới
-         * @param options - Optional configuration
-         * @returns Function to stop auto-refresh
-         */
-        enableAutoRefreshForUserId(userId, callback, options = {}) {
-            return this.enableAutoRefresh(userId, 'UserId', callback, options);
-        }
-        /**
-         * Enable auto-refresh cho logged-in user by Username
-         * @param username - Username
-         * @param callback - Callback function được gọi khi có data mới
-         * @param options - Optional configuration
-         * @returns Function to stop auto-refresh
-         */
-        enableAutoRefreshForUsername(username, callback, options = {}) {
-            return this.enableAutoRefresh(username, 'Username', callback, options);
-        }
-        /**
-         * Transform API response sang RecommendationItem format
-         * @param data - Response từ API
-         * @returns RecommendationItem[]
-         */
+        // Giữ nguyên 100% logic transform ban đầu của bạn
         transformResponse(data) {
-            if (!Array.isArray(data)) {
-                return [];
-            }
-            return data.map(item => {
-                const result = { ...item };
-                result.id = item.DomainItemId;
-                const rawImg = item.ImageUrl || item.imageUrl || item.Image || item.img;
-                result.img = rawImg || PlaceholderImage.getDefaultRecommendation();
-                result.title = item.title || item.Title || item.Name || item.name;
-                return result;
+            const rawItems = Array.isArray(data) ? data : (data.item || []);
+            return rawItems.map((item) => {
+                return {
+                    ...item,
+                    displayTitle: item.Title || item.Name || item.Subject || 'No Title',
+                    displayImage: item.ImageUrl || item.Thumbnail || item.Image || '',
+                    displayId: item.DomainItemId || item.Id || Math.random().toString(),
+                    id: item.Id
+                };
             });
         }
-        /**
-         * Get cached user ID from localStorage
-         * @returns Cached user ID or null
-         */
-        getCachedUserId() {
-            try {
-                const cachedUserInfo = localStorage.getItem('recsys_cached_user_info');
-                if (cachedUserInfo) {
-                    const userInfo = JSON.parse(cachedUserInfo);
-                    return userInfo.userValue || null;
-                }
-                return null;
-            }
-            catch (error) {
-                return null;
-            }
-        }
-        /**
-         * Get or create anonymous ID cho user
-         * @returns Anonymous ID string
-         */
         getOrCreateAnonymousId() {
             const storageKey = 'recsys_anon_id';
             try {
-                // Try to get existing ID from localStorage
                 let anonymousId = localStorage.getItem(storageKey);
                 if (!anonymousId) {
-                    // Generate new anonymous ID
                     anonymousId = `anon_${Date.now()}_${this.generateRandomString(8)}`;
                     localStorage.setItem(storageKey, anonymousId);
                 }
                 return anonymousId;
             }
-            catch (error) {
-                // Fallback if localStorage not available
+            catch {
                 return `anon_${Date.now()}_${this.generateRandomString(8)}`;
             }
         }
-        /**
-         * Generate random string cho anonymous ID
-         * @param length - Length của string
-         * @returns Random string
-         */
         generateRandomString(length) {
             const chars = 'abcdefghijklmnopqrstuvwxyz0123456789';
             let result = '';
-            for (let i = 0; i < length; i++) {
+            for (let i = 0; i < length; i++)
                 result += chars.charAt(Math.floor(Math.random() * chars.length));
-            }
             return result;
         }
-        /**
-         * Generate cache key
-         * @param userValue - User value
-         * @param userField - User field type
-         * @returns Cache key string
-         */
+        getCachedUserId() {
+            try {
+                const cachedUserInfo = localStorage.getItem('recsys_cached_user_info');
+                return cachedUserInfo ? JSON.parse(cachedUserInfo).userValue : null;
+            }
+            catch {
+                return null;
+            }
+        }
         getCacheKey(userValue, userField) {
             return `${userField}:${userValue}`;
         }
-        /**
-         * Get items from cache if not expired
-         * @param key - Cache key
-         * @returns Cached items or null
-         */
         getFromCache(key) {
             const cached = this.cache.get(key);
-            if (!cached) {
+            if (!cached)
                 return null;
-            }
-            // Check if cache expired
-            const now = Date.now();
-            if (now - cached.timestamp > this.CACHE_TTL) {
+            if (Date.now() - cached.timestamp > this.CACHE_TTL) {
                 this.cache.delete(key);
                 return null;
             }
-            return cached.items;
+            return cached.data;
         }
-        /**
-         * Save items to cache
-         * @param key - Cache key
-         * @param items - Items to cache
-         */
-        saveToCache(key, items) {
-            this.cache.set(key, {
-                items,
-                timestamp: Date.now(),
-            });
+        saveToCache(key, data) {
+            this.cache.set(key, { data, timestamp: Date.now() });
         }
-        /**
-         * Clear cache
-         */
-        clearCache() {
-            this.cache.clear();
-        }
-        /**
-         * Update API base URL
-         * @param url - New API base URL
-         */
-        setApiBaseUrl(url) {
-            this.apiBaseUrl = url;
-            this.clearCache(); // Clear cache when API URL changes
-        }
+        clearCache() { this.cache.clear(); }
+        setApiBaseUrl(url) { this.apiBaseUrl = url; this.clearCache(); }
     }
 
     const ANON_USER_ID_KEY = 'recsys_anon_id';
@@ -2596,6 +2437,7 @@ var RecSysTracker = (function (exports) {
             this.inlineDisplays = new Map();
             this.cachedRecommendations = null;
             this.fetchPromise = null;
+            this.refreshTimer = null;
             this.domainKey = domainKey;
             this.apiBaseUrl = apiBaseUrl;
             this.recommendationFetcher = new RecommendationFetcher(domainKey, apiBaseUrl);
@@ -2617,6 +2459,28 @@ var RecSysTracker = (function (exports) {
             for (const method of returnMethods) {
                 this.activateDisplayMethod(method);
             }
+        }
+        notifyActionTriggered() {
+            if (this.refreshTimer)
+                clearTimeout(this.refreshTimer);
+            // Chống spam API bằng Debounce (đợi 500ms sau hành động cuối cùng)
+            this.refreshTimer = setTimeout(async () => {
+                await this.refreshAllDisplays();
+            }, 500);
+        }
+        async refreshAllDisplays() {
+            var _a, _b, _c;
+            this.recommendationFetcher.clearCache();
+            const newItems = await this.getRecommendations(50);
+            const oldId = (_b = (_a = this.cachedRecommendations) === null || _a === void 0 ? void 0 : _a.item[0]) === null || _b === void 0 ? void 0 : _b.id;
+            const newId = (_c = newItems === null || newItems === void 0 ? void 0 : newItems.item[0]) === null || _c === void 0 ? void 0 : _c.id;
+            if (oldId === newId) {
+                console.log("Dữ liệu từ server trả về giống hệt cũ, không cần render lại.");
+                return;
+            }
+            this.cachedRecommendations = newItems;
+            this.popupDisplays.forEach(popup => { var _a, _b; return (_b = (_a = popup).updateContent) === null || _b === void 0 ? void 0 : _b.call(_a, newItems); });
+            this.inlineDisplays.forEach(inline => { var _a, _b; return (_b = (_a = inline).updateContent) === null || _b === void 0 ? void 0 : _b.call(_a, newItems); });
         }
         // Phân loại và kích hoạt display method tương ứng
         activateDisplayMethod(method) {
@@ -2658,7 +2522,14 @@ var RecSysTracker = (function (exports) {
                     (_a = this.popupDisplays.get(key)) === null || _a === void 0 ? void 0 : _a.stop();
                     this.popupDisplays.delete(key);
                 }
-                const popupDisplay = new PopupDisplay(this.domainKey, key, this.apiBaseUrl, config, (limit) => this.getRecommendations(limit !== null && limit !== void 0 ? limit : 50));
+                const popupDisplay = new PopupDisplay(this.domainKey, key, this.apiBaseUrl, config, (limit) => {
+                    console.log('[DisplayManager] recommendationGetter called with limit:', limit);
+                    // Fetch directly from recommendationFetcher instead of using cache
+                    return this.recommendationFetcher.fetchForAnonymousUser({
+                        numberItems: limit,
+                        autoRefresh: false
+                    });
+                });
                 this.popupDisplays.set(key, popupDisplay);
                 popupDisplay.start();
             }
@@ -2677,7 +2548,11 @@ var RecSysTracker = (function (exports) {
                 if (!config.selector)
                     return;
                 const inlineDisplay = new InlineDisplay(this.domainKey, key, config.selector, this.apiBaseUrl, config, // Truyền object config
-                (limit) => this.getRecommendations(limit !== null && limit !== void 0 ? limit : 50));
+                () => {
+                    return this.recommendationFetcher.fetchForAnonymousUser({
+                        autoRefresh: false
+                    });
+                });
                 this.inlineDisplays.set(key, inlineDisplay);
                 inlineDisplay.start();
             }
@@ -2704,18 +2579,16 @@ var RecSysTracker = (function (exports) {
             try {
                 const anonymousId = this.getAnonymousId();
                 if (!anonymousId)
-                    return [];
-                return await this.recommendationFetcher.fetchRecommendations(anonymousId, 'AnonymousId', {
+                    return { item: [], keyword: '', lastItem: '' };
+                // Chỉ fetch 1 lần, không enable autoRefresh ở đây để tránh vòng lặp
+                const response = await this.recommendationFetcher.fetchRecommendations(anonymousId, 'AnonymousId', {
                     numberItems: limit,
-                    autoRefresh: true,
-                    onRefresh: (newItems) => {
-                        // Update cached recommendations
-                        this.cachedRecommendations = newItems;
-                    }
+                    autoRefresh: false
                 });
+                return response;
             }
             catch (error) {
-                return [];
+                return { item: [], keyword: '', lastItem: '' };
             }
         }
         getAnonymousId() {
@@ -5404,6 +5277,9 @@ var RecSysTracker = (function (exports) {
                         this.displayManager = new DisplayManager(this.config.domainKey, baseUrl);
                         await this.displayManager.initialize(this.config.returnMethods);
                     }
+                    // console.log(this.config);
+                    // // Tự động khởi tạo plugins dựa trên rules
+                    // this.autoInitializePlugins();
                 }
                 else {
                     // Nếu origin verification thất bại, không khởi tạo SDK
