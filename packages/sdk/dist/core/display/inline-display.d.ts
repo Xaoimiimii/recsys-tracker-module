@@ -11,7 +11,6 @@ export declare class InlineDisplay {
     constructor(_domainKey: string, _slotName: string, selector: string, _apiBaseUrl: string, config: InlineConfig | undefined, recommendationGetter: (limit: number) => Promise<RecommendationItem[]>);
     start(): void;
     stop(): void;
-    updateContent(newItems: RecommendationItem[]): void;
     private setupObserver;
     private scanAndRender;
     private findContainers;

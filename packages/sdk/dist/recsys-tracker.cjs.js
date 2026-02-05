@@ -1089,19 +1089,6 @@ class PopupDisplay {
         }
         this.removePopup();
     }
-    updateContent(newItems) {
-        if (!this.shadowHost || !this.shadowHost.shadowRoot)
-            return;
-        const shadow = this.shadowHost.shadowRoot;
-        const layout = this.config.layoutJson || {};
-        const contentMode = layout.contentMode || 'carousel';
-        if (contentMode === 'carousel') {
-            this.setupCarousel(shadow, newItems);
-        }
-        else {
-            this.renderStaticItems(shadow, newItems);
-        }
-    }
     startWatcher() {
         if (this.spaCheckInterval)
             clearInterval(this.spaCheckInterval);
@@ -1694,21 +1681,6 @@ class InlineDisplay {
         if (this.autoSlideTimeout) {
             clearTimeout(this.autoSlideTimeout);
         }
-    }
-    updateContent(newItems) {
-        const containers = document.querySelectorAll(`${this.selector}[data-recsys-loaded="true"]`);
-        containers.forEach(container => {
-            if (container.shadowRoot) {
-                const shadow = container.shadowRoot;
-                const contentMode = this.config.layoutJson.contentMode || 'grid';
-                if (contentMode === 'carousel') {
-                    this.setupCarousel(shadow, newItems);
-                }
-                else {
-                    this.renderStaticItems(shadow, newItems);
-                }
-            }
-        });
     }
     // --- CORE INLINE LOGIC (Mutation Observer) ---
     setupObserver() {
@@ -2625,7 +2597,6 @@ class DisplayManager {
         this.inlineDisplays = new Map();
         this.cachedRecommendations = null;
         this.fetchPromise = null;
-        this.refreshTimer = null;
         this.domainKey = domainKey;
         this.apiBaseUrl = apiBaseUrl;
         this.recommendationFetcher = new RecommendationFetcher(domainKey, apiBaseUrl);
@@ -2647,22 +2618,6 @@ class DisplayManager {
         for (const method of returnMethods) {
             this.activateDisplayMethod(method);
         }
-    }
-    notifyActionTriggered() {
-        if (this.refreshTimer)
-            clearTimeout(this.refreshTimer);
-        // Chống spam API bằng Debounce (đợi 500ms sau hành động cuối cùng)
-        this.refreshTimer = setTimeout(async () => {
-            await this.refreshAllDisplays();
-        }, 500);
-    }
-    async refreshAllDisplays() {
-        this.cachedRecommendations = null;
-        this.fetchPromise = null;
-        this.recommendationFetcher.clearCache();
-        const newItems = await this.getRecommendations(50);
-        this.popupDisplays.forEach(popup => { var _a, _b; return (_b = (_a = popup).updateContent) === null || _b === void 0 ? void 0 : _b.call(_a, newItems); });
-        this.inlineDisplays.forEach(inline => { var _a, _b; return (_b = (_a = inline).updateContent) === null || _b === void 0 ? void 0 : _b.call(_a, newItems); });
     }
     // Phân loại và kích hoạt display method tương ứng
     activateDisplayMethod(method) {
@@ -2755,17 +2710,8 @@ class DisplayManager {
                 numberItems: limit,
                 autoRefresh: true,
                 onRefresh: (newItems) => {
+                    // Update cached recommendations
                     this.cachedRecommendations = newItems;
-                    this.popupDisplays.forEach(popup => {
-                        if (typeof popup.updateContent === 'function') {
-                            popup.updateContent(newItems);
-                        }
-                    });
-                    this.inlineDisplays.forEach(inline => {
-                        if (typeof inline.updateContent === 'function') {
-                            inline.updateContent(newItems);
-                        }
-                    });
                 }
             });
         }
@@ -2809,7 +2755,6 @@ class BasePlugin {
             }
             this.tracker = tracker;
             this.payloadBuilder = tracker.payloadBuilder;
-            this.displayManager = tracker.getDisplayManager();
         }, `${this.name}.init`);
     }
     stop() {
@@ -2825,11 +2770,6 @@ class BasePlugin {
     }
     isActive() {
         return this.active;
-    }
-    triggerRefresh() {
-        if (this.displayManager && typeof this.displayManager.notifyActionTriggered === 'function') {
-            this.displayManager.notifyActionTriggered();
-        }
     }
     ensureInitialized() {
         if (!this.tracker) {
@@ -3243,7 +3183,6 @@ class ClickPlugin extends BasePlugin {
                 plugin: this.name
             }
         });
-        this.triggerRefresh();
     }
 }
 
@@ -3470,7 +3409,6 @@ class ReviewPlugin extends BasePlugin {
                 plugin: this.name
             }
         });
-        this.triggerRefresh();
     }
 }
 
@@ -3806,7 +3744,6 @@ class SearchKeywordPlugin extends BasePlugin {
                 },
                 body: JSON.stringify(payload)
             });
-            this.triggerRefresh();
             if (response.ok) {
                 // console.log('[SearchKeywordPlugin] Keyword pushed successfully');
             }
@@ -5405,7 +5342,6 @@ class RatingPlugin extends BasePlugin {
                 plugin: this.name
             }
         });
-        this.triggerRefresh();
     }
 }
 
@@ -5460,14 +5396,15 @@ class RecSysTracker {
                 if (this.eventDispatcher && this.config.domainUrl) {
                     this.eventDispatcher.setDomainUrl(this.config.domainUrl);
                 }
+                // console.log(this.config);
+                // Tự động khởi tạo plugins dựa trên rules
+                this.autoInitializePlugins();
                 // Khởi tạo Display Manager nếu có returnMethods
                 if (this.config.returnMethods && this.config.returnMethods.length > 0) {
                     // const apiBaseUrl = process.env.API_URL || 'https://recsys-tracker-module.onrender.com';
                     this.displayManager = new DisplayManager(this.config.domainKey, baseUrl);
                     await this.displayManager.initialize(this.config.returnMethods);
                 }
-                // Tự động khởi tạo plugins dựa trên rules
-                this.autoInitializePlugins();
             }
             else {
                 // Nếu origin verification thất bại, không khởi tạo SDK

@@ -29,19 +29,6 @@ export class PopupDisplay {
         }
         this.removePopup();
     }
-    updateContent(newItems) {
-        if (!this.shadowHost || !this.shadowHost.shadowRoot)
-            return;
-        const shadow = this.shadowHost.shadowRoot;
-        const layout = this.config.layoutJson || {};
-        const contentMode = layout.contentMode || 'carousel';
-        if (contentMode === 'carousel') {
-            this.setupCarousel(shadow, newItems);
-        }
-        else {
-            this.renderStaticItems(shadow, newItems);
-        }
-    }
     startWatcher() {
         if (this.spaCheckInterval)
             clearInterval(this.spaCheckInterval);

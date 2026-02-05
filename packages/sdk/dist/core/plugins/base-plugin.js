@@ -13,7 +13,6 @@ export class BasePlugin {
             }
             this.tracker = tracker;
             this.payloadBuilder = tracker.payloadBuilder;
-            this.displayManager = tracker.getDisplayManager();
         }, `${this.name}.init`);
     }
     stop() {
@@ -29,11 +28,6 @@ export class BasePlugin {
     }
     isActive() {
         return this.active;
-    }
-    triggerRefresh() {
-        if (this.displayManager && typeof this.displayManager.notifyActionTriggered === 'function') {
-            this.displayManager.notifyActionTriggered();
-        }
     }
     ensureInitialized() {
         if (!this.tracker) {

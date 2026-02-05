@@ -255,7 +255,6 @@ export class SearchKeywordPlugin extends BasePlugin {
                 },
                 body: JSON.stringify(payload)
             });
-            this.triggerRefresh();
             if (response.ok) {
                 // console.log('[SearchKeywordPlugin] Keyword pushed successfully');
             }

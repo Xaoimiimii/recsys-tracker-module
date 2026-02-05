@@ -170,7 +170,6 @@ export class RatingPlugin extends BasePlugin {
                 plugin: this.name
             }
         });
-        this.triggerRefresh();
     }
 }
 //# sourceMappingURL=rating-plugin.js.map

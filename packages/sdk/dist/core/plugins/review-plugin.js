@@ -222,7 +222,6 @@ export class ReviewPlugin extends BasePlugin {
                 plugin: this.name
             }
         });
-        this.triggerRefresh();
     }
 }
 //# sourceMappingURL=review-plugin.js.map

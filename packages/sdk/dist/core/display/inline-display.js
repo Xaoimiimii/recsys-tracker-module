@@ -24,21 +24,6 @@ export class InlineDisplay {
             clearTimeout(this.autoSlideTimeout);
         }
     }
-    updateContent(newItems) {
-        const containers = document.querySelectorAll(`${this.selector}[data-recsys-loaded="true"]`);
-        containers.forEach(container => {
-            if (container.shadowRoot) {
-                const shadow = container.shadowRoot;
-                const contentMode = this.config.layoutJson.contentMode || 'grid';
-                if (contentMode === 'carousel') {
-                    this.setupCarousel(shadow, newItems);
-                }
-                else {
-                    this.renderStaticItems(shadow, newItems);
-                }
-            }
-        });
-    }
     // --- CORE INLINE LOGIC (Mutation Observer) ---
     setupObserver() {
         this.observer = new MutationObserver(() => {

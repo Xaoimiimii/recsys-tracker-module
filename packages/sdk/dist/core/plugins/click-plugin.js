@@ -211,7 +211,6 @@ export class ClickPlugin extends BasePlugin {
                 plugin: this.name
             }
         });
-        this.triggerRefresh();
     }
 }
 //# sourceMappingURL=click-plugin.js.map
