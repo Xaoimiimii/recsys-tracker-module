@@ -1,7 +1,7 @@
 import { ReturnMethod, PopupConfig, InlineConfig } from '../../types';
 import { PopupDisplay } from './popup-display';
 import { InlineDisplay } from './inline-display';
-import { RecommendationFetcher, RecommendationResponse } from '../recommendation';
+import { RecommendationFetcher, RecommendationResponse, normalizeItems } from '../recommendation';
 
 const ANON_USER_ID_KEY = 'recsys_anon_id';
 
@@ -55,8 +55,10 @@ export class DisplayManager {
     this.recommendationFetcher.clearCache();
     const newItems = await this.getRecommendations(50);
     
-    const oldId = this.cachedRecommendations?.item[0]?.id;
-    const newId = newItems?.item[0]?.id;
+    const oldItems = normalizeItems(this.cachedRecommendations);
+    const newItemsNormalized = normalizeItems(newItems);
+    const oldId = oldItems[0]?.id;
+    const newId = newItemsNormalized[0]?.id;
 
     if (oldId === newId) {
       console.log("Dữ liệu từ server trả về giống hệt cũ, không cần render lại.");

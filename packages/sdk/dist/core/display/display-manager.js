@@ -1,6 +1,6 @@
 import { PopupDisplay } from './popup-display';
 import { InlineDisplay } from './inline-display';
-import { RecommendationFetcher } from '../recommendation';
+import { RecommendationFetcher, normalizeItems } from '../recommendation';
 const ANON_USER_ID_KEY = 'recsys_anon_id';
 export class DisplayManager {
     constructor(domainKey, apiBaseUrl) {
@@ -40,11 +40,13 @@ export class DisplayManager {
         }, 500);
     }
     async refreshAllDisplays() {
-        var _a, _b, _c;
+        var _a, _b;
         this.recommendationFetcher.clearCache();
         const newItems = await this.getRecommendations(50);
-        const oldId = (_b = (_a = this.cachedRecommendations) === null || _a === void 0 ? void 0 : _a.item[0]) === null || _b === void 0 ? void 0 : _b.id;
-        const newId = (_c = newItems === null || newItems === void 0 ? void 0 : newItems.item[0]) === null || _c === void 0 ? void 0 : _c.id;
+        const oldItems = normalizeItems(this.cachedRecommendations);
+        const newItemsNormalized = normalizeItems(newItems);
+        const oldId = (_a = oldItems[0]) === null || _a === void 0 ? void 0 : _a.id;
+        const newId = (_b = newItemsNormalized[0]) === null || _b === void 0 ? void 0 : _b.id;
         if (oldId === newId) {
             console.log("Dữ liệu từ server trả về giống hệt cũ, không cần render lại.");
             return;

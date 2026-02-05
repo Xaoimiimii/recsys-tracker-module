@@ -6,10 +6,12 @@ export interface RecommendationRequest {
     NumberItems: number;
 }
 export interface RecommendationResponse {
-    item: RecommendationItem[];
+    item?: RecommendationItem[];
+    items?: RecommendationItem[];
     keyword: string;
     lastItem: string;
 }
+export declare function normalizeItems(response: RecommendationResponse | null | undefined): RecommendationItem[];
 export interface RecommendationItem {
     Id: number | string;
     DomainItemId: string;

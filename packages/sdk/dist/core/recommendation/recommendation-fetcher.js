@@ -38,7 +38,9 @@ export class RecommendationFetcher {
                 throw new Error(`API Error: ${response.status}`);
             }
             const data = await response.json();
-            const transformedItems = this.transformResponse(data.item || []);
+            // Flexible: check 'item' first, then fallback to 'items'
+            const rawItems = (data.item && data.item.length > 0) ? data.item : (data.items || []);
+            const transformedItems = this.transformResponse(rawItems);
             const finalResponse = {
                 item: transformedItems,
                 keyword: data.keyword || '',

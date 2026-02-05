@@ -1057,6 +1057,187 @@ var RecSysTracker = (function (exports) {
         }
     }
 
+    class RecommendationFetcher {
+        constructor(domainKey, apiBaseUrl) {
+            this.CACHE_TTL = 5 * 60 * 1000;
+            this.AUTO_REFRESH_INTERVAL = 60 * 1000;
+            this.domainKey = domainKey;
+            this.apiBaseUrl = apiBaseUrl;
+            this.cache = new Map();
+            this.autoRefreshTimers = new Map();
+            this.refreshCallbacks = new Map();
+        }
+        async fetchRecommendations(userValue, userField = 'AnonymousId', _options = {}) {
+            try {
+                const limit = _options.numberItems || 50;
+                const cacheKey = this.getCacheKey(userValue, userField);
+                const cached = this.getFromCache(cacheKey);
+                if (cached && cached.length >= limit) {
+                    return {
+                        item: cached,
+                        keyword: '',
+                        lastItem: ''
+                    };
+                }
+                const requestBody = {
+                    AnonymousId: this.getOrCreateAnonymousId(),
+                    DomainKey: this.domainKey,
+                    NumberItems: limit,
+                };
+                const cachedUserId = this.getCachedUserId();
+                if (cachedUserId) {
+                    requestBody.UserId = cachedUserId;
+                }
+                const response = await fetch(`${this.apiBaseUrl}/recommendation`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(requestBody),
+                });
+                if (!response.ok) {
+                    throw new Error(`API Error: ${response.status}`);
+                }
+                const data = await response.json();
+                // Flexible: check 'item' first, then fallback to 'items'
+                const rawItems = (data.item && data.item.length > 0) ? data.item : (data.items || []);
+                const transformedItems = this.transformResponse(rawItems);
+                const finalResponse = {
+                    item: transformedItems,
+                    keyword: data.keyword || '',
+                    lastItem: data.lastItem || ''
+                };
+                this.saveToCache(cacheKey, transformedItems);
+                // Giữ nguyên logic đăng ký auto-refresh của bạn
+                if (_options.autoRefresh && _options.onRefresh) {
+                    if (!this.autoRefreshTimers.has(cacheKey)) {
+                        this.enableAutoRefresh(userValue, userField, _options.onRefresh, _options);
+                    }
+                }
+                return finalResponse;
+            }
+            catch (error) {
+                return { item: [], keyword: '', lastItem: '' };
+            }
+        }
+        enableAutoRefresh(userValue, userField = 'AnonymousId', callback, options = {}) {
+            const cacheKey = this.getCacheKey(userValue, userField);
+            this.stopAutoRefresh(cacheKey);
+            this.refreshCallbacks.set(cacheKey, callback);
+            this.fetchRecommendations(userValue, userField, options)
+                .then(data => callback(data));
+            const timerId = setInterval(async () => {
+                try {
+                    this.cache.delete(cacheKey);
+                    const data = await this.fetchRecommendations(userValue, userField, {
+                        ...options,
+                        autoRefresh: false
+                    });
+                    const cb = this.refreshCallbacks.get(cacheKey);
+                    if (cb)
+                        cb(data);
+                }
+                catch (error) { }
+            }, this.AUTO_REFRESH_INTERVAL);
+            this.autoRefreshTimers.set(cacheKey, timerId);
+            return () => this.stopAutoRefresh(cacheKey);
+        }
+        stopAutoRefresh(cacheKey) {
+            const timerId = this.autoRefreshTimers.get(cacheKey);
+            if (timerId) {
+                clearInterval(timerId);
+                this.autoRefreshTimers.delete(cacheKey);
+                this.refreshCallbacks.delete(cacheKey);
+            }
+        }
+        stopAllAutoRefresh() {
+            this.autoRefreshTimers.forEach((timerId) => clearInterval(timerId));
+            this.autoRefreshTimers.clear();
+            this.refreshCallbacks.clear();
+        }
+        async fetchForAnonymousUser(options = {}) {
+            const anonymousId = this.getOrCreateAnonymousId();
+            return this.fetchRecommendations(anonymousId, 'AnonymousId', options);
+        }
+        async fetchForUserId(userId, options = {}) {
+            return this.fetchRecommendations(userId, 'UserId', options);
+        }
+        async fetchForUsername(username, options = {}) {
+            return this.fetchRecommendations(username, 'Username', options);
+        }
+        // Giữ nguyên 100% logic transform ban đầu của bạn
+        transformResponse(data) {
+            const rawItems = Array.isArray(data) ? data : (data.item || []);
+            return rawItems.map((item) => {
+                return {
+                    ...item,
+                    displayTitle: item.Title || item.Name || item.Subject || 'No Title',
+                    displayImage: item.ImageUrl || item.Thumbnail || item.Image || '',
+                    displayId: item.DomainItemId || item.Id || Math.random().toString(),
+                    id: item.Id
+                };
+            });
+        }
+        getOrCreateAnonymousId() {
+            const storageKey = 'recsys_anon_id';
+            try {
+                let anonymousId = localStorage.getItem(storageKey);
+                if (!anonymousId) {
+                    anonymousId = `anon_${Date.now()}_${this.generateRandomString(8)}`;
+                    localStorage.setItem(storageKey, anonymousId);
+                }
+                return anonymousId;
+            }
+            catch {
+                return `anon_${Date.now()}_${this.generateRandomString(8)}`;
+            }
+        }
+        generateRandomString(length) {
+            const chars = 'abcdefghijklmnopqrstuvwxyz0123456789';
+            let result = '';
+            for (let i = 0; i < length; i++)
+                result += chars.charAt(Math.floor(Math.random() * chars.length));
+            return result;
+        }
+        getCachedUserId() {
+            try {
+                const cachedUserInfo = localStorage.getItem('recsys_cached_user_info');
+                return cachedUserInfo ? JSON.parse(cachedUserInfo).userValue : null;
+            }
+            catch {
+                return null;
+            }
+        }
+        getCacheKey(userValue, userField) {
+            return `${userField}:${userValue}`;
+        }
+        getFromCache(key) {
+            const cached = this.cache.get(key);
+            if (!cached)
+                return null;
+            if (Date.now() - cached.timestamp > this.CACHE_TTL) {
+                this.cache.delete(key);
+                return null;
+            }
+            return cached.data;
+        }
+        saveToCache(key, data) {
+            this.cache.set(key, { data, timestamp: Date.now() });
+        }
+        clearCache() { this.cache.clear(); }
+        setApiBaseUrl(url) { this.apiBaseUrl = url; this.clearCache(); }
+    }
+
+    // Helper function to normalize response (check 'item' first, fallback to 'items')
+    function normalizeItems(response) {
+        if (!response)
+            return [];
+        // Priority: item > items > empty array
+        if (response.item && response.item.length > 0)
+            return response.item;
+        if (response.items && response.items.length > 0)
+            return response.items;
+        return [];
+    }
+
     class PopupDisplay {
         constructor(_domainKey, _slotName, _apiBaseUrl, config = {}, recommendationGetter) {
             var _a;
@@ -1105,16 +1286,17 @@ var RecSysTracker = (function (exports) {
         updateContent(response) {
             if (!this.shadowHost || !this.shadowHost.shadowRoot)
                 return;
-            const { item, keyword, lastItem } = response;
+            // const { item, keyword, lastItem } = response;
+            const { keyword, lastItem } = response;
             const titleElement = this.shadowHost.shadowRoot.querySelector('.recsys-header-title');
             if (titleElement) {
                 titleElement.textContent = this.generateTitle(keyword, lastItem);
                 const layout = this.config.layoutJson || {};
                 if (layout.contentMode === 'carousel') {
-                    this.setupCarousel(this.shadowHost.shadowRoot, item);
+                    this.setupCarousel(this.shadowHost.shadowRoot, normalizeItems(response));
                 }
                 else {
-                    this.renderStaticItems(this.shadowHost.shadowRoot, item);
+                    this.renderStaticItems(this.shadowHost.shadowRoot, normalizeItems(response));
                 }
             }
         }
@@ -1175,7 +1357,7 @@ var RecSysTracker = (function (exports) {
         async showPopup() {
             try {
                 const response = await this.fetchRecommendations();
-                const items = response.item;
+                const items = normalizeItems(response);
                 // Chỉ hiện nếu chưa hiện (double check)
                 if (items && items.length > 0 && !this.shadowHost) {
                     this.renderPopup(items, response.keyword, response.lastItem);
@@ -1792,7 +1974,7 @@ var RecSysTracker = (function (exports) {
             container.setAttribute('data-recsys-loaded', 'true');
             try {
                 const response = await this.fetchRecommendations();
-                const items = response.item;
+                const items = normalizeItems(response);
                 //console.log(items);
                 if (items && items.length > 0) {
                     this.renderWidget(container, items);
@@ -2263,173 +2445,6 @@ var RecSysTracker = (function (exports) {
         }
     }
 
-    class RecommendationFetcher {
-        constructor(domainKey, apiBaseUrl) {
-            this.CACHE_TTL = 5 * 60 * 1000;
-            this.AUTO_REFRESH_INTERVAL = 60 * 1000;
-            this.domainKey = domainKey;
-            this.apiBaseUrl = apiBaseUrl;
-            this.cache = new Map();
-            this.autoRefreshTimers = new Map();
-            this.refreshCallbacks = new Map();
-        }
-        async fetchRecommendations(userValue, userField = 'AnonymousId', _options = {}) {
-            try {
-                const limit = _options.numberItems || 50;
-                const cacheKey = this.getCacheKey(userValue, userField);
-                const cached = this.getFromCache(cacheKey);
-                if (cached && cached.length >= limit) {
-                    return {
-                        item: cached,
-                        keyword: '',
-                        lastItem: ''
-                    };
-                }
-                const requestBody = {
-                    AnonymousId: this.getOrCreateAnonymousId(),
-                    DomainKey: this.domainKey,
-                    NumberItems: limit,
-                };
-                const cachedUserId = this.getCachedUserId();
-                if (cachedUserId) {
-                    requestBody.UserId = cachedUserId;
-                }
-                const response = await fetch(`${this.apiBaseUrl}/recommendation`, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(requestBody),
-                });
-                if (!response.ok) {
-                    throw new Error(`API Error: ${response.status}`);
-                }
-                const data = await response.json();
-                const transformedItems = this.transformResponse(data.item || []);
-                const finalResponse = {
-                    item: transformedItems,
-                    keyword: data.keyword || '',
-                    lastItem: data.lastItem || ''
-                };
-                this.saveToCache(cacheKey, transformedItems);
-                // Giữ nguyên logic đăng ký auto-refresh của bạn
-                if (_options.autoRefresh && _options.onRefresh) {
-                    if (!this.autoRefreshTimers.has(cacheKey)) {
-                        this.enableAutoRefresh(userValue, userField, _options.onRefresh, _options);
-                    }
-                }
-                return finalResponse;
-            }
-            catch (error) {
-                return { item: [], keyword: '', lastItem: '' };
-            }
-        }
-        enableAutoRefresh(userValue, userField = 'AnonymousId', callback, options = {}) {
-            const cacheKey = this.getCacheKey(userValue, userField);
-            this.stopAutoRefresh(cacheKey);
-            this.refreshCallbacks.set(cacheKey, callback);
-            this.fetchRecommendations(userValue, userField, options)
-                .then(data => callback(data));
-            const timerId = setInterval(async () => {
-                try {
-                    this.cache.delete(cacheKey);
-                    const data = await this.fetchRecommendations(userValue, userField, {
-                        ...options,
-                        autoRefresh: false
-                    });
-                    const cb = this.refreshCallbacks.get(cacheKey);
-                    if (cb)
-                        cb(data);
-                }
-                catch (error) { }
-            }, this.AUTO_REFRESH_INTERVAL);
-            this.autoRefreshTimers.set(cacheKey, timerId);
-            return () => this.stopAutoRefresh(cacheKey);
-        }
-        stopAutoRefresh(cacheKey) {
-            const timerId = this.autoRefreshTimers.get(cacheKey);
-            if (timerId) {
-                clearInterval(timerId);
-                this.autoRefreshTimers.delete(cacheKey);
-                this.refreshCallbacks.delete(cacheKey);
-            }
-        }
-        stopAllAutoRefresh() {
-            this.autoRefreshTimers.forEach((timerId) => clearInterval(timerId));
-            this.autoRefreshTimers.clear();
-            this.refreshCallbacks.clear();
-        }
-        async fetchForAnonymousUser(options = {}) {
-            const anonymousId = this.getOrCreateAnonymousId();
-            return this.fetchRecommendations(anonymousId, 'AnonymousId', options);
-        }
-        async fetchForUserId(userId, options = {}) {
-            return this.fetchRecommendations(userId, 'UserId', options);
-        }
-        async fetchForUsername(username, options = {}) {
-            return this.fetchRecommendations(username, 'Username', options);
-        }
-        // Giữ nguyên 100% logic transform ban đầu của bạn
-        transformResponse(data) {
-            const rawItems = Array.isArray(data) ? data : (data.item || []);
-            return rawItems.map((item) => {
-                return {
-                    ...item,
-                    displayTitle: item.Title || item.Name || item.Subject || 'No Title',
-                    displayImage: item.ImageUrl || item.Thumbnail || item.Image || '',
-                    displayId: item.DomainItemId || item.Id || Math.random().toString(),
-                    id: item.Id
-                };
-            });
-        }
-        getOrCreateAnonymousId() {
-            const storageKey = 'recsys_anon_id';
-            try {
-                let anonymousId = localStorage.getItem(storageKey);
-                if (!anonymousId) {
-                    anonymousId = `anon_${Date.now()}_${this.generateRandomString(8)}`;
-                    localStorage.setItem(storageKey, anonymousId);
-                }
-                return anonymousId;
-            }
-            catch {
-                return `anon_${Date.now()}_${this.generateRandomString(8)}`;
-            }
-        }
-        generateRandomString(length) {
-            const chars = 'abcdefghijklmnopqrstuvwxyz0123456789';
-            let result = '';
-            for (let i = 0; i < length; i++)
-                result += chars.charAt(Math.floor(Math.random() * chars.length));
-            return result;
-        }
-        getCachedUserId() {
-            try {
-                const cachedUserInfo = localStorage.getItem('recsys_cached_user_info');
-                return cachedUserInfo ? JSON.parse(cachedUserInfo).userValue : null;
-            }
-            catch {
-                return null;
-            }
-        }
-        getCacheKey(userValue, userField) {
-            return `${userField}:${userValue}`;
-        }
-        getFromCache(key) {
-            const cached = this.cache.get(key);
-            if (!cached)
-                return null;
-            if (Date.now() - cached.timestamp > this.CACHE_TTL) {
-                this.cache.delete(key);
-                return null;
-            }
-            return cached.data;
-        }
-        saveToCache(key, data) {
-            this.cache.set(key, { data, timestamp: Date.now() });
-        }
-        clearCache() { this.cache.clear(); }
-        setApiBaseUrl(url) { this.apiBaseUrl = url; this.clearCache(); }
-    }
-
     const ANON_USER_ID_KEY = 'recsys_anon_id';
     class DisplayManager {
         constructor(domainKey, apiBaseUrl) {
@@ -2469,11 +2484,13 @@ var RecSysTracker = (function (exports) {
             }, 500);
         }
         async refreshAllDisplays() {
-            var _a, _b, _c;
+            var _a, _b;
             this.recommendationFetcher.clearCache();
             const newItems = await this.getRecommendations(50);
-            const oldId = (_b = (_a = this.cachedRecommendations) === null || _a === void 0 ? void 0 : _a.item[0]) === null || _b === void 0 ? void 0 : _b.id;
-            const newId = (_c = newItems === null || newItems === void 0 ? void 0 : newItems.item[0]) === null || _c === void 0 ? void 0 : _c.id;
+            const oldItems = normalizeItems(this.cachedRecommendations);
+            const newItemsNormalized = normalizeItems(newItems);
+            const oldId = (_a = oldItems[0]) === null || _a === void 0 ? void 0 : _a.id;
+            const newId = (_b = newItemsNormalized[0]) === null || _b === void 0 ? void 0 : _b.id;
             if (oldId === newId) {
                 console.log("Dữ liệu từ server trả về giống hệt cũ, không cần render lại.");
                 return;

@@ -1,3 +1,4 @@
+import { normalizeItems } from '../recommendation';
 export class InlineDisplay {
     constructor(_domainKey, _slotName, selector, _apiBaseUrl, config = {}, recommendationGetter) {
         this.observer = null;
@@ -75,7 +76,7 @@ export class InlineDisplay {
         container.setAttribute('data-recsys-loaded', 'true');
         try {
             const response = await this.fetchRecommendations();
-            const items = response.item;
+            const items = normalizeItems(response);
             //console.log(items);
             if (items && items.length > 0) {
                 this.renderWidget(container, items);

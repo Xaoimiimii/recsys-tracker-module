@@ -1,3 +1,4 @@
+import { normalizeItems } from '../recommendation';
 export class PopupDisplay {
     constructor(_domainKey, _slotName, _apiBaseUrl, config = {}, recommendationGetter) {
         var _a;
@@ -46,16 +47,17 @@ export class PopupDisplay {
     updateContent(response) {
         if (!this.shadowHost || !this.shadowHost.shadowRoot)
             return;
-        const { item, keyword, lastItem } = response;
+        // const { item, keyword, lastItem } = response;
+        const { keyword, lastItem } = response;
         const titleElement = this.shadowHost.shadowRoot.querySelector('.recsys-header-title');
         if (titleElement) {
             titleElement.textContent = this.generateTitle(keyword, lastItem);
             const layout = this.config.layoutJson || {};
             if (layout.contentMode === 'carousel') {
-                this.setupCarousel(this.shadowHost.shadowRoot, item);
+                this.setupCarousel(this.shadowHost.shadowRoot, normalizeItems(response));
             }
             else {
-                this.renderStaticItems(this.shadowHost.shadowRoot, item);
+                this.renderStaticItems(this.shadowHost.shadowRoot, normalizeItems(response));
             }
         }
     }
@@ -116,7 +118,7 @@ export class PopupDisplay {
     async showPopup() {
         try {
             const response = await this.fetchRecommendations();
-            const items = response.item;
+            const items = normalizeItems(response);
             // Chỉ hiện nếu chưa hiện (double check)
             if (items && items.length > 0 && !this.shadowHost) {
                 this.renderPopup(items, response.keyword, response.lastItem);

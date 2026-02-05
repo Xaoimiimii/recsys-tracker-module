@@ -1,5 +1,5 @@
 import { InlineConfig, StyleJson, LayoutJson } from '../../types';
-import { RecommendationItem, RecommendationResponse } from '../recommendation';
+import { RecommendationItem, RecommendationResponse, normalizeItems } from '../recommendation';
 
 export class InlineDisplay {
   private selector: string;
@@ -102,7 +102,7 @@ export class InlineDisplay {
 
     try {
       const response = await this.fetchRecommendations();
-      const items = response.item;
+      const items = normalizeItems(response);
       //console.log(items);
 
       if (items && items.length > 0) {

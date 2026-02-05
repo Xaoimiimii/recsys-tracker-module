@@ -7,3 +7,4 @@ export type {
   RecommendationOptions,
   UserField,
 } from './types';
+export { normalizeItems } from './types';
