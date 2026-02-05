@@ -1091,19 +1091,6 @@
             }
             this.removePopup();
         }
-        updateContent(newItems) {
-            if (!this.shadowHost || !this.shadowHost.shadowRoot)
-                return;
-            const shadow = this.shadowHost.shadowRoot;
-            const layout = this.config.layoutJson || {};
-            const contentMode = layout.contentMode || 'carousel';
-            if (contentMode === 'carousel') {
-                this.setupCarousel(shadow, newItems);
-            }
-            else {
-                this.renderStaticItems(shadow, newItems);
-            }
-        }
         startWatcher() {
             if (this.spaCheckInterval)
                 clearInterval(this.spaCheckInterval);
@@ -1635,39 +1622,7 @@
         handleItemClick(id) {
             if (!id)
                 return;
-            // const targetUrl = `/song/${id}`;
-            let urlPattern = this.config.layoutJson.itemUrlPattern || '/song/{:id}';
-            const targetUrl = urlPattern.replace('{:id}', id.toString());
-            // Try SPA-style navigation first
-            try {
-                // 1. Update URL without reload
-                window.history.pushState({}, '', targetUrl);
-                // 2. Dispatch events to notify SPA frameworks
-                window.dispatchEvent(new PopStateEvent('popstate', { state: {} }));
-                // 3. Custom event for frameworks that listen to custom routing events
-                window.dispatchEvent(new CustomEvent('navigate', {
-                    detail: { path: targetUrl, from: 'recsys-tracker' }
-                }));
-                // 4. Trigger link click event (some frameworks listen to this)
-                // const clickEvent = new MouseEvent('click', {
-                //   bubbles: true,
-                //   cancelable: true,
-                //   view: window
-                // });
-                // If navigation didn't work (URL changed but page didn't update), fallback
-                // Check after a short delay if the page updated
-                setTimeout(() => {
-                    // If window.location.pathname is different from targetUrl, means framework didn't handle it
-                    // So we need to force reload
-                    if (window.location.pathname !== targetUrl) {
-                        window.location.href = targetUrl;
-                    }
-                }, 100);
-            }
-            catch (error) {
-                // Fallback to traditional navigation if History API fails
-                window.location.href = targetUrl;
-            }
+            window.location.href = `/song/${id}`;
         }
     }
 
@@ -1696,21 +1651,6 @@
             if (this.autoSlideTimeout) {
                 clearTimeout(this.autoSlideTimeout);
             }
-        }
-        updateContent(newItems) {
-            const containers = document.querySelectorAll(`${this.selector}[data-recsys-loaded="true"]`);
-            containers.forEach(container => {
-                if (container.shadowRoot) {
-                    const shadow = container.shadowRoot;
-                    const contentMode = this.config.layoutJson.contentMode || 'grid';
-                    if (contentMode === 'carousel') {
-                        this.setupCarousel(shadow, newItems);
-                    }
-                    else {
-                        this.renderStaticItems(shadow, newItems);
-                    }
-                }
-            });
         }
         // --- CORE INLINE LOGIC (Mutation Observer) ---
         setupObserver() {
@@ -2187,37 +2127,8 @@
             if (!id)
                 return;
             let urlPattern = this.config.layoutJson.itemUrlPattern || '/song/{:id}';
-            const targetUrl = urlPattern.replace('{:id}', id.toString());
-            // Try SPA-style navigation first
-            try {
-                // 1. Update URL without reload
-                window.history.pushState({}, '', targetUrl);
-                // 2. Dispatch events to notify SPA frameworks
-                window.dispatchEvent(new PopStateEvent('popstate', { state: {} }));
-                // 3. Custom event for frameworks that listen to custom routing events
-                window.dispatchEvent(new CustomEvent('navigate', {
-                    detail: { path: targetUrl, from: 'recsys-tracker' }
-                }));
-                // 4. Trigger link click event (some frameworks listen to this)
-                // const clickEvent = new MouseEvent('click', {
-                //   bubbles: true,
-                //   cancelable: true,
-                //   view: window
-                // });
-                // If navigation didn't work (URL changed but page didn't update), fallback
-                // Check after a short delay if the page updated
-                setTimeout(() => {
-                    // If window.location.pathname is different from targetUrl, means framework didn't handle it
-                    // So we need to force reload
-                    if (window.location.pathname !== targetUrl) {
-                        window.location.href = targetUrl;
-                    }
-                }, 100);
-            }
-            catch (error) {
-                // Fallback to traditional navigation if History API fails
-                window.location.href = targetUrl;
-            }
+            const finalUrl = urlPattern.replace('{:id}', id.toString());
+            window.location.href = finalUrl;
         }
     }
 
@@ -2328,7 +2239,7 @@
     }
 
     class RecommendationFetcher {
-        constructor(domainKey, apiBaseUrl) {
+        constructor(domainKey, apiBaseUrl = 'https://recsys-tracker-module.onrender.com') {
             this.CACHE_TTL = 5 * 60 * 1000; // 5 minutes cache
             this.AUTO_REFRESH_INTERVAL = 60 * 1000; // 1 minute auto-refresh
             this.domainKey = domainKey;
@@ -2337,6 +2248,10 @@
             this.autoRefreshTimers = new Map();
             this.refreshCallbacks = new Map();
         }
+        // constructor(apiBaseUrl: string = 'http://localhost:3001') {
+        //   this.apiBaseUrl = apiBaseUrl;
+        //   this.cache = new Map();
+        // }
         async fetchRecommendations(userValue, userField = 'AnonymousId', _options = {}) {
             try {
                 // Check cache first
@@ -2622,12 +2537,11 @@
 
     const ANON_USER_ID_KEY = 'recsys_anon_id';
     class DisplayManager {
-        constructor(domainKey, apiBaseUrl) {
+        constructor(domainKey, apiBaseUrl = 'https://recsys-tracker-module.onrender.com') {
             this.popupDisplays = new Map();
             this.inlineDisplays = new Map();
             this.cachedRecommendations = null;
             this.fetchPromise = null;
-            this.refreshTimer = null;
             this.domainKey = domainKey;
             this.apiBaseUrl = apiBaseUrl;
             this.recommendationFetcher = new RecommendationFetcher(domainKey, apiBaseUrl);
@@ -2649,22 +2563,6 @@
             for (const method of returnMethods) {
                 this.activateDisplayMethod(method);
             }
-        }
-        notifyActionTriggered() {
-            if (this.refreshTimer)
-                clearTimeout(this.refreshTimer);
-            // Chống spam API bằng Debounce (đợi 500ms sau hành động cuối cùng)
-            this.refreshTimer = setTimeout(async () => {
-                await this.refreshAllDisplays();
-            }, 500);
-        }
-        async refreshAllDisplays() {
-            this.cachedRecommendations = null;
-            this.fetchPromise = null;
-            this.recommendationFetcher.clearCache();
-            const newItems = await this.getRecommendations(50);
-            this.popupDisplays.forEach(popup => { var _a, _b; return (_b = (_a = popup).updateContent) === null || _b === void 0 ? void 0 : _b.call(_a, newItems); });
-            this.inlineDisplays.forEach(inline => { var _a, _b; return (_b = (_a = inline).updateContent) === null || _b === void 0 ? void 0 : _b.call(_a, newItems); });
         }
         // Phân loại và kích hoạt display method tương ứng
         activateDisplayMethod(method) {
@@ -2757,17 +2655,8 @@
                     numberItems: limit,
                     autoRefresh: true,
                     onRefresh: (newItems) => {
+                        // Update cached recommendations
                         this.cachedRecommendations = newItems;
-                        this.popupDisplays.forEach(popup => {
-                            if (typeof popup.updateContent === 'function') {
-                                popup.updateContent(newItems);
-                            }
-                        });
-                        this.inlineDisplays.forEach(inline => {
-                            if (typeof inline.updateContent === 'function') {
-                                inline.updateContent(newItems);
-                            }
-                        });
                     }
                 });
             }

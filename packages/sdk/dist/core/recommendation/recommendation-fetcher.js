@@ -1,6 +1,6 @@
 import { PlaceholderImage } from './placeholder-image';
 export class RecommendationFetcher {
-    constructor(domainKey, apiBaseUrl) {
+    constructor(domainKey, apiBaseUrl = 'https://recsys-tracker-module.onrender.com') {
         this.CACHE_TTL = 5 * 60 * 1000; // 5 minutes cache
         this.AUTO_REFRESH_INTERVAL = 60 * 1000; // 1 minute auto-refresh
         this.domainKey = domainKey;
@@ -9,6 +9,10 @@ export class RecommendationFetcher {
         this.autoRefreshTimers = new Map();
         this.refreshCallbacks = new Map();
     }
+    // constructor(apiBaseUrl: string = 'http://localhost:3001') {
+    //   this.apiBaseUrl = apiBaseUrl;
+    //   this.cache = new Map();
+    // }
     async fetchRecommendations(userValue, userField = 'AnonymousId', _options = {}) {
         try {
             // Check cache first

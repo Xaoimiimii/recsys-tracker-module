@@ -15,7 +15,6 @@ export declare class PopupDisplay {
     constructor(_domainKey: string, _slotName: string, _apiBaseUrl: string, config: PopupConfig | undefined, recommendationGetter: (limit: number) => Promise<RecommendationItem[]>);
     start(): void;
     stop(): void;
-    updateContent(newItems: RecommendationItem[]): void;
     private startWatcher;
     private scheduleShow;
     private showPopup;

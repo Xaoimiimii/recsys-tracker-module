@@ -3,12 +3,11 @@ import { InlineDisplay } from './inline-display';
 import { RecommendationFetcher } from '../recommendation';
 const ANON_USER_ID_KEY = 'recsys_anon_id';
 export class DisplayManager {
-    constructor(domainKey, apiBaseUrl) {
+    constructor(domainKey, apiBaseUrl = 'https://recsys-tracker-module.onrender.com') {
         this.popupDisplays = new Map();
         this.inlineDisplays = new Map();
         this.cachedRecommendations = null;
         this.fetchPromise = null;
-        this.refreshTimer = null;
         this.domainKey = domainKey;
         this.apiBaseUrl = apiBaseUrl;
         this.recommendationFetcher = new RecommendationFetcher(domainKey, apiBaseUrl);
@@ -30,22 +29,6 @@ export class DisplayManager {
         for (const method of returnMethods) {
             this.activateDisplayMethod(method);
         }
-    }
-    notifyActionTriggered() {
-        if (this.refreshTimer)
-            clearTimeout(this.refreshTimer);
-        // Chống spam API bằng Debounce (đợi 500ms sau hành động cuối cùng)
-        this.refreshTimer = setTimeout(async () => {
-            await this.refreshAllDisplays();
-        }, 500);
-    }
-    async refreshAllDisplays() {
-        this.cachedRecommendations = null;
-        this.fetchPromise = null;
-        this.recommendationFetcher.clearCache();
-        const newItems = await this.getRecommendations(50);
-        this.popupDisplays.forEach(popup => { var _a, _b; return (_b = (_a = popup).updateContent) === null || _b === void 0 ? void 0 : _b.call(_a, newItems); });
-        this.inlineDisplays.forEach(inline => { var _a, _b; return (_b = (_a = inline).updateContent) === null || _b === void 0 ? void 0 : _b.call(_a, newItems); });
     }
     // Phân loại và kích hoạt display method tương ứng
     activateDisplayMethod(method) {
@@ -138,17 +121,8 @@ export class DisplayManager {
                 numberItems: limit,
                 autoRefresh: true,
                 onRefresh: (newItems) => {
+                    // Update cached recommendations
                     this.cachedRecommendations = newItems;
-                    this.popupDisplays.forEach(popup => {
-                        if (typeof popup.updateContent === 'function') {
-                            popup.updateContent(newItems);
-                        }
-                    });
-                    this.inlineDisplays.forEach(inline => {
-                        if (typeof inline.updateContent === 'function') {
-                            inline.updateContent(newItems);
-                        }
-                    });
                 }
             });
         }

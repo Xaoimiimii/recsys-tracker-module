@@ -8,11 +8,8 @@ export declare class DisplayManager {
     private recommendationFetcher;
     private cachedRecommendations;
     private fetchPromise;
-    private refreshTimer;
-    constructor(domainKey: string, apiBaseUrl: string);
+    constructor(domainKey: string, apiBaseUrl?: string);
     initialize(returnMethods: ReturnMethod[]): Promise<void>;
-    notifyActionTriggered(): void;
-    private refreshAllDisplays;
     private activateDisplayMethod;
     private initializePopup;
     private initializeInline;

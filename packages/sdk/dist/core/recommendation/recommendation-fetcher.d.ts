@@ -7,7 +7,7 @@ export declare class RecommendationFetcher {
     private readonly AUTO_REFRESH_INTERVAL;
     private autoRefreshTimers;
     private refreshCallbacks;
-    constructor(domainKey: string, apiBaseUrl: string);
+    constructor(domainKey: string, apiBaseUrl?: string);
     fetchRecommendations(userValue: string, userField?: UserField, _options?: RecommendationOptions): Promise<RecommendationItem[]>;
     /**
      * Enable auto-refresh for recommendations

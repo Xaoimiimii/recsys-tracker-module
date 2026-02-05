@@ -45,20 +45,6 @@ export class PopupDisplay {
     this.removePopup();
   }
 
-  public updateContent(newItems: RecommendationItem[]): void {
-    if (!this.shadowHost || !this.shadowHost.shadowRoot) return;
-    
-    const shadow = this.shadowHost.shadowRoot;
-    const layout = (this.config.layoutJson as any) || {};
-    const contentMode = layout.contentMode || 'carousel';
-
-    if (contentMode === 'carousel') {
-      this.setupCarousel(shadow, newItems);
-    } else {
-      this.renderStaticItems(shadow, newItems);
-    }
-  }
-
   private startWatcher(): void {
     if (this.spaCheckInterval) clearInterval(this.spaCheckInterval);
 
@@ -621,45 +607,7 @@ export class PopupDisplay {
 
   private handleItemClick(id: string | number): void {
       if (!id) return;
-      
-      // const targetUrl = `/song/${id}`;
-      let urlPattern = this.config.layoutJson.itemUrlPattern || '/song/{:id}';
-      const targetUrl = urlPattern.replace('{:id}', id.toString());
-      
-      // Try SPA-style navigation first
-      try {
-        // 1. Update URL without reload
-        window.history.pushState({}, '', targetUrl);
-        
-        // 2. Dispatch events to notify SPA frameworks
-        window.dispatchEvent(new PopStateEvent('popstate', { state: {} }));
-        
-        // 3. Custom event for frameworks that listen to custom routing events
-        window.dispatchEvent(new CustomEvent('navigate', { 
-          detail: { path: targetUrl, from: 'recsys-tracker' }
-        }));
-        
-        // 4. Trigger link click event (some frameworks listen to this)
-        // const clickEvent = new MouseEvent('click', {
-        //   bubbles: true,
-        //   cancelable: true,
-        //   view: window
-        // });
-        
-        // If navigation didn't work (URL changed but page didn't update), fallback
-        // Check after a short delay if the page updated
-        setTimeout(() => {
-          // If window.location.pathname is different from targetUrl, means framework didn't handle it
-          // So we need to force reload
-          if (window.location.pathname !== targetUrl) {
-            window.location.href = targetUrl;
-          }
-        }, 100);
-        
-      } catch (error) {
-        // Fallback to traditional navigation if History API fails
-        window.location.href = targetUrl; 
-      }
+      window.location.href = `/song/${id}`; 
   }
 }
 

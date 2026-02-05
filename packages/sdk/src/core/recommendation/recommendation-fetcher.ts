@@ -16,13 +16,18 @@ export class RecommendationFetcher {
   private autoRefreshTimers: Map<string, NodeJS.Timeout | number>;
   private refreshCallbacks: Map<string, (items: RecommendationItem[]) => void>;
 
-  constructor(domainKey: string, apiBaseUrl: string) {
+  constructor(domainKey: string, apiBaseUrl: string = 'https://recsys-tracker-module.onrender.com') {
     this.domainKey = domainKey;
     this.apiBaseUrl = apiBaseUrl;
     this.cache = new Map();
     this.autoRefreshTimers = new Map();
     this.refreshCallbacks = new Map();
   }
+
+  // constructor(apiBaseUrl: string = 'http://localhost:3001') {
+  //   this.apiBaseUrl = apiBaseUrl;
+  //   this.cache = new Map();
+  // }
 
   async fetchRecommendations(
     userValue: string,
