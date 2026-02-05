@@ -27,7 +27,6 @@ export abstract class BasePlugin implements IPlugin {
   protected active: boolean = false;
   protected errorBoundary: ErrorBoundary;
   protected payloadBuilder: any = null;
-  protected displayManager?: any; 
 
   constructor() {
     this.errorBoundary = new ErrorBoundary(true);
@@ -41,7 +40,6 @@ export abstract class BasePlugin implements IPlugin {
 
       this.tracker = tracker;
       this.payloadBuilder = tracker.payloadBuilder;
-      this.displayManager = (tracker as any).getDisplayManager();
 
     }, `${this.name}.init`);
   }
@@ -63,12 +61,6 @@ export abstract class BasePlugin implements IPlugin {
 
   public isActive(): boolean {
     return this.active;
-  }
-
-  protected triggerRefresh(): void {
-    if (this.displayManager && typeof this.displayManager.notifyActionTriggered === 'function') {
-      this.displayManager.notifyActionTriggered();
-    }
   }
 
   protected ensureInitialized(): boolean {
