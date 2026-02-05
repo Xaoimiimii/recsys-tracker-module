@@ -40,10 +40,15 @@ export class DisplayManager {
         }, 500);
     }
     async refreshAllDisplays() {
-        this.cachedRecommendations = null;
-        this.fetchPromise = null;
+        var _a, _b, _c;
         this.recommendationFetcher.clearCache();
         const newItems = await this.getRecommendations(50);
+        const oldId = (_b = (_a = this.cachedRecommendations) === null || _a === void 0 ? void 0 : _a.items[0]) === null || _b === void 0 ? void 0 : _b.id;
+        const newId = (_c = newItems === null || newItems === void 0 ? void 0 : newItems.items[0]) === null || _c === void 0 ? void 0 : _c.id;
+        if (oldId === newId) {
+            console.log("Dữ liệu từ server trả về giống hệt cũ, không cần render lại.");
+            return;
+        }
         this.popupDisplays.forEach(popup => { var _a, _b; return (_b = (_a = popup).updateContent) === null || _b === void 0 ? void 0 : _b.call(_a, newItems); });
         this.inlineDisplays.forEach(inline => { var _a, _b; return (_b = (_a = inline).updateContent) === null || _b === void 0 ? void 0 : _b.call(_a, newItems); });
     }
@@ -87,7 +92,14 @@ export class DisplayManager {
                 (_a = this.popupDisplays.get(key)) === null || _a === void 0 ? void 0 : _a.stop();
                 this.popupDisplays.delete(key);
             }
-            const popupDisplay = new PopupDisplay(this.domainKey, key, this.apiBaseUrl, config, (limit) => this.getRecommendations(limit !== null && limit !== void 0 ? limit : 50));
+            const popupDisplay = new PopupDisplay(this.domainKey, key, this.apiBaseUrl, config, (limit) => {
+                console.log('[DisplayManager] recommendationGetter called with limit:', limit);
+                // Fetch directly from recommendationFetcher instead of using cache
+                return this.recommendationFetcher.fetchForAnonymousUser({
+                    numberItems: limit,
+                    autoRefresh: false
+                });
+            });
             this.popupDisplays.set(key, popupDisplay);
             popupDisplay.start();
         }
@@ -106,7 +118,11 @@ export class DisplayManager {
             if (!config.selector)
                 return;
             const inlineDisplay = new InlineDisplay(this.domainKey, key, config.selector, this.apiBaseUrl, config, // Truyền object config
-            (limit) => this.getRecommendations(limit !== null && limit !== void 0 ? limit : 50));
+            () => {
+                return this.recommendationFetcher.fetchForAnonymousUser({
+                    autoRefresh: false
+                });
+            });
             this.inlineDisplays.set(key, inlineDisplay);
             inlineDisplay.start();
         }
@@ -133,27 +149,16 @@ export class DisplayManager {
         try {
             const anonymousId = this.getAnonymousId();
             if (!anonymousId)
-                return [];
-            return await this.recommendationFetcher.fetchRecommendations(anonymousId, 'AnonymousId', {
+                return { items: [], keyword: '', lastItem: '' };
+            // Chỉ fetch 1 lần, không enable autoRefresh ở đây để tránh vòng lặp
+            const response = await this.recommendationFetcher.fetchRecommendations(anonymousId, 'AnonymousId', {
                 numberItems: limit,
-                autoRefresh: true,
-                onRefresh: (newItems) => {
-                    this.cachedRecommendations = newItems;
-                    this.popupDisplays.forEach(popup => {
-                        if (typeof popup.updateContent === 'function') {
-                            popup.updateContent(newItems);
-                        }
-                    });
-                    this.inlineDisplays.forEach(inline => {
-                        if (typeof inline.updateContent === 'function') {
-                            inline.updateContent(newItems);
-                        }
-                    });
-                }
+                autoRefresh: false
             });
+            return response;
         }
         catch (error) {
-            return [];
+            return { items: [], keyword: '', lastItem: '' };
         }
     }
     getAnonymousId() {

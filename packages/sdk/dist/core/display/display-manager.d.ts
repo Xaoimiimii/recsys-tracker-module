@@ -1,5 +1,5 @@
 import { ReturnMethod } from '../../types';
-import { RecommendationItem } from '../recommendation';
+import { RecommendationResponse } from '../recommendation';
 export declare class DisplayManager {
     private popupDisplays;
     private inlineDisplays;
@@ -19,7 +19,7 @@ export declare class DisplayManager {
     private fetchRecommendationsOnce;
     private fetchRecommendationsInternal;
     private getAnonymousId;
-    getRecommendations(limit?: number): Promise<RecommendationItem[]>;
+    getRecommendations(limit?: number): Promise<RecommendationResponse>;
     destroy(): void;
 }
 //# sourceMappingURL=display-manager.d.ts.map

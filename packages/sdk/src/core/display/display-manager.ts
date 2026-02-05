@@ -1,7 +1,7 @@
 import { ReturnMethod, PopupConfig, InlineConfig } from '../../types';
 import { PopupDisplay } from './popup-display';
 import { InlineDisplay } from './inline-display';
-import { RecommendationFetcher, RecommendationItem } from '../recommendation';
+import { RecommendationFetcher, RecommendationResponse } from '../recommendation';
 
 const ANON_USER_ID_KEY = 'recsys_anon_id';
 
@@ -11,8 +11,8 @@ export class DisplayManager {
   private domainKey: string;
   private apiBaseUrl: string;
   private recommendationFetcher: RecommendationFetcher;
-  private cachedRecommendations: RecommendationItem[] | null = null;
-  private fetchPromise: Promise<RecommendationItem[]> | null = null;
+  private cachedRecommendations: RecommendationResponse | null = null;
+  private fetchPromise: Promise<RecommendationResponse> | null = null;
   private refreshTimer: NodeJS.Timeout | null = null;
 
   constructor(domainKey: string, apiBaseUrl: string) {
@@ -52,11 +52,16 @@ export class DisplayManager {
   }
 
   private async refreshAllDisplays(): Promise<void> {
-    this.cachedRecommendations = null;
-    this.fetchPromise = null;
     this.recommendationFetcher.clearCache();
-
     const newItems = await this.getRecommendations(50);
+    
+    const oldId = this.cachedRecommendations?.items[0]?.id;
+    const newId = newItems?.items[0]?.id;
+
+    if (oldId === newId) {
+      console.log("Dữ liệu từ server trả về giống hệt cũ, không cần render lại.");
+      return;
+    }
     this.popupDisplays.forEach(popup => (popup as any).updateContent?.(newItems));
     this.inlineDisplays.forEach(inline => (inline as any).updateContent?.(newItems));
   }
@@ -108,7 +113,14 @@ export class DisplayManager {
         key,
         this.apiBaseUrl,
         config, 
-        (limit?: number) => this.getRecommendations(limit ?? 50)
+        (limit: number) => {
+          console.log('[DisplayManager] recommendationGetter called with limit:', limit);
+          // Fetch directly from recommendationFetcher instead of using cache
+          return this.recommendationFetcher.fetchForAnonymousUser({ 
+            numberItems: limit,
+            autoRefresh: false
+          });
+        }
       );
       
       this.popupDisplays.set(key, popupDisplay);
@@ -133,7 +145,11 @@ export class DisplayManager {
         config.selector,
         this.apiBaseUrl,
         config, // Truyền object config
-        (limit?: number) => this.getRecommendations(limit ?? 50)
+        () => {
+          return this.recommendationFetcher.fetchForAnonymousUser({ 
+            autoRefresh: false
+          });
+        }
       );
       
       this.inlineDisplays.set(key, inlineDisplay);
@@ -144,7 +160,7 @@ export class DisplayManager {
   }
 
   // --- LOGIC FETCH RECOMMENDATION (GIỮ NGUYÊN) ---
-  private async fetchRecommendationsOnce(limit: number = 50): Promise<RecommendationItem[]> {
+  private async fetchRecommendationsOnce(limit: number = 50): Promise<RecommendationResponse> {
     if (this.cachedRecommendations) return this.cachedRecommendations;
     if (this.fetchPromise) return this.fetchPromise;
 
@@ -157,35 +173,17 @@ export class DisplayManager {
     }
   }
 
-  private async fetchRecommendationsInternal(limit: number): Promise<RecommendationItem[]> {
+  private async fetchRecommendationsInternal(limit: number): Promise<RecommendationResponse> {
     try {
       const anonymousId = this.getAnonymousId();
-      if (!anonymousId) return [];
-
-      return await this.recommendationFetcher.fetchRecommendations(
-        anonymousId,
-        'AnonymousId',
-        { 
-          numberItems: limit,
-          autoRefresh: true,
-          onRefresh: (newItems) => {
-            this.cachedRecommendations = newItems;
-            this.popupDisplays.forEach(popup => {
-              if (typeof (popup as any).updateContent === 'function') {
-                (popup as any).updateContent(newItems);
-              }
-            });
-            this.inlineDisplays.forEach(inline => {
-              if (typeof (inline as any).updateContent === 'function') {
-                (inline as any).updateContent(newItems);
-              }
-            });
-          }
-        }
-      );
-    } catch (error) {
-      return [];
-    }
+      if (!anonymousId) return {items: [], keyword: '', lastItem: ''};
+      // Chỉ fetch 1 lần, không enable autoRefresh ở đây để tránh vòng lặp
+      const response = await this.recommendationFetcher.fetchRecommendations(anonymousId, 'AnonymousId', { 
+        numberItems: limit,
+        autoRefresh: false
+      });
+      return response; 
+    } catch (error) { return {items: [], keyword: '', lastItem: ''}; }
   }
 
   private getAnonymousId(): string | null {
@@ -196,7 +194,7 @@ export class DisplayManager {
     }
   }
 
-  async getRecommendations(limit: number = 50): Promise<RecommendationItem[]> {
+  async getRecommendations(limit: number = 50): Promise<RecommendationResponse> {
     if (limit) {
         return this.fetchRecommendationsInternal(limit);
     }

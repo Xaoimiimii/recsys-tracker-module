@@ -66,6 +66,7 @@ export class RecSysTracker {
                     this.displayManager = new DisplayManager(this.config.domainKey, baseUrl);
                     await this.displayManager.initialize(this.config.returnMethods);
                 }
+                console.log(this.config);
                 // Tự động khởi tạo plugins dựa trên rules
                 this.autoInitializePlugins();
             }

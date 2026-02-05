@@ -8,16 +8,18 @@ export interface RecommendationRequest {
 }
 
 export interface RecommendationResponse {
-  id: number;
-  [key: string]: any; 
+  items: RecommendationItem[];
+  keyword: string;
+  lastItem: string;
 }
 
 // Interface chính dùng trong app
 export interface RecommendationItem {
-  id?: number | string;
-  Id?: number | string;
+  Id: number | string;
+  DomainItemId: string;
   [key: string]: any;
 }
+
 export interface RecommendationOptions {
   numberItems?: number;
   userField?: UserField;

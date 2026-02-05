@@ -1,10 +1,10 @@
 import { InlineConfig, StyleJson, LayoutJson } from '../../types';
-import { RecommendationItem } from '../recommendation';
+import { RecommendationItem, RecommendationResponse } from '../recommendation';
 
 export class InlineDisplay {
   private selector: string;
   private config: InlineConfig;
-  private recommendationGetter: (limit: number) => Promise<RecommendationItem[]>;
+  private recommendationGetter: () => Promise<RecommendationResponse>;
   private observer: MutationObserver | null = null;
   private debounceTimer: NodeJS.Timeout | null = null;
   private autoSlideTimeout: NodeJS.Timeout | null = null;
@@ -17,7 +17,7 @@ export class InlineDisplay {
     selector: string,
     _apiBaseUrl: string,
     config: InlineConfig = {} as InlineConfig,
-    recommendationGetter: (limit: number) => Promise<RecommendationItem[]>
+    recommendationGetter: () => Promise<RecommendationResponse>
   ) {
     this.selector = selector;
     this.recommendationGetter = recommendationGetter;
@@ -130,8 +130,12 @@ export class InlineDisplay {
 
   private async fetchRecommendations(): Promise<RecommendationItem[]> {
     try {
-      const numberItems = this.config.layoutJson.maxItems || 50;
-      return await this.recommendationGetter(numberItems);
+      const result = await this.recommendationGetter();
+      // recommendationGetter now returns full RecommendationResponse
+      if (result && typeof result === 'object' && 'items' in result) {
+        return result.items;
+      }
+      return [];
     } catch { return []; }
   }
 

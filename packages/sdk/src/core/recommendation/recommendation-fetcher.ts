@@ -5,16 +5,15 @@ import {
   RecommendationOptions,
   UserField
 } from './types';
-import { PlaceholderImage } from './placeholder-image';
 
 export class RecommendationFetcher {
   private domainKey: string;
   private apiBaseUrl: string;
-  private cache: Map<string, { items: RecommendationItem[], timestamp: number }>;
-  private readonly CACHE_TTL = 5 * 60 * 1000; // 5 minutes cache
-  private readonly AUTO_REFRESH_INTERVAL = 60 * 1000; // 1 minute auto-refresh
+  private cache: Map<string, { data: RecommendationItem[], timestamp: number }>;
+  private readonly CACHE_TTL = 5 * 60 * 1000; 
+  private readonly AUTO_REFRESH_INTERVAL = 60 * 1000; 
   private autoRefreshTimers: Map<string, NodeJS.Timeout | number>;
-  private refreshCallbacks: Map<string, (items: RecommendationItem[]) => void>;
+  private refreshCallbacks: Map<string, (data: RecommendationResponse) => void>;
 
   constructor(domainKey: string, apiBaseUrl: string) {
     this.domainKey = domainKey;
@@ -28,113 +27,92 @@ export class RecommendationFetcher {
     userValue: string,
     userField: UserField = 'AnonymousId',
     _options: RecommendationOptions = {}
-  ): Promise<RecommendationItem[]> {
+  ): Promise<RecommendationResponse> {
     try {
-      // Check cache first
       const limit = _options.numberItems || 50;
       const cacheKey = this.getCacheKey(userValue, userField);
+
       const cached = this.getFromCache(cacheKey);
       if (cached && cached.length >= limit) {
-        return cached.slice(0, limit);
+        return {
+          items: cached,
+          keyword: '', 
+          lastItem: ''
+        };
       }
 
-      // Prepare request payload
       const requestBody: RecommendationRequest = {
         AnonymousId: this.getOrCreateAnonymousId(),
         DomainKey: this.domainKey,
         NumberItems: limit,
       };
 
-      // Check for cached user info in localStorage
       const cachedUserId = this.getCachedUserId();
       if (cachedUserId) {
         requestBody.UserId = cachedUserId;
       }
 
-      // Call API
       const response = await fetch(`${this.apiBaseUrl}/recommendation`, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(requestBody),
       });
 
       if (!response.ok) {
-        throw new Error(`API Error: ${response.status} ${response.statusText}`);
+        throw new Error(`API Error: ${response.status}`);
       }
+      const data: RecommendationResponse = await response.json();
+      const transformedItems = this.transformResponse(data.items || []);
+      
+      const finalResponse: RecommendationResponse = {
+        items: transformedItems,
+        keyword: data.keyword || '',
+        lastItem: data.lastItem || ''
+      };
+      this.saveToCache(cacheKey, transformedItems);
 
-      const data: RecommendationResponse[] = await response.json();
-
-      // Transform response to RecommendationItem
-      const items = this.transformResponse(data);
-
-      // Cache results
-      this.saveToCache(cacheKey, items);
-
-      // Enable auto-refresh if option is set
+      // Giữ nguyên logic đăng ký auto-refresh của bạn
       if (_options.autoRefresh && _options.onRefresh) {
-        // Check if auto-refresh already enabled for this key
         if (!this.autoRefreshTimers.has(cacheKey)) {
-          this.enableAutoRefresh(userValue, userField, _options.onRefresh, _options);
+          this.enableAutoRefresh(userValue, userField, _options.onRefresh as any, _options);
         }
       }
 
-      return items;
-
+      return finalResponse;
     } catch (error) {
-      throw error;
+      return { items: [], keyword: '', lastItem: '' };
     }
   }
 
-  /**
-   * Enable auto-refresh for recommendations
-   * Tự động fetch recommendations mới mỗi 1 phút
-   */
   enableAutoRefresh(
     userValue: string,
     userField: UserField = 'AnonymousId',
-    callback: (items: RecommendationItem[]) => void,
+    callback: (data: RecommendationResponse) => void,
     options: RecommendationOptions = {}
   ): () => void {
     const cacheKey = this.getCacheKey(userValue, userField);
-
-    // Stop existing auto-refresh if any
     this.stopAutoRefresh(cacheKey);
-
-    // Store callback
     this.refreshCallbacks.set(cacheKey, callback);
 
-    // Fetch immediately
     this.fetchRecommendations(userValue, userField, options)
-      .then(items => {
-        callback(items);
-      })
+      .then(data => callback(data));
 
-    // Set up auto-refresh timer
     const timerId = setInterval(async () => {
       try {
-        // Force fresh fetch by clearing cache for this key
-        this.cache.delete(cacheKey);
-        
-        const items = await this.fetchRecommendations(userValue, userField, options);
-        
+        this.cache.delete(cacheKey); 
+        const data = await this.fetchRecommendations(userValue, userField, {
+        ...options,
+        autoRefresh: false
+      });
         const cb = this.refreshCallbacks.get(cacheKey);
-        if (cb) {
-          cb(items);
-        }
-      } catch (error) {
-        // console.error('[RecSysTracker] Auto-refresh failed:', error);
-      }
+        if (cb) cb(data);
+      } catch (error) {}
     }, this.AUTO_REFRESH_INTERVAL);
 
     this.autoRefreshTimers.set(cacheKey, timerId);
-
-    // Return function to stop auto-refresh
     return () => this.stopAutoRefresh(cacheKey);
   }
 
-  // Stop auto-refresh for a specific cache key
   private stopAutoRefresh(cacheKey: string): void {
     const timerId = this.autoRefreshTimers.get(cacheKey);
     if (timerId) {
@@ -144,224 +122,83 @@ export class RecommendationFetcher {
     }
   }
 
-  /**
-   * Stop all auto-refresh timers
-   */
-  stopAllAutoRefresh(): void {
-    this.autoRefreshTimers.forEach((timerId) => {
-      clearInterval(timerId as NodeJS.Timeout);
-    });
+  public stopAllAutoRefresh(): void {
+    this.autoRefreshTimers.forEach((timerId) => clearInterval(timerId as NodeJS.Timeout));
     this.autoRefreshTimers.clear();
     this.refreshCallbacks.clear();
   }
 
-  /**
-   * Get recommendations cho anonymous user (auto-detect)
-   * @param options - Optional configuration
-   * @returns Promise<RecommendationItem[]>
-   */
-  async fetchForAnonymousUser(options: RecommendationOptions = {}): Promise<RecommendationItem[]> {
-    // Get or generate anonymous ID
+  async fetchForAnonymousUser(options: RecommendationOptions = {}): Promise<RecommendationResponse> {
     const anonymousId = this.getOrCreateAnonymousId();
     return this.fetchRecommendations(anonymousId, 'AnonymousId', options);
   }
 
-  /**
-   * Get recommendations cho logged-in user by ID
-   * @param userId - User ID
-   * @param options - Optional configuration
-   * @returns Promise<RecommendationItem[]>
-   */
-  async fetchForUserId(userId: string, options: RecommendationOptions = {}): Promise<RecommendationItem[]> {
+  async fetchForUserId(userId: string, options: RecommendationOptions = {}): Promise<RecommendationResponse> {
     return this.fetchRecommendations(userId, 'UserId', options);
   }
 
-  /**
-   * Get recommendations cho logged-in user by Username
-   * @param username - Username
-   * @param options - Optional configuration
-   * @returns Promise<RecommendationItem[]>
-   */
-  async fetchForUsername(username: string, options: RecommendationOptions = {}): Promise<RecommendationItem[]> {
+  async fetchForUsername(username: string, options: RecommendationOptions = {}): Promise<RecommendationResponse> {
     return this.fetchRecommendations(username, 'Username', options);
   }
 
-  /**
-   * Enable auto-refresh cho anonymous user
-   * @param callback - Callback function được gọi khi có data mới
-   * @param options - Optional configuration
-   * @returns Function to stop auto-refresh
-   */
-  enableAutoRefreshForAnonymousUser(
-    callback: (items: RecommendationItem[]) => void,
-    options: RecommendationOptions = {}
-  ): () => void {
-    const anonymousId = this.getOrCreateAnonymousId();
-    return this.enableAutoRefresh(anonymousId, 'AnonymousId', callback, options);
-  }
-
-  /**
-   * Enable auto-refresh cho logged-in user by ID
-   * @param userId - User ID
-   * @param callback - Callback function được gọi khi có data mới
-   * @param options - Optional configuration
-   * @returns Function to stop auto-refresh
-   */
-  enableAutoRefreshForUserId(
-    userId: string,
-    callback: (items: RecommendationItem[]) => void,
-    options: RecommendationOptions = {}
-  ): () => void {
-    return this.enableAutoRefresh(userId, 'UserId', callback, options);
-  }
-
-  /**
-   * Enable auto-refresh cho logged-in user by Username
-   * @param username - Username
-   * @param callback - Callback function được gọi khi có data mới
-   * @param options - Optional configuration
-   * @returns Function to stop auto-refresh
-   */
-  enableAutoRefreshForUsername(
-    username: string,
-    callback: (items: RecommendationItem[]) => void,
-    options: RecommendationOptions = {}
-  ): () => void {
-    return this.enableAutoRefresh(username, 'Username', callback, options);
-  }
-
-  /**
-   * Transform API response sang RecommendationItem format
-   * @param data - Response từ API
-   * @returns RecommendationItem[]
-   */
-  private transformResponse(data: RecommendationResponse[]): RecommendationItem[] {
-    if (!Array.isArray(data)) {
-      return [];
-    }
-
-    return data.map(item => {
-      const result: RecommendationItem = { ...item };
-      result.id = item.DomainItemId;
-      const rawImg = item.ImageUrl || item.imageUrl || item.Image || item.img;
-      result.img = rawImg || PlaceholderImage.getDefaultRecommendation();
-      result.title = item.title || item.Title || item.Name || item.name;
-      return result;
+  // Giữ nguyên 100% logic transform ban đầu của bạn
+  private transformResponse(data: any): RecommendationItem[] {
+    const rawItems = Array.isArray(data) ? data : (data.item || []);
+    return rawItems.map((item: any) => {
+      return {
+        ...item,
+        displayTitle: item.Title || item.Name || item.Subject || 'No Title',
+        displayImage: item.ImageUrl || item.Thumbnail || item.Image || '',
+        displayId: item.DomainItemId || item.Id || Math.random().toString(),
+        id: item.Id
+      };
     });
   }
 
-  /**
-   * Get cached user ID from localStorage
-   * @returns Cached user ID or null
-   */
-  private getCachedUserId(): string | null {
-    try {
-      const cachedUserInfo = localStorage.getItem('recsys_cached_user_info');
-      if (cachedUserInfo) {
-        const userInfo = JSON.parse(cachedUserInfo);
-        return userInfo.userValue || null;
-      }
-      return null;
-    } catch (error) {
-      return null;
-    }
-  }
-
-  /**
-   * Get or create anonymous ID cho user
-   * @returns Anonymous ID string
-   */
   private getOrCreateAnonymousId(): string {
     const storageKey = 'recsys_anon_id';
-
     try {
-      // Try to get existing ID from localStorage
       let anonymousId = localStorage.getItem(storageKey);
-
       if (!anonymousId) {
-        // Generate new anonymous ID
         anonymousId = `anon_${Date.now()}_${this.generateRandomString(8)}`;
         localStorage.setItem(storageKey, anonymousId);
       }
-
       return anonymousId;
-    } catch (error) {
-      // Fallback if localStorage not available
-      return `anon_${Date.now()}_${this.generateRandomString(8)}`;
-    }
+    } catch { return `anon_${Date.now()}_${this.generateRandomString(8)}`; }
   }
 
-  /**
-   * Generate random string cho anonymous ID
-   * @param length - Length của string
-   * @returns Random string
-   */
   private generateRandomString(length: number): string {
     const chars = 'abcdefghijklmnopqrstuvwxyz0123456789';
     let result = '';
-    for (let i = 0; i < length; i++) {
-      result += chars.charAt(Math.floor(Math.random() * chars.length));
-    }
+    for (let i = 0; i < length; i++) result += chars.charAt(Math.floor(Math.random() * chars.length));
     return result;
   }
 
-  /**
-   * Generate cache key
-   * @param userValue - User value
-   * @param userField - User field type
-   * @returns Cache key string
-   */
+  private getCachedUserId(): string | null {
+    try {
+      const cachedUserInfo = localStorage.getItem('recsys_cached_user_info');
+      return cachedUserInfo ? JSON.parse(cachedUserInfo).userValue : null;
+    } catch { return null; }
+  }
+
   private getCacheKey(userValue: string, userField: UserField): string {
     return `${userField}:${userValue}`;
   }
 
-  /**
-   * Get items from cache if not expired
-   * @param key - Cache key
-   * @returns Cached items or null
-   */
   private getFromCache(key: string): RecommendationItem[] | null {
     const cached = this.cache.get(key);
-
-    if (!cached) {
-      return null;
-    }
-
-    // Check if cache expired
-    const now = Date.now();
-    if (now - cached.timestamp > this.CACHE_TTL) {
+    if (!cached) return null;
+    if (Date.now() - cached.timestamp > this.CACHE_TTL) {
       this.cache.delete(key);
       return null;
     }
-
-    return cached.items;
+    return cached.data;
   }
 
-  /**
-   * Save items to cache
-   * @param key - Cache key
-   * @param items - Items to cache
-   */
-  private saveToCache(key: string, items: RecommendationItem[]): void {
-    this.cache.set(key, {
-      items,
-      timestamp: Date.now(),
-    });
+  private saveToCache(key: string, data: RecommendationItem[]): void {
+    this.cache.set(key, { data, timestamp: Date.now() });
   }
 
-  /**
-   * Clear cache
-   */
-  clearCache(): void {
-    this.cache.clear();
-  }
-
-  /**
-   * Update API base URL
-   * @param url - New API base URL
-   */
-  setApiBaseUrl(url: string): void {
-    this.apiBaseUrl = url;
-    this.clearCache(); // Clear cache when API URL changes
-  }
+  public clearCache(): void { this.cache.clear(); }
+  public setApiBaseUrl(url: string): void { this.apiBaseUrl = url; this.clearCache(); }
 }

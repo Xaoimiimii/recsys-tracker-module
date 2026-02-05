@@ -100,8 +100,12 @@ export class InlineDisplay {
     }
     async fetchRecommendations() {
         try {
-            const numberItems = this.config.layoutJson.maxItems || 50;
-            return await this.recommendationGetter(numberItems);
+            const result = await this.recommendationGetter();
+            // recommendationGetter now returns full RecommendationResponse
+            if (result && typeof result === 'object' && 'items' in result) {
+                return result.items;
+            }
+            return [];
         }
         catch {
             return [];

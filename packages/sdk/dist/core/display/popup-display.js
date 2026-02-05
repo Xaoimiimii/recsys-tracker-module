@@ -29,17 +29,33 @@ export class PopupDisplay {
         }
         this.removePopup();
     }
-    updateContent(newItems) {
+    generateTitle(keyword, lastItem) {
+        var _a;
+        const context = (_a = this.config.triggerConfig) === null || _a === void 0 ? void 0 : _a.targetValue;
+        const title = "Vì bạn đã trải nghiệm";
+        const searchTitle = "Vì bạn đã tìm kiếm";
+        if ((context === null || context === void 0 ? void 0 : context.includes('search')) || (context === null || context === void 0 ? void 0 : context.includes('query'))) {
+            return `${searchTitle} "${keyword}"`;
+        }
+        if (lastItem && lastItem.trim() !== "") {
+            return `${title} "${lastItem}"`;
+        }
+        return "Gợi ý dành riêng cho bạn";
+    }
+    updateContent(response) {
         if (!this.shadowHost || !this.shadowHost.shadowRoot)
             return;
-        const shadow = this.shadowHost.shadowRoot;
-        const layout = this.config.layoutJson || {};
-        const contentMode = layout.contentMode || 'carousel';
-        if (contentMode === 'carousel') {
-            this.setupCarousel(shadow, newItems);
-        }
-        else {
-            this.renderStaticItems(shadow, newItems);
+        const { items, keyword, lastItem } = response;
+        const titleElement = this.shadowHost.shadowRoot.querySelector('.recsys-header-title');
+        if (titleElement) {
+            titleElement.textContent = this.generateTitle(keyword, lastItem);
+            const layout = this.config.layoutJson || {};
+            if (layout.contentMode === 'carousel') {
+                this.setupCarousel(this.shadowHost.shadowRoot, items);
+            }
+            else {
+                this.renderStaticItems(this.shadowHost.shadowRoot, items);
+            }
         }
     }
     startWatcher() {
@@ -66,27 +82,37 @@ export class PopupDisplay {
             }
             // CASE 3: URL KHỚP, Popup CHƯA hiện và CHƯA đếm ngược -> BẮT ĐẦU ĐẾM
             if (shouldShow && !isVisible && !this.isPendingShow && !this.isManuallyClosed) {
-                this.scheduleShow();
+                this.isPendingShow = true; // KHÓA NGAY LẬP TỨC
+                const delay = this.config.delay || 0;
+                this.popupTimeout = setTimeout(() => {
+                    // Kiểm tra lại URL lần cuối trước khi gọi API
+                    if (this.shouldShowPopup() && !this.shadowHost) {
+                        this.showPopup();
+                    }
+                    this.isPendingShow = false; // MỞ KHÓA sau khi đã chạy xong
+                }, delay);
             }
         }, 500);
     }
     // Hàm lên lịch hiển thị (tách riêng logic delay)
-    scheduleShow() {
-        const delay = this.config.delay || 0;
-        this.isPendingShow = true;
-        this.popupTimeout = setTimeout(() => {
-            if (this.shouldShowPopup()) {
-                this.showPopup();
-            }
-            this.isPendingShow = false;
-        }, delay);
-    }
+    // private scheduleShow(): void {
+    //     const delay = this.config.delay || 0;
+    //     this.isPendingShow = true;
+    //     this.popupTimeout = setTimeout(() => {
+    //         if (this.shouldShowPopup()) {
+    //             this.showPopup();
+    //         }
+    //         this.isPendingShow = false;
+    //     }, delay);
+    // }
     async showPopup() {
         try {
-            const items = await this.fetchRecommendations();
+            const response = await this.fetchRecommendations();
+            const items = response.items;
+            console.log(items);
             // Chỉ hiện nếu chưa hiện (double check)
             if (items && items.length > 0 && !this.shadowHost) {
-                this.renderPopup(items);
+                this.renderPopup(items, response.keyword, response.lastItem);
                 // Logic autoClose (tự đóng sau X giây)
                 if (this.config.autoCloseDelay && this.config.autoCloseDelay > 0) {
                     this.autoCloseTimeout = setTimeout(() => {
@@ -136,13 +162,23 @@ export class PopupDisplay {
         }, delay);
     }
     async fetchRecommendations() {
-        var _a;
+        var _a, _b;
         try {
-            const numberItems = ((_a = this.config.layoutJson) === null || _a === void 0 ? void 0 : _a.maxItems) || 50;
-            return await this.recommendationGetter(numberItems);
+            const limit = ((_a = this.config.layoutJson) === null || _a === void 0 ? void 0 : _a.maxItems) || 50;
+            console.log('[PopupDisplay] Calling recommendationGetter with limit:', limit);
+            const result = await this.recommendationGetter(limit);
+            console.log('[PopupDisplay] recommendationGetter result:', result);
+            // recommendationGetter now returns full RecommendationResponse
+            if (result && typeof result === 'object' && 'items' in result) {
+                console.log('[PopupDisplay] items length:', (_b = result.items) === null || _b === void 0 ? void 0 : _b.length);
+                return result;
+            }
+            console.log('[PopupDisplay] Invalid result, returning empty');
+            return { items: [], keyword: '', lastItem: '' };
         }
-        catch {
-            return [];
+        catch (e) {
+            console.error('[PopupDisplay] fetchRecommendations error:', e);
+            return { items: [], keyword: '', lastItem: '' };
         }
     }
     // --- LOGIC 2: DYNAMIC CSS GENERATOR ---
@@ -461,9 +497,11 @@ export class PopupDisplay {
         html += `</div></div>`;
         return html;
     }
-    renderPopup(items) {
+    renderPopup(items, keyword, lastItem) {
         var _a;
         this.removePopup();
+        //const returnMethodValue = (this.config as any).value || "";
+        const dynamicTitle = this.generateTitle(keyword, lastItem);
         const host = document.createElement('div');
         host.id = this.hostId;
         document.body.appendChild(host);
@@ -478,7 +516,7 @@ export class PopupDisplay {
         popup.className = 'recsys-popup';
         popup.innerHTML = `
       <div class="recsys-header">
-        <span class="recsys-header-title">Gợi ý cho bạn</span>
+        <span class="recsys-header-title">${dynamicTitle}</span>
         <button class="recsys-close">✕</button>
       </div>
       <div class="recsys-body">${contentMode === 'carousel' ? '<button class="recsys-nav recsys-prev">‹</button>' : ''}  
