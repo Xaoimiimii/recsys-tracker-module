@@ -45,7 +45,6 @@ export class RecSysTracker {
             // Khởi tạo EventDispatcher
             // const baseUrl = process.env.MODULE_API_URL || 'https://recsys-tracker-module.onrender.com';
             const baseUrl = process.env.MODULE_API_URL || '';
-            console.log('[RecSysTracker] Using MODULE_API_URL:', baseUrl);
             this.eventDispatcher = new EventDispatcher({
                 endpoint: `${baseUrl}/event`,
             });

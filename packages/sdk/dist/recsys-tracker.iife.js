@@ -5383,7 +5383,6 @@ var RecSysTracker = (function (exports) {
                 // Khởi tạo EventDispatcher
                 // const baseUrl = "https://recsys-tracker-module.onrender.com" || 'https://recsys-tracker-module.onrender.com';
                 const baseUrl = "https://recsys-tracker-module.onrender.com";
-                console.log('[RecSysTracker] Using MODULE_API_URL:', baseUrl);
                 this.eventDispatcher = new EventDispatcher({
                     endpoint: `${baseUrl}/event`,
                 });
