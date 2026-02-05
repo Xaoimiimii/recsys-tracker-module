@@ -8,8 +8,10 @@ export interface RecommendationRequest {
 }
 
 export interface RecommendationResponse {
-  item: RecommendationItem[];
-  keyword: string;
+  item?: RecommendationItem[];
+  items?: RecommendationItem[];
+  keyword?: string;
+  search?: string;
   lastItem: string;
 }
 

@@ -38,10 +38,10 @@ export class RecommendationFetcher {
                 throw new Error(`API Error: ${response.status}`);
             }
             const data = await response.json();
-            const transformedItems = this.transformResponse(data.item || []);
+            const transformedItems = this.transformResponse(data.item || data.items || []);
             const finalResponse = {
                 item: transformedItems,
-                keyword: data.keyword || '',
+                keyword: data.keyword || data.search || '',
                 lastItem: data.lastItem || ''
             };
             this.saveToCache(cacheKey, transformedItems);

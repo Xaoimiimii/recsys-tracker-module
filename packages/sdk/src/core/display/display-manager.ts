@@ -55,8 +55,8 @@ export class DisplayManager {
     this.recommendationFetcher.clearCache();
     const newItems = await this.getRecommendations(50);
     
-    const oldId = this.cachedRecommendations?.item[0]?.id;
-    const newId = newItems?.item[0]?.id;
+    const oldId = (this.cachedRecommendations as any)?.item?.[0]?.id;
+    const newId = (newItems as any)?.item?.[0]?.id;
 
     if (oldId === newId) {
       console.log("Dữ liệu từ server trả về giống hệt cũ, không cần render lại.");

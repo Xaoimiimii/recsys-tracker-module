@@ -2316,10 +2316,10 @@ class RecommendationFetcher {
                 throw new Error(`API Error: ${response.status}`);
             }
             const data = await response.json();
-            const transformedItems = this.transformResponse(data.item || []);
+            const transformedItems = this.transformResponse(data.item || data.items || []);
             const finalResponse = {
                 item: transformedItems,
-                keyword: data.keyword || '',
+                keyword: data.keyword || data.search || '',
                 lastItem: data.lastItem || ''
             };
             this.saveToCache(cacheKey, transformedItems);
@@ -2482,11 +2482,11 @@ class DisplayManager {
         }, 500);
     }
     async refreshAllDisplays() {
-        var _a, _b, _c;
+        var _a, _b, _c, _d, _e;
         this.recommendationFetcher.clearCache();
         const newItems = await this.getRecommendations(50);
-        const oldId = (_b = (_a = this.cachedRecommendations) === null || _a === void 0 ? void 0 : _a.item[0]) === null || _b === void 0 ? void 0 : _b.id;
-        const newId = (_c = newItems === null || newItems === void 0 ? void 0 : newItems.item[0]) === null || _c === void 0 ? void 0 : _c.id;
+        const oldId = (_c = (_b = (_a = this.cachedRecommendations) === null || _a === void 0 ? void 0 : _a.item) === null || _b === void 0 ? void 0 : _b[0]) === null || _c === void 0 ? void 0 : _c.id;
+        const newId = (_e = (_d = newItems === null || newItems === void 0 ? void 0 : newItems.item) === null || _d === void 0 ? void 0 : _d[0]) === null || _e === void 0 ? void 0 : _e.id;
         if (oldId === newId) {
             console.log("Dữ liệu từ server trả về giống hệt cũ, không cần render lại.");
             return;

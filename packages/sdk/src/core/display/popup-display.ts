@@ -69,12 +69,12 @@ export class PopupDisplay {
     const { item, keyword, lastItem } = response;
     const titleElement = this.shadowHost.shadowRoot.querySelector('.recsys-header-title');
       if (titleElement) {
-      titleElement.textContent = this.generateTitle(keyword, lastItem);
+      titleElement.textContent = this.generateTitle(keyword as any, lastItem);
       const layout = (this.config.layoutJson as any) || {};
       if (layout.contentMode === 'carousel') {
-        this.setupCarousel(this.shadowHost.shadowRoot, item);
+        this.setupCarousel(this.shadowHost.shadowRoot, item as any);
       } else {
-        this.renderStaticItems(this.shadowHost.shadowRoot, item);
+        this.renderStaticItems(this.shadowHost.shadowRoot, item as any);
       }
     }
   }
@@ -144,7 +144,7 @@ export class PopupDisplay {
       const items = response.item;
       // Chỉ hiện nếu chưa hiện (double check)
       if (items && items.length > 0 && !this.shadowHost) {
-        this.renderPopup(items, response.keyword, response.lastItem);
+        this.renderPopup(items, response.keyword as any, response.lastItem);
         
         // Logic autoClose (tự đóng sau X giây)
         if (this.config.autoCloseDelay && this.config.autoCloseDelay > 0) {
@@ -203,17 +203,17 @@ export class PopupDisplay {
   private async fetchRecommendations(): Promise<RecommendationResponse> {
     try {
       const limit = (this.config.layoutJson as any)?.maxItems || 50;
-      //console.log('[PopupDisplay] Calling recommendationGetter with limit:', limit);
+      console.log('[PopupDisplay] Calling recommendationGetter with limit:', limit);
       const result = await this.recommendationGetter(limit);
-      //console.log('[PopupDisplay] recommendationGetter result:', result);
+      console.log('[PopupDisplay] recommendationGetter result:', result);
       // recommendationGetter now returns full RecommendationResponse
       if (result && result.item && Array.isArray(result.item)) {
         return result; 
       }
-      //console.log('[PopupDisplay] Invalid result, returning empty');
+      console.log('[PopupDisplay] Invalid result, returning empty');
       return { item: [], keyword: '', lastItem: '' };
     } catch (e) { 
-      //console.error('[PopupDisplay] fetchRecommendations error:', e);
+      console.error('[PopupDisplay] fetchRecommendations error:', e);
       return { item: [], keyword: '', lastItem: '' }; 
     }
   }
