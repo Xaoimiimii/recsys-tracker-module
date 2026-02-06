@@ -6,6 +6,7 @@ export class EventDispatcher {
         this.timeout = 5000;
         this.headers = {};
         this.sendingEvents = new Set(); // Track events đang gửi để tránh duplicate
+        this.displayManager = null;
         this.endpoint = options.endpoint;
         this.domainUrl = options.domainUrl || null;
         this.timeout = options.timeout || 5000;
@@ -55,6 +56,9 @@ export class EventDispatcher {
                     const success = await this.sendWithStrategy(payload, strategy);
                     //console.log('[EventDispatcher] Strategy', strategy, 'result:', success);
                     if (success) {
+                        if (this.displayManager && typeof this.displayManager.notifyActionTriggered === 'function') {
+                            this.displayManager.notifyActionTriggered();
+                        }
                         return true;
                     }
                 }
@@ -156,6 +160,10 @@ export class EventDispatcher {
     // Cập nhật custom headers
     setHeaders(headers) {
         this.headers = headers;
+    }
+    // Inject DisplayManager để notify action triggered
+    setDisplayManager(displayManager) {
+        this.displayManager = displayManager;
     }
 }
 //# sourceMappingURL=event-dispatcher.js.map

@@ -12,6 +12,7 @@ export declare class EventDispatcher {
     private timeout;
     private headers;
     private sendingEvents;
+    private displayManager;
     constructor(options: DispatchOptions);
     send(event: TrackedEvent): Promise<boolean>;
     sendBatch(events: TrackedEvent[]): Promise<boolean>;
@@ -22,5 +23,8 @@ export declare class EventDispatcher {
     setDomainUrl(domainUrl: string): void;
     setTimeout(timeout: number): void;
     setHeaders(headers: Record<string, string>): void;
+    setDisplayManager(displayManager: {
+        notifyActionTriggered: () => void;
+    } | null): void;
 }
 //# sourceMappingURL=event-dispatcher.d.ts.map

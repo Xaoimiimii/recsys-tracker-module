@@ -569,6 +569,7 @@ var RecSysTracker = (function (exports) {
             this.timeout = 5000;
             this.headers = {};
             this.sendingEvents = new Set(); // Track events đang gửi để tránh duplicate
+            this.displayManager = null;
             this.endpoint = options.endpoint;
             this.domainUrl = options.domainUrl || null;
             this.timeout = options.timeout || 5000;
@@ -618,6 +619,9 @@ var RecSysTracker = (function (exports) {
                         const success = await this.sendWithStrategy(payload, strategy);
                         //console.log('[EventDispatcher] Strategy', strategy, 'result:', success);
                         if (success) {
+                            if (this.displayManager && typeof this.displayManager.notifyActionTriggered === 'function') {
+                                this.displayManager.notifyActionTriggered();
+                            }
                             return true;
                         }
                     }
@@ -719,6 +723,10 @@ var RecSysTracker = (function (exports) {
         // Cập nhật custom headers
         setHeaders(headers) {
             this.headers = headers;
+        }
+        // Inject DisplayManager để notify action triggered
+        setDisplayManager(displayManager) {
+            this.displayManager = displayManager;
         }
     }
 
@@ -5373,6 +5381,10 @@ var RecSysTracker = (function (exports) {
                         // const apiBaseUrl = process.env.API_URL || 'https://recsys-tracker-module.onrender.com';
                         this.displayManager = new DisplayManager(this.config.domainKey, baseUrl);
                         await this.displayManager.initialize(this.config.returnMethods);
+                        // Inject DisplayManager vào EventDispatcher để trigger callback
+                        if (this.eventDispatcher) {
+                            this.eventDispatcher.setDisplayManager(this.displayManager);
+                        }
                     }
                     // console.log(this.config);
                     // // Tự động khởi tạo plugins dựa trên rules
