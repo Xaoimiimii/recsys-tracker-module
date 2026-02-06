@@ -9,7 +9,7 @@ import {
 export class RecommendationFetcher {
   private domainKey: string;
   private apiBaseUrl: string;
-  private cache: Map<string, { data: RecommendationItem[], timestamp: number }>;
+  private cache: Map<string, { data: RecommendationResponse, timestamp: number }>;
   private readonly CACHE_TTL = 5 * 60 * 1000; 
   private readonly AUTO_REFRESH_INTERVAL = 60 * 1000; 
   private autoRefreshTimers: Map<string, NodeJS.Timeout | number>;
@@ -33,12 +33,8 @@ export class RecommendationFetcher {
       const cacheKey = this.getCacheKey(userValue, userField);
 
       const cached = this.getFromCache(cacheKey);
-      if (cached && cached.length >= limit) {
-        return {
-          item: cached,
-          keyword: '', 
-          lastItem: ''
-        };
+      if (cached && (cached.item as any).length >= limit) {
+        return cached;
       }
 
       const requestBody: RecommendationRequest = {
@@ -62,18 +58,20 @@ export class RecommendationFetcher {
         throw new Error(`API Error: ${response.status}`);
       }
       const data: RecommendationResponse = await response.json();
-      // Flexible: check 'item' first, then fallback to 'items'
       const rawItems = (data.item && data.item.length > 0) ? data.item : (data.items || []);
       const transformedItems = this.transformResponse(rawItems);
+
+      // const data: any = await response.json();
+      // const transformedItems = this.transformResponse(data.item || data.items || []);
       
       const finalResponse: RecommendationResponse = {
         item: transformedItems,
-        keyword: data.keyword || '',
+        keyword: data.keyword || data.search || '',
         lastItem: data.lastItem || ''
       };
-      this.saveToCache(cacheKey, transformedItems);
 
-      // Giữ nguyên logic đăng ký auto-refresh của bạn
+      //console.log("FINAL RESPONSE: ",finalResponse);
+      this.saveToCache(cacheKey, finalResponse);
       if (_options.autoRefresh && _options.onRefresh) {
         if (!this.autoRefreshTimers.has(cacheKey)) {
           this.enableAutoRefresh(userValue, userField, _options.onRefresh as any, _options);
@@ -143,7 +141,6 @@ export class RecommendationFetcher {
     return this.fetchRecommendations(username, 'Username', options);
   }
 
-  // Giữ nguyên 100% logic transform ban đầu của bạn
   private transformResponse(data: any): RecommendationItem[] {
     const rawItems = Array.isArray(data) ? data : (data.item || []);
     return rawItems.map((item: any) => {
@@ -187,7 +184,7 @@ export class RecommendationFetcher {
     return `${userField}:${userValue}`;
   }
 
-  private getFromCache(key: string): RecommendationItem[] | null {
+  private getFromCache(key: string): RecommendationResponse| null {
     const cached = this.cache.get(key);
     if (!cached) return null;
     if (Date.now() - cached.timestamp > this.CACHE_TTL) {
@@ -197,7 +194,7 @@ export class RecommendationFetcher {
     return cached.data;
   }
 
-  private saveToCache(key: string, data: RecommendationItem[]): void {
+  private saveToCache(key: string, data: RecommendationResponse): void {
     this.cache.set(key, { data, timestamp: Date.now() });
   }
 

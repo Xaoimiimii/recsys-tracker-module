@@ -13,12 +13,8 @@ export class RecommendationFetcher {
             const limit = _options.numberItems || 50;
             const cacheKey = this.getCacheKey(userValue, userField);
             const cached = this.getFromCache(cacheKey);
-            if (cached && cached.length >= limit) {
-                return {
-                    item: cached,
-                    keyword: '',
-                    lastItem: ''
-                };
+            if (cached && cached.item.length >= limit) {
+                return cached;
             }
             const requestBody = {
                 AnonymousId: this.getOrCreateAnonymousId(),
@@ -38,16 +34,17 @@ export class RecommendationFetcher {
                 throw new Error(`API Error: ${response.status}`);
             }
             const data = await response.json();
-            // Flexible: check 'item' first, then fallback to 'items'
             const rawItems = (data.item && data.item.length > 0) ? data.item : (data.items || []);
             const transformedItems = this.transformResponse(rawItems);
+            // const data: any = await response.json();
+            // const transformedItems = this.transformResponse(data.item || data.items || []);
             const finalResponse = {
                 item: transformedItems,
-                keyword: data.keyword || '',
+                keyword: data.keyword || data.search || '',
                 lastItem: data.lastItem || ''
             };
-            this.saveToCache(cacheKey, transformedItems);
-            // Giữ nguyên logic đăng ký auto-refresh của bạn
+            //console.log("FINAL RESPONSE: ",finalResponse);
+            this.saveToCache(cacheKey, finalResponse);
             if (_options.autoRefresh && _options.onRefresh) {
                 if (!this.autoRefreshTimers.has(cacheKey)) {
                     this.enableAutoRefresh(userValue, userField, _options.onRefresh, _options);
@@ -104,7 +101,6 @@ export class RecommendationFetcher {
     async fetchForUsername(username, options = {}) {
         return this.fetchRecommendations(username, 'Username', options);
     }
-    // Giữ nguyên 100% logic transform ban đầu của bạn
     transformResponse(data) {
         const rawItems = Array.isArray(data) ? data : (data.item || []);
         return rawItems.map((item) => {

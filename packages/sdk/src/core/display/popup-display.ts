@@ -70,7 +70,7 @@ export class PopupDisplay {
     const { keyword, lastItem } = response;
     const titleElement = this.shadowHost.shadowRoot.querySelector('.recsys-header-title');
       if (titleElement) {
-      titleElement.textContent = this.generateTitle(keyword, lastItem);
+      titleElement.textContent = this.generateTitle(keyword as any, lastItem);
       const layout = (this.config.layoutJson as any) || {};
       if (layout.contentMode === 'carousel') {
         this.setupCarousel(this.shadowHost.shadowRoot, normalizeItems(response));
@@ -145,7 +145,7 @@ export class PopupDisplay {
       const items = normalizeItems(response);
       // Chỉ hiện nếu chưa hiện (double check)
       if (items && items.length > 0 && !this.shadowHost) {
-        this.renderPopup(items, response.keyword, response.lastItem);
+        this.renderPopup(items, response.keyword as any, response.lastItem);
         
         // Logic autoClose (tự đóng sau X giây)
         if (this.config.autoCloseDelay && this.config.autoCloseDelay > 0) {
@@ -714,6 +714,15 @@ export class PopupDisplay {
         // Fallback to traditional navigation if History API fails
         window.location.href = targetUrl; 
       }
+  }
+
+  public forceShow(): void {
+    this.isManuallyClosed = false; 
+    this.isPendingShow = false;
+    this.removePopup();
+    if (this.shouldShowPopup()) {
+      this.showPopup(); 
+    }
   }
 }
 

@@ -8,7 +8,8 @@ export interface RecommendationRequest {
 export interface RecommendationResponse {
     item?: RecommendationItem[];
     items?: RecommendationItem[];
-    keyword: string;
+    keyword?: string;
+    search?: string;
     lastItem: string;
 }
 export declare function normalizeItems(response: RecommendationResponse | null | undefined): RecommendationItem[];

@@ -83,24 +83,25 @@ export class InlineDisplay {
             }
         }
         catch (error) {
-            // //console.error('[InlineDisplay] Error processing container', error);
+            // console.error('[InlineDisplay] Error processing container', error);
         }
     }
     async fetchRecommendations() {
+        var _a;
         try {
-            //const limit = (this.config.layoutJson as any)?.maxItems || 50;
-            //console.log('[PopupDisplay] Calling recommendationGetter with limit:', limit);
+            const limit = ((_a = this.config.layoutJson) === null || _a === void 0 ? void 0 : _a.maxItems) || 50;
+            console.log('[PopupDisplay] Calling recommendationGetter with limit:', limit);
             const result = await this.recommendationGetter();
-            //console.log('[PopupDisplay] recommendationGetter result:', result);
+            console.log('[PopupDisplay] recommendationGetter result:', result);
             // recommendationGetter now returns full RecommendationResponse
             if (result && result.item && Array.isArray(result.item)) {
                 return result;
             }
-            //console.log('[PopupDisplay] Invalid result, returning empty');
+            console.log('[PopupDisplay] Invalid result, returning empty');
             return { item: [], keyword: '', lastItem: '' };
         }
         catch (e) {
-            //console.error('[PopupDisplay] fetchRecommendations error:', e);
+            console.error('[PopupDisplay] fetchRecommendations error:', e);
             return { item: [], keyword: '', lastItem: '' };
         }
     }

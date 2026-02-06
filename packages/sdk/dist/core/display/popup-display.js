@@ -656,5 +656,13 @@ export class PopupDisplay {
             window.location.href = targetUrl;
         }
     }
+    forceShow() {
+        this.isManuallyClosed = false;
+        this.isPendingShow = false;
+        this.removePopup();
+        if (this.shouldShowPopup()) {
+            this.showPopup();
+        }
+    }
 }
 //# sourceMappingURL=popup-display.js.map

@@ -1072,12 +1072,8 @@ var RecSysTracker = (function (exports) {
                 const limit = _options.numberItems || 50;
                 const cacheKey = this.getCacheKey(userValue, userField);
                 const cached = this.getFromCache(cacheKey);
-                if (cached && cached.length >= limit) {
-                    return {
-                        item: cached,
-                        keyword: '',
-                        lastItem: ''
-                    };
+                if (cached && cached.item.length >= limit) {
+                    return cached;
                 }
                 const requestBody = {
                     AnonymousId: this.getOrCreateAnonymousId(),
@@ -1097,16 +1093,17 @@ var RecSysTracker = (function (exports) {
                     throw new Error(`API Error: ${response.status}`);
                 }
                 const data = await response.json();
-                // Flexible: check 'item' first, then fallback to 'items'
                 const rawItems = (data.item && data.item.length > 0) ? data.item : (data.items || []);
                 const transformedItems = this.transformResponse(rawItems);
+                // const data: any = await response.json();
+                // const transformedItems = this.transformResponse(data.item || data.items || []);
                 const finalResponse = {
                     item: transformedItems,
-                    keyword: data.keyword || '',
+                    keyword: data.keyword || data.search || '',
                     lastItem: data.lastItem || ''
                 };
-                this.saveToCache(cacheKey, transformedItems);
-                // Giữ nguyên logic đăng ký auto-refresh của bạn
+                //console.log("FINAL RESPONSE: ",finalResponse);
+                this.saveToCache(cacheKey, finalResponse);
                 if (_options.autoRefresh && _options.onRefresh) {
                     if (!this.autoRefreshTimers.has(cacheKey)) {
                         this.enableAutoRefresh(userValue, userField, _options.onRefresh, _options);
@@ -1163,7 +1160,6 @@ var RecSysTracker = (function (exports) {
         async fetchForUsername(username, options = {}) {
             return this.fetchRecommendations(username, 'Username', options);
         }
-        // Giữ nguyên 100% logic transform ban đầu của bạn
         transformResponse(data) {
             const rawItems = Array.isArray(data) ? data : (data.item || []);
             return rawItems.map((item) => {
@@ -1895,6 +1891,14 @@ var RecSysTracker = (function (exports) {
                 window.location.href = targetUrl;
             }
         }
+        forceShow() {
+            this.isManuallyClosed = false;
+            this.isPendingShow = false;
+            this.removePopup();
+            if (this.shouldShowPopup()) {
+                this.showPopup();
+            }
+        }
     }
 
     class InlineDisplay {
@@ -1981,24 +1985,25 @@ var RecSysTracker = (function (exports) {
                 }
             }
             catch (error) {
-                // //console.error('[InlineDisplay] Error processing container', error);
+                // console.error('[InlineDisplay] Error processing container', error);
             }
         }
         async fetchRecommendations() {
+            var _a;
             try {
-                //const limit = (this.config.layoutJson as any)?.maxItems || 50;
-                //console.log('[PopupDisplay] Calling recommendationGetter with limit:', limit);
+                const limit = ((_a = this.config.layoutJson) === null || _a === void 0 ? void 0 : _a.maxItems) || 50;
+                console.log('[PopupDisplay] Calling recommendationGetter with limit:', limit);
                 const result = await this.recommendationGetter();
-                //console.log('[PopupDisplay] recommendationGetter result:', result);
+                console.log('[PopupDisplay] recommendationGetter result:', result);
                 // recommendationGetter now returns full RecommendationResponse
                 if (result && result.item && Array.isArray(result.item)) {
                     return result;
                 }
-                //console.log('[PopupDisplay] Invalid result, returning empty');
+                console.log('[PopupDisplay] Invalid result, returning empty');
                 return { item: [], keyword: '', lastItem: '' };
             }
             catch (e) {
-                //console.error('[PopupDisplay] fetchRecommendations error:', e);
+                console.error('[PopupDisplay] fetchRecommendations error:', e);
                 return { item: [], keyword: '', lastItem: '' };
             }
         }
@@ -2468,7 +2473,7 @@ var RecSysTracker = (function (exports) {
                 await this.fetchRecommendationsOnce();
             }
             catch (error) {
-                // console.error('[DisplayManager] Failed to fetch recommendations.');
+                // //console.error('[DisplayManager] Failed to fetch recommendations.');
             }
             // Process each return method
             for (const method of returnMethods) {
@@ -2484,19 +2489,21 @@ var RecSysTracker = (function (exports) {
             }, 500);
         }
         async refreshAllDisplays() {
-            var _a, _b;
             this.recommendationFetcher.clearCache();
             const newItems = await this.getRecommendations(50);
-            const oldItems = normalizeItems(this.cachedRecommendations);
-            const newItemsNormalized = normalizeItems(newItems);
-            const oldId = (_a = oldItems[0]) === null || _a === void 0 ? void 0 : _a.id;
-            const newId = (_b = newItemsNormalized[0]) === null || _b === void 0 ? void 0 : _b.id;
-            if (oldId === newId) {
-                console.log("Dữ liệu từ server trả về giống hệt cũ, không cần render lại.");
-                return;
-            }
+            // const oldItems = normalizeItems(this.cachedRecommendations);
+            // const newItemsNormalized = normalizeItems(newItems);
+            // const oldId = oldItems[0]?.id;
+            // const newId = newItemsNormalized[0]?.id;
+            //console.log(newItems);
+            // const oldId = (this.cachedRecommendations as any)?.item?.[0]?.id;
+            // const newId = (newItems as any)?.item?.[0]?.id;
             this.cachedRecommendations = newItems;
-            this.popupDisplays.forEach(popup => { var _a, _b; return (_b = (_a = popup).updateContent) === null || _b === void 0 ? void 0 : _b.call(_a, newItems); });
+            this.popupDisplays.forEach(popup => {
+                var _a, _b, _c, _d;
+                (_b = (_a = popup).updateContent) === null || _b === void 0 ? void 0 : _b.call(_a, newItems);
+                (_d = (_c = popup).forceShow) === null || _d === void 0 ? void 0 : _d.call(_c);
+            });
             this.inlineDisplays.forEach(inline => { var _a, _b; return (_b = (_a = inline).updateContent) === null || _b === void 0 ? void 0 : _b.call(_a, newItems); });
         }
         // Phân loại và kích hoạt display method tương ứng
@@ -2540,7 +2547,7 @@ var RecSysTracker = (function (exports) {
                     this.popupDisplays.delete(key);
                 }
                 const popupDisplay = new PopupDisplay(this.domainKey, key, this.apiBaseUrl, config, (limit) => {
-                    console.log('[DisplayManager] recommendationGetter called with limit:', limit);
+                    //console.log('[DisplayManager] recommendationGetter called with limit:', limit);
                     // Fetch directly from recommendationFetcher instead of using cache
                     return this.recommendationFetcher.fetchForAnonymousUser({
                         numberItems: limit,
@@ -2551,7 +2558,7 @@ var RecSysTracker = (function (exports) {
                 popupDisplay.start();
             }
             catch (error) {
-                // console.error('[DisplayManager] Error initializing popup:', error);
+                // //console.error('[DisplayManager] Error initializing popup:', error);
             }
         }
         // Khởi tạo Inline Display với Config đầy đủ
@@ -2574,7 +2581,7 @@ var RecSysTracker = (function (exports) {
                 inlineDisplay.start();
             }
             catch (error) {
-                // console.error('[DisplayManager] Error initializing inline:', error);
+                // //console.error('[DisplayManager] Error initializing inline:', error);
             }
         }
         // --- LOGIC FETCH RECOMMENDATION (GIỮ NGUYÊN) ---

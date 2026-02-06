@@ -10,7 +10,8 @@ export interface RecommendationRequest {
 export interface RecommendationResponse {
   item?: RecommendationItem[];
   items?: RecommendationItem[];
-  keyword: string;
+  keyword?: string;
+  search?: string;
   lastItem: string;
 }
 

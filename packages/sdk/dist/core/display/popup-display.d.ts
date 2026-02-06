@@ -31,5 +31,6 @@ export declare class PopupDisplay {
     private removePopup;
     private clearTimeouts;
     private handleItemClick;
+    forceShow(): void;
 }
 //# sourceMappingURL=popup-display.d.ts.map
