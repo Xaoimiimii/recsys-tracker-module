@@ -245,16 +245,16 @@ export class PopupDisplay {
     const modeConfig = layout.modes?.[contentMode as keyof typeof layout.modes] || {} as any;
     
     // Image Size logic
-    const imgLayout = layout.card?.image?.sizeByMode?.[contentMode as 'grid' | 'list' | 'carousel'] || {};
-    const imgHeightRaw = imgLayout.height || density.imageHeight || 140; 
+    // const imgLayout = layout.card?.image?.sizeByMode?.[contentMode as 'grid' | 'list' | 'carousel'] || {};
+    // const imgHeightRaw = imgLayout.height || density.imageHeight || 140; 
     
     // [FIX] Carousel ưu tiên width từ config (96px) thay vì 100% để giống preview
-    let imgWidthRaw = '100%';
-    if (contentMode === 'list') imgWidthRaw = (imgLayout as any).width || 96;
-    if (contentMode === 'carousel' && (imgLayout as any).width) imgWidthRaw = (imgLayout as any).width;
+    // let imgWidthRaw = '100%';
+    // if (contentMode === 'list') imgWidthRaw = (imgLayout as any).width || 96;
+    // if (contentMode === 'carousel' && (imgLayout as any).width) imgWidthRaw = (imgLayout as any).width;
 
-    const imgHeight = typeof imgHeightRaw === 'number' ? `${imgHeightRaw}px` : imgHeightRaw;
-    const imgWidth = typeof imgWidthRaw === 'number' ? `${imgWidthRaw}px` : imgWidthRaw;
+    // const imgHeight = typeof imgHeightRaw === 'number' ? `${imgHeightRaw}px` : imgHeightRaw;
+    // const imgWidth = typeof imgWidthRaw === 'number' ? `${imgWidthRaw}px` : imgWidthRaw;
 
     // Popup Wrapper logic
     const popupWrapper = layout.wrapper?.popup || {} as any;
@@ -283,12 +283,24 @@ export class PopupDisplay {
     if (contentMode === 'grid') {
         const cols = modeConfig.columns || 2;
         const gapPx = tokens.spacingScale?.[modeConfig.gap || 'md'] || 12;
-        containerCSS = `display: grid; grid-template-columns: repeat(${cols}, 1fr); gap: ${gapPx}px; padding: ${density.cardPadding || 16}px;`;
+        containerCSS = `
+        display: grid; 
+        grid-template-columns: repeat(${cols}, 1fr); 
+        // gap: ${gapPx}px; 
+        gap: 16px; 
+        padding: ${density.cardPadding || 16}px;
+        `;
     } else if (contentMode === 'list') {
         itemDir = 'row';
         itemAlign = 'flex-start';
         const gapPx = tokens.spacingScale?.[modeConfig.rowGap || 'md'] || 12;
-        containerCSS = `display: flex; flex-direction: column; gap: ${gapPx}px; padding: ${density.cardPadding || 16}px;`;
+        containerCSS = `
+        display: flex; 
+        flex-direction: column;
+        // gap: ${gapPx}px; 
+        gap: 16px;
+        padding: ${density.cardPadding || 16}px;
+        `;
         containerCSS = 'padding: 0;'; 
     }
 
@@ -349,12 +361,21 @@ export class PopupDisplay {
       .recsys-container { ${containerCSS} }
 
       .recsys-item {
-         display: flex; flex-direction: ${itemDir}; align-items: ${itemAlign};
+         display: flex; 
+         flex-direction: ${itemDir}; 
+         align-items: ${itemAlign};
          gap: ${tokens.spacingScale?.sm || 8}px;
-         background: ${cardBg}; border: ${cardBorder}; border-radius: ${cardRadius};
-         box-shadow: ${cardShadow}; padding: ${cardPadding}px;
-         cursor: pointer; transition: all 0.2s;
-         width: 100%; min-width: 0; box-sizing: border-box; overflow: hidden;
+         background: ${cardBg}; 
+         border: ${cardBorder}; 
+         border-radius: ${cardRadius};
+         box-shadow: ${cardShadow}; 
+         padding: ${cardPadding}px;
+         cursor: pointer; 
+         transition: all 0.2s;
+         width: 100%; 
+         min-width: 0; 
+         box-sizing: border-box; 
+         overflow: hidden;
       }
 
       /* SỬ DỤNG colorPrimary Ở ĐÂY */
@@ -364,26 +385,52 @@ export class PopupDisplay {
 
       ${cardComp.hover?.enabled ? `
       .recsys-item:hover {
-         transform: translateY(-${cardComp.hover.liftPx || 2}px);
+        //  transform: translateY(-${cardComp.hover.liftPx || 1}px);
+        scale: 1.02;
          box-shadow: ${getShadow(cardComp.hover.shadowToken || 'cardHover')};
          /* Optional: border-color: ${colorPrimary}; */
       }
       ` : ''}
 
       .recsys-img-box {
-         width: ${imgWidth}; height: ${imgHeight};
-         border-radius: ${getRadius(components.image?.radiusFollowsCard ? cardComp.radiusToken : 'image')};
-         overflow: hidden; background: ${getColor('muted')}; flex-shrink: 0; display: flex;
+          position: relative;
+          width: 100%;
+          overflow: hidden;
+          border-radius: 4px;
       }
-      .recsys-img-box img { width: 100%; height: 100%; object-fit: ${components.image?.objectFit || 'cover'}; }
+
+      .recsys-img-box img { 
+          width: 100%;
+          aspect-ratio: 1;
+          object-fit: cover;
+          border-radius: 4px;
+          background-color: var(--sidebar-bg);
+          transition: all 0.3s ease;
+      }
 
       .recsys-info { display: flex; flex-direction: column; gap: 4px; flex: 1; min-width: 0; text-align: ${infoTextAlign}; 
         align-items: ${infoAlignItems}; width: 100%}
       
+      .recsys-name {
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        display: block;
+        max-width: 100%;
+      }
+
       .recsys-field-row {
         width: 100%;
         min-width: 0;
         display: block;
+      }
+
+      .recsys-value {
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        display: block;
+        max-width: 100%;
       }
 
       .recsys-badges { display: flex; flex-wrap: wrap; gap: 4px; margin-top: auto; }
@@ -482,15 +529,15 @@ export class PopupDisplay {
         if (finalSize) style += `font-size: ${finalSize}px !important; `;
         if (finalWeight) style += `font-weight: ${finalWeight} !important; `;
 
-        if (['artist', 'singer', 'performer', 'artist_name', 'description'].includes(key)) {
-          style += `
-            white-space: nowrap; 
-            overflow: hidden; 
-            text-overflow: ellipsis; 
-            display: block; 
-            max-width: 100%;
-          `;
-        }
+        // if (['artist', 'singer', 'performer', 'artist_name', 'description'].includes(key)) {
+        //   style += `
+        //     white-space: nowrap; 
+        //     overflow: hidden; 
+        //     text-overflow: ellipsis; 
+        //     display: block; 
+        //     max-width: 100%;
+        //   `;
+        // }
         
         return style;
     };
@@ -601,14 +648,16 @@ export class PopupDisplay {
     if (!container) return;
     container.innerHTML = '';
     items.forEach((item) => {
-      const itemWrapper = document.createElement('div');
-      itemWrapper.className = 'recsys-item';
-      itemWrapper.innerHTML = this.renderItemContent(item);
-      itemWrapper.addEventListener('click', () => {
-        const targetId = item.DomainItemId;
-        this.handleItemClick(targetId);
-      });
-      container.appendChild(itemWrapper);
+      const tempDiv = document.createElement('div');
+      tempDiv.innerHTML = this.renderItemContent(item);
+      const itemElement = tempDiv.firstElementChild as HTMLElement;
+      if (itemElement) {
+        itemElement.addEventListener('click', () => {
+          const targetId = item.DomainItemId;
+          this.handleItemClick(targetId);
+        });
+        container.appendChild(itemElement);
+      }
     });
   }
 
@@ -620,16 +669,18 @@ export class PopupDisplay {
       const item = items[currentIndex];
       slideContainer.innerHTML = '';
       
-      const slideElement = document.createElement('div');
-      slideElement.className = 'recsys-item';
-      slideElement.innerHTML = this.renderItemContent(item);
+      const tempDiv = document.createElement('div');
+      tempDiv.innerHTML = this.renderItemContent(item);
+      const slideElement = tempDiv.firstElementChild as HTMLElement;
 
-      slideElement.addEventListener('click', () => {
-        const targetId = item.DomainItemId || item.id || item.Id;
-        if (targetId) this.handleItemClick(targetId);
-      });
+      if (slideElement) {
+        slideElement.addEventListener('click', () => {
+          const targetId = item.DomainItemId || item.id || item.Id;
+          if (targetId) this.handleItemClick(targetId);
+        });
 
-      slideContainer.appendChild(slideElement);
+        slideContainer.appendChild(slideElement);
+      }
     };
 
     const next = () => {

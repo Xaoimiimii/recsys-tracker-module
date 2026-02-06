@@ -249,7 +249,8 @@ export class InlineDisplay {
 
     ${((_o = cardComp.hover) === null || _o === void 0 ? void 0 : _o.enabled) ? `
     .recsys-item:hover {
-      transform: translateY(-${cardComp.hover.liftPx || 2}px);
+      // transform: translateY(-${cardComp.hover.liftPx || 2}px);
+      scale: 1.02;
       box-shadow: ${getShadow(cardComp.hover.shadowToken || 'cardHover')};
     }
     ` : ''}
@@ -258,7 +259,7 @@ export class InlineDisplay {
         width: 100%;
         aspect-ratio: 1;
         overflow: hidden; 
-        background: ${getColor('muted')}; 
+        // background: ${getColor('muted')}; 
         flex-shrink: 0;
         border-radius: 4px;
     }
@@ -273,10 +274,26 @@ export class InlineDisplay {
     .recsys-info { display: flex; flex-direction: column; gap: 4px; flex: 1; min-width: 0; text-align: ${infoTextAlign}; 
       align-items: ${infoAlignItems};}
 
+    .recsys-name {
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      display: block;
+      max-width: 100%;
+    }
+
     .recsys-field-row {
       width: 100%;
       min-width: 0;
       display: block;
+    }
+
+    .recsys-value {
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      display: block;
+      max-width: 100%;
     }
 
     /* Buttons for Carousel */
@@ -361,16 +378,16 @@ export class InlineDisplay {
                 style += `font-size: ${finalSize}px !important; `;
             if (finalWeight)
                 style += `font-weight: ${finalWeight} !important; `;
-            if (['artist', 'singer', 'performer', 'artist_name', 'description'].includes(key)) {
-                style += `
-          white-space: nowrap; 
-          overflow: hidden; 
-          text-overflow: ellipsis; 
-          display: block; 
-          max-width: 100%;
-          width: 100%;
-        `;
-            }
+            // if (['artist', 'singer', 'performer', 'artist_name', 'description'].includes(key)) {
+            //   style += `
+            //     white-space: nowrap; 
+            //     overflow: hidden; 
+            //     text-overflow: ellipsis; 
+            //     display: block; 
+            //     max-width: 100%;
+            //     width: 100%;
+            //   `;
+            // }
             return style;
         };
         // 2. Extract Data
@@ -471,14 +488,16 @@ export class InlineDisplay {
             return;
         container.innerHTML = '';
         items.forEach((item) => {
-            const itemWrapper = document.createElement('div');
-            itemWrapper.className = 'recsys-item';
-            itemWrapper.innerHTML = this.renderItemContent(item);
-            itemWrapper.addEventListener('click', () => {
-                const targetId = item.DomainItemId;
-                this.handleItemClick(targetId);
-            });
-            container.appendChild(itemWrapper);
+            const tempDiv = document.createElement('div');
+            tempDiv.innerHTML = this.renderItemContent(item);
+            const itemElement = tempDiv.firstElementChild;
+            if (itemElement) {
+                itemElement.addEventListener('click', () => {
+                    const targetId = item.DomainItemId;
+                    this.handleItemClick(targetId);
+                });
+                container.appendChild(itemElement);
+            }
         });
     }
     // --- CAROUSEL LOGIC ---
@@ -497,16 +516,18 @@ export class InlineDisplay {
             for (let i = 0; i < itemsPerView; i++) {
                 const index = (currentIndex + i) % items.length;
                 const item = items[index];
-                const itemWrapper = document.createElement('div');
-                itemWrapper.className = 'recsys-item';
-                itemWrapper.innerHTML = this.renderItemContent(item);
-                itemWrapper.addEventListener('click', () => {
-                    const targetId = item.DomainItemId;
-                    if (targetId) {
-                        this.handleItemClick(targetId);
-                    }
-                });
-                slideContainer.appendChild(itemWrapper);
+                const tempDiv = document.createElement('div');
+                tempDiv.innerHTML = this.renderItemContent(item);
+                const itemElement = tempDiv.firstElementChild;
+                if (itemElement) {
+                    itemElement.addEventListener('click', () => {
+                        const targetId = item.DomainItemId;
+                        if (targetId) {
+                            this.handleItemClick(targetId);
+                        }
+                    });
+                    slideContainer.appendChild(itemElement);
+                }
             }
         };
         const next = () => {

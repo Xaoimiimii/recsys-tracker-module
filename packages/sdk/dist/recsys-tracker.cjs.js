@@ -1428,7 +1428,7 @@ class PopupDisplay {
     // --- LOGIC 2: DYNAMIC CSS GENERATOR ---
     // --- DYNAMIC CSS GENERATOR (FINAL CLEAN VERSION) ---
     getDynamicStyles() {
-        var _a, _b, _c, _d, _e, _f, _g, _h, _j, _k, _l, _m, _o, _p, _q, _r, _s, _t, _u, _v, _w;
+        var _a, _b, _c, _d, _e, _f, _g, _h, _j, _k, _l, _m, _o, _p, _q, _r;
         const style = this.config.styleJson || {};
         const layout = this.config.layoutJson || {};
         // 1. Unpack Configs
@@ -1448,18 +1448,16 @@ class PopupDisplay {
         const contentMode = layout.contentMode || 'grid';
         const modeConfig = ((_b = layout.modes) === null || _b === void 0 ? void 0 : _b[contentMode]) || {};
         // Image Size logic
-        const imgLayout = ((_e = (_d = (_c = layout.card) === null || _c === void 0 ? void 0 : _c.image) === null || _d === void 0 ? void 0 : _d.sizeByMode) === null || _e === void 0 ? void 0 : _e[contentMode]) || {};
-        const imgHeightRaw = imgLayout.height || density.imageHeight || 140;
+        // const imgLayout = layout.card?.image?.sizeByMode?.[contentMode as 'grid' | 'list' | 'carousel'] || {};
+        // const imgHeightRaw = imgLayout.height || density.imageHeight || 140; 
         // [FIX] Carousel ưu tiên width từ config (96px) thay vì 100% để giống preview
-        let imgWidthRaw = '100%';
-        if (contentMode === 'list')
-            imgWidthRaw = imgLayout.width || 96;
-        if (contentMode === 'carousel' && imgLayout.width)
-            imgWidthRaw = imgLayout.width;
-        const imgHeight = typeof imgHeightRaw === 'number' ? `${imgHeightRaw}px` : imgHeightRaw;
-        const imgWidth = typeof imgWidthRaw === 'number' ? `${imgWidthRaw}px` : imgWidthRaw;
+        // let imgWidthRaw = '100%';
+        // if (contentMode === 'list') imgWidthRaw = (imgLayout as any).width || 96;
+        // if (contentMode === 'carousel' && (imgLayout as any).width) imgWidthRaw = (imgLayout as any).width;
+        // const imgHeight = typeof imgHeightRaw === 'number' ? `${imgHeightRaw}px` : imgHeightRaw;
+        // const imgWidth = typeof imgWidthRaw === 'number' ? `${imgWidthRaw}px` : imgWidthRaw;
         // Popup Wrapper logic
-        const popupWrapper = ((_f = layout.wrapper) === null || _f === void 0 ? void 0 : _f.popup) || {};
+        const popupWrapper = ((_c = layout.wrapper) === null || _c === void 0 ? void 0 : _c.popup) || {};
         const popupWidth = popupWrapper.width ? `${popupWrapper.width}px` : '340px';
         // const popupWidth = '340px';
         // Xử lý Height từ Config (Nếu JSON có height thì dùng, ko thì max-height)
@@ -1486,19 +1484,31 @@ class PopupDisplay {
         let infoAlignItems = 'flex-start';
         if (contentMode === 'grid') {
             const cols = modeConfig.columns || 2;
-            const gapPx = ((_g = tokens.spacingScale) === null || _g === void 0 ? void 0 : _g[modeConfig.gap || 'md']) || 12;
-            containerCSS = `display: grid; grid-template-columns: repeat(${cols}, 1fr); gap: ${gapPx}px; padding: ${density.cardPadding || 16}px;`;
+            const gapPx = ((_d = tokens.spacingScale) === null || _d === void 0 ? void 0 : _d[modeConfig.gap || 'md']) || 12;
+            containerCSS = `
+        display: grid; 
+        grid-template-columns: repeat(${cols}, 1fr); 
+        // gap: ${gapPx}px; 
+        gap: 16px; 
+        padding: ${density.cardPadding || 16}px;
+        `;
         }
         else if (contentMode === 'list') {
             itemDir = 'row';
             itemAlign = 'flex-start';
-            const gapPx = ((_h = tokens.spacingScale) === null || _h === void 0 ? void 0 : _h[modeConfig.rowGap || 'md']) || 12;
-            containerCSS = `display: flex; flex-direction: column; gap: ${gapPx}px; padding: ${density.cardPadding || 16}px;`;
+            const gapPx = ((_e = tokens.spacingScale) === null || _e === void 0 ? void 0 : _e[modeConfig.rowGap || 'md']) || 12;
+            containerCSS = `
+        display: flex; 
+        flex-direction: column;
+        // gap: ${gapPx}px; 
+        gap: 16px;
+        padding: ${density.cardPadding || 16}px;
+        `;
             containerCSS = 'padding: 0;';
         }
         // 4. Styles Mapping
         const cardComp = components.card || {};
-        const modeOverride = ((_j = style.modeOverrides) === null || _j === void 0 ? void 0 : _j[contentMode]) || {};
+        const modeOverride = ((_f = style.modeOverrides) === null || _f === void 0 ? void 0 : _f[contentMode]) || {};
         // Colors
         const colorTitle = getColor('textPrimary');
         const colorBody = getColor('textSecondary');
@@ -1508,7 +1518,7 @@ class PopupDisplay {
         const cardBorder = cardComp.border ? `1px solid ${getColor(cardComp.borderColorToken)}` : 'none';
         const cardRadius = getRadius(cardComp.radiusToken || 'card');
         const cardShadow = getShadow(cardComp.shadowToken);
-        const cardPadding = ((_k = modeOverride.card) === null || _k === void 0 ? void 0 : _k.paddingFromDensity)
+        const cardPadding = ((_g = modeOverride.card) === null || _g === void 0 ? void 0 : _g.paddingFromDensity)
             ? (density[modeOverride.card.paddingFromDensity] || 12)
             : (density.cardPadding || 12);
         const btnBg = getColor('surface');
@@ -1521,7 +1531,7 @@ class PopupDisplay {
         background: ${getColor('surface')};
         color: ${colorTitle};
         border-radius: ${getRadius('card')}; 
-        box-shadow: ${(_l = tokens.shadow) === null || _l === void 0 ? void 0 : _l.cardHover};
+        box-shadow: ${(_h = tokens.shadow) === null || _h === void 0 ? void 0 : _h.cardHover};
         border: 1px solid ${getColor('border')};
         display: flex; flex-direction: column; z-index: 999999; overflow: hidden;
         animation: slideIn 0.3s ease-out;
@@ -1535,8 +1545,8 @@ class PopupDisplay {
         flex-shrink: 0; 
       }
       .recsys-header-title {
-          font-size: ${((_o = (_m = tokens.typography) === null || _m === void 0 ? void 0 : _m.title) === null || _o === void 0 ? void 0 : _o.fontSize) || 16}px;
-          font-weight: ${((_q = (_p = tokens.typography) === null || _p === void 0 ? void 0 : _p.title) === null || _q === void 0 ? void 0 : _q.fontWeight) || 600};
+          font-size: ${((_k = (_j = tokens.typography) === null || _j === void 0 ? void 0 : _j.title) === null || _k === void 0 ? void 0 : _k.fontSize) || 16}px;
+          font-weight: ${((_m = (_l = tokens.typography) === null || _l === void 0 ? void 0 : _l.title) === null || _m === void 0 ? void 0 : _m.fontWeight) || 600};
           color: ${colorTitle};
       }
       .recsys-close { background: none; border: none; color: ${colorBody}; cursor: pointer; font-size: 18px; }
@@ -1549,12 +1559,21 @@ class PopupDisplay {
       .recsys-container { ${containerCSS} }
 
       .recsys-item {
-         display: flex; flex-direction: ${itemDir}; align-items: ${itemAlign};
-         gap: ${((_r = tokens.spacingScale) === null || _r === void 0 ? void 0 : _r.sm) || 8}px;
-         background: ${cardBg}; border: ${cardBorder}; border-radius: ${cardRadius};
-         box-shadow: ${cardShadow}; padding: ${cardPadding}px;
-         cursor: pointer; transition: all 0.2s;
-         width: 100%; min-width: 0; box-sizing: border-box; overflow: hidden;
+         display: flex; 
+         flex-direction: ${itemDir}; 
+         align-items: ${itemAlign};
+         gap: ${((_o = tokens.spacingScale) === null || _o === void 0 ? void 0 : _o.sm) || 8}px;
+         background: ${cardBg}; 
+         border: ${cardBorder}; 
+         border-radius: ${cardRadius};
+         box-shadow: ${cardShadow}; 
+         padding: ${cardPadding}px;
+         cursor: pointer; 
+         transition: all 0.2s;
+         width: 100%; 
+         min-width: 0; 
+         box-sizing: border-box; 
+         overflow: hidden;
       }
 
       /* SỬ DỤNG colorPrimary Ở ĐÂY */
@@ -1562,35 +1581,61 @@ class PopupDisplay {
           color: ${colorPrimary}; 
       }
 
-      ${((_s = cardComp.hover) === null || _s === void 0 ? void 0 : _s.enabled) ? `
+      ${((_p = cardComp.hover) === null || _p === void 0 ? void 0 : _p.enabled) ? `
       .recsys-item:hover {
-         transform: translateY(-${cardComp.hover.liftPx || 2}px);
+        //  transform: translateY(-${cardComp.hover.liftPx || 1}px);
+        scale: 1.02;
          box-shadow: ${getShadow(cardComp.hover.shadowToken || 'cardHover')};
          /* Optional: border-color: ${colorPrimary}; */
       }
       ` : ''}
 
       .recsys-img-box {
-         width: ${imgWidth}; height: ${imgHeight};
-         border-radius: ${getRadius(((_t = components.image) === null || _t === void 0 ? void 0 : _t.radiusFollowsCard) ? cardComp.radiusToken : 'image')};
-         overflow: hidden; background: ${getColor('muted')}; flex-shrink: 0; display: flex;
+          position: relative;
+          width: 100%;
+          overflow: hidden;
+          border-radius: 4px;
       }
-      .recsys-img-box img { width: 100%; height: 100%; object-fit: ${((_u = components.image) === null || _u === void 0 ? void 0 : _u.objectFit) || 'cover'}; }
+
+      .recsys-img-box img { 
+          width: 100%;
+          aspect-ratio: 1;
+          object-fit: cover;
+          border-radius: 4px;
+          background-color: var(--sidebar-bg);
+          transition: all 0.3s ease;
+      }
 
       .recsys-info { display: flex; flex-direction: column; gap: 4px; flex: 1; min-width: 0; text-align: ${infoTextAlign}; 
         align-items: ${infoAlignItems}; width: 100%}
       
+      .recsys-name {
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        display: block;
+        max-width: 100%;
+      }
+
       .recsys-field-row {
         width: 100%;
         min-width: 0;
         display: block;
       }
 
+      .recsys-value {
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        display: block;
+        max-width: 100%;
+      }
+
       .recsys-badges { display: flex; flex-wrap: wrap; gap: 4px; margin-top: auto; }
       .recsys-badge { 
          font-size: 10px; 
-         background: ${getColor(((_v = components.badge) === null || _v === void 0 ? void 0 : _v.backgroundToken) || 'primary')}; 
-         color: ${((_w = components.badge) === null || _w === void 0 ? void 0 : _w.textColor) || '#fff'};
+         background: ${getColor(((_q = components.badge) === null || _q === void 0 ? void 0 : _q.backgroundToken) || 'primary')}; 
+         color: ${((_r = components.badge) === null || _r === void 0 ? void 0 : _r.textColor) || '#fff'};
          padding: 2px 6px; border-radius: ${getRadius('badge')};
       }
 
@@ -1685,15 +1730,15 @@ class PopupDisplay {
                 style += `font-size: ${finalSize}px !important; `;
             if (finalWeight)
                 style += `font-weight: ${finalWeight} !important; `;
-            if (['artist', 'singer', 'performer', 'artist_name', 'description'].includes(key)) {
-                style += `
-            white-space: nowrap; 
-            overflow: hidden; 
-            text-overflow: ellipsis; 
-            display: block; 
-            max-width: 100%;
-          `;
-            }
+            // if (['artist', 'singer', 'performer', 'artist_name', 'description'].includes(key)) {
+            //   style += `
+            //     white-space: nowrap; 
+            //     overflow: hidden; 
+            //     text-overflow: ellipsis; 
+            //     display: block; 
+            //     max-width: 100%;
+            //   `;
+            // }
             return style;
         };
         // 2. Render Title & Image
@@ -1790,14 +1835,16 @@ class PopupDisplay {
             return;
         container.innerHTML = '';
         items.forEach((item) => {
-            const itemWrapper = document.createElement('div');
-            itemWrapper.className = 'recsys-item';
-            itemWrapper.innerHTML = this.renderItemContent(item);
-            itemWrapper.addEventListener('click', () => {
-                const targetId = item.DomainItemId;
-                this.handleItemClick(targetId);
-            });
-            container.appendChild(itemWrapper);
+            const tempDiv = document.createElement('div');
+            tempDiv.innerHTML = this.renderItemContent(item);
+            const itemElement = tempDiv.firstElementChild;
+            if (itemElement) {
+                itemElement.addEventListener('click', () => {
+                    const targetId = item.DomainItemId;
+                    this.handleItemClick(targetId);
+                });
+                container.appendChild(itemElement);
+            }
         });
     }
     setupCarousel(shadow, items) {
@@ -1807,15 +1854,17 @@ class PopupDisplay {
         const renderSlide = () => {
             const item = items[currentIndex];
             slideContainer.innerHTML = '';
-            const slideElement = document.createElement('div');
-            slideElement.className = 'recsys-item';
-            slideElement.innerHTML = this.renderItemContent(item);
-            slideElement.addEventListener('click', () => {
-                const targetId = item.DomainItemId || item.id || item.Id;
-                if (targetId)
-                    this.handleItemClick(targetId);
-            });
-            slideContainer.appendChild(slideElement);
+            const tempDiv = document.createElement('div');
+            tempDiv.innerHTML = this.renderItemContent(item);
+            const slideElement = tempDiv.firstElementChild;
+            if (slideElement) {
+                slideElement.addEventListener('click', () => {
+                    const targetId = item.DomainItemId || item.id || item.Id;
+                    if (targetId)
+                        this.handleItemClick(targetId);
+                });
+                slideContainer.appendChild(slideElement);
+            }
         };
         const next = () => {
             currentIndex = (currentIndex + 1) % items.length;
@@ -2133,7 +2182,8 @@ class InlineDisplay {
 
     ${((_o = cardComp.hover) === null || _o === void 0 ? void 0 : _o.enabled) ? `
     .recsys-item:hover {
-      transform: translateY(-${cardComp.hover.liftPx || 2}px);
+      // transform: translateY(-${cardComp.hover.liftPx || 2}px);
+      scale: 1.02;
       box-shadow: ${getShadow(cardComp.hover.shadowToken || 'cardHover')};
     }
     ` : ''}
@@ -2142,7 +2192,7 @@ class InlineDisplay {
         width: 100%;
         aspect-ratio: 1;
         overflow: hidden; 
-        background: ${getColor('muted')}; 
+        // background: ${getColor('muted')}; 
         flex-shrink: 0;
         border-radius: 4px;
     }
@@ -2157,10 +2207,26 @@ class InlineDisplay {
     .recsys-info { display: flex; flex-direction: column; gap: 4px; flex: 1; min-width: 0; text-align: ${infoTextAlign}; 
       align-items: ${infoAlignItems};}
 
+    .recsys-name {
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      display: block;
+      max-width: 100%;
+    }
+
     .recsys-field-row {
       width: 100%;
       min-width: 0;
       display: block;
+    }
+
+    .recsys-value {
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      display: block;
+      max-width: 100%;
     }
 
     /* Buttons for Carousel */
@@ -2245,16 +2311,16 @@ class InlineDisplay {
                 style += `font-size: ${finalSize}px !important; `;
             if (finalWeight)
                 style += `font-weight: ${finalWeight} !important; `;
-            if (['artist', 'singer', 'performer', 'artist_name', 'description'].includes(key)) {
-                style += `
-          white-space: nowrap; 
-          overflow: hidden; 
-          text-overflow: ellipsis; 
-          display: block; 
-          max-width: 100%;
-          width: 100%;
-        `;
-            }
+            // if (['artist', 'singer', 'performer', 'artist_name', 'description'].includes(key)) {
+            //   style += `
+            //     white-space: nowrap; 
+            //     overflow: hidden; 
+            //     text-overflow: ellipsis; 
+            //     display: block; 
+            //     max-width: 100%;
+            //     width: 100%;
+            //   `;
+            // }
             return style;
         };
         // 2. Extract Data
@@ -2355,14 +2421,16 @@ class InlineDisplay {
             return;
         container.innerHTML = '';
         items.forEach((item) => {
-            const itemWrapper = document.createElement('div');
-            itemWrapper.className = 'recsys-item';
-            itemWrapper.innerHTML = this.renderItemContent(item);
-            itemWrapper.addEventListener('click', () => {
-                const targetId = item.DomainItemId;
-                this.handleItemClick(targetId);
-            });
-            container.appendChild(itemWrapper);
+            const tempDiv = document.createElement('div');
+            tempDiv.innerHTML = this.renderItemContent(item);
+            const itemElement = tempDiv.firstElementChild;
+            if (itemElement) {
+                itemElement.addEventListener('click', () => {
+                    const targetId = item.DomainItemId;
+                    this.handleItemClick(targetId);
+                });
+                container.appendChild(itemElement);
+            }
         });
     }
     // --- CAROUSEL LOGIC ---
@@ -2381,16 +2449,18 @@ class InlineDisplay {
             for (let i = 0; i < itemsPerView; i++) {
                 const index = (currentIndex + i) % items.length;
                 const item = items[index];
-                const itemWrapper = document.createElement('div');
-                itemWrapper.className = 'recsys-item';
-                itemWrapper.innerHTML = this.renderItemContent(item);
-                itemWrapper.addEventListener('click', () => {
-                    const targetId = item.DomainItemId;
-                    if (targetId) {
-                        this.handleItemClick(targetId);
-                    }
-                });
-                slideContainer.appendChild(itemWrapper);
+                const tempDiv = document.createElement('div');
+                tempDiv.innerHTML = this.renderItemContent(item);
+                const itemElement = tempDiv.firstElementChild;
+                if (itemElement) {
+                    itemElement.addEventListener('click', () => {
+                        const targetId = item.DomainItemId;
+                        if (targetId) {
+                            this.handleItemClick(targetId);
+                        }
+                    });
+                    slideContainer.appendChild(itemElement);
+                }
             }
         };
         const next = () => {
