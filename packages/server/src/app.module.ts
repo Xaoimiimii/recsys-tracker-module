@@ -14,6 +14,7 @@ import { ElasticConfigModule } from './common/elastic/elastic-config.module';
 import { CacheModule } from '@nestjs/cache-manager';
 import KeyvRedis from '@keyv/redis';
 import { SearchKeywordConfigModule } from './modules/search-keyword-config/search-keyword-config.module';
+import { EvaluationModule } from './modules/evaluation/evaluation.module';
 
 @Module({
   imports: [
@@ -52,7 +53,8 @@ import { SearchKeywordConfigModule } from './modules/search-keyword-config/searc
       },
       inject: [ConfigService],
     }),
-    SearchKeywordConfigModule
+    SearchKeywordConfigModule,
+    EvaluationModule
   ],
   controllers: [],
 })

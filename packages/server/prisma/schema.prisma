@@ -48,6 +48,7 @@ model Domain {
   Models        Model[]
   SearchKeywordConfigs SearchKeywordConfig[]
   UserIdentities UserIdentity[]
+  Evaluations Evaluation[]
 }
 
 // model DomainReturn {
@@ -111,6 +112,16 @@ model TrackingRule {
 
   Events          Event[]
   PayloadMappings PayloadMapping[]
+}
+
+model Evaluation {
+  Id Int @id @default(autoincrement())
+
+  DomainId Int
+  Domain Domain @relation(fields: [DomainId], references: [Id])
+
+  Rank Int
+  Timestamp DateTime @db.Timestamptz
 }
 
 // model TriggerEvent {

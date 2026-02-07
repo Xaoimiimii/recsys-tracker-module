@@ -388,6 +388,7 @@ export const ModelName = {
   Domain: 'Domain',
   ReturnMethod: 'ReturnMethod',
   TrackingRule: 'TrackingRule',
+  Evaluation: 'Evaluation',
   EventType: 'EventType',
   PayloadMapping: 'PayloadMapping',
   UserIdentity: 'UserIdentity',
@@ -419,7 +420,7 @@ export type TypeMap<ExtArgs extends runtime.Types.Extensions.InternalArgs = runt
     omit: GlobalOmitOptions
   }
   meta: {
-    modelProps: "ternant" | "domain" | "returnMethod" | "trackingRule" | "eventType" | "payloadMapping" | "userIdentity" | "operator" | "event" | "searchKeywordConfig" | "category" | "itemCategory" | "item" | "model" | "itemFactor" | "user" | "userFactor" | "predict" | "rating" | "interaction"
+    modelProps: "ternant" | "domain" | "returnMethod" | "trackingRule" | "evaluation" | "eventType" | "payloadMapping" | "userIdentity" | "operator" | "event" | "searchKeywordConfig" | "category" | "itemCategory" | "item" | "model" | "itemFactor" | "user" | "userFactor" | "predict" | "rating" | "interaction"
     txIsolationLevel: TransactionIsolationLevel
   }
   model: {
@@ -716,6 +717,80 @@ export type TypeMap<ExtArgs extends runtime.Types.Extensions.InternalArgs = runt
         count: {
           args: Prisma.TrackingRuleCountArgs<ExtArgs>
           result: runtime.Types.Utils.Optional<Prisma.TrackingRuleCountAggregateOutputType> | number
+        }
+      }
+    }
+    Evaluation: {
+      payload: Prisma.$EvaluationPayload<ExtArgs>
+      fields: Prisma.EvaluationFieldRefs
+      operations: {
+        findUnique: {
+          args: Prisma.EvaluationFindUniqueArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$EvaluationPayload> | null
+        }
+        findUniqueOrThrow: {
+          args: Prisma.EvaluationFindUniqueOrThrowArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$EvaluationPayload>
+        }
+        findFirst: {
+          args: Prisma.EvaluationFindFirstArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$EvaluationPayload> | null
+        }
+        findFirstOrThrow: {
+          args: Prisma.EvaluationFindFirstOrThrowArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$EvaluationPayload>
+        }
+        findMany: {
+          args: Prisma.EvaluationFindManyArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$EvaluationPayload>[]
+        }
+        create: {
+          args: Prisma.EvaluationCreateArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$EvaluationPayload>
+        }
+        createMany: {
+          args: Prisma.EvaluationCreateManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        createManyAndReturn: {
+          args: Prisma.EvaluationCreateManyAndReturnArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$EvaluationPayload>[]
+        }
+        delete: {
+          args: Prisma.EvaluationDeleteArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$EvaluationPayload>
+        }
+        update: {
+          args: Prisma.EvaluationUpdateArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$EvaluationPayload>
+        }
+        deleteMany: {
+          args: Prisma.EvaluationDeleteManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        updateMany: {
+          args: Prisma.EvaluationUpdateManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        updateManyAndReturn: {
+          args: Prisma.EvaluationUpdateManyAndReturnArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$EvaluationPayload>[]
+        }
+        upsert: {
+          args: Prisma.EvaluationUpsertArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$EvaluationPayload>
+        }
+        aggregate: {
+          args: Prisma.EvaluationAggregateArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.AggregateEvaluation>
+        }
+        groupBy: {
+          args: Prisma.EvaluationGroupByArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.EvaluationGroupByOutputType>[]
+        }
+        count: {
+          args: Prisma.EvaluationCountArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.EvaluationCountAggregateOutputType> | number
         }
       }
     }
@@ -1992,6 +2067,16 @@ export const TrackingRuleScalarFieldEnum = {
 export type TrackingRuleScalarFieldEnum = (typeof TrackingRuleScalarFieldEnum)[keyof typeof TrackingRuleScalarFieldEnum]
 
 
+export const EvaluationScalarFieldEnum = {
+  Id: 'Id',
+  DomainId: 'DomainId',
+  Rank: 'Rank',
+  Timestamp: 'Timestamp'
+} as const
+
+export type EvaluationScalarFieldEnum = (typeof EvaluationScalarFieldEnum)[keyof typeof EvaluationScalarFieldEnum]
+
+
 export const EventTypeScalarFieldEnum = {
   Id: 'Id',
   Name: 'Name'
@@ -2490,6 +2575,7 @@ export type GlobalOmitConfig = {
   domain?: Prisma.DomainOmit
   returnMethod?: Prisma.ReturnMethodOmit
   trackingRule?: Prisma.TrackingRuleOmit
+  evaluation?: Prisma.EvaluationOmit
   eventType?: Prisma.EventTypeOmit
   payloadMapping?: Prisma.PayloadMappingOmit
   userIdentity?: Prisma.UserIdentityOmit

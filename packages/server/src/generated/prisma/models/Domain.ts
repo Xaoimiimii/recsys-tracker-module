@@ -242,6 +242,7 @@ export type DomainWhereInput = {
   Models?: Prisma.ModelListRelationFilter
   SearchKeywordConfigs?: Prisma.SearchKeywordConfigListRelationFilter
   UserIdentities?: Prisma.UserIdentityListRelationFilter
+  Evaluations?: Prisma.EvaluationListRelationFilter
 }
 
 export type DomainOrderByWithRelationInput = {
@@ -261,6 +262,7 @@ export type DomainOrderByWithRelationInput = {
   Models?: Prisma.ModelOrderByRelationAggregateInput
   SearchKeywordConfigs?: Prisma.SearchKeywordConfigOrderByRelationAggregateInput
   UserIdentities?: Prisma.UserIdentityOrderByRelationAggregateInput
+  Evaluations?: Prisma.EvaluationOrderByRelationAggregateInput
 }
 
 export type DomainWhereUniqueInput = Prisma.AtLeast<{
@@ -283,6 +285,7 @@ export type DomainWhereUniqueInput = Prisma.AtLeast<{
   Models?: Prisma.ModelListRelationFilter
   SearchKeywordConfigs?: Prisma.SearchKeywordConfigListRelationFilter
   UserIdentities?: Prisma.UserIdentityListRelationFilter
+  Evaluations?: Prisma.EvaluationListRelationFilter
 }, "Id" | "Key">
 
 export type DomainOrderByWithAggregationInput = {
@@ -326,6 +329,7 @@ export type DomainCreateInput = {
   Models?: Prisma.ModelCreateNestedManyWithoutDomainInput
   SearchKeywordConfigs?: Prisma.SearchKeywordConfigCreateNestedManyWithoutDomainInput
   UserIdentities?: Prisma.UserIdentityCreateNestedManyWithoutDomainInput
+  Evaluations?: Prisma.EvaluationCreateNestedManyWithoutDomainInput
 }
 
 export type DomainUncheckedCreateInput = {
@@ -344,6 +348,7 @@ export type DomainUncheckedCreateInput = {
   Models?: Prisma.ModelUncheckedCreateNestedManyWithoutDomainInput
   SearchKeywordConfigs?: Prisma.SearchKeywordConfigUncheckedCreateNestedManyWithoutDomainInput
   UserIdentities?: Prisma.UserIdentityUncheckedCreateNestedManyWithoutDomainInput
+  Evaluations?: Prisma.EvaluationUncheckedCreateNestedManyWithoutDomainInput
 }
 
 export type DomainUpdateInput = {
@@ -361,6 +366,7 @@ export type DomainUpdateInput = {
   Models?: Prisma.ModelUpdateManyWithoutDomainNestedInput
   SearchKeywordConfigs?: Prisma.SearchKeywordConfigUpdateManyWithoutDomainNestedInput
   UserIdentities?: Prisma.UserIdentityUpdateManyWithoutDomainNestedInput
+  Evaluations?: Prisma.EvaluationUpdateManyWithoutDomainNestedInput
 }
 
 export type DomainUncheckedUpdateInput = {
@@ -379,6 +385,7 @@ export type DomainUncheckedUpdateInput = {
   Models?: Prisma.ModelUncheckedUpdateManyWithoutDomainNestedInput
   SearchKeywordConfigs?: Prisma.SearchKeywordConfigUncheckedUpdateManyWithoutDomainNestedInput
   UserIdentities?: Prisma.UserIdentityUncheckedUpdateManyWithoutDomainNestedInput
+  Evaluations?: Prisma.EvaluationUncheckedUpdateManyWithoutDomainNestedInput
 }
 
 export type DomainCreateManyInput = {
@@ -542,6 +549,20 @@ export type DomainUpdateOneRequiredWithoutTrackingRulesNestedInput = {
   update?: Prisma.XOR<Prisma.XOR<Prisma.DomainUpdateToOneWithWhereWithoutTrackingRulesInput, Prisma.DomainUpdateWithoutTrackingRulesInput>, Prisma.DomainUncheckedUpdateWithoutTrackingRulesInput>
 }
 
+export type DomainCreateNestedOneWithoutEvaluationsInput = {
+  create?: Prisma.XOR<Prisma.DomainCreateWithoutEvaluationsInput, Prisma.DomainUncheckedCreateWithoutEvaluationsInput>
+  connectOrCreate?: Prisma.DomainCreateOrConnectWithoutEvaluationsInput
+  connect?: Prisma.DomainWhereUniqueInput
+}
+
+export type DomainUpdateOneRequiredWithoutEvaluationsNestedInput = {
+  create?: Prisma.XOR<Prisma.DomainCreateWithoutEvaluationsInput, Prisma.DomainUncheckedCreateWithoutEvaluationsInput>
+  connectOrCreate?: Prisma.DomainCreateOrConnectWithoutEvaluationsInput
+  upsert?: Prisma.DomainUpsertWithoutEvaluationsInput
+  connect?: Prisma.DomainWhereUniqueInput
+  update?: Prisma.XOR<Prisma.XOR<Prisma.DomainUpdateToOneWithWhereWithoutEvaluationsInput, Prisma.DomainUpdateWithoutEvaluationsInput>, Prisma.DomainUncheckedUpdateWithoutEvaluationsInput>
+}
+
 export type DomainCreateNestedOneWithoutUserIdentitiesInput = {
   create?: Prisma.XOR<Prisma.DomainCreateWithoutUserIdentitiesInput, Prisma.DomainUncheckedCreateWithoutUserIdentitiesInput>
   connectOrCreate?: Prisma.DomainCreateOrConnectWithoutUserIdentitiesInput
@@ -654,6 +675,7 @@ export type DomainCreateWithoutTernantInput = {
   Models?: Prisma.ModelCreateNestedManyWithoutDomainInput
   SearchKeywordConfigs?: Prisma.SearchKeywordConfigCreateNestedManyWithoutDomainInput
   UserIdentities?: Prisma.UserIdentityCreateNestedManyWithoutDomainInput
+  Evaluations?: Prisma.EvaluationCreateNestedManyWithoutDomainInput
 }
 
 export type DomainUncheckedCreateWithoutTernantInput = {
@@ -671,6 +693,7 @@ export type DomainUncheckedCreateWithoutTernantInput = {
   Models?: Prisma.ModelUncheckedCreateNestedManyWithoutDomainInput
   SearchKeywordConfigs?: Prisma.SearchKeywordConfigUncheckedCreateNestedManyWithoutDomainInput
   UserIdentities?: Prisma.UserIdentityUncheckedCreateNestedManyWithoutDomainInput
+  Evaluations?: Prisma.EvaluationUncheckedCreateNestedManyWithoutDomainInput
 }
 
 export type DomainCreateOrConnectWithoutTernantInput = {
@@ -725,6 +748,7 @@ export type DomainCreateWithoutReturnMethodsInput = {
   Models?: Prisma.ModelCreateNestedManyWithoutDomainInput
   SearchKeywordConfigs?: Prisma.SearchKeywordConfigCreateNestedManyWithoutDomainInput
   UserIdentities?: Prisma.UserIdentityCreateNestedManyWithoutDomainInput
+  Evaluations?: Prisma.EvaluationCreateNestedManyWithoutDomainInput
 }
 
 export type DomainUncheckedCreateWithoutReturnMethodsInput = {
@@ -742,6 +766,7 @@ export type DomainUncheckedCreateWithoutReturnMethodsInput = {
   Models?: Prisma.ModelUncheckedCreateNestedManyWithoutDomainInput
   SearchKeywordConfigs?: Prisma.SearchKeywordConfigUncheckedCreateNestedManyWithoutDomainInput
   UserIdentities?: Prisma.UserIdentityUncheckedCreateNestedManyWithoutDomainInput
+  Evaluations?: Prisma.EvaluationUncheckedCreateNestedManyWithoutDomainInput
 }
 
 export type DomainCreateOrConnectWithoutReturnMethodsInput = {
@@ -774,6 +799,7 @@ export type DomainUpdateWithoutReturnMethodsInput = {
   Models?: Prisma.ModelUpdateManyWithoutDomainNestedInput
   SearchKeywordConfigs?: Prisma.SearchKeywordConfigUpdateManyWithoutDomainNestedInput
   UserIdentities?: Prisma.UserIdentityUpdateManyWithoutDomainNestedInput
+  Evaluations?: Prisma.EvaluationUpdateManyWithoutDomainNestedInput
 }
 
 export type DomainUncheckedUpdateWithoutReturnMethodsInput = {
@@ -791,6 +817,7 @@ export type DomainUncheckedUpdateWithoutReturnMethodsInput = {
   Models?: Prisma.ModelUncheckedUpdateManyWithoutDomainNestedInput
   SearchKeywordConfigs?: Prisma.SearchKeywordConfigUncheckedUpdateManyWithoutDomainNestedInput
   UserIdentities?: Prisma.UserIdentityUncheckedUpdateManyWithoutDomainNestedInput
+  Evaluations?: Prisma.EvaluationUncheckedUpdateManyWithoutDomainNestedInput
 }
 
 export type DomainCreateWithoutTrackingRulesInput = {
@@ -807,6 +834,7 @@ export type DomainCreateWithoutTrackingRulesInput = {
   Models?: Prisma.ModelCreateNestedManyWithoutDomainInput
   SearchKeywordConfigs?: Prisma.SearchKeywordConfigCreateNestedManyWithoutDomainInput
   UserIdentities?: Prisma.UserIdentityCreateNestedManyWithoutDomainInput
+  Evaluations?: Prisma.EvaluationCreateNestedManyWithoutDomainInput
 }
 
 export type DomainUncheckedCreateWithoutTrackingRulesInput = {
@@ -824,6 +852,7 @@ export type DomainUncheckedCreateWithoutTrackingRulesInput = {
   Models?: Prisma.ModelUncheckedCreateNestedManyWithoutDomainInput
   SearchKeywordConfigs?: Prisma.SearchKeywordConfigUncheckedCreateNestedManyWithoutDomainInput
   UserIdentities?: Prisma.UserIdentityUncheckedCreateNestedManyWithoutDomainInput
+  Evaluations?: Prisma.EvaluationUncheckedCreateNestedManyWithoutDomainInput
 }
 
 export type DomainCreateOrConnectWithoutTrackingRulesInput = {
@@ -856,6 +885,7 @@ export type DomainUpdateWithoutTrackingRulesInput = {
   Models?: Prisma.ModelUpdateManyWithoutDomainNestedInput
   SearchKeywordConfigs?: Prisma.SearchKeywordConfigUpdateManyWithoutDomainNestedInput
   UserIdentities?: Prisma.UserIdentityUpdateManyWithoutDomainNestedInput
+  Evaluations?: Prisma.EvaluationUpdateManyWithoutDomainNestedInput
 }
 
 export type DomainUncheckedUpdateWithoutTrackingRulesInput = {
@@ -865,6 +895,93 @@ export type DomainUncheckedUpdateWithoutTrackingRulesInput = {
   Type?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
   CreatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   TernantID?: Prisma.IntFieldUpdateOperationsInput | number
+  ReturnMethods?: Prisma.ReturnMethodUncheckedUpdateManyWithoutDomainNestedInput
+  Interactions?: Prisma.InteractionUncheckedUpdateManyWithoutDomainNestedInput
+  Items?: Prisma.ItemUncheckedUpdateManyWithoutDomainNestedInput
+  Users?: Prisma.UserUncheckedUpdateManyWithoutDomainNestedInput
+  Ratings?: Prisma.RatingUncheckedUpdateManyWithoutDomainNestedInput
+  Models?: Prisma.ModelUncheckedUpdateManyWithoutDomainNestedInput
+  SearchKeywordConfigs?: Prisma.SearchKeywordConfigUncheckedUpdateManyWithoutDomainNestedInput
+  UserIdentities?: Prisma.UserIdentityUncheckedUpdateManyWithoutDomainNestedInput
+  Evaluations?: Prisma.EvaluationUncheckedUpdateManyWithoutDomainNestedInput
+}
+
+export type DomainCreateWithoutEvaluationsInput = {
+  Key: string
+  Url: string
+  Type?: number | null
+  CreatedAt?: Date | string
+  Ternant: Prisma.TernantCreateNestedOneWithoutDomainsInput
+  TrackingRules?: Prisma.TrackingRuleCreateNestedManyWithoutDomainInput
+  ReturnMethods?: Prisma.ReturnMethodCreateNestedManyWithoutDomainInput
+  Interactions?: Prisma.InteractionCreateNestedManyWithoutDomainInput
+  Items?: Prisma.ItemCreateNestedManyWithoutDomainInput
+  Users?: Prisma.UserCreateNestedManyWithoutDomainInput
+  Ratings?: Prisma.RatingCreateNestedManyWithoutDomainInput
+  Models?: Prisma.ModelCreateNestedManyWithoutDomainInput
+  SearchKeywordConfigs?: Prisma.SearchKeywordConfigCreateNestedManyWithoutDomainInput
+  UserIdentities?: Prisma.UserIdentityCreateNestedManyWithoutDomainInput
+}
+
+export type DomainUncheckedCreateWithoutEvaluationsInput = {
+  Id?: number
+  Key: string
+  Url: string
+  Type?: number | null
+  CreatedAt?: Date | string
+  TernantID: number
+  TrackingRules?: Prisma.TrackingRuleUncheckedCreateNestedManyWithoutDomainInput
+  ReturnMethods?: Prisma.ReturnMethodUncheckedCreateNestedManyWithoutDomainInput
+  Interactions?: Prisma.InteractionUncheckedCreateNestedManyWithoutDomainInput
+  Items?: Prisma.ItemUncheckedCreateNestedManyWithoutDomainInput
+  Users?: Prisma.UserUncheckedCreateNestedManyWithoutDomainInput
+  Ratings?: Prisma.RatingUncheckedCreateNestedManyWithoutDomainInput
+  Models?: Prisma.ModelUncheckedCreateNestedManyWithoutDomainInput
+  SearchKeywordConfigs?: Prisma.SearchKeywordConfigUncheckedCreateNestedManyWithoutDomainInput
+  UserIdentities?: Prisma.UserIdentityUncheckedCreateNestedManyWithoutDomainInput
+}
+
+export type DomainCreateOrConnectWithoutEvaluationsInput = {
+  where: Prisma.DomainWhereUniqueInput
+  create: Prisma.XOR<Prisma.DomainCreateWithoutEvaluationsInput, Prisma.DomainUncheckedCreateWithoutEvaluationsInput>
+}
+
+export type DomainUpsertWithoutEvaluationsInput = {
+  update: Prisma.XOR<Prisma.DomainUpdateWithoutEvaluationsInput, Prisma.DomainUncheckedUpdateWithoutEvaluationsInput>
+  create: Prisma.XOR<Prisma.DomainCreateWithoutEvaluationsInput, Prisma.DomainUncheckedCreateWithoutEvaluationsInput>
+  where?: Prisma.DomainWhereInput
+}
+
+export type DomainUpdateToOneWithWhereWithoutEvaluationsInput = {
+  where?: Prisma.DomainWhereInput
+  data: Prisma.XOR<Prisma.DomainUpdateWithoutEvaluationsInput, Prisma.DomainUncheckedUpdateWithoutEvaluationsInput>
+}
+
+export type DomainUpdateWithoutEvaluationsInput = {
+  Key?: Prisma.StringFieldUpdateOperationsInput | string
+  Url?: Prisma.StringFieldUpdateOperationsInput | string
+  Type?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
+  CreatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  Ternant?: Prisma.TernantUpdateOneRequiredWithoutDomainsNestedInput
+  TrackingRules?: Prisma.TrackingRuleUpdateManyWithoutDomainNestedInput
+  ReturnMethods?: Prisma.ReturnMethodUpdateManyWithoutDomainNestedInput
+  Interactions?: Prisma.InteractionUpdateManyWithoutDomainNestedInput
+  Items?: Prisma.ItemUpdateManyWithoutDomainNestedInput
+  Users?: Prisma.UserUpdateManyWithoutDomainNestedInput
+  Ratings?: Prisma.RatingUpdateManyWithoutDomainNestedInput
+  Models?: Prisma.ModelUpdateManyWithoutDomainNestedInput
+  SearchKeywordConfigs?: Prisma.SearchKeywordConfigUpdateManyWithoutDomainNestedInput
+  UserIdentities?: Prisma.UserIdentityUpdateManyWithoutDomainNestedInput
+}
+
+export type DomainUncheckedUpdateWithoutEvaluationsInput = {
+  Id?: Prisma.IntFieldUpdateOperationsInput | number
+  Key?: Prisma.StringFieldUpdateOperationsInput | string
+  Url?: Prisma.StringFieldUpdateOperationsInput | string
+  Type?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
+  CreatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  TernantID?: Prisma.IntFieldUpdateOperationsInput | number
+  TrackingRules?: Prisma.TrackingRuleUncheckedUpdateManyWithoutDomainNestedInput
   ReturnMethods?: Prisma.ReturnMethodUncheckedUpdateManyWithoutDomainNestedInput
   Interactions?: Prisma.InteractionUncheckedUpdateManyWithoutDomainNestedInput
   Items?: Prisma.ItemUncheckedUpdateManyWithoutDomainNestedInput
@@ -889,6 +1006,7 @@ export type DomainCreateWithoutUserIdentitiesInput = {
   Ratings?: Prisma.RatingCreateNestedManyWithoutDomainInput
   Models?: Prisma.ModelCreateNestedManyWithoutDomainInput
   SearchKeywordConfigs?: Prisma.SearchKeywordConfigCreateNestedManyWithoutDomainInput
+  Evaluations?: Prisma.EvaluationCreateNestedManyWithoutDomainInput
 }
 
 export type DomainUncheckedCreateWithoutUserIdentitiesInput = {
@@ -906,6 +1024,7 @@ export type DomainUncheckedCreateWithoutUserIdentitiesInput = {
   Ratings?: Prisma.RatingUncheckedCreateNestedManyWithoutDomainInput
   Models?: Prisma.ModelUncheckedCreateNestedManyWithoutDomainInput
   SearchKeywordConfigs?: Prisma.SearchKeywordConfigUncheckedCreateNestedManyWithoutDomainInput
+  Evaluations?: Prisma.EvaluationUncheckedCreateNestedManyWithoutDomainInput
 }
 
 export type DomainCreateOrConnectWithoutUserIdentitiesInput = {
@@ -938,6 +1057,7 @@ export type DomainUpdateWithoutUserIdentitiesInput = {
   Ratings?: Prisma.RatingUpdateManyWithoutDomainNestedInput
   Models?: Prisma.ModelUpdateManyWithoutDomainNestedInput
   SearchKeywordConfigs?: Prisma.SearchKeywordConfigUpdateManyWithoutDomainNestedInput
+  Evaluations?: Prisma.EvaluationUpdateManyWithoutDomainNestedInput
 }
 
 export type DomainUncheckedUpdateWithoutUserIdentitiesInput = {
@@ -955,6 +1075,7 @@ export type DomainUncheckedUpdateWithoutUserIdentitiesInput = {
   Ratings?: Prisma.RatingUncheckedUpdateManyWithoutDomainNestedInput
   Models?: Prisma.ModelUncheckedUpdateManyWithoutDomainNestedInput
   SearchKeywordConfigs?: Prisma.SearchKeywordConfigUncheckedUpdateManyWithoutDomainNestedInput
+  Evaluations?: Prisma.EvaluationUncheckedUpdateManyWithoutDomainNestedInput
 }
 
 export type DomainCreateWithoutSearchKeywordConfigsInput = {
@@ -971,6 +1092,7 @@ export type DomainCreateWithoutSearchKeywordConfigsInput = {
   Ratings?: Prisma.RatingCreateNestedManyWithoutDomainInput
   Models?: Prisma.ModelCreateNestedManyWithoutDomainInput
   UserIdentities?: Prisma.UserIdentityCreateNestedManyWithoutDomainInput
+  Evaluations?: Prisma.EvaluationCreateNestedManyWithoutDomainInput
 }
 
 export type DomainUncheckedCreateWithoutSearchKeywordConfigsInput = {
@@ -988,6 +1110,7 @@ export type DomainUncheckedCreateWithoutSearchKeywordConfigsInput = {
   Ratings?: Prisma.RatingUncheckedCreateNestedManyWithoutDomainInput
   Models?: Prisma.ModelUncheckedCreateNestedManyWithoutDomainInput
   UserIdentities?: Prisma.UserIdentityUncheckedCreateNestedManyWithoutDomainInput
+  Evaluations?: Prisma.EvaluationUncheckedCreateNestedManyWithoutDomainInput
 }
 
 export type DomainCreateOrConnectWithoutSearchKeywordConfigsInput = {
@@ -1020,6 +1143,7 @@ export type DomainUpdateWithoutSearchKeywordConfigsInput = {
   Ratings?: Prisma.RatingUpdateManyWithoutDomainNestedInput
   Models?: Prisma.ModelUpdateManyWithoutDomainNestedInput
   UserIdentities?: Prisma.UserIdentityUpdateManyWithoutDomainNestedInput
+  Evaluations?: Prisma.EvaluationUpdateManyWithoutDomainNestedInput
 }
 
 export type DomainUncheckedUpdateWithoutSearchKeywordConfigsInput = {
@@ -1037,6 +1161,7 @@ export type DomainUncheckedUpdateWithoutSearchKeywordConfigsInput = {
   Ratings?: Prisma.RatingUncheckedUpdateManyWithoutDomainNestedInput
   Models?: Prisma.ModelUncheckedUpdateManyWithoutDomainNestedInput
   UserIdentities?: Prisma.UserIdentityUncheckedUpdateManyWithoutDomainNestedInput
+  Evaluations?: Prisma.EvaluationUncheckedUpdateManyWithoutDomainNestedInput
 }
 
 export type DomainCreateWithoutItemsInput = {
@@ -1053,6 +1178,7 @@ export type DomainCreateWithoutItemsInput = {
   Models?: Prisma.ModelCreateNestedManyWithoutDomainInput
   SearchKeywordConfigs?: Prisma.SearchKeywordConfigCreateNestedManyWithoutDomainInput
   UserIdentities?: Prisma.UserIdentityCreateNestedManyWithoutDomainInput
+  Evaluations?: Prisma.EvaluationCreateNestedManyWithoutDomainInput
 }
 
 export type DomainUncheckedCreateWithoutItemsInput = {
@@ -1070,6 +1196,7 @@ export type DomainUncheckedCreateWithoutItemsInput = {
   Models?: Prisma.ModelUncheckedCreateNestedManyWithoutDomainInput
   SearchKeywordConfigs?: Prisma.SearchKeywordConfigUncheckedCreateNestedManyWithoutDomainInput
   UserIdentities?: Prisma.UserIdentityUncheckedCreateNestedManyWithoutDomainInput
+  Evaluations?: Prisma.EvaluationUncheckedCreateNestedManyWithoutDomainInput
 }
 
 export type DomainCreateOrConnectWithoutItemsInput = {
@@ -1102,6 +1229,7 @@ export type DomainUpdateWithoutItemsInput = {
   Models?: Prisma.ModelUpdateManyWithoutDomainNestedInput
   SearchKeywordConfigs?: Prisma.SearchKeywordConfigUpdateManyWithoutDomainNestedInput
   UserIdentities?: Prisma.UserIdentityUpdateManyWithoutDomainNestedInput
+  Evaluations?: Prisma.EvaluationUpdateManyWithoutDomainNestedInput
 }
 
 export type DomainUncheckedUpdateWithoutItemsInput = {
@@ -1119,6 +1247,7 @@ export type DomainUncheckedUpdateWithoutItemsInput = {
   Models?: Prisma.ModelUncheckedUpdateManyWithoutDomainNestedInput
   SearchKeywordConfigs?: Prisma.SearchKeywordConfigUncheckedUpdateManyWithoutDomainNestedInput
   UserIdentities?: Prisma.UserIdentityUncheckedUpdateManyWithoutDomainNestedInput
+  Evaluations?: Prisma.EvaluationUncheckedUpdateManyWithoutDomainNestedInput
 }
 
 export type DomainCreateWithoutModelsInput = {
@@ -1135,6 +1264,7 @@ export type DomainCreateWithoutModelsInput = {
   Ratings?: Prisma.RatingCreateNestedManyWithoutDomainInput
   SearchKeywordConfigs?: Prisma.SearchKeywordConfigCreateNestedManyWithoutDomainInput
   UserIdentities?: Prisma.UserIdentityCreateNestedManyWithoutDomainInput
+  Evaluations?: Prisma.EvaluationCreateNestedManyWithoutDomainInput
 }
 
 export type DomainUncheckedCreateWithoutModelsInput = {
@@ -1152,6 +1282,7 @@ export type DomainUncheckedCreateWithoutModelsInput = {
   Ratings?: Prisma.RatingUncheckedCreateNestedManyWithoutDomainInput
   SearchKeywordConfigs?: Prisma.SearchKeywordConfigUncheckedCreateNestedManyWithoutDomainInput
   UserIdentities?: Prisma.UserIdentityUncheckedCreateNestedManyWithoutDomainInput
+  Evaluations?: Prisma.EvaluationUncheckedCreateNestedManyWithoutDomainInput
 }
 
 export type DomainCreateOrConnectWithoutModelsInput = {
@@ -1184,6 +1315,7 @@ export type DomainUpdateWithoutModelsInput = {
   Ratings?: Prisma.RatingUpdateManyWithoutDomainNestedInput
   SearchKeywordConfigs?: Prisma.SearchKeywordConfigUpdateManyWithoutDomainNestedInput
   UserIdentities?: Prisma.UserIdentityUpdateManyWithoutDomainNestedInput
+  Evaluations?: Prisma.EvaluationUpdateManyWithoutDomainNestedInput
 }
 
 export type DomainUncheckedUpdateWithoutModelsInput = {
@@ -1201,6 +1333,7 @@ export type DomainUncheckedUpdateWithoutModelsInput = {
   Ratings?: Prisma.RatingUncheckedUpdateManyWithoutDomainNestedInput
   SearchKeywordConfigs?: Prisma.SearchKeywordConfigUncheckedUpdateManyWithoutDomainNestedInput
   UserIdentities?: Prisma.UserIdentityUncheckedUpdateManyWithoutDomainNestedInput
+  Evaluations?: Prisma.EvaluationUncheckedUpdateManyWithoutDomainNestedInput
 }
 
 export type DomainCreateWithoutUsersInput = {
@@ -1217,6 +1350,7 @@ export type DomainCreateWithoutUsersInput = {
   Models?: Prisma.ModelCreateNestedManyWithoutDomainInput
   SearchKeywordConfigs?: Prisma.SearchKeywordConfigCreateNestedManyWithoutDomainInput
   UserIdentities?: Prisma.UserIdentityCreateNestedManyWithoutDomainInput
+  Evaluations?: Prisma.EvaluationCreateNestedManyWithoutDomainInput
 }
 
 export type DomainUncheckedCreateWithoutUsersInput = {
@@ -1234,6 +1368,7 @@ export type DomainUncheckedCreateWithoutUsersInput = {
   Models?: Prisma.ModelUncheckedCreateNestedManyWithoutDomainInput
   SearchKeywordConfigs?: Prisma.SearchKeywordConfigUncheckedCreateNestedManyWithoutDomainInput
   UserIdentities?: Prisma.UserIdentityUncheckedCreateNestedManyWithoutDomainInput
+  Evaluations?: Prisma.EvaluationUncheckedCreateNestedManyWithoutDomainInput
 }
 
 export type DomainCreateOrConnectWithoutUsersInput = {
@@ -1266,6 +1401,7 @@ export type DomainUpdateWithoutUsersInput = {
   Models?: Prisma.ModelUpdateManyWithoutDomainNestedInput
   SearchKeywordConfigs?: Prisma.SearchKeywordConfigUpdateManyWithoutDomainNestedInput
   UserIdentities?: Prisma.UserIdentityUpdateManyWithoutDomainNestedInput
+  Evaluations?: Prisma.EvaluationUpdateManyWithoutDomainNestedInput
 }
 
 export type DomainUncheckedUpdateWithoutUsersInput = {
@@ -1283,6 +1419,7 @@ export type DomainUncheckedUpdateWithoutUsersInput = {
   Models?: Prisma.ModelUncheckedUpdateManyWithoutDomainNestedInput
   SearchKeywordConfigs?: Prisma.SearchKeywordConfigUncheckedUpdateManyWithoutDomainNestedInput
   UserIdentities?: Prisma.UserIdentityUncheckedUpdateManyWithoutDomainNestedInput
+  Evaluations?: Prisma.EvaluationUncheckedUpdateManyWithoutDomainNestedInput
 }
 
 export type DomainCreateWithoutRatingsInput = {
@@ -1299,6 +1436,7 @@ export type DomainCreateWithoutRatingsInput = {
   Models?: Prisma.ModelCreateNestedManyWithoutDomainInput
   SearchKeywordConfigs?: Prisma.SearchKeywordConfigCreateNestedManyWithoutDomainInput
   UserIdentities?: Prisma.UserIdentityCreateNestedManyWithoutDomainInput
+  Evaluations?: Prisma.EvaluationCreateNestedManyWithoutDomainInput
 }
 
 export type DomainUncheckedCreateWithoutRatingsInput = {
@@ -1316,6 +1454,7 @@ export type DomainUncheckedCreateWithoutRatingsInput = {
   Models?: Prisma.ModelUncheckedCreateNestedManyWithoutDomainInput
   SearchKeywordConfigs?: Prisma.SearchKeywordConfigUncheckedCreateNestedManyWithoutDomainInput
   UserIdentities?: Prisma.UserIdentityUncheckedCreateNestedManyWithoutDomainInput
+  Evaluations?: Prisma.EvaluationUncheckedCreateNestedManyWithoutDomainInput
 }
 
 export type DomainCreateOrConnectWithoutRatingsInput = {
@@ -1348,6 +1487,7 @@ export type DomainUpdateWithoutRatingsInput = {
   Models?: Prisma.ModelUpdateManyWithoutDomainNestedInput
   SearchKeywordConfigs?: Prisma.SearchKeywordConfigUpdateManyWithoutDomainNestedInput
   UserIdentities?: Prisma.UserIdentityUpdateManyWithoutDomainNestedInput
+  Evaluations?: Prisma.EvaluationUpdateManyWithoutDomainNestedInput
 }
 
 export type DomainUncheckedUpdateWithoutRatingsInput = {
@@ -1365,6 +1505,7 @@ export type DomainUncheckedUpdateWithoutRatingsInput = {
   Models?: Prisma.ModelUncheckedUpdateManyWithoutDomainNestedInput
   SearchKeywordConfigs?: Prisma.SearchKeywordConfigUncheckedUpdateManyWithoutDomainNestedInput
   UserIdentities?: Prisma.UserIdentityUncheckedUpdateManyWithoutDomainNestedInput
+  Evaluations?: Prisma.EvaluationUncheckedUpdateManyWithoutDomainNestedInput
 }
 
 export type DomainCreateWithoutInteractionsInput = {
@@ -1381,6 +1522,7 @@ export type DomainCreateWithoutInteractionsInput = {
   Models?: Prisma.ModelCreateNestedManyWithoutDomainInput
   SearchKeywordConfigs?: Prisma.SearchKeywordConfigCreateNestedManyWithoutDomainInput
   UserIdentities?: Prisma.UserIdentityCreateNestedManyWithoutDomainInput
+  Evaluations?: Prisma.EvaluationCreateNestedManyWithoutDomainInput
 }
 
 export type DomainUncheckedCreateWithoutInteractionsInput = {
@@ -1398,6 +1540,7 @@ export type DomainUncheckedCreateWithoutInteractionsInput = {
   Models?: Prisma.ModelUncheckedCreateNestedManyWithoutDomainInput
   SearchKeywordConfigs?: Prisma.SearchKeywordConfigUncheckedCreateNestedManyWithoutDomainInput
   UserIdentities?: Prisma.UserIdentityUncheckedCreateNestedManyWithoutDomainInput
+  Evaluations?: Prisma.EvaluationUncheckedCreateNestedManyWithoutDomainInput
 }
 
 export type DomainCreateOrConnectWithoutInteractionsInput = {
@@ -1430,6 +1573,7 @@ export type DomainUpdateWithoutInteractionsInput = {
   Models?: Prisma.ModelUpdateManyWithoutDomainNestedInput
   SearchKeywordConfigs?: Prisma.SearchKeywordConfigUpdateManyWithoutDomainNestedInput
   UserIdentities?: Prisma.UserIdentityUpdateManyWithoutDomainNestedInput
+  Evaluations?: Prisma.EvaluationUpdateManyWithoutDomainNestedInput
 }
 
 export type DomainUncheckedUpdateWithoutInteractionsInput = {
@@ -1447,6 +1591,7 @@ export type DomainUncheckedUpdateWithoutInteractionsInput = {
   Models?: Prisma.ModelUncheckedUpdateManyWithoutDomainNestedInput
   SearchKeywordConfigs?: Prisma.SearchKeywordConfigUncheckedUpdateManyWithoutDomainNestedInput
   UserIdentities?: Prisma.UserIdentityUncheckedUpdateManyWithoutDomainNestedInput
+  Evaluations?: Prisma.EvaluationUncheckedUpdateManyWithoutDomainNestedInput
 }
 
 export type DomainCreateManyTernantInput = {
@@ -1471,6 +1616,7 @@ export type DomainUpdateWithoutTernantInput = {
   Models?: Prisma.ModelUpdateManyWithoutDomainNestedInput
   SearchKeywordConfigs?: Prisma.SearchKeywordConfigUpdateManyWithoutDomainNestedInput
   UserIdentities?: Prisma.UserIdentityUpdateManyWithoutDomainNestedInput
+  Evaluations?: Prisma.EvaluationUpdateManyWithoutDomainNestedInput
 }
 
 export type DomainUncheckedUpdateWithoutTernantInput = {
@@ -1488,6 +1634,7 @@ export type DomainUncheckedUpdateWithoutTernantInput = {
   Models?: Prisma.ModelUncheckedUpdateManyWithoutDomainNestedInput
   SearchKeywordConfigs?: Prisma.SearchKeywordConfigUncheckedUpdateManyWithoutDomainNestedInput
   UserIdentities?: Prisma.UserIdentityUncheckedUpdateManyWithoutDomainNestedInput
+  Evaluations?: Prisma.EvaluationUncheckedUpdateManyWithoutDomainNestedInput
 }
 
 export type DomainUncheckedUpdateManyWithoutTernantInput = {
@@ -1513,6 +1660,7 @@ export type DomainCountOutputType = {
   Models: number
   SearchKeywordConfigs: number
   UserIdentities: number
+  Evaluations: number
 }
 
 export type DomainCountOutputTypeSelect<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
@@ -1525,6 +1673,7 @@ export type DomainCountOutputTypeSelect<ExtArgs extends runtime.Types.Extensions
   Models?: boolean | DomainCountOutputTypeCountModelsArgs
   SearchKeywordConfigs?: boolean | DomainCountOutputTypeCountSearchKeywordConfigsArgs
   UserIdentities?: boolean | DomainCountOutputTypeCountUserIdentitiesArgs
+  Evaluations?: boolean | DomainCountOutputTypeCountEvaluationsArgs
 }
 
 /**
@@ -1600,6 +1749,13 @@ export type DomainCountOutputTypeCountUserIdentitiesArgs<ExtArgs extends runtime
   where?: Prisma.UserIdentityWhereInput
 }
 
+/**
+ * DomainCountOutputType without action
+ */
+export type DomainCountOutputTypeCountEvaluationsArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  where?: Prisma.EvaluationWhereInput
+}
+
 
 export type DomainSelect<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetSelect<{
   Id?: boolean
@@ -1618,6 +1774,7 @@ export type DomainSelect<ExtArgs extends runtime.Types.Extensions.InternalArgs =
   Models?: boolean | Prisma.Domain$ModelsArgs<ExtArgs>
   SearchKeywordConfigs?: boolean | Prisma.Domain$SearchKeywordConfigsArgs<ExtArgs>
   UserIdentities?: boolean | Prisma.Domain$UserIdentitiesArgs<ExtArgs>
+  Evaluations?: boolean | Prisma.Domain$EvaluationsArgs<ExtArgs>
   _count?: boolean | Prisma.DomainCountOutputTypeDefaultArgs<ExtArgs>
 }, ExtArgs["result"]["domain"]>
 
@@ -1662,6 +1819,7 @@ export type DomainInclude<ExtArgs extends runtime.Types.Extensions.InternalArgs 
   Models?: boolean | Prisma.Domain$ModelsArgs<ExtArgs>
   SearchKeywordConfigs?: boolean | Prisma.Domain$SearchKeywordConfigsArgs<ExtArgs>
   UserIdentities?: boolean | Prisma.Domain$UserIdentitiesArgs<ExtArgs>
+  Evaluations?: boolean | Prisma.Domain$EvaluationsArgs<ExtArgs>
   _count?: boolean | Prisma.DomainCountOutputTypeDefaultArgs<ExtArgs>
 }
 export type DomainIncludeCreateManyAndReturn<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
@@ -1684,6 +1842,7 @@ export type $DomainPayload<ExtArgs extends runtime.Types.Extensions.InternalArgs
     Models: Prisma.$ModelPayload<ExtArgs>[]
     SearchKeywordConfigs: Prisma.$SearchKeywordConfigPayload<ExtArgs>[]
     UserIdentities: Prisma.$UserIdentityPayload<ExtArgs>[]
+    Evaluations: Prisma.$EvaluationPayload<ExtArgs>[]
   }
   scalars: runtime.Types.Extensions.GetPayloadResult<{
     Id: number
@@ -2096,6 +2255,7 @@ export interface Prisma__DomainClient<T, Null = never, ExtArgs extends runtime.T
   Models<T extends Prisma.Domain$ModelsArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.Domain$ModelsArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$ModelPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
   SearchKeywordConfigs<T extends Prisma.Domain$SearchKeywordConfigsArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.Domain$SearchKeywordConfigsArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$SearchKeywordConfigPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
   UserIdentities<T extends Prisma.Domain$UserIdentitiesArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.Domain$UserIdentitiesArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$UserIdentityPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
+  Evaluations<T extends Prisma.Domain$EvaluationsArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.Domain$EvaluationsArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$EvaluationPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
   /**
    * Attaches callbacks for the resolution and/or rejection of the Promise.
    * @param onfulfilled The callback to execute when the Promise is resolved.
@@ -2740,6 +2900,30 @@ export type Domain$UserIdentitiesArgs<ExtArgs extends runtime.Types.Extensions.I
   take?: number
   skip?: number
   distinct?: Prisma.UserIdentityScalarFieldEnum | Prisma.UserIdentityScalarFieldEnum[]
+}
+
+/**
+ * Domain.Evaluations
+ */
+export type Domain$EvaluationsArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  /**
+   * Select specific fields to fetch from the Evaluation
+   */
+  select?: Prisma.EvaluationSelect<ExtArgs> | null
+  /**
+   * Omit specific fields from the Evaluation
+   */
+  omit?: Prisma.EvaluationOmit<ExtArgs> | null
+  /**
+   * Choose, which related nodes to fetch as well
+   */
+  include?: Prisma.EvaluationInclude<ExtArgs> | null
+  where?: Prisma.EvaluationWhereInput
+  orderBy?: Prisma.EvaluationOrderByWithRelationInput | Prisma.EvaluationOrderByWithRelationInput[]
+  cursor?: Prisma.EvaluationWhereUniqueInput
+  take?: number
+  skip?: number
+  distinct?: Prisma.EvaluationScalarFieldEnum | Prisma.EvaluationScalarFieldEnum[]
 }
 
 /**

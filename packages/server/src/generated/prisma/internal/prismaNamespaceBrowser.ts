@@ -55,6 +55,7 @@ export const ModelName = {
   Domain: 'Domain',
   ReturnMethod: 'ReturnMethod',
   TrackingRule: 'TrackingRule',
+  Evaluation: 'Evaluation',
   EventType: 'EventType',
   PayloadMapping: 'PayloadMapping',
   UserIdentity: 'UserIdentity',
@@ -137,6 +138,16 @@ export const TrackingRuleScalarFieldEnum = {
 } as const
 
 export type TrackingRuleScalarFieldEnum = (typeof TrackingRuleScalarFieldEnum)[keyof typeof TrackingRuleScalarFieldEnum]
+
+
+export const EvaluationScalarFieldEnum = {
+  Id: 'Id',
+  DomainId: 'DomainId',
+  Rank: 'Rank',
+  Timestamp: 'Timestamp'
+} as const
+
+export type EvaluationScalarFieldEnum = (typeof EvaluationScalarFieldEnum)[keyof typeof EvaluationScalarFieldEnum]
 
 
 export const EventTypeScalarFieldEnum = {

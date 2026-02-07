@@ -38,6 +38,11 @@ export type ReturnMethod = Prisma.ReturnMethodModel
  */
 export type TrackingRule = Prisma.TrackingRuleModel
 /**
+ * Model Evaluation
+ * 
+ */
+export type Evaluation = Prisma.EvaluationModel
+/**
  * Model EventType
  * 
  */
