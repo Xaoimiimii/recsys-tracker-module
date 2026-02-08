@@ -13,6 +13,8 @@ export declare class PopupDisplay {
     private isManuallyClosed;
     private lastCheckedUrl;
     private readonly DEFAULT_DELAY;
+    private domainKey;
+    private apiBaseUrl;
     constructor(_domainKey: string, _slotName: string, _apiBaseUrl: string, config: PopupConfig | undefined, recommendationGetter: (limit: number) => Promise<RecommendationResponse>);
     start(): void;
     stop(): void;

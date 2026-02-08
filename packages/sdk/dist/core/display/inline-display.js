@@ -6,6 +6,8 @@ export class InlineDisplay {
         this.autoSlideTimeout = null;
         this.DEFAULT_DELAY = 5000;
         this.selector = selector;
+        this.domainKey = _domainKey;
+        this.apiBaseUrl = _apiBaseUrl;
         this.recommendationGetter = recommendationGetter;
         this.config = { ...config };
     }
@@ -87,21 +89,20 @@ export class InlineDisplay {
         }
     }
     async fetchRecommendations() {
-        var _a;
         try {
-            const limit = ((_a = this.config.layoutJson) === null || _a === void 0 ? void 0 : _a.maxItems) || 50;
-            console.log('[PopupDisplay] Calling recommendationGetter with limit:', limit);
+            // const limit = (this.config.layoutJson as any)?.maxItems || 50;
+            // console.log('[PopupDisplay] Calling recommendationGetter with limit:', limit);
             const result = await this.recommendationGetter();
-            console.log('[PopupDisplay] recommendationGetter result:', result);
+            // console.log('[PopupDisplay] recommendationGetter result:', result);
             // recommendationGetter now returns full RecommendationResponse
             if (result && result.item && Array.isArray(result.item)) {
                 return result;
             }
-            console.log('[PopupDisplay] Invalid result, returning empty');
+            // console.log('[PopupDisplay] Invalid result, returning empty');
             return { item: [], keyword: '', lastItem: '' };
         }
         catch (e) {
-            console.error('[PopupDisplay] fetchRecommendations error:', e);
+            // console.error('[PopupDisplay] fetchRecommendations error:', e);
             return { item: [], keyword: '', lastItem: '' };
         }
     }
@@ -487,14 +488,15 @@ export class InlineDisplay {
         if (!container)
             return;
         container.innerHTML = '';
-        items.forEach((item) => {
+        items.forEach((item, index) => {
             const tempDiv = document.createElement('div');
             tempDiv.innerHTML = this.renderItemContent(item);
             const itemElement = tempDiv.firstElementChild;
             if (itemElement) {
                 itemElement.addEventListener('click', () => {
                     const targetId = item.DomainItemId;
-                    this.handleItemClick(targetId);
+                    const rank = index + 1;
+                    this.handleItemClick(targetId, rank);
                 });
                 container.appendChild(itemElement);
             }
@@ -523,7 +525,8 @@ export class InlineDisplay {
                     itemElement.addEventListener('click', () => {
                         const targetId = item.DomainItemId;
                         if (targetId) {
-                            this.handleItemClick(targetId);
+                            const rank = index + 1;
+                            this.handleItemClick(targetId, rank);
                         }
                     });
                     slideContainer.appendChild(itemElement);
@@ -550,9 +553,26 @@ export class InlineDisplay {
         renderSlide();
         resetAutoSlide();
     }
-    handleItemClick(id) {
+    async handleItemClick(id, rank) {
         if (!id)
             return;
+        // Send evaluation request
+        try {
+            const evaluationUrl = `${this.apiBaseUrl}/evaluation`;
+            await fetch(evaluationUrl, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    DomainKey: this.domainKey,
+                    Rank: rank
+                })
+            });
+        }
+        catch (error) {
+            // console.error('[InlineDisplay] Failed to send evaluation:', error);
+        }
         let urlPattern = this.config.layoutJson.itemUrlPattern || '/song/{:id}';
         const targetUrl = urlPattern.replace('{:id}', id.toString());
         // Try SPA-style navigation first

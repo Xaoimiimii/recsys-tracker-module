@@ -8,6 +8,8 @@ export declare class InlineDisplay {
     private debounceTimer;
     private autoSlideTimeout;
     private readonly DEFAULT_DELAY;
+    private domainKey;
+    private apiBaseUrl;
     constructor(_domainKey: string, _slotName: string, selector: string, _apiBaseUrl: string, config: InlineConfig | undefined, recommendationGetter: () => Promise<RecommendationResponse>);
     start(): void;
     stop(): void;

@@ -16,6 +16,8 @@ export class PopupDisplay {
   private lastCheckedUrl: string = '';
 
   private readonly DEFAULT_DELAY = 5000;
+  private domainKey: string;
+  private apiBaseUrl: string;
 
   constructor(
     _domainKey: string,
@@ -25,6 +27,8 @@ export class PopupDisplay {
     recommendationGetter: (limit: number) => Promise<RecommendationResponse>
   ) {
     this.recommendationGetter = recommendationGetter;
+    this.domainKey = _domainKey;
+    this.apiBaseUrl = _apiBaseUrl;
     this.hostId = `recsys-popup-host-${_slotName}-${Date.now()}`; // Unique ID based on slotName
     this.config = {
       delay: config.delay ?? this.DEFAULT_DELAY,
@@ -647,14 +651,15 @@ export class PopupDisplay {
     const container = shadow.querySelector('.recsys-container');
     if (!container) return;
     container.innerHTML = '';
-    items.forEach((item) => {
+    items.forEach((item, index) => {
       const tempDiv = document.createElement('div');
       tempDiv.innerHTML = this.renderItemContent(item);
       const itemElement = tempDiv.firstElementChild as HTMLElement;
       if (itemElement) {
         itemElement.addEventListener('click', () => {
           const targetId = item.DomainItemId;
-          this.handleItemClick(targetId);
+          const rank = index + 1;
+          this.handleItemClick(targetId, rank);
         });
         container.appendChild(itemElement);
       }
@@ -676,7 +681,8 @@ export class PopupDisplay {
       if (slideElement) {
         slideElement.addEventListener('click', () => {
           const targetId = item.DomainItemId || item.id || item.Id;
-          if (targetId) this.handleItemClick(targetId);
+          const rank = currentIndex + 1;
+          if (targetId) this.handleItemClick(targetId, rank);
         });
 
         slideContainer.appendChild(slideElement);
@@ -724,8 +730,25 @@ export class PopupDisplay {
     this.autoSlideTimeout = null;
   }
 
-  private handleItemClick(id: string | number): void {
+  private async handleItemClick(id: string | number, rank: number): Promise<void> {
       if (!id) return;
+      
+      // Send evaluation request
+      try {
+        const evaluationUrl = `${this.apiBaseUrl}/evaluation`;
+        await fetch(evaluationUrl, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            DomainKey: this.domainKey,
+            Rank: rank
+          })
+        });
+      } catch (error) {
+        // console.error('[PopupDisplay] Failed to send evaluation:', error);
+      }
       
       // const targetUrl = `/song/${id}`;
       let urlPattern = this.config.layoutJson.itemUrlPattern || '/song/{:id}';

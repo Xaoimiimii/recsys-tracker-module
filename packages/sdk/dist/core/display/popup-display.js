@@ -13,6 +13,8 @@ export class PopupDisplay {
         this.lastCheckedUrl = '';
         this.DEFAULT_DELAY = 5000;
         this.recommendationGetter = recommendationGetter;
+        this.domainKey = _domainKey;
+        this.apiBaseUrl = _apiBaseUrl;
         this.hostId = `recsys-popup-host-${_slotName}-${Date.now()}`; // Unique ID based on slotName
         this.config = {
             delay: (_a = config.delay) !== null && _a !== void 0 ? _a : this.DEFAULT_DELAY,
@@ -598,14 +600,15 @@ export class PopupDisplay {
         if (!container)
             return;
         container.innerHTML = '';
-        items.forEach((item) => {
+        items.forEach((item, index) => {
             const tempDiv = document.createElement('div');
             tempDiv.innerHTML = this.renderItemContent(item);
             const itemElement = tempDiv.firstElementChild;
             if (itemElement) {
                 itemElement.addEventListener('click', () => {
                     const targetId = item.DomainItemId;
-                    this.handleItemClick(targetId);
+                    const rank = index + 1;
+                    this.handleItemClick(targetId, rank);
                 });
                 container.appendChild(itemElement);
             }
@@ -624,8 +627,9 @@ export class PopupDisplay {
             if (slideElement) {
                 slideElement.addEventListener('click', () => {
                     const targetId = item.DomainItemId || item.id || item.Id;
+                    const rank = currentIndex + 1;
                     if (targetId)
-                        this.handleItemClick(targetId);
+                        this.handleItemClick(targetId, rank);
                 });
                 slideContainer.appendChild(slideElement);
             }
@@ -668,9 +672,26 @@ export class PopupDisplay {
         this.autoCloseTimeout = null;
         this.autoSlideTimeout = null;
     }
-    handleItemClick(id) {
+    async handleItemClick(id, rank) {
         if (!id)
             return;
+        // Send evaluation request
+        try {
+            const evaluationUrl = `${this.apiBaseUrl}/evaluation`;
+            await fetch(evaluationUrl, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    DomainKey: this.domainKey,
+                    Rank: rank
+                })
+            });
+        }
+        catch (error) {
+            // console.error('[PopupDisplay] Failed to send evaluation:', error);
+        }
         // const targetUrl = `/song/${id}`;
         let urlPattern = this.config.layoutJson.itemUrlPattern || '/song/{:id}';
         const targetUrl = urlPattern.replace('{:id}', id.toString());

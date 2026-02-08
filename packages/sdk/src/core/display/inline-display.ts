@@ -10,6 +10,8 @@ export class InlineDisplay {
   private autoSlideTimeout: NodeJS.Timeout | null = null;
   
   private readonly DEFAULT_DELAY = 5000;
+  private domainKey: string;
+  private apiBaseUrl: string;
 
   constructor(
     _domainKey: string,
@@ -20,6 +22,8 @@ export class InlineDisplay {
     recommendationGetter: () => Promise<RecommendationResponse>
   ) {
     this.selector = selector;
+    this.domainKey = _domainKey;
+    this.apiBaseUrl = _apiBaseUrl;
     this.recommendationGetter = recommendationGetter;
     this.config = { ...config };
   }
@@ -115,18 +119,18 @@ export class InlineDisplay {
 
   private async fetchRecommendations(): Promise<RecommendationResponse> {
     try {
-      const limit = (this.config.layoutJson as any)?.maxItems || 50;
-      console.log('[PopupDisplay] Calling recommendationGetter with limit:', limit);
+      // const limit = (this.config.layoutJson as any)?.maxItems || 50;
+      // console.log('[PopupDisplay] Calling recommendationGetter with limit:', limit);
       const result = await this.recommendationGetter();
-      console.log('[PopupDisplay] recommendationGetter result:', result);
+      // console.log('[PopupDisplay] recommendationGetter result:', result);
       // recommendationGetter now returns full RecommendationResponse
       if (result && result.item && Array.isArray(result.item)) {
         return result; 
       }
-      console.log('[PopupDisplay] Invalid result, returning empty');
+      // console.log('[PopupDisplay] Invalid result, returning empty');
       return { item: [], keyword: '', lastItem: '' };
     } catch (e) { 
-      console.error('[PopupDisplay] fetchRecommendations error:', e);
+      // console.error('[PopupDisplay] fetchRecommendations error:', e);
       return { item: [], keyword: '', lastItem: '' }; 
     }
   }
@@ -535,14 +539,15 @@ export class InlineDisplay {
     const container = shadow.querySelector('.recsys-container');
     if (!container) return;
     container.innerHTML = '';
-    items.forEach((item) => {
+    items.forEach((item, index) => {
       const tempDiv = document.createElement('div');
       tempDiv.innerHTML = this.renderItemContent(item);
       const itemElement = tempDiv.firstElementChild as HTMLElement;
       if (itemElement) {
         itemElement.addEventListener('click', () => {
           const targetId = item.DomainItemId;
-          this.handleItemClick(targetId);
+          const rank = index + 1;
+          this.handleItemClick(targetId, rank);
         });
         container.appendChild(itemElement);
       }
@@ -573,7 +578,8 @@ export class InlineDisplay {
           itemElement.addEventListener('click', () => {
             const targetId = item.DomainItemId;
             if (targetId) {
-              this.handleItemClick(targetId);
+              const rank = index + 1;
+              this.handleItemClick(targetId, rank);
             }
           });
           slideContainer.appendChild(itemElement);
@@ -605,8 +611,26 @@ export class InlineDisplay {
     resetAutoSlide();
   }
 
-  private handleItemClick(id: string | number): void {
+  private async handleItemClick(id: string | number, rank: number): Promise<void> {
       if (!id) return;
+      
+      // Send evaluation request
+      try {
+        const evaluationUrl = `${this.apiBaseUrl}/evaluation`;
+        await fetch(evaluationUrl, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            DomainKey: this.domainKey,
+            Rank: rank
+          })
+        });
+      } catch (error) {
+        // console.error('[InlineDisplay] Failed to send evaluation:', error);
+      }
+      
       let urlPattern = this.config.layoutJson.itemUrlPattern || '/song/{:id}';
       const targetUrl = urlPattern.replace('{:id}', id.toString());
       
