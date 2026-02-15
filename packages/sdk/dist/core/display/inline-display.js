@@ -150,7 +150,6 @@ export class InlineDisplay {
           display: grid;
           grid-template-columns: repeat(${cols}, 1fr);
           gap: ${gapPx}px;
-          padding: 8px 0;
       `;
             // Responsive đơn giản cho Grid Inline
             extraCSS += `
@@ -216,14 +215,12 @@ export class InlineDisplay {
     .recsys-wrapper {
       width: 100%;
       background: ${getColor('surface') || 'transparent'};
-      padding: 16px 0;
       border-radius: 8px;
     }
 
     .recsys-header {
       border-bottom: 1px solid ${getColor('border')};
       padding-bottom: 8px;
-      
       justify-content: space-between; align-items: center;
     }
     .recsys-header-title {

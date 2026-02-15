@@ -2129,7 +2129,6 @@ var RecSysTracker = (function (exports) {
           display: grid;
           grid-template-columns: repeat(${cols}, 1fr);
           gap: ${gapPx}px;
-          padding: 8px 0;
       `;
             }
             else if (contentMode === 'list') {
@@ -2177,14 +2176,12 @@ var RecSysTracker = (function (exports) {
     .recsys-wrapper {
       width: 100%;
       background: ${getColor('surface')};
-      padding: 16px 0;
       border-radius: 8px;
     }
 
     .recsys-header {
       border-bottom: 1px solid ${getColor('border')};
       padding-bottom: 8px;
-      
       justify-content: space-between; align-items: center;
     }
     .recsys-header-title {
