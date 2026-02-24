@@ -1,6 +1,64 @@
 import { PopupConfig, StyleJson, LayoutJson } from '../../types';
 import { RecommendationItem, RecommendationResponse, normalizeItems } from '../recommendation';
 
+// --- BỘ TỪ ĐIỂN ĐA NGÔN NGỮ (MỞ RỘNG) ---
+const translations: Record<string, Record<string, string>> = {
+  // 🇻🇳 Tiếng Việt
+  'vi': {
+    searched: 'Vì bạn đã tìm kiếm "{keyword}"',
+    experienced: 'Vì bạn đã trải nghiệm "{lastItem}"',
+    default: 'Gợi ý dành riêng cho bạn'
+  },
+  // 🇺🇸 Tiếng Anh (Mặc định quốc tế)
+  'en': {
+    searched: 'Because you searched for "{keyword}"',
+    experienced: 'Because you experienced "{lastItem}"',
+    default: 'Recommendations just for you'
+  },
+  // 🇩🇪 Tiếng Đức (German)
+  'de': {
+    searched: 'Weil Sie nach "{keyword}" gesucht haben',
+    experienced: 'Weil Sie "{lastItem}" angesehen haben',
+    default: 'Empfehlungen speziell für Sie'
+  },
+  // 🇯🇵 Tiếng Nhật (Japan)
+  'ja': {
+    searched: '「{keyword}」を検索されたため',
+    experienced: '「{lastItem}」をご覧になったため',
+    default: 'あなただけのおすすめ'
+  },
+  // 🇷🇺 Tiếng Nga (Russia)
+  'ru': {
+    searched: 'Потому что вы искали "{keyword}"',
+    experienced: 'Потому что вы интересовались "{lastItem}"',
+    default: 'Рекомендации специально для вас'
+  },
+  // 🇫🇷 Tiếng Pháp (France)
+  'fr': {
+    searched: 'Parce que vous avez cherché "{keyword}"',
+    experienced: 'Parce que vous avez consulté "{lastItem}"',
+    default: 'Recommandations juste pour vous'
+  },
+  // 🇪🇸 Tiếng Tây Ban Nha (Spain)
+  'es': {
+    searched: 'Porque buscaste "{keyword}"',
+    experienced: 'Porque viste "{lastItem}"',
+    default: 'Recomendaciones solo para ti'
+  },
+  // 🇨🇳 Tiếng Trung (China - Simplified)
+  'zh': {
+    searched: '因为您搜索了“{keyword}”',
+    experienced: '因为您浏览了“{lastItem}”',
+    default: '为您量身定制的推荐'
+  },
+  // 🇰🇷 Tiếng Hàn (Korea)
+  'ko': {
+    searched: '"{keyword}" 검색 결과에 tàra',
+    experienced: '"{lastItem}" 관련 추천',
+    default: '회원님을 위한 맞춤 추천'
+  }
+};
+
 export class PopupDisplay {
   private config: PopupConfig;
   private recommendationGetter: (limit: number) => Promise<RecommendationResponse>;
@@ -19,6 +77,8 @@ export class PopupDisplay {
   private domainKey: string;
   private apiBaseUrl: string;
 
+  private currentLangCode: string = 'vi'; // Biến lưu ngôn ngữ hiện tại
+
   constructor(
     _domainKey: string,
     _slotName: string,
@@ -33,8 +93,9 @@ export class PopupDisplay {
     this.config = {
       delay: config.delay ?? this.DEFAULT_DELAY,
       autoCloseDelay: config.autoCloseDelay,
-      ...config 
+      ...config
     };
+    this.detectLanguage();
   }
 
   start(): void {
@@ -44,27 +105,58 @@ export class PopupDisplay {
   stop(): void {
     this.clearTimeouts();
     if (this.spaCheckInterval) {
-        clearInterval(this.spaCheckInterval);
-        this.spaCheckInterval = null;
+      clearInterval(this.spaCheckInterval);
+      this.spaCheckInterval = null;
     }
     this.removePopup();
   }
 
+  private detectLanguage(): void {
+    let langCode = (this.config as any).language;
+
+    if (!langCode && document.documentElement.lang) {
+      langCode = document.documentElement.lang;
+    }
+
+    if (!langCode && navigator.language) {
+      langCode = navigator.language;
+    }
+
+    const shortCode = langCode ? langCode.substring(0, 2).toLowerCase() : 'vi';
+
+    if (translations[shortCode]) {
+      this.currentLangCode = shortCode;
+    } else {
+      this.currentLangCode = 'en';
+    }
+  }
+
+  private t(key: string, variables?: Record<string, string>): string {
+    let text = translations[this.currentLangCode]?.[key] || translations['vi'][key] || key;
+
+    if (variables) {
+      for (const [varName, varValue] of Object.entries(variables)) {
+        text = text.replace(new RegExp(`{${varName}}`, 'g'), varValue);
+      }
+    }
+    return text;
+  }
+
   private generateTitle(search: string, lastItem: string): string {
-    const context = this.config.triggerConfig?.targetValue; 
-    
-    const title = "Vì bạn đã trải nghiệm";
-    const searchTitle = "Vì bạn đã tìm kiếm";
+    const context = this.config.triggerConfig?.targetValue;
 
+    // Trường hợp 1: Có keyword tìm kiếm
     if (context?.includes('search') || context?.includes('query')) {
-      return `${searchTitle} "${search}"`;
-    }
-    
-    if (lastItem && lastItem.trim() !== "") {
-      return `${title} "${lastItem}"`;
+      return this.t('searched', { keyword: search });
     }
 
-    return "Gợi ý dành riêng cho bạn";
+    // Trường hợp 2: Có item xem gần nhất
+    if (lastItem && lastItem.trim() !== "") {
+      return this.t('experienced', { lastItem: lastItem });
+    }
+
+    // Trường hợp 3: Mặc định
+    return this.t('default');
   }
 
   public updateContent(response: RecommendationResponse): void {
@@ -73,7 +165,7 @@ export class PopupDisplay {
     // const { item, keyword, lastItem } = response;
     const { keyword, lastItem } = response;
     const titleElement = this.shadowHost.shadowRoot.querySelector('.recsys-header-title');
-      if (titleElement) {
+    if (titleElement) {
       titleElement.textContent = this.generateTitle(keyword as any, lastItem);
       const layout = (this.config.layoutJson as any) || {};
       if (layout.contentMode === 'carousel') {
@@ -123,7 +215,7 @@ export class PopupDisplay {
             // KHÔNG reset isPendingShow về false nếu showPopup không tạo ra shadowHost
             // Điều này ngăn việc chu kỳ Watcher sau lại nhảy vào đây khi items rỗng
             if (this.shadowHost) {
-              this.isPendingShow = false; 
+              this.isPendingShow = false;
             }
           }
         }, delay);
@@ -150,30 +242,30 @@ export class PopupDisplay {
       // Chỉ hiện nếu chưa hiện (double check)
       if (items && items.length > 0 && !this.shadowHost) {
         this.renderPopup(items, response.keyword as any, response.lastItem);
-        
+
         // Logic autoClose (tự đóng sau X giây)
         if (this.config.autoCloseDelay && this.config.autoCloseDelay > 0) {
           this.autoCloseTimeout = setTimeout(() => {
             this.removePopup();
             // Sau khi đóng, Watcher vẫn chạy nên nếu URL vẫn đúng thì nó sẽ lại đếm ngược để hiện lại.
             // Nếu muốn hiện 1 lần duy nhất mỗi lần vào trang, cần thêm logic session storage.
-          }, this.config.autoCloseDelay * 1000); 
+          }, this.config.autoCloseDelay * 1000);
         }
       }
     } catch (error) {
-       this.isPendingShow = false;
+      this.isPendingShow = false;
     }
   }
 
   // --- LOGIC 1: TRIGGER CONFIG (URL CHECKING) ---
   private shouldShowPopup(): boolean {
     const trigger = this.config.triggerConfig;
-    
+
     // Nếu không có trigger config, mặc định cho hiện (hoặc check pages cũ nếu cần)
     if (!trigger || !trigger.targetValue) return true;
 
     // Lấy URL hiện tại (pathname: /products/ao-thun)
-    const currentUrl = window.location.pathname; 
+    const currentUrl = window.location.pathname;
     const targetUrl = trigger.targetValue;
 
     if (targetUrl === '/' && currentUrl !== '/') return false;
@@ -187,9 +279,9 @@ export class PopupDisplay {
     // Check ngay lập tức trước khi hẹn giờ
     if (!this.shouldShowPopup()) {
       this.popupTimeout = setTimeout(() => {
-            this.scheduleNextPopup(); 
-        }, 1000);
-      return; 
+        this.scheduleNextPopup();
+      }, 1000);
+      return;
     }
 
     const delay = this.config.delay || 0;
@@ -200,7 +292,7 @@ export class PopupDisplay {
         this.showPopup();
       } else {
         // Nếu chuyển sang trang không khớp, thử lại sau (hoặc dừng hẳn tùy logic)
-        this.scheduleNextPopup(); 
+        this.scheduleNextPopup();
       }
     }, delay);
   }
@@ -213,13 +305,13 @@ export class PopupDisplay {
       //console.log('[PopupDisplay] recommendationGetter result:', result);
       // recommendationGetter now returns full RecommendationResponse
       if (result && result.item && Array.isArray(result.item)) {
-        return result; 
+        return result;
       }
       //console.log('[PopupDisplay] Invalid result, returning empty');
       return { item: [], keyword: '', lastItem: '' };
-    } catch (e) { 
+    } catch (e) {
       //console.error('[PopupDisplay] fetchRecommendations error:', e);
-      return { item: [], keyword: '', lastItem: '' }; 
+      return { item: [], keyword: '', lastItem: '' };
     }
   }
 
@@ -229,29 +321,29 @@ export class PopupDisplay {
   private getDynamicStyles(): string {
     const style = this.config.styleJson || {} as StyleJson;
     const layout = this.config.layoutJson || {} as LayoutJson;
-    
+
     // 1. Unpack Configs
     const tokens = style.tokens || {} as any;
     const components = style.components || {} as any;
     const size = style.size || 'md';
-    const density = tokens.densityBySize?.[size] || {}; 
-    
+    const density = tokens.densityBySize?.[size] || {};
+
     // --- Helper Getters ---
     const getColor = (tokenName: string) => (tokens.colors as any)?.[tokenName] || tokenName || 'transparent';
     const getRadius = (tokenName: string) => {
-        const r = (tokens.radius as any)?.[tokenName];
-        return r !== undefined ? `${r}px` : '4px';
+      const r = (tokens.radius as any)?.[tokenName];
+      return r !== undefined ? `${r}px` : '4px';
     };
     const getShadow = (tokenName: string) => (tokens.shadow as any)?.[tokenName] || 'none';
 
     // 2. Setup Dimensions
-    const contentMode = layout.contentMode || 'grid'; 
+    const contentMode = layout.contentMode || 'grid';
     const modeConfig = layout.modes?.[contentMode as keyof typeof layout.modes] || {} as any;
-    
+
     // Image Size logic
     // const imgLayout = layout.card?.image?.sizeByMode?.[contentMode as 'grid' | 'list' | 'carousel'] || {};
     // const imgHeightRaw = imgLayout.height || density.imageHeight || 140; 
-    
+
     // [FIX] Carousel ưu tiên width từ config (96px) thay vì 100% để giống preview
     // let imgWidthRaw = '100%';
     // if (contentMode === 'list') imgWidthRaw = (imgLayout as any).width || 96;
@@ -264,30 +356,30 @@ export class PopupDisplay {
     const popupWrapper = layout.wrapper?.popup || {} as any;
     const popupWidth = popupWrapper.width ? `${popupWrapper.width}px` : '340px';
     // const popupWidth = '340px';
-    
+
     // Xử lý Height từ Config (Nếu JSON có height thì dùng, ko thì max-height)
-    const popupHeightCSS = popupWrapper.height 
-        ? `height: ${popupWrapper.height}px;` 
-        : `height: auto; max-height: 50vh;`;
+    const popupHeightCSS = popupWrapper.height
+      ? `height: ${popupWrapper.height}px;`
+      : `height: auto; max-height: 50vh;`;
 
     let posCSS = 'bottom: 20px; right: 20px;';
     switch (popupWrapper.position) {
-        case 'bottom-left': posCSS = 'bottom: 20px; left: 20px;'; break;
-        case 'top-center': posCSS = 'top: 20px; left: 50%; transform: translateX(-50%);'; break;
-        case 'center': posCSS = 'top: 50%; left: 50%; transform: translate(-50%, -50%);'; break;
+      case 'bottom-left': posCSS = 'bottom: 20px; left: 20px;'; break;
+      case 'top-center': posCSS = 'top: 20px; left: 50%; transform: translateX(-50%);'; break;
+      case 'center': posCSS = 'top: 50%; left: 50%; transform: translate(-50%, -50%);'; break;
     }
 
     // 3. Container Logic
     let containerCSS = '';
     let itemDir = 'column';
     let itemAlign = 'stretch';
-    let infoTextAlign = 'left';   
+    let infoTextAlign = 'left';
     let infoAlignItems = 'flex-start';
 
     if (contentMode === 'grid') {
-        const cols = modeConfig.columns || 2;
-        const gapPx = tokens.spacingScale?.[modeConfig.gap || 'md'] || 12;
-        containerCSS = `
+      const cols = modeConfig.columns || 2;
+      const gapPx = tokens.spacingScale?.[modeConfig.gap || 'md'] || 12;
+      containerCSS = `
         display: grid; 
         grid-template-columns: repeat(${cols}, 1fr); 
         // gap: ${gapPx}px; 
@@ -295,23 +387,23 @@ export class PopupDisplay {
         padding: ${density.cardPadding || 16}px;
         `;
     } else if (contentMode === 'list') {
-        itemDir = 'row';
-        itemAlign = 'flex-start';
-        const gapPx = tokens.spacingScale?.[modeConfig.rowGap || 'md'] || 12;
-        containerCSS = `
+      itemDir = 'row';
+      itemAlign = 'flex-start';
+      const gapPx = tokens.spacingScale?.[modeConfig.rowGap || 'md'] || 12;
+      containerCSS = `
         display: flex; 
         flex-direction: column;
         // gap: ${gapPx}px; 
         gap: 16px;
         padding: ${density.cardPadding || 16}px;
         `;
-        containerCSS = 'padding: 0;'; 
+      containerCSS = 'padding: 0;';
     }
 
     // 4. Styles Mapping
     const cardComp = components.card || {};
     const modeOverride = style.modeOverrides?.[contentMode as keyof typeof style.modeOverrides] || {};
-    
+
     // Colors
     const colorTitle = getColor('textPrimary');
     const colorBody = getColor('textSecondary');
@@ -322,10 +414,10 @@ export class PopupDisplay {
     const cardBorder = cardComp.border ? `1px solid ${getColor(cardComp.borderColorToken)}` : 'none';
     const cardRadius = getRadius(cardComp.radiusToken || 'card');
     const cardShadow = getShadow(cardComp.shadowToken);
-    const cardPadding = modeOverride.card?.paddingFromDensity 
-        ? (density[modeOverride.card.paddingFromDensity as keyof typeof density] || 12) 
-        : (density.cardPadding || 12);
-    
+    const cardPadding = modeOverride.card?.paddingFromDensity
+      ? (density[modeOverride.card.paddingFromDensity as keyof typeof density] || 12)
+      : (density.cardPadding || 12);
+
     const btnBg = getColor('surface');
 
     return `
@@ -473,8 +565,8 @@ export class PopupDisplay {
   // --- LOGIC 3: DYNAMIC HTML RENDERER (UPDATED) ---
   private renderItemContent(item: RecommendationItem): string {
     const customizingFields = this.config.customizingFields?.fields || [];
-    const activeFields = customizingFields.filter(f => f.isEnabled).sort((a,b) => a.position - b.position);
-    
+    const activeFields = customizingFields.filter(f => f.isEnabled).sort((a, b) => a.position - b.position);
+
     // 1. Lấy Config Style & Colors
     const styleJson = this.config.styleJson || {} as any;
     const fieldOverrides = styleJson.components?.fieldRow?.overrides || {};
@@ -482,74 +574,74 @@ export class PopupDisplay {
 
     // Helper: Lấy giá trị item (Giữ nguyên)
     const getValue = (obj: any, configKey: string) => {
-        if (!obj) return '';
-        if (obj[configKey] !== undefined) return obj[configKey];
-        const pascalKey = configKey.replace(/(_\w)/g, m => m[1].toUpperCase()).replace(/^\w/, c => c.toUpperCase());
-        if (obj[pascalKey] !== undefined) return obj[pascalKey];
-        const camelKey = configKey.replace(/(_\w)/g, m => m[1].toUpperCase());
-        if (obj[camelKey] !== undefined) return obj[camelKey];
-        if (obj[configKey.toUpperCase()] !== undefined) return obj[configKey.toUpperCase()];
-        const lowerKey = configKey.toLowerCase();
-        if (['title', 'name', 'product_name', 'item_name'].includes(lowerKey)) 
-            return obj['Title'] || obj['title'] || obj['Name'] || obj['name'];
-        if (['image', 'img', 'image_url', 'avatar'].includes(lowerKey)) 
-            return obj['ImageUrl'] || obj['imageUrl'] || obj['Img'] || obj['img'] || obj['Image'] || obj['image'];
-        return '';
+      if (!obj) return '';
+      if (obj[configKey] !== undefined) return obj[configKey];
+      const pascalKey = configKey.replace(/(_\w)/g, m => m[1].toUpperCase()).replace(/^\w/, c => c.toUpperCase());
+      if (obj[pascalKey] !== undefined) return obj[pascalKey];
+      const camelKey = configKey.replace(/(_\w)/g, m => m[1].toUpperCase());
+      if (obj[camelKey] !== undefined) return obj[camelKey];
+      if (obj[configKey.toUpperCase()] !== undefined) return obj[configKey.toUpperCase()];
+      const lowerKey = configKey.toLowerCase();
+      if (['title', 'name', 'product_name', 'item_name'].includes(lowerKey))
+        return obj['Title'] || obj['title'] || obj['Name'] || obj['name'];
+      if (['image', 'img', 'image_url', 'avatar'].includes(lowerKey))
+        return obj['ImageUrl'] || obj['imageUrl'] || obj['Img'] || obj['img'] || obj['Image'] || obj['image'];
+      return '';
     };
 
     // Helper mới: Tính toán Style cuối cùng (Kết hợp Default Theme + Manual Override)
     const getFinalStyle = (fieldKey: string) => {
-        const key = fieldKey.toLowerCase();
-        const override = (fieldOverrides as Record<string, any>)[fieldKey] || {};
-        
-        // A. XÁC ĐỊNH MÀU MẶC ĐỊNH DỰA THEO LOẠI FIELD (Mapping logic)
-        let defaultColor = colors.textSecondary; // Mặc định là màu phụ
-        let defaultWeight = '400';
-        let defaultSize = 12;
+      const key = fieldKey.toLowerCase();
+      const override = (fieldOverrides as Record<string, any>)[fieldKey] || {};
 
-        if (['title', 'name', 'product_name', 'item_name'].includes(key)) {
-            defaultColor = colors.textPrimary;
-            defaultWeight = '600';
-            defaultSize = 14;
-        } else if (key.includes('price')) {
-            defaultColor = colors.primary; // Hoặc colors.warning tùy theme
-            defaultWeight = '700';
-            defaultSize = 14;
-        } else if (key.includes('rating')) {
-            defaultColor = colors.warning;
-        } else if (key.includes('category') || key.includes('categories')) {
-            defaultColor = colors.primary;
-            defaultSize = 11;
-        }
+      // A. XÁC ĐỊNH MÀU MẶC ĐỊNH DỰA THEO LOẠI FIELD (Mapping logic)
+      let defaultColor = colors.textSecondary; // Mặc định là màu phụ
+      let defaultWeight = '400';
+      let defaultSize = 12;
 
-        // B. LẤY GIÁ TRỊ CUỐI CÙNG (Ưu tiên Override nếu có)
-        const finalColor = override.color || defaultColor;
-        const finalSize = override.fontSize || defaultSize;
-        const finalWeight = override.fontWeight || defaultWeight;
+      if (['title', 'name', 'product_name', 'item_name'].includes(key)) {
+        defaultColor = colors.textPrimary;
+        defaultWeight = '600';
+        defaultSize = 14;
+      } else if (key.includes('price')) {
+        defaultColor = colors.primary; // Hoặc colors.warning tùy theme
+        defaultWeight = '700';
+        defaultSize = 14;
+      } else if (key.includes('rating')) {
+        defaultColor = colors.warning;
+      } else if (key.includes('category') || key.includes('categories')) {
+        defaultColor = colors.primary;
+        defaultSize = 11;
+      }
 
-        // C. TẠO CHUỖI CSS
-        let style = '';
-        if (finalColor) style += `color: ${finalColor} !important; `;
-        if (finalSize) style += `font-size: ${finalSize}px !important; `;
-        if (finalWeight) style += `font-weight: ${finalWeight} !important; `;
+      // B. LẤY GIÁ TRỊ CUỐI CÙNG (Ưu tiên Override nếu có)
+      const finalColor = override.color || defaultColor;
+      const finalSize = override.fontSize || defaultSize;
+      const finalWeight = override.fontWeight || defaultWeight;
 
-        // if (['artist', 'singer', 'performer', 'artist_name', 'description'].includes(key)) {
-        //   style += `
-        //     white-space: nowrap; 
-        //     overflow: hidden; 
-        //     text-overflow: ellipsis; 
-        //     display: block; 
-        //     max-width: 100%;
-        //   `;
-        // }
-        
-        return style;
+      // C. TẠO CHUỖI CSS
+      let style = '';
+      if (finalColor) style += `color: ${finalColor} !important; `;
+      if (finalSize) style += `font-size: ${finalSize}px !important; `;
+      if (finalWeight) style += `font-weight: ${finalWeight} !important; `;
+
+      // if (['artist', 'singer', 'performer', 'artist_name', 'description'].includes(key)) {
+      //   style += `
+      //     white-space: nowrap; 
+      //     overflow: hidden; 
+      //     text-overflow: ellipsis; 
+      //     display: block; 
+      //     max-width: 100%;
+      //   `;
+      // }
+
+      return style;
     };
 
     // 2. Render Title & Image
     const titleFieldConfig = activeFields.find(f => ['title', 'name', 'product_name', 'item_name'].includes(f.key.toLowerCase()));
     const titleValue = titleFieldConfig ? getValue(item, titleFieldConfig.key) : getValue(item, 'title');
-    
+
     // Áp dụng style cho Title
     const titleStyle = titleFieldConfig ? getFinalStyle(titleFieldConfig.key) : `color: ${colors.textPrimary}; font-weight: 600;`;
 
@@ -572,31 +664,31 @@ export class PopupDisplay {
 
     // 4. Render các field còn lại
     activeFields.forEach(field => {
-        const key = field.key.toLowerCase();
-        let rawValue = getValue(item, field.key);
+      const key = field.key.toLowerCase();
+      let rawValue = getValue(item, field.key);
 
-        if (!rawValue) {
-          return; 
-        }
+      if (!rawValue) {
+        return;
+      }
 
-        if (['image', 'img', 'image_url', 'title', 'name', 'product_name', 'item_name'].includes(key)) return;
-        if (rawValue === undefined || rawValue === null || rawValue === '') return;
+      if (['image', 'img', 'image_url', 'title', 'name', 'product_name', 'item_name'].includes(key)) return;
+      if (rawValue === undefined || rawValue === null || rawValue === '') return;
 
-        // [SỬA ĐỔI] Xử lý mảng: Nối thành chuỗi (Pop, Ballad) thay vì render Badge
-        let displayValue = rawValue;
-        if (Array.isArray(rawValue)) {
-            displayValue = rawValue.join(', ');
-        }
+      // [SỬA ĐỔI] Xử lý mảng: Nối thành chuỗi (Pop, Ballad) thay vì render Badge
+      let displayValue = rawValue;
+      if (Array.isArray(rawValue)) {
+        displayValue = rawValue.join(', ');
+      }
 
-        // Lấy style (Category sẽ tự lấy màu Primary từ hàm getFinalStyle)
-        const valueStyle = getFinalStyle(field.key);
+      // Lấy style (Category sẽ tự lấy màu Primary từ hàm getFinalStyle)
+      const valueStyle = getFinalStyle(field.key);
 
-        html += `<div class="recsys-field-row">
+      html += `<div class="recsys-field-row">
             <span class="recsys-value" style="${valueStyle}">${displayValue}</span>
         </div>`;
     });
 
-    html += `</div></div>`; 
+    html += `</div></div>`;
     return html;
   }
 
@@ -634,10 +726,10 @@ export class PopupDisplay {
 
     this.shadowHost = host;
     if (contentMode === 'carousel') {
-        this.setupCarousel(shadow, items);
+      this.setupCarousel(shadow, items);
     } else {
-        // Nếu là Grid hoặc List -> Render tất cả items ra luôn
-        this.renderStaticItems(shadow, items);
+      // Nếu là Grid hoặc List -> Render tất cả items ra luôn
+      this.renderStaticItems(shadow, items);
     }
 
     shadow.querySelector('.recsys-close')?.addEventListener('click', () => {
@@ -669,11 +761,11 @@ export class PopupDisplay {
   private setupCarousel(shadow: ShadowRoot, items: RecommendationItem[]): void {
     let currentIndex = 0;
     const slideContainer = shadow.querySelector('.recsys-slide') as HTMLElement;
-    
+
     const renderSlide = () => {
       const item = items[currentIndex];
       slideContainer.innerHTML = '';
-      
+
       const tempDiv = document.createElement('div');
       tempDiv.innerHTML = this.renderItemContent(item);
       const slideElement = tempDiv.firstElementChild as HTMLElement;
@@ -731,71 +823,71 @@ export class PopupDisplay {
   }
 
   private async handleItemClick(id: string | number, rank: number): Promise<void> {
-      if (!id) return;
-      
-      // Send evaluation request
-      try {
-        const evaluationUrl = `${this.apiBaseUrl}/evaluation`;
-        await fetch(evaluationUrl, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({
-            DomainKey: this.domainKey,
-            Rank: rank
-          })
-        });
-      } catch (error) {
-        // console.error('[PopupDisplay] Failed to send evaluation:', error);
-      }
-      
-      // const targetUrl = `/song/${id}`;
-      let urlPattern = this.config.layoutJson.itemUrlPattern || '/song/{:id}';
-      const targetUrl = urlPattern.replace('{:id}', id.toString());
-      
-      // Try SPA-style navigation first
-      try {
-        // 1. Update URL without reload
-        window.history.pushState({}, '', targetUrl);
-        
-        // 2. Dispatch events to notify SPA frameworks
-        window.dispatchEvent(new PopStateEvent('popstate', { state: {} }));
-        
-        // 3. Custom event for frameworks that listen to custom routing events
-        window.dispatchEvent(new CustomEvent('navigate', { 
-          detail: { path: targetUrl, from: 'recsys-tracker' }
-        }));
-        
-        // 4. Trigger link click event (some frameworks listen to this)
-        // const clickEvent = new MouseEvent('click', {
-        //   bubbles: true,
-        //   cancelable: true,
-        //   view: window
-        // });
-        
-        // If navigation didn't work (URL changed but page didn't update), fallback
-        // Check after a short delay if the page updated
-        setTimeout(() => {
-          // If window.location.pathname is different from targetUrl, means framework didn't handle it
-          // So we need to force reload
-          if (window.location.pathname !== targetUrl) {
-            window.location.href = targetUrl;
-          }
-        }, 100);
-        
-      } catch (error) {
-        // Fallback to traditional navigation if History API fails
-        window.location.href = targetUrl; 
-      }
+    if (!id) return;
+
+    // Send evaluation request
+    try {
+      const evaluationUrl = `${this.apiBaseUrl}/evaluation`;
+      await fetch(evaluationUrl, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          DomainKey: this.domainKey,
+          Rank: rank
+        })
+      });
+    } catch (error) {
+      // console.error('[PopupDisplay] Failed to send evaluation:', error);
+    }
+
+    // const targetUrl = `/song/${id}`;
+    let urlPattern = this.config.layoutJson.itemUrlPattern || '/song/{:id}';
+    const targetUrl = urlPattern.replace('{:id}', id.toString());
+
+    // Try SPA-style navigation first
+    try {
+      // 1. Update URL without reload
+      window.history.pushState({}, '', targetUrl);
+
+      // 2. Dispatch events to notify SPA frameworks
+      window.dispatchEvent(new PopStateEvent('popstate', { state: {} }));
+
+      // 3. Custom event for frameworks that listen to custom routing events
+      window.dispatchEvent(new CustomEvent('navigate', {
+        detail: { path: targetUrl, from: 'recsys-tracker' }
+      }));
+
+      // 4. Trigger link click event (some frameworks listen to this)
+      // const clickEvent = new MouseEvent('click', {
+      //   bubbles: true,
+      //   cancelable: true,
+      //   view: window
+      // });
+
+      // If navigation didn't work (URL changed but page didn't update), fallback
+      // Check after a short delay if the page updated
+      setTimeout(() => {
+        // If window.location.pathname is different from targetUrl, means framework didn't handle it
+        // So we need to force reload
+        if (window.location.pathname !== targetUrl) {
+          window.location.href = targetUrl;
+        }
+      }, 100);
+
+    } catch (error) {
+      // Fallback to traditional navigation if History API fails
+      window.location.href = targetUrl;
+    }
   }
 
   public forceShow(): void {
-    this.isManuallyClosed = false; 
+    this.isManuallyClosed = false;
     this.isPendingShow = false;
     this.removePopup();
     if (this.shouldShowPopup()) {
-      this.showPopup(); 
+      this.showPopup();
     }
   }
 }
