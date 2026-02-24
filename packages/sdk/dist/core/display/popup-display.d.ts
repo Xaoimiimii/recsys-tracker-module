@@ -19,7 +19,7 @@ export declare class PopupDisplay {
     start(): void;
     stop(): void;
     private generateTitle;
-    updateContent(response: RecommendationResponse): void;
+    updateContent(response: RecommendationResponse, isUserAction: boolean | undefined, actionType: string | null): void;
     private startWatcher;
     private showPopup;
     private shouldShowPopup;
@@ -33,6 +33,6 @@ export declare class PopupDisplay {
     private removePopup;
     private clearTimeouts;
     private handleItemClick;
-    forceShow(): void;
+    forceShow(isUserAction?: boolean, actionType?: string | null): void;
 }
 //# sourceMappingURL=popup-display.d.ts.map

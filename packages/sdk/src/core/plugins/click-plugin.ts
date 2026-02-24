@@ -228,7 +228,8 @@ export class ClickPlugin extends BasePlugin {
   private dispatchEvent(payload: Record<string, any>, rule: TrackingRule, eventId: number): void {
     if (!this.tracker) return;
 
-    //console.log('[ClickPlugin] Dispatching event with payload:', payload);
+    console.log('[ClickPlugin] Dispatching event with payload:', payload);
+    console.log('[ClickPlugin] Action type:', rule.actionType);
 
     this.tracker.track({
       eventType: eventId,

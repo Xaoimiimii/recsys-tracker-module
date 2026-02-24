@@ -33,27 +33,36 @@ export class PopupDisplay {
         }
         this.removePopup();
     }
-    generateTitle(search, lastItem) {
+    generateTitle(search, lastItem, isUserAction, actionType) {
         var _a;
         const context = (_a = this.config.triggerConfig) === null || _a === void 0 ? void 0 : _a.targetValue;
-        const title = "Vì bạn đã trải nghiệm";
-        const searchTitle = "Vì bạn đã tìm kiếm";
-        if ((context === null || context === void 0 ? void 0 : context.includes('search')) || (context === null || context === void 0 ? void 0 : context.includes('query'))) {
-            return `${searchTitle} "${search}"`;
+        const title = "More like";
+        const searchTitle = "Top picks for";
+        console.log("Action type:", actionType);
+        if (actionType === 'search') {
+            if (search && search.trim() !== "") {
+                return `${searchTitle} "${search}"`;
+            }
         }
-        if (lastItem && lastItem.trim() !== "") {
+        if (isUserAction && lastItem && lastItem.trim() !== "") {
             return `${title} "${lastItem}"`;
         }
-        return "Gợi ý dành riêng cho bạn";
+        if (((context === null || context === void 0 ? void 0 : context.includes('search')) || (context === null || context === void 0 ? void 0 : context.includes('query'))) && search && search.trim() !== "") {
+            return `${searchTitle} "${search}"`;
+        }
+        if (lastItem && lastItem.trim() !== "")
+            return `${title} "${lastItem}"`;
+        return "Recommended only for you";
     }
-    updateContent(response) {
+    updateContent(response, isUserAction = false, actionType) {
         if (!this.shadowHost || !this.shadowHost.shadowRoot)
             return;
         // const { item, keyword, lastItem } = response;
+        console.log('[Popup] Action type: ', actionType);
         const { keyword, lastItem } = response;
         const titleElement = this.shadowHost.shadowRoot.querySelector('.recsys-header-title');
         if (titleElement) {
-            titleElement.textContent = this.generateTitle(keyword, lastItem);
+            titleElement.textContent = this.generateTitle(keyword, lastItem, isUserAction, actionType);
             const layout = this.config.layoutJson || {};
             if (layout.contentMode === 'carousel') {
                 this.setupCarousel(this.shadowHost.shadowRoot, normalizeItems(response));
@@ -67,9 +76,14 @@ export class PopupDisplay {
         if (this.spaCheckInterval)
             clearInterval(this.spaCheckInterval);
         this.spaCheckInterval = setInterval(async () => {
+            var _a, _b, _c, _d;
             const shouldShow = this.shouldShowPopup();
             const isVisible = this.shadowHost !== null;
             const currentUrl = window.location.pathname;
+            const isSearchPage = ((_b = (_a = this.config.triggerConfig) === null || _a === void 0 ? void 0 : _a.targetValue) === null || _b === void 0 ? void 0 : _b.includes('search')) || ((_d = (_c = this.config.triggerConfig) === null || _c === void 0 ? void 0 : _c.targetValue) === null || _d === void 0 ? void 0 : _d.includes('query'));
+            if (isSearchPage && !this.shadowHost && !this.isManuallyClosed) {
+                return;
+            }
             // Nếu URL thay đổi, reset lại trạng thái để cho phép hiện ở trang mới
             if (currentUrl !== this.lastCheckedUrl) {
                 this.isManuallyClosed = false;
@@ -117,13 +131,13 @@ export class PopupDisplay {
     //         this.isPendingShow = false;
     //     }, delay);
     // }
-    async showPopup() {
+    async showPopup(isUserAction = false, actionType = null) {
         try {
             const response = await this.fetchRecommendations();
             const items = normalizeItems(response);
             // Chỉ hiện nếu chưa hiện (double check)
             if (items && items.length > 0 && !this.shadowHost) {
-                this.renderPopup(items, response.keyword, response.lastItem);
+                this.renderPopup(items, response.keyword, response.lastItem, isUserAction, actionType);
                 // Logic autoClose (tự đóng sau X giây)
                 if (this.config.autoCloseDelay && this.config.autoCloseDelay > 0) {
                     this.autoCloseTimeout = setTimeout(() => {
@@ -552,11 +566,11 @@ export class PopupDisplay {
         html += `</div></div>`;
         return html;
     }
-    renderPopup(items, search, lastItem) {
+    renderPopup(items, search, lastItem, isUserAction = false, actionType) {
         var _a;
         this.removePopup();
         //const returnMethodValue = (this.config as any).value || "";
-        const dynamicTitle = this.generateTitle(search, lastItem);
+        const dynamicTitle = this.generateTitle(search, lastItem, isUserAction, actionType);
         const host = document.createElement('div');
         host.id = this.hostId;
         document.body.appendChild(host);
@@ -726,12 +740,13 @@ export class PopupDisplay {
             window.location.href = targetUrl;
         }
     }
-    forceShow() {
+    forceShow(isUserAction = false, actionType = null) {
+        console.log('[Popup] Forced show: ', actionType);
         this.isManuallyClosed = false;
         this.isPendingShow = false;
         this.removePopup();
         if (this.shouldShowPopup()) {
-            this.showPopup();
+            this.showPopup(isUserAction, actionType);
         }
     }
 }

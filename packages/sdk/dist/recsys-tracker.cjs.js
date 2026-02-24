@@ -621,7 +621,8 @@ class EventDispatcher {
                     //console.log('[EventDispatcher] Strategy', strategy, 'result:', success);
                     if (success) {
                         if (this.displayManager && typeof this.displayManager.notifyActionTriggered === 'function') {
-                            this.displayManager.notifyActionTriggered();
+                            this.displayManager.notifyActionTriggered(event.actionType);
+                            console.log('[EventDispatcher] Action type:', event.actionType);
                         }
                         return true;
                     }
@@ -1277,27 +1278,36 @@ class PopupDisplay {
         }
         this.removePopup();
     }
-    generateTitle(search, lastItem) {
+    generateTitle(search, lastItem, isUserAction, actionType) {
         var _a;
         const context = (_a = this.config.triggerConfig) === null || _a === void 0 ? void 0 : _a.targetValue;
-        const title = "Vì bạn đã trải nghiệm";
-        const searchTitle = "Vì bạn đã tìm kiếm";
-        if ((context === null || context === void 0 ? void 0 : context.includes('search')) || (context === null || context === void 0 ? void 0 : context.includes('query'))) {
-            return `${searchTitle} "${search}"`;
+        const title = "More like";
+        const searchTitle = "Top picks for";
+        console.log("Action type:", actionType);
+        if (actionType === 'search') {
+            if (search && search.trim() !== "") {
+                return `${searchTitle} "${search}"`;
+            }
         }
-        if (lastItem && lastItem.trim() !== "") {
+        if (isUserAction && lastItem && lastItem.trim() !== "") {
             return `${title} "${lastItem}"`;
         }
-        return "Gợi ý dành riêng cho bạn";
+        if (((context === null || context === void 0 ? void 0 : context.includes('search')) || (context === null || context === void 0 ? void 0 : context.includes('query'))) && search && search.trim() !== "") {
+            return `${searchTitle} "${search}"`;
+        }
+        if (lastItem && lastItem.trim() !== "")
+            return `${title} "${lastItem}"`;
+        return "Recommended only for you";
     }
-    updateContent(response) {
+    updateContent(response, isUserAction = false, actionType) {
         if (!this.shadowHost || !this.shadowHost.shadowRoot)
             return;
         // const { item, keyword, lastItem } = response;
+        console.log('[Popup] Action type: ', actionType);
         const { keyword, lastItem } = response;
         const titleElement = this.shadowHost.shadowRoot.querySelector('.recsys-header-title');
         if (titleElement) {
-            titleElement.textContent = this.generateTitle(keyword, lastItem);
+            titleElement.textContent = this.generateTitle(keyword, lastItem, isUserAction, actionType);
             const layout = this.config.layoutJson || {};
             if (layout.contentMode === 'carousel') {
                 this.setupCarousel(this.shadowHost.shadowRoot, normalizeItems(response));
@@ -1311,9 +1321,14 @@ class PopupDisplay {
         if (this.spaCheckInterval)
             clearInterval(this.spaCheckInterval);
         this.spaCheckInterval = setInterval(async () => {
+            var _a, _b, _c, _d;
             const shouldShow = this.shouldShowPopup();
             const isVisible = this.shadowHost !== null;
             const currentUrl = window.location.pathname;
+            const isSearchPage = ((_b = (_a = this.config.triggerConfig) === null || _a === void 0 ? void 0 : _a.targetValue) === null || _b === void 0 ? void 0 : _b.includes('search')) || ((_d = (_c = this.config.triggerConfig) === null || _c === void 0 ? void 0 : _c.targetValue) === null || _d === void 0 ? void 0 : _d.includes('query'));
+            if (isSearchPage && !this.shadowHost && !this.isManuallyClosed) {
+                return;
+            }
             // Nếu URL thay đổi, reset lại trạng thái để cho phép hiện ở trang mới
             if (currentUrl !== this.lastCheckedUrl) {
                 this.isManuallyClosed = false;
@@ -1361,13 +1376,13 @@ class PopupDisplay {
     //         this.isPendingShow = false;
     //     }, delay);
     // }
-    async showPopup() {
+    async showPopup(isUserAction = false, actionType = null) {
         try {
             const response = await this.fetchRecommendations();
             const items = normalizeItems(response);
             // Chỉ hiện nếu chưa hiện (double check)
             if (items && items.length > 0 && !this.shadowHost) {
-                this.renderPopup(items, response.keyword, response.lastItem);
+                this.renderPopup(items, response.keyword, response.lastItem, isUserAction, actionType);
                 // Logic autoClose (tự đóng sau X giây)
                 if (this.config.autoCloseDelay && this.config.autoCloseDelay > 0) {
                     this.autoCloseTimeout = setTimeout(() => {
@@ -1796,11 +1811,11 @@ class PopupDisplay {
         html += `</div></div>`;
         return html;
     }
-    renderPopup(items, search, lastItem) {
+    renderPopup(items, search, lastItem, isUserAction = false, actionType) {
         var _a;
         this.removePopup();
         //const returnMethodValue = (this.config as any).value || "";
-        const dynamicTitle = this.generateTitle(search, lastItem);
+        const dynamicTitle = this.generateTitle(search, lastItem, isUserAction, actionType);
         const host = document.createElement('div');
         host.id = this.hostId;
         document.body.appendChild(host);
@@ -1970,12 +1985,13 @@ class PopupDisplay {
             window.location.href = targetUrl;
         }
     }
-    forceShow() {
+    forceShow(isUserAction = false, actionType = null) {
+        console.log('[Popup] Forced show: ', actionType);
         this.isManuallyClosed = false;
         this.isPendingShow = false;
         this.removePopup();
         if (this.shouldShowPopup()) {
-            this.showPopup();
+            this.showPopup(isUserAction, actionType);
         }
     }
 }
@@ -2575,6 +2591,8 @@ class DisplayManager {
         this.cachedRecommendations = null;
         this.fetchPromise = null;
         this.refreshTimer = null;
+        this.isUserAction = false;
+        this.lastActionType = null;
         this.domainKey = domainKey;
         this.apiBaseUrl = apiBaseUrl;
         this.recommendationFetcher = new RecommendationFetcher(domainKey, apiBaseUrl);
@@ -2597,13 +2615,18 @@ class DisplayManager {
             this.activateDisplayMethod(method);
         }
     }
-    notifyActionTriggered() {
+    notifyActionTriggered(actionType) {
+        this.isUserAction = true;
+        this.lastActionType = actionType || null;
         if (this.refreshTimer)
             clearTimeout(this.refreshTimer);
+        console.log('[DisplayManager] Action type: ', actionType);
         // Chống spam API bằng Debounce (đợi 500ms sau hành động cuối cùng)
         this.refreshTimer = setTimeout(async () => {
             await this.refreshAllDisplays();
-        }, 500);
+            this.isUserAction = false;
+            this.lastActionType = null;
+        }, 1000);
     }
     async refreshAllDisplays() {
         this.recommendationFetcher.clearCache();
@@ -2618,8 +2641,8 @@ class DisplayManager {
         this.cachedRecommendations = newItems;
         this.popupDisplays.forEach(popup => {
             var _a, _b, _c, _d;
-            (_b = (_a = popup).updateContent) === null || _b === void 0 ? void 0 : _b.call(_a, newItems);
-            (_d = (_c = popup).forceShow) === null || _d === void 0 ? void 0 : _d.call(_c);
+            (_b = (_a = popup).updateContent) === null || _b === void 0 ? void 0 : _b.call(_a, newItems, this.isUserAction, this.lastActionType);
+            (_d = (_c = popup).forceShow) === null || _d === void 0 ? void 0 : _d.call(_c, this.isUserAction, this.lastActionType);
         });
         this.inlineDisplays.forEach(inline => { var _a, _b; return (_b = (_a = inline).updateContent) === null || _b === void 0 ? void 0 : _b.call(_a, newItems); });
     }
@@ -3181,7 +3204,8 @@ class ClickPlugin extends BasePlugin {
     dispatchEvent(payload, rule, eventId) {
         if (!this.tracker)
             return;
-        //console.log('[ClickPlugin] Dispatching event with payload:', payload);
+        console.log('[ClickPlugin] Dispatching event with payload:', payload);
+        console.log('[ClickPlugin] Action type:', rule.actionType);
         this.tracker.track({
             eventType: eventId,
             eventData: {
@@ -3761,7 +3785,7 @@ class SearchKeywordPlugin extends BasePlugin {
             if (response.ok) {
                 // console.log('[SearchKeywordPlugin] Keyword pushed successfully');
                 // Trigger recommendation refresh after successful keyword push
-                (_b = (_a = this.tracker) === null || _a === void 0 ? void 0 : _a.getDisplayManager()) === null || _b === void 0 ? void 0 : _b.notifyActionTriggered();
+                (_b = (_a = this.tracker) === null || _a === void 0 ? void 0 : _a.getDisplayManager()) === null || _b === void 0 ? void 0 : _b.notifyActionTriggered('search');
             }
             else {
                 // console.error('[SearchKeywordPlugin] Failed to push keyword:', response.statusText);

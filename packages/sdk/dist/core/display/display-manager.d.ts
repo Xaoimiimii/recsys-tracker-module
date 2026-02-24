@@ -9,9 +9,11 @@ export declare class DisplayManager {
     private cachedRecommendations;
     private fetchPromise;
     private refreshTimer;
+    private isUserAction;
+    private lastActionType;
     constructor(domainKey: string, apiBaseUrl: string);
     initialize(returnMethods: ReturnMethod[]): Promise<void>;
-    notifyActionTriggered(): void;
+    notifyActionTriggered(actionType?: string): void;
     private refreshAllDisplays;
     private activateDisplayMethod;
     private initializePopup;

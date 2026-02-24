@@ -196,7 +196,8 @@ export class ClickPlugin extends BasePlugin {
     dispatchEvent(payload, rule, eventId) {
         if (!this.tracker)
             return;
-        //console.log('[ClickPlugin] Dispatching event with payload:', payload);
+        console.log('[ClickPlugin] Dispatching event with payload:', payload);
+        console.log('[ClickPlugin] Action type:', rule.actionType);
         this.tracker.track({
             eventType: eventId,
             eventData: {

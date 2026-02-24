@@ -9,6 +9,8 @@ export class DisplayManager {
         this.cachedRecommendations = null;
         this.fetchPromise = null;
         this.refreshTimer = null;
+        this.isUserAction = false;
+        this.lastActionType = null;
         this.domainKey = domainKey;
         this.apiBaseUrl = apiBaseUrl;
         this.recommendationFetcher = new RecommendationFetcher(domainKey, apiBaseUrl);
@@ -31,13 +33,18 @@ export class DisplayManager {
             this.activateDisplayMethod(method);
         }
     }
-    notifyActionTriggered() {
+    notifyActionTriggered(actionType) {
+        this.isUserAction = true;
+        this.lastActionType = actionType || null;
         if (this.refreshTimer)
             clearTimeout(this.refreshTimer);
+        console.log('[DisplayManager] Action type: ', actionType);
         // Chống spam API bằng Debounce (đợi 500ms sau hành động cuối cùng)
         this.refreshTimer = setTimeout(async () => {
             await this.refreshAllDisplays();
-        }, 500);
+            this.isUserAction = false;
+            this.lastActionType = null;
+        }, 1000);
     }
     async refreshAllDisplays() {
         this.recommendationFetcher.clearCache();
@@ -52,8 +59,8 @@ export class DisplayManager {
         this.cachedRecommendations = newItems;
         this.popupDisplays.forEach(popup => {
             var _a, _b, _c, _d;
-            (_b = (_a = popup).updateContent) === null || _b === void 0 ? void 0 : _b.call(_a, newItems);
-            (_d = (_c = popup).forceShow) === null || _d === void 0 ? void 0 : _d.call(_c);
+            (_b = (_a = popup).updateContent) === null || _b === void 0 ? void 0 : _b.call(_a, newItems, this.isUserAction, this.lastActionType);
+            (_d = (_c = popup).forceShow) === null || _d === void 0 ? void 0 : _d.call(_c, this.isUserAction, this.lastActionType);
         });
         this.inlineDisplays.forEach(inline => { var _a, _b; return (_b = (_a = inline).updateContent) === null || _b === void 0 ? void 0 : _b.call(_a, newItems); });
     }

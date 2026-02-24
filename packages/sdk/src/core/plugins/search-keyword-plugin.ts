@@ -314,7 +314,7 @@ export class SearchKeywordPlugin extends BasePlugin {
       if (response.ok) {
         // console.log('[SearchKeywordPlugin] Keyword pushed successfully');
         // Trigger recommendation refresh after successful keyword push
-        this.tracker?.getDisplayManager()?.notifyActionTriggered();
+        this.tracker?.getDisplayManager()?.notifyActionTriggered('search');
       } else {
         // console.error('[SearchKeywordPlugin] Failed to push keyword:', response.statusText);
       }

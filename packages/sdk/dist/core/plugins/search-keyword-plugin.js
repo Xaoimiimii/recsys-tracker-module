@@ -259,7 +259,7 @@ export class SearchKeywordPlugin extends BasePlugin {
             if (response.ok) {
                 // console.log('[SearchKeywordPlugin] Keyword pushed successfully');
                 // Trigger recommendation refresh after successful keyword push
-                (_b = (_a = this.tracker) === null || _a === void 0 ? void 0 : _a.getDisplayManager()) === null || _b === void 0 ? void 0 : _b.notifyActionTriggered();
+                (_b = (_a = this.tracker) === null || _a === void 0 ? void 0 : _a.getDisplayManager()) === null || _b === void 0 ? void 0 : _b.notifyActionTriggered('search');
             }
             else {
                 // console.error('[SearchKeywordPlugin] Failed to push keyword:', response.statusText);
