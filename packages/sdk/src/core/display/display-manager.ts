@@ -35,7 +35,7 @@ export class DisplayManager {
     try {
       await this.fetchRecommendationsOnce();
     } catch (error) {
-      // //console.error('[DisplayManager] Failed to fetch recommendations.');
+      // ////console.error('[DisplayManager] Failed to fetch recommendations.');
     }
 
     // Process each return method
@@ -49,7 +49,7 @@ export class DisplayManager {
     this.lastActionType = actionType || null;
     if (this.refreshTimer) clearTimeout(this.refreshTimer);
 
-    console.log('[DisplayManager] Action type: ', actionType);
+    //console.log('[DisplayManager] Action type: ', actionType);
 
     // Chống spam API bằng Debounce (đợi 500ms sau hành động cuối cùng)
     this.refreshTimer = setTimeout(async () => {
@@ -68,7 +68,7 @@ export class DisplayManager {
     // const oldId = oldItems[0]?.id;
     // const newId = newItemsNormalized[0]?.id;
 
-    //console.log(newItems);
+    ////console.log(newItems);
     
     // const oldId = (this.cachedRecommendations as any)?.item?.[0]?.id;
     // const newId = (newItems as any)?.item?.[0]?.id;
@@ -129,7 +129,7 @@ export class DisplayManager {
         this.apiBaseUrl,
         config, 
         (limit: number) => {
-          //console.log('[DisplayManager] recommendationGetter called with limit:', limit);
+          ////console.log('[DisplayManager] recommendationGetter called with limit:', limit);
           // Fetch directly from recommendationFetcher instead of using cache
           return this.recommendationFetcher.fetchForAnonymousUser({ 
             numberItems: limit,
@@ -141,7 +141,7 @@ export class DisplayManager {
       this.popupDisplays.set(key, popupDisplay);
       popupDisplay.start();
     } catch (error) {
-      // //console.error('[DisplayManager] Error initializing popup:', error);
+      // ////console.error('[DisplayManager] Error initializing popup:', error);
     }
   }
 
@@ -170,7 +170,7 @@ export class DisplayManager {
       this.inlineDisplays.set(key, inlineDisplay);
       inlineDisplay.start();
     } catch (error) {
-      // //console.error('[DisplayManager] Error initializing inline:', error);
+      // ////console.error('[DisplayManager] Error initializing inline:', error);
     }
   }
 

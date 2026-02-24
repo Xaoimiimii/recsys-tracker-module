@@ -55,7 +55,7 @@ export class PopupDisplay {
     const title = "More like";
     const searchTitle = "Top picks for";
     
-    console.log("Action type:", actionType);
+    //console.log("Action type:", actionType);
 
     if (actionType === 'search') {
       if (search && search.trim() !== "") {
@@ -80,7 +80,7 @@ export class PopupDisplay {
     if (!this.shadowHost || !this.shadowHost.shadowRoot) return;
 
     // const { item, keyword, lastItem } = response;
-    console.log('[Popup] Action type: ', actionType);
+    //console.log('[Popup] Action type: ', actionType);
     const { keyword, lastItem } = response;
     const titleElement = this.shadowHost.shadowRoot.querySelector('.recsys-header-title');
       if (titleElement) {
@@ -222,17 +222,17 @@ export class PopupDisplay {
   private async fetchRecommendations(): Promise<RecommendationResponse> {
     try {
       const limit = (this.config.layoutJson as any)?.maxItems || 50;
-      //console.log('[PopupDisplay] Calling recommendationGetter with limit:', limit);
+      ////console.log('[PopupDisplay] Calling recommendationGetter with limit:', limit);
       const result = await this.recommendationGetter(limit);
-      //console.log('[PopupDisplay] recommendationGetter result:', result);
+      ////console.log('[PopupDisplay] recommendationGetter result:', result);
       // recommendationGetter now returns full RecommendationResponse
       if (result && result.item && Array.isArray(result.item)) {
         return result; 
       }
-      //console.log('[PopupDisplay] Invalid result, returning empty');
+      ////console.log('[PopupDisplay] Invalid result, returning empty');
       return { item: [], keyword: '', lastItem: '' };
     } catch (e) { 
-      //console.error('[PopupDisplay] fetchRecommendations error:', e);
+      ////console.error('[PopupDisplay] fetchRecommendations error:', e);
       return { item: [], keyword: '', lastItem: '' }; 
     }
   }
@@ -761,7 +761,7 @@ export class PopupDisplay {
           })
         });
       } catch (error) {
-        // console.error('[PopupDisplay] Failed to send evaluation:', error);
+        // //console.error('[PopupDisplay] Failed to send evaluation:', error);
       }
       
       // const targetUrl = `/song/${id}`;
@@ -805,7 +805,7 @@ export class PopupDisplay {
   }
 
   public forceShow(isUserAction: boolean = false, actionType: string | null = null): void {
-    console.log('[Popup] Forced show: ', actionType);
+    //console.log('[Popup] Forced show: ', actionType);
     this.isManuallyClosed = false; 
     this.isPendingShow = false;
     this.removePopup();
