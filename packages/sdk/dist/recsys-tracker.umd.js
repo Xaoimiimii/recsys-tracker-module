@@ -623,7 +623,8 @@
                         //console.log('[EventDispatcher] Strategy', strategy, 'result:', success);
                         if (success) {
                             if (this.displayManager && typeof this.displayManager.notifyActionTriggered === 'function') {
-                                this.displayManager.notifyActionTriggered();
+                                this.displayManager.notifyActionTriggered(event.actionType);
+                                console.log('[EventDispatcher] Action type:', event.actionType);
                             }
                             return true;
                         }
@@ -1245,6 +1246,63 @@
         return [];
     }
 
+    // --- BỘ TỪ ĐIỂN ĐA NGÔN NGỮ (MỞ RỘNG) ---
+    const translations = {
+        // 🇻🇳 Tiếng Việt
+        'vi': {
+            searched: 'Vì bạn đã tìm kiếm "{keyword}"',
+            experienced: 'Vì bạn đã trải nghiệm "{lastItem}"',
+            default: 'Gợi ý dành riêng cho bạn'
+        },
+        // 🇺🇸 Tiếng Anh (Mặc định quốc tế)
+        'en': {
+            searched: 'Because you searched for "{keyword}"',
+            experienced: 'Because you experienced "{lastItem}"',
+            default: 'Recommendations just for you'
+        },
+        // 🇩🇪 Tiếng Đức (German)
+        'de': {
+            searched: 'Weil Sie nach "{keyword}" gesucht haben',
+            experienced: 'Weil Sie "{lastItem}" angesehen haben',
+            default: 'Empfehlungen speziell für Sie'
+        },
+        // 🇯🇵 Tiếng Nhật (Japan)
+        'ja': {
+            searched: '「{keyword}」を検索されたため',
+            experienced: '「{lastItem}」をご覧になったため',
+            default: 'あなただけのおすすめ'
+        },
+        // 🇷🇺 Tiếng Nga (Russia)
+        'ru': {
+            searched: 'Потому что вы искали "{keyword}"',
+            experienced: 'Потому что вы интересовались "{lastItem}"',
+            default: 'Рекомендации специально для вас'
+        },
+        // 🇫🇷 Tiếng Pháp (France)
+        'fr': {
+            searched: 'Parce que vous avez cherché "{keyword}"',
+            experienced: 'Parce que vous avez consulté "{lastItem}"',
+            default: 'Recommandations juste pour vous'
+        },
+        // 🇪🇸 Tiếng Tây Ban Nha (Spain)
+        'es': {
+            searched: 'Porque buscaste "{keyword}"',
+            experienced: 'Porque viste "{lastItem}"',
+            default: 'Recomendaciones solo para ti'
+        },
+        // 🇨🇳 Tiếng Trung (China - Simplified)
+        'zh': {
+            searched: '因为您搜索了“{keyword}”',
+            experienced: '因为您浏览了“{lastItem}”',
+            default: '为您量身定制的推荐'
+        },
+        // 🇰🇷 Tiếng Hàn (Korea)
+        'ko': {
+            searched: '"{keyword}" 검색 결과에 tàra',
+            experienced: '"{lastItem}" 관련 추천',
+            default: '회원님을 위한 맞춤 추천'
+        }
+    };
     class PopupDisplay {
         constructor(_domainKey, _slotName, _apiBaseUrl, config = {}, recommendationGetter) {
             var _a;
@@ -1258,6 +1316,9 @@
             this.isManuallyClosed = false;
             this.lastCheckedUrl = '';
             this.DEFAULT_DELAY = 5000;
+            this.currentLangCode = 'en'; // Biến lưu ngôn ngữ hiện tại
+            this.currentSearchKeyword = '';
+            this.currentLastItem = '';
             this.recommendationGetter = recommendationGetter;
             this.domainKey = _domainKey;
             this.apiBaseUrl = _apiBaseUrl;
@@ -1267,6 +1328,8 @@
                 autoCloseDelay: config.autoCloseDelay,
                 ...config
             };
+            this.detectLanguage();
+            this.setupLanguageObserver();
         }
         start() {
             this.startWatcher();
@@ -1279,27 +1342,87 @@
             }
             this.removePopup();
         }
-        generateTitle(search, lastItem) {
+        detectLanguage() {
+            let langCode = this.config.language || document.documentElement.lang || navigator.language;
+            const shortCode = langCode ? langCode.substring(0, 2).toLowerCase() : 'vi';
+            const newLangCode = translations[shortCode] ? shortCode : 'en';
+            if (this.currentLangCode !== newLangCode) {
+                this.currentLangCode = newLangCode;
+                return true;
+            }
+            return false;
+        }
+        setupLanguageObserver() {
+            const htmlElement = document.documentElement;
+            const observer = new MutationObserver((mutations) => {
+                mutations.forEach((mutation) => {
+                    if (mutation.type === 'attributes' && mutation.attributeName === 'lang') {
+                        const hasChanged = this.detectLanguage();
+                        if (hasChanged && this.shadowHost && this.shadowHost.shadowRoot) {
+                            const titleElement = this.shadowHost.shadowRoot.querySelector('.recsys-header-title');
+                            if (titleElement) {
+                                titleElement.textContent = this.generateTitle(this.currentSearchKeyword, this.currentLastItem, false, null);
+                            }
+                        }
+                    }
+                });
+            });
+            observer.observe(htmlElement, { attributes: true, attributeFilter: ['lang'] });
+        }
+        t(key, variables) {
+            var _a;
+            let text = ((_a = translations[this.currentLangCode]) === null || _a === void 0 ? void 0 : _a[key]) || translations['vi'][key] || key;
+            if (variables) {
+                for (const [varName, varValue] of Object.entries(variables)) {
+                    text = text.replace(new RegExp(`{${varName}}`, 'g'), varValue);
+                }
+            }
+            return text;
+        }
+        // private generateTitle(search: string, lastItem: string): string {
+        //   const context = this.config.triggerConfig?.targetValue;
+        //   // Trường hợp 1: Có keyword tìm kiếm
+        //   if (context?.includes('search') || context?.includes('query')) {
+        //     return this.t('searched', { keyword: search });
+        //   }
+        //   // Trường hợp 2: Có item xem gần nhất
+        //   if (lastItem && lastItem.trim() !== "") {
+        //     return this.t('experienced', { lastItem: lastItem });
+        //   }
+        //   // Trường hợp 3: Mặc định
+        //   return this.t('default');
+        // }
+        generateTitle(search, lastItem, isUserAction, actionType) {
             var _a;
             const context = (_a = this.config.triggerConfig) === null || _a === void 0 ? void 0 : _a.targetValue;
-            const title = "Vì bạn đã trải nghiệm";
-            const searchTitle = "Vì bạn đã tìm kiếm";
-            if ((context === null || context === void 0 ? void 0 : context.includes('search')) || (context === null || context === void 0 ? void 0 : context.includes('query'))) {
-                return `${searchTitle} "${search}"`;
+            // Trường hợp 1: User action là search (ưu tiên cao nhất)
+            if (actionType === 'search' && search && search.trim() !== "") {
+                return this.t('searched', { keyword: search });
             }
+            // Trường hợp 2: User action với lastItem (click vào item)
+            if (isUserAction && lastItem && lastItem.trim() !== "") {
+                return this.t('experienced', { lastItem: lastItem });
+            }
+            // Trường hợp 3: Config trigger là search page
+            if (((context === null || context === void 0 ? void 0 : context.includes('search')) || (context === null || context === void 0 ? void 0 : context.includes('query'))) && search && search.trim() !== "") {
+                return this.t('searched', { keyword: search });
+            }
+            // Trường hợp 4: Có lastItem (auto show)
             if (lastItem && lastItem.trim() !== "") {
-                return `${title} "${lastItem}"`;
+                return this.t('experienced', { lastItem: lastItem });
             }
-            return "Gợi ý dành riêng cho bạn";
+            // Trường hợp 5: Mặc định
+            return this.t('default');
         }
-        updateContent(response) {
+        updateContent(response, isUserAction = false, actionType) {
             if (!this.shadowHost || !this.shadowHost.shadowRoot)
                 return;
             // const { item, keyword, lastItem } = response;
+            //console.log('[Popup] Action type: ', actionType);
             const { keyword, lastItem } = response;
             const titleElement = this.shadowHost.shadowRoot.querySelector('.recsys-header-title');
             if (titleElement) {
-                titleElement.textContent = this.generateTitle(keyword, lastItem);
+                titleElement.textContent = this.generateTitle(keyword, lastItem, isUserAction, actionType);
                 const layout = this.config.layoutJson || {};
                 if (layout.contentMode === 'carousel') {
                     this.setupCarousel(this.shadowHost.shadowRoot, normalizeItems(response));
@@ -1313,9 +1436,14 @@
             if (this.spaCheckInterval)
                 clearInterval(this.spaCheckInterval);
             this.spaCheckInterval = setInterval(async () => {
+                var _a, _b, _c, _d;
                 const shouldShow = this.shouldShowPopup();
                 const isVisible = this.shadowHost !== null;
                 const currentUrl = window.location.pathname;
+                const isSearchPage = ((_b = (_a = this.config.triggerConfig) === null || _a === void 0 ? void 0 : _a.targetValue) === null || _b === void 0 ? void 0 : _b.includes('search')) || ((_d = (_c = this.config.triggerConfig) === null || _c === void 0 ? void 0 : _c.targetValue) === null || _d === void 0 ? void 0 : _d.includes('query'));
+                if (isSearchPage && !this.shadowHost && !this.isManuallyClosed) {
+                    return;
+                }
                 // Nếu URL thay đổi, reset lại trạng thái để cho phép hiện ở trang mới
                 if (currentUrl !== this.lastCheckedUrl) {
                     this.isManuallyClosed = false;
@@ -1363,13 +1491,13 @@
         //         this.isPendingShow = false;
         //     }, delay);
         // }
-        async showPopup() {
+        async showPopup(isUserAction = false, actionType = null) {
             try {
                 const response = await this.fetchRecommendations();
                 const items = normalizeItems(response);
                 // Chỉ hiện nếu chưa hiện (double check)
                 if (items && items.length > 0 && !this.shadowHost) {
-                    this.renderPopup(items, response.keyword, response.lastItem);
+                    this.renderPopup(items, response.keyword, response.lastItem, isUserAction, actionType);
                     // Logic autoClose (tự đóng sau X giây)
                     if (this.config.autoCloseDelay && this.config.autoCloseDelay > 0) {
                         this.autoCloseTimeout = setTimeout(() => {
@@ -1422,18 +1550,18 @@
             var _a;
             try {
                 const limit = ((_a = this.config.layoutJson) === null || _a === void 0 ? void 0 : _a.maxItems) || 50;
-                //console.log('[PopupDisplay] Calling recommendationGetter with limit:', limit);
+                ////console.log('[PopupDisplay] Calling recommendationGetter with limit:', limit);
                 const result = await this.recommendationGetter(limit);
-                //console.log('[PopupDisplay] recommendationGetter result:', result);
+                ////console.log('[PopupDisplay] recommendationGetter result:', result);
                 // recommendationGetter now returns full RecommendationResponse
                 if (result && result.item && Array.isArray(result.item)) {
                     return result;
                 }
-                //console.log('[PopupDisplay] Invalid result, returning empty');
+                ////console.log('[PopupDisplay] Invalid result, returning empty');
                 return { item: [], keyword: '', lastItem: '' };
             }
             catch (e) {
-                //console.error('[PopupDisplay] fetchRecommendations error:', e);
+                // console.error('[PopupDisplay] fetchRecommendations error:', e);
                 return { item: [], keyword: '', lastItem: '' };
             }
         }
@@ -1798,11 +1926,14 @@
             html += `</div></div>`;
             return html;
         }
-        renderPopup(items, search, lastItem) {
+        renderPopup(items, search, lastItem, isUserAction = false, actionType) {
+            // Lưu keyword và lastItem để language observer có thể regenerate title
+            // this.currentSearchKeyword = search || '';
+            // this.currentLastItem = lastItem || '';
             var _a;
             this.removePopup();
             //const returnMethodValue = (this.config as any).value || "";
-            const dynamicTitle = this.generateTitle(search, lastItem);
+            const dynamicTitle = this.generateTitle(search, lastItem, isUserAction, actionType);
             const host = document.createElement('div');
             host.id = this.hostId;
             document.body.appendChild(host);
@@ -1936,7 +2067,7 @@
                 });
             }
             catch (error) {
-                // console.error('[PopupDisplay] Failed to send evaluation:', error);
+                // //console.error('[PopupDisplay] Failed to send evaluation:', error);
             }
             // const targetUrl = `/song/${id}`;
             let urlPattern = this.config.layoutJson.itemUrlPattern || '/song/{:id}';
@@ -1972,12 +2103,13 @@
                 window.location.href = targetUrl;
             }
         }
-        forceShow() {
+        forceShow(isUserAction = false, actionType = null) {
+            //console.log('[Popup] Forced show: ', actionType);
             this.isManuallyClosed = false;
             this.isPendingShow = false;
             this.removePopup();
             if (this.shouldShowPopup()) {
-                this.showPopup();
+                this.showPopup(isUserAction, actionType);
             }
         }
     }
@@ -2577,6 +2709,8 @@
             this.cachedRecommendations = null;
             this.fetchPromise = null;
             this.refreshTimer = null;
+            this.isUserAction = false;
+            this.lastActionType = null;
             this.domainKey = domainKey;
             this.apiBaseUrl = apiBaseUrl;
             this.recommendationFetcher = new RecommendationFetcher(domainKey, apiBaseUrl);
@@ -2592,20 +2726,25 @@
                 await this.fetchRecommendationsOnce();
             }
             catch (error) {
-                // //console.error('[DisplayManager] Failed to fetch recommendations.');
+                // ////console.error('[DisplayManager] Failed to fetch recommendations.');
             }
             // Process each return method
             for (const method of returnMethods) {
                 this.activateDisplayMethod(method);
             }
         }
-        notifyActionTriggered() {
+        notifyActionTriggered(actionType) {
+            this.isUserAction = true;
+            this.lastActionType = actionType || null;
             if (this.refreshTimer)
                 clearTimeout(this.refreshTimer);
+            //console.log('[DisplayManager] Action type: ', actionType);
             // Chống spam API bằng Debounce (đợi 500ms sau hành động cuối cùng)
             this.refreshTimer = setTimeout(async () => {
                 await this.refreshAllDisplays();
-            }, 500);
+                this.isUserAction = false;
+                this.lastActionType = null;
+            }, 1000);
         }
         async refreshAllDisplays() {
             this.recommendationFetcher.clearCache();
@@ -2614,14 +2753,14 @@
             // const newItemsNormalized = normalizeItems(newItems);
             // const oldId = oldItems[0]?.id;
             // const newId = newItemsNormalized[0]?.id;
-            //console.log(newItems);
+            ////console.log(newItems);
             // const oldId = (this.cachedRecommendations as any)?.item?.[0]?.id;
             // const newId = (newItems as any)?.item?.[0]?.id;
             this.cachedRecommendations = newItems;
             this.popupDisplays.forEach(popup => {
                 var _a, _b, _c, _d;
-                (_b = (_a = popup).updateContent) === null || _b === void 0 ? void 0 : _b.call(_a, newItems);
-                (_d = (_c = popup).forceShow) === null || _d === void 0 ? void 0 : _d.call(_c);
+                (_b = (_a = popup).updateContent) === null || _b === void 0 ? void 0 : _b.call(_a, newItems, this.isUserAction, this.lastActionType);
+                (_d = (_c = popup).forceShow) === null || _d === void 0 ? void 0 : _d.call(_c, this.isUserAction, this.lastActionType);
             });
             this.inlineDisplays.forEach(inline => { var _a, _b; return (_b = (_a = inline).updateContent) === null || _b === void 0 ? void 0 : _b.call(_a, newItems); });
         }
@@ -2666,7 +2805,7 @@
                     this.popupDisplays.delete(key);
                 }
                 const popupDisplay = new PopupDisplay(this.domainKey, key, this.apiBaseUrl, config, (limit) => {
-                    //console.log('[DisplayManager] recommendationGetter called with limit:', limit);
+                    ////console.log('[DisplayManager] recommendationGetter called with limit:', limit);
                     // Fetch directly from recommendationFetcher instead of using cache
                     return this.recommendationFetcher.fetchForAnonymousUser({
                         numberItems: limit,
@@ -2677,7 +2816,7 @@
                 popupDisplay.start();
             }
             catch (error) {
-                // //console.error('[DisplayManager] Error initializing popup:', error);
+                // ////console.error('[DisplayManager] Error initializing popup:', error);
             }
         }
         // Khởi tạo Inline Display với Config đầy đủ
@@ -2700,7 +2839,7 @@
                 inlineDisplay.start();
             }
             catch (error) {
-                // //console.error('[DisplayManager] Error initializing inline:', error);
+                // ////console.error('[DisplayManager] Error initializing inline:', error);
             }
         }
         // --- LOGIC FETCH RECOMMENDATION (GIỮ NGUYÊN) ---
@@ -3009,7 +3148,7 @@
         init(tracker) {
             this.errorBoundary.execute(() => {
                 super.init(tracker);
-                // console.log('[ClickPlugin] Initialized');
+                // //console.log('[ClickPlugin] Initialized');
             }, 'ClickPlugin.init');
         }
         start() {
@@ -3017,12 +3156,12 @@
                 if (!this.ensureInitialized())
                     return;
                 if (this.active) {
-                    //console.warn('[ClickPlugin] Already active, skipping duplicate start');
+                    ////console.warn('[ClickPlugin] Already active, skipping duplicate start');
                     return;
                 }
                 document.addEventListener('click', this.handleClickBound, true);
                 this.active = true;
-                //console.log('[ClickPlugin] ✅ Started and listening for clicks');
+                ////console.log('[ClickPlugin] ✅ Started and listening for clicks');
             }, 'ClickPlugin.start');
         }
         stop() {
@@ -3038,7 +3177,7 @@
          */
         handleClick(event) {
             var _a;
-            //console.log('[ClickPlugin] Click detected on:', event.target);
+            ////console.log('[ClickPlugin] Click detected on:', event.target);
             if (!this.tracker)
                 return;
             const clickedElement = event.target;
@@ -3056,13 +3195,13 @@
                 if (!matchedElement) {
                     continue;
                 }
-                //console.log('[ClickPlugin] Matched element for rule:', rule.name, matchedElement);
+                ////console.log('[ClickPlugin] Matched element for rule:', rule.name, matchedElement);
                 // Debounce: Bỏ qua clicks liên tiếp trên cùng element trong thời gian ngắn
                 const elementKey = this.getElementKey(matchedElement, rule.id);
                 const now = Date.now();
                 const lastClick = this.lastClickTimestamp.get(elementKey);
                 if (lastClick && (now - lastClick) < this.debounceTime) {
-                    //console.log('[ClickPlugin] Debounced - ignoring rapid click on', elementKey);
+                    ////console.log('[ClickPlugin] Debounced - ignoring rapid click on', elementKey);
                     return;
                 }
                 this.lastClickTimestamp.set(elementKey, now);
@@ -3184,6 +3323,7 @@
             if (!this.tracker)
                 return;
             //console.log('[ClickPlugin] Dispatching event with payload:', payload);
+            //console.log('[ClickPlugin] Action type:', rule.actionType);
             this.tracker.track({
                 eventType: eventId,
                 eventData: {
@@ -3763,7 +3903,7 @@
                 if (response.ok) {
                     // console.log('[SearchKeywordPlugin] Keyword pushed successfully');
                     // Trigger recommendation refresh after successful keyword push
-                    (_b = (_a = this.tracker) === null || _a === void 0 ? void 0 : _a.getDisplayManager()) === null || _b === void 0 ? void 0 : _b.notifyActionTriggered();
+                    (_b = (_a = this.tracker) === null || _a === void 0 ? void 0 : _a.getDisplayManager()) === null || _b === void 0 ? void 0 : _b.notifyActionTriggered('search');
                 }
                 else {
                     // console.error('[SearchKeywordPlugin] Failed to push keyword:', response.statusText);

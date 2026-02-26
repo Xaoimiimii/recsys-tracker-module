@@ -14,6 +14,8 @@ export class DisplayManager {
   private cachedRecommendations: RecommendationResponse | null = null;
   private fetchPromise: Promise<RecommendationResponse> | null = null;
   private refreshTimer: NodeJS.Timeout | null = null;
+  private isUserAction: boolean = false;
+  private lastActionType: string | null = null;
 
   constructor(domainKey: string, apiBaseUrl: string) {
     this.domainKey = domainKey;
@@ -33,7 +35,7 @@ export class DisplayManager {
     try {
       await this.fetchRecommendationsOnce();
     } catch (error) {
-      // //console.error('[DisplayManager] Failed to fetch recommendations.');
+      // ////console.error('[DisplayManager] Failed to fetch recommendations.');
     }
 
     // Process each return method
@@ -42,13 +44,19 @@ export class DisplayManager {
     }
   }
 
-  public notifyActionTriggered(): void {
+  public notifyActionTriggered(actionType?: string): void {
+    this.isUserAction = true;
+    this.lastActionType = actionType || null;
     if (this.refreshTimer) clearTimeout(this.refreshTimer);
+
+    //console.log('[DisplayManager] Action type: ', actionType);
 
     // Chống spam API bằng Debounce (đợi 500ms sau hành động cuối cùng)
     this.refreshTimer = setTimeout(async () => {
       await this.refreshAllDisplays();
-    }, 500);
+      this.isUserAction = false;
+      this.lastActionType = null;
+    }, 1000);
   }
 
   private async refreshAllDisplays(): Promise<void> {
@@ -60,15 +68,15 @@ export class DisplayManager {
     // const oldId = oldItems[0]?.id;
     // const newId = newItemsNormalized[0]?.id;
 
-    //console.log(newItems);
+    ////console.log(newItems);
     
     // const oldId = (this.cachedRecommendations as any)?.item?.[0]?.id;
     // const newId = (newItems as any)?.item?.[0]?.id;
 
     this.cachedRecommendations = newItems;
     this.popupDisplays.forEach(popup => {
-      (popup as any).updateContent?.(newItems);
-      (popup as any).forceShow?.(); 
+      (popup as any).updateContent?.(newItems, this.isUserAction, this.lastActionType);
+      (popup as any).forceShow?.(this.isUserAction, this.lastActionType); 
     });
     this.inlineDisplays.forEach(inline => (inline as any).updateContent?.(newItems));
   }
@@ -121,7 +129,7 @@ export class DisplayManager {
         this.apiBaseUrl,
         config, 
         (limit: number) => {
-          //console.log('[DisplayManager] recommendationGetter called with limit:', limit);
+          ////console.log('[DisplayManager] recommendationGetter called with limit:', limit);
           // Fetch directly from recommendationFetcher instead of using cache
           return this.recommendationFetcher.fetchForAnonymousUser({ 
             numberItems: limit,
@@ -133,7 +141,7 @@ export class DisplayManager {
       this.popupDisplays.set(key, popupDisplay);
       popupDisplay.start();
     } catch (error) {
-      // //console.error('[DisplayManager] Error initializing popup:', error);
+      // ////console.error('[DisplayManager] Error initializing popup:', error);
     }
   }
 
@@ -162,7 +170,7 @@ export class DisplayManager {
       this.inlineDisplays.set(key, inlineDisplay);
       inlineDisplay.start();
     } catch (error) {
-      // //console.error('[DisplayManager] Error initializing inline:', error);
+      // ////console.error('[DisplayManager] Error initializing inline:', error);
     }
   }
 

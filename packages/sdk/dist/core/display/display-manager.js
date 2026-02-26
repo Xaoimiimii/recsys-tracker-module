@@ -9,6 +9,8 @@ export class DisplayManager {
         this.cachedRecommendations = null;
         this.fetchPromise = null;
         this.refreshTimer = null;
+        this.isUserAction = false;
+        this.lastActionType = null;
         this.domainKey = domainKey;
         this.apiBaseUrl = apiBaseUrl;
         this.recommendationFetcher = new RecommendationFetcher(domainKey, apiBaseUrl);
@@ -24,20 +26,25 @@ export class DisplayManager {
             await this.fetchRecommendationsOnce();
         }
         catch (error) {
-            // //console.error('[DisplayManager] Failed to fetch recommendations.');
+            // ////console.error('[DisplayManager] Failed to fetch recommendations.');
         }
         // Process each return method
         for (const method of returnMethods) {
             this.activateDisplayMethod(method);
         }
     }
-    notifyActionTriggered() {
+    notifyActionTriggered(actionType) {
+        this.isUserAction = true;
+        this.lastActionType = actionType || null;
         if (this.refreshTimer)
             clearTimeout(this.refreshTimer);
+        //console.log('[DisplayManager] Action type: ', actionType);
         // Chống spam API bằng Debounce (đợi 500ms sau hành động cuối cùng)
         this.refreshTimer = setTimeout(async () => {
             await this.refreshAllDisplays();
-        }, 500);
+            this.isUserAction = false;
+            this.lastActionType = null;
+        }, 1000);
     }
     async refreshAllDisplays() {
         this.recommendationFetcher.clearCache();
@@ -46,14 +53,14 @@ export class DisplayManager {
         // const newItemsNormalized = normalizeItems(newItems);
         // const oldId = oldItems[0]?.id;
         // const newId = newItemsNormalized[0]?.id;
-        //console.log(newItems);
+        ////console.log(newItems);
         // const oldId = (this.cachedRecommendations as any)?.item?.[0]?.id;
         // const newId = (newItems as any)?.item?.[0]?.id;
         this.cachedRecommendations = newItems;
         this.popupDisplays.forEach(popup => {
             var _a, _b, _c, _d;
-            (_b = (_a = popup).updateContent) === null || _b === void 0 ? void 0 : _b.call(_a, newItems);
-            (_d = (_c = popup).forceShow) === null || _d === void 0 ? void 0 : _d.call(_c);
+            (_b = (_a = popup).updateContent) === null || _b === void 0 ? void 0 : _b.call(_a, newItems, this.isUserAction, this.lastActionType);
+            (_d = (_c = popup).forceShow) === null || _d === void 0 ? void 0 : _d.call(_c, this.isUserAction, this.lastActionType);
         });
         this.inlineDisplays.forEach(inline => { var _a, _b; return (_b = (_a = inline).updateContent) === null || _b === void 0 ? void 0 : _b.call(_a, newItems); });
     }
@@ -98,7 +105,7 @@ export class DisplayManager {
                 this.popupDisplays.delete(key);
             }
             const popupDisplay = new PopupDisplay(this.domainKey, key, this.apiBaseUrl, config, (limit) => {
-                //console.log('[DisplayManager] recommendationGetter called with limit:', limit);
+                ////console.log('[DisplayManager] recommendationGetter called with limit:', limit);
                 // Fetch directly from recommendationFetcher instead of using cache
                 return this.recommendationFetcher.fetchForAnonymousUser({
                     numberItems: limit,
@@ -109,7 +116,7 @@ export class DisplayManager {
             popupDisplay.start();
         }
         catch (error) {
-            // //console.error('[DisplayManager] Error initializing popup:', error);
+            // ////console.error('[DisplayManager] Error initializing popup:', error);
         }
     }
     // Khởi tạo Inline Display với Config đầy đủ
@@ -132,7 +139,7 @@ export class DisplayManager {
             inlineDisplay.start();
         }
         catch (error) {
-            // //console.error('[DisplayManager] Error initializing inline:', error);
+            // ////console.error('[DisplayManager] Error initializing inline:', error);
         }
     }
     // --- LOGIC FETCH RECOMMENDATION (GIỮ NGUYÊN) ---

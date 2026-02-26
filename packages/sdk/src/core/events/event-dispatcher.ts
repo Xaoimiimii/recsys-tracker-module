@@ -28,7 +28,7 @@ export class EventDispatcher {
   private timeout: number = 5000;
   private headers: Record<string, string> = {};
   private sendingEvents: Set<string> = new Set(); // Track events đang gửi để tránh duplicate
-  private displayManager: { notifyActionTriggered: () => void } | null = null;
+  private displayManager: { notifyActionTriggered: (actionType?: string) => void } | null = null;
 
   constructor(options: DispatchOptions) {
     this.endpoint = options.endpoint;
@@ -90,7 +90,8 @@ export class EventDispatcher {
           //console.log('[EventDispatcher] Strategy', strategy, 'result:', success);
           if (success) {
             if (this.displayManager && typeof this.displayManager.notifyActionTriggered === 'function') {
-              this.displayManager.notifyActionTriggered();
+              this.displayManager.notifyActionTriggered(event.actionType as any);
+              console.log('[EventDispatcher] Action type:', event.actionType);
             }
             return true;
           }
@@ -214,7 +215,7 @@ export class EventDispatcher {
   }
 
   // Inject DisplayManager để notify action triggered
-  setDisplayManager(displayManager: { notifyActionTriggered: () => void } | null): void {
+  setDisplayManager(displayManager: { notifyActionTriggered: (actionType?: string) => void } | null): void {
     this.displayManager = displayManager;
   }
 }

@@ -15,11 +15,17 @@ export declare class PopupDisplay {
     private readonly DEFAULT_DELAY;
     private domainKey;
     private apiBaseUrl;
+    private currentLangCode;
+    private currentSearchKeyword;
+    private currentLastItem;
     constructor(_domainKey: string, _slotName: string, _apiBaseUrl: string, config: PopupConfig | undefined, recommendationGetter: (limit: number) => Promise<RecommendationResponse>);
     start(): void;
     stop(): void;
+    private detectLanguage;
+    private setupLanguageObserver;
+    private t;
     private generateTitle;
-    updateContent(response: RecommendationResponse): void;
+    updateContent(response: RecommendationResponse, isUserAction: boolean | undefined, actionType: string | null): void;
     private startWatcher;
     private showPopup;
     private shouldShowPopup;
@@ -33,6 +39,6 @@ export declare class PopupDisplay {
     private removePopup;
     private clearTimeouts;
     private handleItemClick;
-    forceShow(): void;
+    forceShow(isUserAction?: boolean, actionType?: string | null): void;
 }
 //# sourceMappingURL=popup-display.d.ts.map

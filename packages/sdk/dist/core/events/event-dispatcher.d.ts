@@ -24,7 +24,7 @@ export declare class EventDispatcher {
     setTimeout(timeout: number): void;
     setHeaders(headers: Record<string, string>): void;
     setDisplayManager(displayManager: {
-        notifyActionTriggered: () => void;
+        notifyActionTriggered: (actionType?: string) => void;
     } | null): void;
 }
 //# sourceMappingURL=event-dispatcher.d.ts.map

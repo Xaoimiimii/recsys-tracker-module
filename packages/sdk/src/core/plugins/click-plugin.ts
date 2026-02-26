@@ -25,7 +25,7 @@ export class ClickPlugin extends BasePlugin {
   public init(tracker: RecSysTracker): void {
     this.errorBoundary.execute(() => {
       super.init(tracker);
-      // console.log('[ClickPlugin] Initialized');
+      // //console.log('[ClickPlugin] Initialized');
     }, 'ClickPlugin.init');
   }
 
@@ -33,13 +33,13 @@ export class ClickPlugin extends BasePlugin {
     this.errorBoundary.execute(() => {
       if (!this.ensureInitialized()) return;
       if (this.active) {
-        //console.warn('[ClickPlugin] Already active, skipping duplicate start');
+        ////console.warn('[ClickPlugin] Already active, skipping duplicate start');
         return;
       }
 
       document.addEventListener('click', this.handleClickBound, true);
       this.active = true;
-      //console.log('[ClickPlugin] ✅ Started and listening for clicks');
+      ////console.log('[ClickPlugin] ✅ Started and listening for clicks');
     }, 'ClickPlugin.start');
   }
 
@@ -56,7 +56,7 @@ export class ClickPlugin extends BasePlugin {
    * Handle click event - TRIGGER PHASE
    */
   private handleClick(event: MouseEvent): void {
-    //console.log('[ClickPlugin] Click detected on:', event.target);
+    ////console.log('[ClickPlugin] Click detected on:', event.target);
     if (!this.tracker) return;
 
     const clickedElement = event.target as HTMLElement;
@@ -77,7 +77,7 @@ export class ClickPlugin extends BasePlugin {
         continue;
       }
 
-      //console.log('[ClickPlugin] Matched element for rule:', rule.name, matchedElement);
+      ////console.log('[ClickPlugin] Matched element for rule:', rule.name, matchedElement);
 
       // Debounce: Bỏ qua clicks liên tiếp trên cùng element trong thời gian ngắn
       const elementKey = this.getElementKey(matchedElement, rule.id);
@@ -85,7 +85,7 @@ export class ClickPlugin extends BasePlugin {
       const lastClick = this.lastClickTimestamp.get(elementKey);
       
       if (lastClick && (now - lastClick) < this.debounceTime) {
-        //console.log('[ClickPlugin] Debounced - ignoring rapid click on', elementKey);
+        ////console.log('[ClickPlugin] Debounced - ignoring rapid click on', elementKey);
         return;
       }
       
@@ -229,6 +229,7 @@ export class ClickPlugin extends BasePlugin {
     if (!this.tracker) return;
 
     //console.log('[ClickPlugin] Dispatching event with payload:', payload);
+    //console.log('[ClickPlugin] Action type:', rule.actionType);
 
     this.tracker.track({
       eventType: eventId,

@@ -137,7 +137,7 @@ export class PopupDisplay {
           if (hasChanged && this.shadowHost && this.shadowHost.shadowRoot) {
             const titleElement = this.shadowHost.shadowRoot.querySelector('.recsys-header-title');
             if (titleElement) {
-              titleElement.textContent = this.generateTitle(this.currentSearchKeyword, this.currentLastItem);
+              titleElement.textContent = this.generateTitle(this.currentSearchKeyword, this.currentLastItem, false, null);
             }
           }
         }
@@ -158,31 +158,59 @@ export class PopupDisplay {
     return text;
   }
 
-  private generateTitle(search: string, lastItem: string): string {
-    const context = this.config.triggerConfig?.targetValue;
+  // private generateTitle(search: string, lastItem: string): string {
+  //   const context = this.config.triggerConfig?.targetValue;
 
-    // Trường hợp 1: Có keyword tìm kiếm
-    if (context?.includes('search') || context?.includes('query')) {
+  //   // Trường hợp 1: Có keyword tìm kiếm
+  //   if (context?.includes('search') || context?.includes('query')) {
+  //     return this.t('searched', { keyword: search });
+  //   }
+
+  //   // Trường hợp 2: Có item xem gần nhất
+  //   if (lastItem && lastItem.trim() !== "") {
+  //     return this.t('experienced', { lastItem: lastItem });
+  //   }
+
+  //   // Trường hợp 3: Mặc định
+  //   return this.t('default');
+  // }
+
+  private generateTitle(search: string, lastItem: string, isUserAction: boolean, actionType: string | null): string {
+    const context = this.config.triggerConfig?.targetValue;
+    
+    // Trường hợp 1: User action là search (ưu tiên cao nhất)
+    if (actionType === 'search' && search && search.trim() !== "") {
       return this.t('searched', { keyword: search });
     }
 
-    // Trường hợp 2: Có item xem gần nhất
+    // Trường hợp 2: User action với lastItem (click vào item)
+    if (isUserAction && lastItem && lastItem.trim() !== "") {
+      return this.t('experienced', { lastItem: lastItem });
+    }
+
+    // Trường hợp 3: Config trigger là search page
+    if ((context?.includes('search') || context?.includes('query')) && search && search.trim() !== "") {
+      return this.t('searched', { keyword: search });
+    }
+
+    // Trường hợp 4: Có lastItem (auto show)
     if (lastItem && lastItem.trim() !== "") {
       return this.t('experienced', { lastItem: lastItem });
     }
 
-    // Trường hợp 3: Mặc định
+    // Trường hợp 5: Mặc định
     return this.t('default');
   }
 
-  public updateContent(response: RecommendationResponse): void {
+  public updateContent(response: RecommendationResponse, isUserAction: boolean = false, actionType: string | null): void {
     if (!this.shadowHost || !this.shadowHost.shadowRoot) return;
 
     // const { item, keyword, lastItem } = response;
+    //console.log('[Popup] Action type: ', actionType);
     const { keyword, lastItem } = response;
     const titleElement = this.shadowHost.shadowRoot.querySelector('.recsys-header-title');
-    if (titleElement) {
-      titleElement.textContent = this.generateTitle(keyword as any, lastItem);
+      if (titleElement) {
+      titleElement.textContent = this.generateTitle(keyword as any, lastItem, isUserAction, actionType);
       const layout = (this.config.layoutJson as any) || {};
       if (layout.contentMode === 'carousel') {
         this.setupCarousel(this.shadowHost.shadowRoot, normalizeItems(response));
@@ -199,7 +227,11 @@ export class PopupDisplay {
       const shouldShow = this.shouldShowPopup();
       const isVisible = this.shadowHost !== null;
       const currentUrl = window.location.pathname;
+      const isSearchPage = this.config.triggerConfig?.targetValue?.includes('search') || this.config.triggerConfig?.targetValue?.includes('query');
 
+      if (isSearchPage && !this.shadowHost && !this.isManuallyClosed) {
+        return; 
+      }
       // Nếu URL thay đổi, reset lại trạng thái để cho phép hiện ở trang mới
       if (currentUrl !== this.lastCheckedUrl) {
         this.isManuallyClosed = false;
@@ -251,14 +283,14 @@ export class PopupDisplay {
   //     }, delay);
   // }
 
-  private async showPopup(): Promise<void> {
+  private async showPopup(isUserAction: boolean = false, actionType: string | null = null): Promise<void> {
     try {
       const response = await this.fetchRecommendations();
       const items = normalizeItems(response);
       // Chỉ hiện nếu chưa hiện (double check)
       if (items && items.length > 0 && !this.shadowHost) {
-        this.renderPopup(items, response.keyword as any, response.lastItem);
-
+        this.renderPopup(items, response.keyword as any, response.lastItem, isUserAction, actionType);
+        
         // Logic autoClose (tự đóng sau X giây)
         if (this.config.autoCloseDelay && this.config.autoCloseDelay > 0) {
           this.autoCloseTimeout = setTimeout(() => {
@@ -316,18 +348,18 @@ export class PopupDisplay {
   private async fetchRecommendations(): Promise<RecommendationResponse> {
     try {
       const limit = (this.config.layoutJson as any)?.maxItems || 50;
-      //console.log('[PopupDisplay] Calling recommendationGetter with limit:', limit);
+      ////console.log('[PopupDisplay] Calling recommendationGetter with limit:', limit);
       const result = await this.recommendationGetter(limit);
-      //console.log('[PopupDisplay] recommendationGetter result:', result);
+      ////console.log('[PopupDisplay] recommendationGetter result:', result);
       // recommendationGetter now returns full RecommendationResponse
       if (result && result.item && Array.isArray(result.item)) {
         return result;
       }
-      //console.log('[PopupDisplay] Invalid result, returning empty');
+      ////console.log('[PopupDisplay] Invalid result, returning empty');
       return { item: [], keyword: '', lastItem: '' };
-    } catch (e) {
-      //console.error('[PopupDisplay] fetchRecommendations error:', e);
-      return { item: [], keyword: '', lastItem: '' };
+    } catch (e) { 
+      // console.error('[PopupDisplay] fetchRecommendations error:', e);
+      return { item: [], keyword: '', lastItem: '' }; 
     }
   }
 
@@ -708,15 +740,16 @@ export class PopupDisplay {
     return html;
   }
 
-  private renderPopup(items: RecommendationItem[], search: string, lastItem: string): void {
-    this.currentSearchKeyword = search || '';
-    this.currentLastItem = lastItem || '';
-
+  private renderPopup(items: RecommendationItem[], search: string, lastItem: string, isUserAction: boolean = false, actionType: string | null): void {
+    // Lưu keyword và lastItem để language observer có thể regenerate title
+    // this.currentSearchKeyword = search || '';
+    // this.currentLastItem = lastItem || '';
+    
     this.removePopup();
 
     //const returnMethodValue = (this.config as any).value || "";
 
-    const dynamicTitle = this.generateTitle(search, lastItem);
+    const dynamicTitle = this.generateTitle(search, lastItem, isUserAction, actionType);
     const host = document.createElement('div');
     host.id = this.hostId;
     document.body.appendChild(host);
@@ -843,7 +876,7 @@ export class PopupDisplay {
 
   private async handleItemClick(id: string | number, rank: number): Promise<void> {
     if (!id) return;
-
+    
     // Send evaluation request
     try {
       const evaluationUrl = `${this.apiBaseUrl}/evaluation`;
@@ -858,33 +891,33 @@ export class PopupDisplay {
         })
       });
     } catch (error) {
-      // console.error('[PopupDisplay] Failed to send evaluation:', error);
+      // //console.error('[PopupDisplay] Failed to send evaluation:', error);
     }
-
+    
     // const targetUrl = `/song/${id}`;
     let urlPattern = this.config.layoutJson.itemUrlPattern || '/song/{:id}';
     const targetUrl = urlPattern.replace('{:id}', id.toString());
-
+    
     // Try SPA-style navigation first
     try {
       // 1. Update URL without reload
       window.history.pushState({}, '', targetUrl);
-
+      
       // 2. Dispatch events to notify SPA frameworks
       window.dispatchEvent(new PopStateEvent('popstate', { state: {} }));
-
+      
       // 3. Custom event for frameworks that listen to custom routing events
-      window.dispatchEvent(new CustomEvent('navigate', {
+      window.dispatchEvent(new CustomEvent('navigate', { 
         detail: { path: targetUrl, from: 'recsys-tracker' }
       }));
-
+      
       // 4. Trigger link click event (some frameworks listen to this)
       // const clickEvent = new MouseEvent('click', {
       //   bubbles: true,
       //   cancelable: true,
       //   view: window
       // });
-
+      
       // If navigation didn't work (URL changed but page didn't update), fallback
       // Check after a short delay if the page updated
       setTimeout(() => {
@@ -894,19 +927,20 @@ export class PopupDisplay {
           window.location.href = targetUrl;
         }
       }, 100);
-
+      
     } catch (error) {
       // Fallback to traditional navigation if History API fails
-      window.location.href = targetUrl;
+      window.location.href = targetUrl; 
     }
   }
 
-  public forceShow(): void {
-    this.isManuallyClosed = false;
+  public forceShow(isUserAction: boolean = false, actionType: string | null = null): void {
+    //console.log('[Popup] Forced show: ', actionType);
+    this.isManuallyClosed = false; 
     this.isPendingShow = false;
     this.removePopup();
     if (this.shouldShowPopup()) {
-      this.showPopup();
+      this.showPopup(isUserAction, actionType); 
     }
   }
 }
