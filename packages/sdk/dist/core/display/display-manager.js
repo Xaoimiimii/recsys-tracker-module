@@ -23,7 +23,19 @@ export class DisplayManager {
         }
         // Fetch recommendations once for all display methods
         try {
-            await this.fetchRecommendationsOnce();
+            const recommendations = await this.fetchRecommendationsOnce();
+            // Cache immediately to sessionStorage (shared cache for entire domain)
+            // This ensures instant popup rendering on user actions
+            const sharedCacheKey = `recsys-cache-${this.domainKey}`;
+            try {
+                sessionStorage.setItem(sharedCacheKey, JSON.stringify({
+                    data: recommendations,
+                    timestamp: Date.now()
+                }));
+            }
+            catch (e) {
+                // Quota exceeded or sessionStorage not available, silently fail
+            }
         }
         catch (error) {
             // ////console.error('[DisplayManager] Failed to fetch recommendations.');
@@ -49,14 +61,18 @@ export class DisplayManager {
     async refreshAllDisplays() {
         this.recommendationFetcher.clearCache();
         const newItems = await this.getRecommendations(50);
-        // const oldItems = normalizeItems(this.cachedRecommendations);
-        // const newItemsNormalized = normalizeItems(newItems);
-        // const oldId = oldItems[0]?.id;
-        // const newId = newItemsNormalized[0]?.id;
-        ////console.log(newItems);
-        // const oldId = (this.cachedRecommendations as any)?.item?.[0]?.id;
-        // const newId = (newItems as any)?.item?.[0]?.id;
         this.cachedRecommendations = newItems;
+        // Update shared cache in sessionStorage
+        const sharedCacheKey = `recsys-cache-${this.domainKey}`;
+        try {
+            sessionStorage.setItem(sharedCacheKey, JSON.stringify({
+                data: newItems,
+                timestamp: Date.now()
+            }));
+        }
+        catch (e) {
+            // Quota exceeded or sessionStorage not available, silently fail
+        }
         this.popupDisplays.forEach(popup => {
             var _a, _b, _c, _d;
             (_b = (_a = popup).updateContent) === null || _b === void 0 ? void 0 : _b.call(_a, newItems, this.isUserAction, this.lastActionType);
@@ -104,13 +120,13 @@ export class DisplayManager {
                 (_a = this.popupDisplays.get(key)) === null || _a === void 0 ? void 0 : _a.stop();
                 this.popupDisplays.delete(key);
             }
-            const popupDisplay = new PopupDisplay(this.domainKey, key, this.apiBaseUrl, config, (limit) => {
-                ////console.log('[DisplayManager] recommendationGetter called with limit:', limit);
-                // Fetch directly from recommendationFetcher instead of using cache
-                return this.recommendationFetcher.fetchForAnonymousUser({
-                    numberItems: limit,
-                    autoRefresh: false
-                });
+            const popupDisplay = new PopupDisplay(this.domainKey, key, this.apiBaseUrl, config, async (limit) => {
+                // Use cached recommendations from init if available
+                if (this.cachedRecommendations) {
+                    return this.cachedRecommendations;
+                }
+                // Otherwise fetch new data
+                return this.getRecommendations(limit);
             });
             this.popupDisplays.set(key, popupDisplay);
             popupDisplay.start();
@@ -130,10 +146,13 @@ export class DisplayManager {
             if (!config.selector)
                 return;
             const inlineDisplay = new InlineDisplay(this.domainKey, key, config.selector, this.apiBaseUrl, config, // Truyền object config
-            () => {
-                return this.recommendationFetcher.fetchForAnonymousUser({
-                    autoRefresh: false
-                });
+            async () => {
+                // Use cached recommendations from init if available
+                if (this.cachedRecommendations) {
+                    return this.cachedRecommendations;
+                }
+                // Otherwise fetch new data
+                return this.getRecommendations(50);
             });
             this.inlineDisplays.set(key, inlineDisplay);
             inlineDisplay.start();

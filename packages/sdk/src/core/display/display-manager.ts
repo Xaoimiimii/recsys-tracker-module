@@ -33,7 +33,19 @@ export class DisplayManager {
 
     // Fetch recommendations once for all display methods
     try {
-      await this.fetchRecommendationsOnce();
+      const recommendations = await this.fetchRecommendationsOnce();
+      
+      // Cache immediately to sessionStorage (shared cache for entire domain)
+      // This ensures instant popup rendering on user actions
+      const sharedCacheKey = `recsys-cache-${this.domainKey}`;
+      try {
+        sessionStorage.setItem(sharedCacheKey, JSON.stringify({
+          data: recommendations,
+          timestamp: Date.now()
+        }));
+      } catch (e) {
+        // Quota exceeded or sessionStorage not available, silently fail
+      }
     } catch (error) {
       // ////console.error('[DisplayManager] Failed to fetch recommendations.');
     }
@@ -63,17 +75,19 @@ export class DisplayManager {
     this.recommendationFetcher.clearCache();
     const newItems = await this.getRecommendations(50);
     
-    // const oldItems = normalizeItems(this.cachedRecommendations);
-    // const newItemsNormalized = normalizeItems(newItems);
-    // const oldId = oldItems[0]?.id;
-    // const newId = newItemsNormalized[0]?.id;
-
-    ////console.log(newItems);
-    
-    // const oldId = (this.cachedRecommendations as any)?.item?.[0]?.id;
-    // const newId = (newItems as any)?.item?.[0]?.id;
-
     this.cachedRecommendations = newItems;
+    
+    // Update shared cache in sessionStorage
+    const sharedCacheKey = `recsys-cache-${this.domainKey}`;
+    try {
+      sessionStorage.setItem(sharedCacheKey, JSON.stringify({
+        data: newItems,
+        timestamp: Date.now()
+      }));
+    } catch (e) {
+      // Quota exceeded or sessionStorage not available, silently fail
+    }
+    
     this.popupDisplays.forEach(popup => {
       (popup as any).updateContent?.(newItems, this.isUserAction, this.lastActionType);
       (popup as any).forceShow?.(this.isUserAction, this.lastActionType); 
@@ -128,13 +142,13 @@ export class DisplayManager {
         key,
         this.apiBaseUrl,
         config, 
-        (limit: number) => {
-          ////console.log('[DisplayManager] recommendationGetter called with limit:', limit);
-          // Fetch directly from recommendationFetcher instead of using cache
-          return this.recommendationFetcher.fetchForAnonymousUser({ 
-            numberItems: limit,
-            autoRefresh: false
-          });
+        async (limit: number) => {
+          // Use cached recommendations from init if available
+          if (this.cachedRecommendations) {
+            return this.cachedRecommendations;
+          }
+          // Otherwise fetch new data
+          return this.getRecommendations(limit);
         }
       );
       
@@ -160,10 +174,13 @@ export class DisplayManager {
         config.selector,
         this.apiBaseUrl,
         config, // Truyền object config
-        () => {
-          return this.recommendationFetcher.fetchForAnonymousUser({ 
-            autoRefresh: false
-          });
+        async () => {
+          // Use cached recommendations from init if available
+          if (this.cachedRecommendations) {
+            return this.cachedRecommendations;
+          }
+          // Otherwise fetch new data
+          return this.getRecommendations(50);
         }
       );
       

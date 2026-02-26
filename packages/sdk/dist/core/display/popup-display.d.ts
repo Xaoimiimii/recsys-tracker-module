@@ -18,6 +18,8 @@ export declare class PopupDisplay {
     private currentLangCode;
     private currentSearchKeyword;
     private currentLastItem;
+    private cacheKey;
+    private readonly CACHE_MAX_AGE;
     constructor(_domainKey: string, _slotName: string, _apiBaseUrl: string, config: PopupConfig | undefined, recommendationGetter: (limit: number) => Promise<RecommendationResponse>);
     start(): void;
     stop(): void;
@@ -25,12 +27,15 @@ export declare class PopupDisplay {
     private setupLanguageObserver;
     private t;
     private generateTitle;
-    updateContent(response: RecommendationResponse, isUserAction: boolean | undefined, actionType: string | null): void;
+    updateContent(response: RecommendationResponse, isUserAction: boolean | undefined, actionType: string | null, isFromCache?: boolean): void;
     private startWatcher;
     private showPopup;
     private shouldShowPopup;
     private scheduleNextPopup;
     private fetchRecommendations;
+    private saveCache;
+    private getCache;
+    private clearCache;
     private getDynamicStyles;
     private renderItemContent;
     private renderPopup;

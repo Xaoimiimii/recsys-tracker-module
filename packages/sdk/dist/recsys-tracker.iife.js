@@ -1316,10 +1316,14 @@ var RecSysTracker = (function (exports) {
             this.currentLangCode = 'en'; // Biến lưu ngôn ngữ hiện tại
             this.currentSearchKeyword = '';
             this.currentLastItem = '';
+            // Cache management
+            this.cacheKey = '';
+            this.CACHE_MAX_AGE = 5 * 60 * 1000; // 5 minutes
             this.recommendationGetter = recommendationGetter;
             this.domainKey = _domainKey;
             this.apiBaseUrl = _apiBaseUrl;
             this.hostId = `recsys-popup-host-${_slotName}-${Date.now()}`; // Unique ID based on slotName
+            this.cacheKey = `recsys-cache-${_domainKey}`; // Shared cache for entire domain
             this.config = {
                 delay: (_a = config.delay) !== null && _a !== void 0 ? _a : this.DEFAULT_DELAY,
                 autoCloseDelay: config.autoCloseDelay,
@@ -1411,15 +1415,25 @@ var RecSysTracker = (function (exports) {
             // Trường hợp 5: Mặc định
             return this.t('default');
         }
-        updateContent(response, isUserAction = false, actionType) {
+        updateContent(response, isUserAction = false, actionType, isFromCache = false) {
             if (!this.shadowHost || !this.shadowHost.shadowRoot)
                 return;
-            // const { item, keyword, lastItem } = response;
-            //console.log('[Popup] Action type: ', actionType);
             const { keyword, lastItem } = response;
             const titleElement = this.shadowHost.shadowRoot.querySelector('.recsys-header-title');
             if (titleElement) {
-                titleElement.textContent = this.generateTitle(keyword, lastItem, isUserAction, actionType);
+                const newTitle = this.generateTitle(keyword, lastItem, isUserAction, actionType);
+                // Smooth transition when updating from cache to fresh data
+                if (!isFromCache && titleElement.textContent !== newTitle) {
+                    titleElement.style.transition = 'opacity 0.3s';
+                    titleElement.style.opacity = '0';
+                    setTimeout(() => {
+                        titleElement.textContent = newTitle;
+                        titleElement.style.opacity = '1';
+                    }, 300);
+                }
+                else {
+                    titleElement.textContent = newTitle;
+                }
                 const layout = this.config.layoutJson || {};
                 if (layout.contentMode === 'carousel') {
                     this.setupCarousel(this.shadowHost.shadowRoot, normalizeItems(response));
@@ -1490,23 +1504,42 @@ var RecSysTracker = (function (exports) {
         // }
         async showPopup(isUserAction = false, actionType = null) {
             try {
-                const response = await this.fetchRecommendations();
-                const items = normalizeItems(response);
-                // Chỉ hiện nếu chưa hiện (double check)
-                if (items && items.length > 0 && !this.shadowHost) {
-                    this.renderPopup(items, response.keyword, response.lastItem, isUserAction, actionType);
-                    // Logic autoClose (tự đóng sau X giây)
+                // 🚀 OPTIMISTIC UI: Show cached data immediately if available
+                const cached = this.getCache();
+                if (cached && cached.item && cached.item.length > 0 && !this.shadowHost) {
+                    const cachedItems = normalizeItems(cached);
+                    this.renderPopup(cachedItems, cached.keyword, cached.lastItem, isUserAction, actionType);
+                    // Setup autoClose for cached popup
                     if (this.config.autoCloseDelay && this.config.autoCloseDelay > 0) {
                         this.autoCloseTimeout = setTimeout(() => {
                             this.removePopup();
-                            // Sau khi đóng, Watcher vẫn chạy nên nếu URL vẫn đúng thì nó sẽ lại đếm ngược để hiện lại.
-                            // Nếu muốn hiện 1 lần duy nhất mỗi lần vào trang, cần thêm logic session storage.
                         }, this.config.autoCloseDelay * 1000);
+                    }
+                }
+                // 🔄 FETCH FRESH DATA: Update in background
+                const response = await this.fetchRecommendations();
+                const items = normalizeItems(response);
+                if (items && items.length > 0) {
+                    // Save fresh data to cache
+                    this.saveCache(response);
+                    if (!this.shadowHost) {
+                        // No cached popup was shown, render fresh data
+                        this.renderPopup(items, response.keyword, response.lastItem, isUserAction, actionType);
+                        if (this.config.autoCloseDelay && this.config.autoCloseDelay > 0) {
+                            this.autoCloseTimeout = setTimeout(() => {
+                                this.removePopup();
+                            }, this.config.autoCloseDelay * 1000);
+                        }
+                    }
+                    else {
+                        // Update existing popup with fresh data
+                        this.updateContent(response, isUserAction, actionType, false);
                     }
                 }
             }
             catch (error) {
                 this.isPendingShow = false;
+                // If fetch fails but cache was shown, keep the cached popup
             }
         }
         // --- LOGIC 1: TRIGGER CONFIG (URL CHECKING) ---
@@ -1547,19 +1580,52 @@ var RecSysTracker = (function (exports) {
             var _a;
             try {
                 const limit = ((_a = this.config.layoutJson) === null || _a === void 0 ? void 0 : _a.maxItems) || 50;
-                ////console.log('[PopupDisplay] Calling recommendationGetter with limit:', limit);
                 const result = await this.recommendationGetter(limit);
-                ////console.log('[PopupDisplay] recommendationGetter result:', result);
                 // recommendationGetter now returns full RecommendationResponse
                 if (result && result.item && Array.isArray(result.item)) {
                     return result;
                 }
-                ////console.log('[PopupDisplay] Invalid result, returning empty');
                 return { item: [], keyword: '', lastItem: '' };
             }
             catch (e) {
-                // console.error('[PopupDisplay] fetchRecommendations error:', e);
                 return { item: [], keyword: '', lastItem: '' };
+            }
+        }
+        // --- CACHE MANAGEMENT ---
+        saveCache(data) {
+            try {
+                sessionStorage.setItem(this.cacheKey, JSON.stringify({
+                    data,
+                    timestamp: Date.now()
+                }));
+            }
+            catch (e) {
+                // Quota exceeded or sessionStorage not available, silently fail
+            }
+        }
+        getCache() {
+            try {
+                const cached = sessionStorage.getItem(this.cacheKey);
+                if (!cached)
+                    return null;
+                const { data, timestamp } = JSON.parse(cached);
+                // Check if cache is expired
+                if (Date.now() - timestamp > this.CACHE_MAX_AGE) {
+                    this.clearCache(); // Remove stale cache
+                    return null;
+                }
+                return data;
+            }
+            catch {
+                return null;
+            }
+        }
+        clearCache() {
+            try {
+                sessionStorage.removeItem(this.cacheKey);
+            }
+            catch {
+                // Silently fail if sessionStorage not available
             }
         }
         // --- LOGIC 2: DYNAMIC CSS GENERATOR ---
@@ -2049,6 +2115,8 @@ var RecSysTracker = (function (exports) {
         async handleItemClick(id, rank) {
             if (!id)
                 return;
+            // Invalidate cache since user context has changed
+            this.clearCache();
             // Send evaluation request
             try {
                 const evaluationUrl = `${this.apiBaseUrl}/evaluation`;
@@ -2720,7 +2788,19 @@ var RecSysTracker = (function (exports) {
             }
             // Fetch recommendations once for all display methods
             try {
-                await this.fetchRecommendationsOnce();
+                const recommendations = await this.fetchRecommendationsOnce();
+                // Cache immediately to sessionStorage (shared cache for entire domain)
+                // This ensures instant popup rendering on user actions
+                const sharedCacheKey = `recsys-cache-${this.domainKey}`;
+                try {
+                    sessionStorage.setItem(sharedCacheKey, JSON.stringify({
+                        data: recommendations,
+                        timestamp: Date.now()
+                    }));
+                }
+                catch (e) {
+                    // Quota exceeded or sessionStorage not available, silently fail
+                }
             }
             catch (error) {
                 // ////console.error('[DisplayManager] Failed to fetch recommendations.');
@@ -2746,14 +2826,18 @@ var RecSysTracker = (function (exports) {
         async refreshAllDisplays() {
             this.recommendationFetcher.clearCache();
             const newItems = await this.getRecommendations(50);
-            // const oldItems = normalizeItems(this.cachedRecommendations);
-            // const newItemsNormalized = normalizeItems(newItems);
-            // const oldId = oldItems[0]?.id;
-            // const newId = newItemsNormalized[0]?.id;
-            ////console.log(newItems);
-            // const oldId = (this.cachedRecommendations as any)?.item?.[0]?.id;
-            // const newId = (newItems as any)?.item?.[0]?.id;
             this.cachedRecommendations = newItems;
+            // Update shared cache in sessionStorage
+            const sharedCacheKey = `recsys-cache-${this.domainKey}`;
+            try {
+                sessionStorage.setItem(sharedCacheKey, JSON.stringify({
+                    data: newItems,
+                    timestamp: Date.now()
+                }));
+            }
+            catch (e) {
+                // Quota exceeded or sessionStorage not available, silently fail
+            }
             this.popupDisplays.forEach(popup => {
                 var _a, _b, _c, _d;
                 (_b = (_a = popup).updateContent) === null || _b === void 0 ? void 0 : _b.call(_a, newItems, this.isUserAction, this.lastActionType);
@@ -2801,13 +2885,13 @@ var RecSysTracker = (function (exports) {
                     (_a = this.popupDisplays.get(key)) === null || _a === void 0 ? void 0 : _a.stop();
                     this.popupDisplays.delete(key);
                 }
-                const popupDisplay = new PopupDisplay(this.domainKey, key, this.apiBaseUrl, config, (limit) => {
-                    ////console.log('[DisplayManager] recommendationGetter called with limit:', limit);
-                    // Fetch directly from recommendationFetcher instead of using cache
-                    return this.recommendationFetcher.fetchForAnonymousUser({
-                        numberItems: limit,
-                        autoRefresh: false
-                    });
+                const popupDisplay = new PopupDisplay(this.domainKey, key, this.apiBaseUrl, config, async (limit) => {
+                    // Use cached recommendations from init if available
+                    if (this.cachedRecommendations) {
+                        return this.cachedRecommendations;
+                    }
+                    // Otherwise fetch new data
+                    return this.getRecommendations(limit);
                 });
                 this.popupDisplays.set(key, popupDisplay);
                 popupDisplay.start();
@@ -2827,10 +2911,13 @@ var RecSysTracker = (function (exports) {
                 if (!config.selector)
                     return;
                 const inlineDisplay = new InlineDisplay(this.domainKey, key, config.selector, this.apiBaseUrl, config, // Truyền object config
-                () => {
-                    return this.recommendationFetcher.fetchForAnonymousUser({
-                        autoRefresh: false
-                    });
+                async () => {
+                    // Use cached recommendations from init if available
+                    if (this.cachedRecommendations) {
+                        return this.cachedRecommendations;
+                    }
+                    // Otherwise fetch new data
+                    return this.getRecommendations(50);
                 });
                 this.inlineDisplays.set(key, inlineDisplay);
                 inlineDisplay.start();

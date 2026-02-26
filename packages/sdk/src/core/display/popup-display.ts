@@ -80,6 +80,10 @@ export class PopupDisplay {
   private currentLangCode: string = 'en'; // Biến lưu ngôn ngữ hiện tại
   private currentSearchKeyword: string = '';
   private currentLastItem: string = '';
+  
+  // Cache management
+  private cacheKey: string = '';
+  private readonly CACHE_MAX_AGE = 5 * 60 * 1000; // 5 minutes
 
   constructor(
     _domainKey: string,
@@ -92,6 +96,7 @@ export class PopupDisplay {
     this.domainKey = _domainKey;
     this.apiBaseUrl = _apiBaseUrl;
     this.hostId = `recsys-popup-host-${_slotName}-${Date.now()}`; // Unique ID based on slotName
+    this.cacheKey = `recsys-cache-${_domainKey}`; // Shared cache for entire domain
     this.config = {
       delay: config.delay ?? this.DEFAULT_DELAY,
       autoCloseDelay: config.autoCloseDelay,
@@ -202,15 +207,28 @@ export class PopupDisplay {
     return this.t('default');
   }
 
-  public updateContent(response: RecommendationResponse, isUserAction: boolean = false, actionType: string | null): void {
+  public updateContent(response: RecommendationResponse, isUserAction: boolean = false, actionType: string | null, isFromCache: boolean = false): void {
     if (!this.shadowHost || !this.shadowHost.shadowRoot) return;
 
-    // const { item, keyword, lastItem } = response;
-    //console.log('[Popup] Action type: ', actionType);
     const { keyword, lastItem } = response;
-    const titleElement = this.shadowHost.shadowRoot.querySelector('.recsys-header-title');
-      if (titleElement) {
-      titleElement.textContent = this.generateTitle(keyword as any, lastItem, isUserAction, actionType);
+    const titleElement = this.shadowHost.shadowRoot.querySelector('.recsys-header-title') as HTMLElement;
+    
+    if (titleElement) {
+      const newTitle = this.generateTitle(keyword as any, lastItem, isUserAction, actionType);
+      
+      // Smooth transition when updating from cache to fresh data
+      if (!isFromCache && titleElement.textContent !== newTitle) {
+        titleElement.style.transition = 'opacity 0.3s';
+        titleElement.style.opacity = '0';
+        
+        setTimeout(() => {
+          titleElement.textContent = newTitle;
+          titleElement.style.opacity = '1';
+        }, 300);
+      } else {
+        titleElement.textContent = newTitle;
+      }
+      
       const layout = (this.config.layoutJson as any) || {};
       if (layout.contentMode === 'carousel') {
         this.setupCarousel(this.shadowHost.shadowRoot, normalizeItems(response));
@@ -285,23 +303,45 @@ export class PopupDisplay {
 
   private async showPopup(isUserAction: boolean = false, actionType: string | null = null): Promise<void> {
     try {
-      const response = await this.fetchRecommendations();
-      const items = normalizeItems(response);
-      // Chỉ hiện nếu chưa hiện (double check)
-      if (items && items.length > 0 && !this.shadowHost) {
-        this.renderPopup(items, response.keyword as any, response.lastItem, isUserAction, actionType);
+      // 🚀 OPTIMISTIC UI: Show cached data immediately if available
+      const cached = this.getCache();
+      if (cached && cached.item && cached.item.length > 0 && !this.shadowHost) {
+        const cachedItems = normalizeItems(cached);
+        this.renderPopup(cachedItems, cached.keyword as any, cached.lastItem, isUserAction, actionType);
         
-        // Logic autoClose (tự đóng sau X giây)
+        // Setup autoClose for cached popup
         if (this.config.autoCloseDelay && this.config.autoCloseDelay > 0) {
           this.autoCloseTimeout = setTimeout(() => {
             this.removePopup();
-            // Sau khi đóng, Watcher vẫn chạy nên nếu URL vẫn đúng thì nó sẽ lại đếm ngược để hiện lại.
-            // Nếu muốn hiện 1 lần duy nhất mỗi lần vào trang, cần thêm logic session storage.
           }, this.config.autoCloseDelay * 1000);
+        }
+      }
+      
+      // 🔄 FETCH FRESH DATA: Update in background
+      const response = await this.fetchRecommendations();
+      const items = normalizeItems(response);
+      
+      if (items && items.length > 0) {
+        // Save fresh data to cache
+        this.saveCache(response);
+        
+        if (!this.shadowHost) {
+          // No cached popup was shown, render fresh data
+          this.renderPopup(items, response.keyword as any, response.lastItem, isUserAction, actionType);
+          
+          if (this.config.autoCloseDelay && this.config.autoCloseDelay > 0) {
+            this.autoCloseTimeout = setTimeout(() => {
+              this.removePopup();
+            }, this.config.autoCloseDelay * 1000);
+          }
+        } else {
+          // Update existing popup with fresh data
+          this.updateContent(response, isUserAction, actionType, false);
         }
       }
     } catch (error) {
       this.isPendingShow = false;
+      // If fetch fails but cache was shown, keep the cached popup
     }
   }
 
@@ -348,18 +388,53 @@ export class PopupDisplay {
   private async fetchRecommendations(): Promise<RecommendationResponse> {
     try {
       const limit = (this.config.layoutJson as any)?.maxItems || 50;
-      ////console.log('[PopupDisplay] Calling recommendationGetter with limit:', limit);
       const result = await this.recommendationGetter(limit);
-      ////console.log('[PopupDisplay] recommendationGetter result:', result);
       // recommendationGetter now returns full RecommendationResponse
       if (result && result.item && Array.isArray(result.item)) {
         return result;
       }
-      ////console.log('[PopupDisplay] Invalid result, returning empty');
       return { item: [], keyword: '', lastItem: '' };
     } catch (e) { 
-      // console.error('[PopupDisplay] fetchRecommendations error:', e);
       return { item: [], keyword: '', lastItem: '' }; 
+    }
+  }
+
+  // --- CACHE MANAGEMENT ---
+  private saveCache(data: RecommendationResponse): void {
+    try {
+      sessionStorage.setItem(this.cacheKey, JSON.stringify({
+        data,
+        timestamp: Date.now()
+      }));
+    } catch (e) {
+      // Quota exceeded or sessionStorage not available, silently fail
+    }
+  }
+
+  private getCache(): RecommendationResponse | null {
+    try {
+      const cached = sessionStorage.getItem(this.cacheKey);
+      if (!cached) return null;
+      
+      const { data, timestamp } = JSON.parse(cached);
+      
+      // Check if cache is expired
+      if (Date.now() - timestamp > this.CACHE_MAX_AGE) {
+        this.clearCache(); // Remove stale cache
+        return null;
+      }
+      
+      return data;
+    } catch {
+      return null;
+    }
+  }
+
+  private clearCache(): void {
+    try {
+      sessionStorage.removeItem(this.cacheKey);
+    } catch {
+      // Silently fail if sessionStorage not available
     }
   }
 
@@ -876,6 +951,9 @@ export class PopupDisplay {
 
   private async handleItemClick(id: string | number, rank: number): Promise<void> {
     if (!id) return;
+    
+    // Invalidate cache since user context has changed
+    this.clearCache();
     
     // Send evaluation request
     try {
