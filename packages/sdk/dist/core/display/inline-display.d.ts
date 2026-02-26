@@ -19,6 +19,8 @@ export declare class InlineDisplay {
     private processContainer;
     private fetchRecommendations;
     private getDynamicStyles;
+    private renderSkeletonItem;
+    private renderSkeletonWidget;
     private renderItemContent;
     private renderWidget;
     private renderStaticItems;

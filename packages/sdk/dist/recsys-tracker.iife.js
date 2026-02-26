@@ -2189,9 +2189,12 @@ var RecSysTracker = (function (exports) {
             }
             container.setAttribute('data-recsys-loaded', 'true');
             try {
+                // Render skeleton loading state immediately
+                this.renderSkeletonWidget(container);
+                // Fetch recommendations asynchronously
                 const response = await this.fetchRecommendations();
                 const items = normalizeItems(response);
-                //console.log(items);
+                // Replace skeleton with actual content
                 if (items && items.length > 0) {
                     this.renderWidget(container, items);
                 }
@@ -2220,7 +2223,7 @@ var RecSysTracker = (function (exports) {
         }
         // --- DYNAMIC CSS GENERATOR (SYNCED WITH POPUP) ---
         getDynamicStyles() {
-            var _a, _b, _c, _d, _e, _f, _g, _h, _j, _k, _l, _m, _o;
+            var _a, _b, _c, _d, _e, _f, _g, _h, _j, _k, _l, _m, _o, _p;
             const style = this.config.styleJson || {};
             const layout = this.config.layoutJson || {};
             // 1. Unpack Configs
@@ -2403,7 +2406,127 @@ var RecSysTracker = (function (exports) {
     .recsys-nav:hover { opacity: 1; }
     .recsys-prev { left: 0; }
     .recsys-next { right: 0; }
+
+    /* Skeleton Loading Styles */
+    .skeleton-item {
+      display: flex;
+      flex-direction: ${itemDir};
+      align-items: ${itemAlign};
+      gap: ${((_p = tokens.spacingScale) === null || _p === void 0 ? void 0 : _p.sm) || 8}px;
+      background: ${cardBg};
+      border: ${cardBorder};
+      border-radius: ${cardRadius};
+      padding: ${cardPadding}px;
+      ${itemWidthCSS}
+      min-width: 0;
+      box-sizing: border-box;
+      overflow: hidden;
+      pointer-events: none;
+    }
+
+    .skeleton {
+      background: linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%);
+      background-size: 200% 100%;
+      animation: shimmer 1.5s infinite;
+      border-radius: 4px;
+    }
+
+    @keyframes shimmer {
+      0% { background-position: 200% 0; }
+      100% { background-position: -200% 0; }
+    }
+
+    .skeleton-img {
+      width: 100%;
+      aspect-ratio: 1;
+      flex-shrink: 0;
+    }
+
+    .skeleton-info {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      flex: 1;
+      min-width: 0;
+      width: 100%;
+    }
+
+    .skeleton-title {
+      height: 16px;
+      width: 80%;
+    }
+
+    .skeleton-text {
+      height: 12px;
+      width: 60%;
+    }
+
+    .skeleton-text-short {
+      height: 12px;
+      width: 40%;
+    }
   `;
+        }
+        // --- SKELETON LOADING STATE ---
+        renderSkeletonItem() {
+            return `
+      <div class="skeleton-item">
+        <div class="skeleton-img skeleton"></div>
+        <div class="skeleton-info">
+          <div class="skeleton skeleton-title"></div>
+          <div class="skeleton skeleton-text"></div>
+          <div class="skeleton skeleton-text-short"></div>
+        </div>
+      </div>
+    `;
+        }
+        renderSkeletonWidget(container) {
+            var _a;
+            const layout = this.config.layoutJson || {};
+            const contentMode = layout.contentMode || 'grid';
+            const modeConfig = ((_a = layout.modes) === null || _a === void 0 ? void 0 : _a[contentMode]) || {};
+            // Determine skeleton count based on mode
+            let skeletonCount = 4;
+            if (contentMode === 'grid') {
+                skeletonCount = modeConfig.columns || 4;
+                if (skeletonCount < 4)
+                    skeletonCount = 4; // At least 4 items for grid
+            }
+            else if (contentMode === 'list') {
+                skeletonCount = 3;
+            }
+            else if (contentMode === 'carousel') {
+                skeletonCount = modeConfig.itemsPerView || 5;
+            }
+            container.innerHTML = '';
+            const shadow = container.attachShadow({ mode: 'open' });
+            const style = document.createElement('style');
+            style.textContent = this.getDynamicStyles();
+            shadow.appendChild(style);
+            const wrapper = document.createElement('div');
+            wrapper.className = 'recsys-widget';
+            if (contentMode === 'carousel') {
+                wrapper.innerHTML = `
+        <button class="recsys-nav recsys-prev">‹</button>
+        <div class="recsys-container"></div>
+        <button class="recsys-nav recsys-next">›</button>
+      `;
+            }
+            else {
+                wrapper.innerHTML = '<div class="recsys-container"></div>';
+            }
+            shadow.appendChild(wrapper);
+            const containerEl = shadow.querySelector('.recsys-container');
+            if (containerEl) {
+                for (let i = 0; i < skeletonCount; i++) {
+                    const tempDiv = document.createElement('div');
+                    tempDiv.innerHTML = this.renderSkeletonItem();
+                    const skeletonElement = tempDiv.firstElementChild;
+                    if (skeletonElement) {
+                        containerEl.appendChild(skeletonElement);
+                    }
+                }
+            }
         }
         // --- DYNAMIC HTML RENDERER (SYNCED WITH POPUP) ---
         renderItemContent(item) {
@@ -2718,13 +2841,13 @@ var RecSysTracker = (function (exports) {
             if (!returnMethods || !Array.isArray(returnMethods) || returnMethods.length === 0) {
                 return;
             }
-            // Fetch recommendations once for all display methods
-            try {
-                await this.fetchRecommendationsOnce();
-            }
-            catch (error) {
-                // ////console.error('[DisplayManager] Failed to fetch recommendations.');
-            }
+            // // Fetch recommendations once for all display methods
+            // try {
+            //   await this.fetchRecommendationsOnce();
+            // } catch (error) {
+            //   // ////console.error('[DisplayManager] Failed to fetch recommendations.');
+            // }
+            // Don't await here to avoid blocking display initialization, each display will fetch when ready
             // Process each return method
             for (const method of returnMethods) {
                 this.activateDisplayMethod(method);

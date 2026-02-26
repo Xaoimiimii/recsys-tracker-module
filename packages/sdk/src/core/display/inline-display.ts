@@ -105,10 +105,14 @@ export class InlineDisplay {
     container.setAttribute('data-recsys-loaded', 'true');
 
     try {
+      // Render skeleton loading state immediately
+      this.renderSkeletonWidget(container);
+      
+      // Fetch recommendations asynchronously
       const response = await this.fetchRecommendations();
       const items = normalizeItems(response);
-      //console.log(items);
 
+      // Replace skeleton with actual content
       if (items && items.length > 0) {
         this.renderWidget(container, items);
       }
@@ -349,7 +353,131 @@ export class InlineDisplay {
     .recsys-nav:hover { opacity: 1; }
     .recsys-prev { left: 0; }
     .recsys-next { right: 0; }
+
+    /* Skeleton Loading Styles */
+    .skeleton-item {
+      display: flex;
+      flex-direction: ${itemDir};
+      align-items: ${itemAlign};
+      gap: ${tokens.spacingScale?.sm || 8}px;
+      background: ${cardBg};
+      border: ${cardBorder};
+      border-radius: ${cardRadius};
+      padding: ${cardPadding}px;
+      ${itemWidthCSS}
+      min-width: 0;
+      box-sizing: border-box;
+      overflow: hidden;
+      pointer-events: none;
+    }
+
+    .skeleton {
+      background: linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%);
+      background-size: 200% 100%;
+      animation: shimmer 1.5s infinite;
+      border-radius: 4px;
+    }
+
+    @keyframes shimmer {
+      0% { background-position: 200% 0; }
+      100% { background-position: -200% 0; }
+    }
+
+    .skeleton-img {
+      width: 100%;
+      aspect-ratio: 1;
+      flex-shrink: 0;
+    }
+
+    .skeleton-info {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      flex: 1;
+      min-width: 0;
+      width: 100%;
+    }
+
+    .skeleton-title {
+      height: 16px;
+      width: 80%;
+    }
+
+    .skeleton-text {
+      height: 12px;
+      width: 60%;
+    }
+
+    .skeleton-text-short {
+      height: 12px;
+      width: 40%;
+    }
   `;
+  }
+
+  // --- SKELETON LOADING STATE ---
+  private renderSkeletonItem(): string {
+    return `
+      <div class="skeleton-item">
+        <div class="skeleton-img skeleton"></div>
+        <div class="skeleton-info">
+          <div class="skeleton skeleton-title"></div>
+          <div class="skeleton skeleton-text"></div>
+          <div class="skeleton skeleton-text-short"></div>
+        </div>
+      </div>
+    `;
+  }
+
+  private renderSkeletonWidget(container: HTMLElement): void {
+    const layout: any = this.config.layoutJson || {};
+    const contentMode = layout.contentMode || 'grid';
+    const modeConfig = layout.modes?.[contentMode as keyof typeof layout.modes] || {} as any;
+    
+    // Determine skeleton count based on mode
+    let skeletonCount = 4;
+    if (contentMode === 'grid') {
+      skeletonCount = modeConfig.columns || 4;
+      if (skeletonCount < 4) skeletonCount = 4; // At least 4 items for grid
+    } else if (contentMode === 'list') {
+      skeletonCount = 3;
+    } else if (contentMode === 'carousel') {
+      skeletonCount = modeConfig.itemsPerView || 5;
+    }
+
+    container.innerHTML = '';
+    const shadow = container.attachShadow({ mode: 'open' });
+    
+    const style = document.createElement('style');
+    style.textContent = this.getDynamicStyles();
+    shadow.appendChild(style);
+
+    const wrapper = document.createElement('div');
+    wrapper.className = 'recsys-widget';
+    
+    if (contentMode === 'carousel') {
+      wrapper.innerHTML = `
+        <button class="recsys-nav recsys-prev">‹</button>
+        <div class="recsys-container"></div>
+        <button class="recsys-nav recsys-next">›</button>
+      `;
+    } else {
+      wrapper.innerHTML = '<div class="recsys-container"></div>';
+    }
+    
+    shadow.appendChild(wrapper);
+
+    const containerEl = shadow.querySelector('.recsys-container');
+    if (containerEl) {
+      for (let i = 0; i < skeletonCount; i++) {
+        const tempDiv = document.createElement('div');
+        tempDiv.innerHTML = this.renderSkeletonItem();
+        const skeletonElement = tempDiv.firstElementChild;
+        if (skeletonElement) {
+          containerEl.appendChild(skeletonElement);
+        }
+      }
+    }
   }
 
   // --- DYNAMIC HTML RENDERER (SYNCED WITH POPUP) ---

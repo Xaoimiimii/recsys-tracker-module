@@ -31,12 +31,14 @@ export class DisplayManager {
       return;
     }
 
-    // Fetch recommendations once for all display methods
-    try {
-      await this.fetchRecommendationsOnce();
-    } catch (error) {
-      // ////console.error('[DisplayManager] Failed to fetch recommendations.');
-    }
+    // // Fetch recommendations once for all display methods
+    // try {
+    //   await this.fetchRecommendationsOnce();
+    // } catch (error) {
+    //   // ////console.error('[DisplayManager] Failed to fetch recommendations.');
+    // }
+
+    // Don't await here to avoid blocking display initialization, each display will fetch when ready
 
     // Process each return method
     for (const method of returnMethods) {      
