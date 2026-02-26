@@ -77,7 +77,9 @@ export class PopupDisplay {
   private domainKey: string;
   private apiBaseUrl: string;
 
-  private currentLangCode: string = 'vi'; // Biến lưu ngôn ngữ hiện tại
+  private currentLangCode: string = 'en'; // Biến lưu ngôn ngữ hiện tại
+  private currentSearchKeyword: string = '';
+  private currentLastItem: string = '';
 
   constructor(
     _domainKey: string,
@@ -96,6 +98,7 @@ export class PopupDisplay {
       ...config
     };
     this.detectLanguage();
+    this.setupLanguageObserver();
   }
 
   start(): void {
@@ -111,24 +114,37 @@ export class PopupDisplay {
     this.removePopup();
   }
 
-  private detectLanguage(): void {
-    let langCode = (this.config as any).language;
-
-    if (!langCode && document.documentElement.lang) {
-      langCode = document.documentElement.lang;
-    }
-
-    if (!langCode && navigator.language) {
-      langCode = navigator.language;
-    }
-
+  private detectLanguage(): boolean {
+    let langCode = (this.config as any).language || document.documentElement.lang || navigator.language;
     const shortCode = langCode ? langCode.substring(0, 2).toLowerCase() : 'vi';
+    const newLangCode = translations[shortCode] ? shortCode : 'en';
 
-    if (translations[shortCode]) {
-      this.currentLangCode = shortCode;
-    } else {
-      this.currentLangCode = 'en';
+    if (this.currentLangCode !== newLangCode) {
+      this.currentLangCode = newLangCode;
+      return true;
     }
+    return false;
+  }
+
+  private setupLanguageObserver(): void {
+    const htmlElement = document.documentElement;
+
+    const observer = new MutationObserver((mutations) => {
+      mutations.forEach((mutation) => {
+        if (mutation.type === 'attributes' && mutation.attributeName === 'lang') {
+          const hasChanged = this.detectLanguage();
+
+          if (hasChanged && this.shadowHost && this.shadowHost.shadowRoot) {
+            const titleElement = this.shadowHost.shadowRoot.querySelector('.recsys-header-title');
+            if (titleElement) {
+              titleElement.textContent = this.generateTitle(this.currentSearchKeyword, this.currentLastItem);
+            }
+          }
+        }
+      });
+    });
+
+    observer.observe(htmlElement, { attributes: true, attributeFilter: ['lang'] });
   }
 
   private t(key: string, variables?: Record<string, string>): string {
@@ -693,6 +709,9 @@ export class PopupDisplay {
   }
 
   private renderPopup(items: RecommendationItem[], search: string, lastItem: string): void {
+    this.currentSearchKeyword = search || '';
+    this.currentLastItem = lastItem || '';
+
     this.removePopup();
 
     //const returnMethodValue = (this.config as any).value || "";
@@ -891,4 +910,3 @@ export class PopupDisplay {
     }
   }
 }
-
