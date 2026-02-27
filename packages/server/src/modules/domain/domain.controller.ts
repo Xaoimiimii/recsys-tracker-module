@@ -8,12 +8,6 @@ import { ApiOperation, ApiTags } from '@nestjs/swagger';
 export class DomainController {
     constructor(private domainService: DomainService) { }
 
-    @Get(':key')
-    @ApiOperation({ summary: 'Get domain by key' })
-    async getDomainByKey(@Param('key') key: string) {
-        return this.domainService.getDomainByKey(key);
-    }
-
     @Post('create')
     @ApiOperation({ summary: 'Create a new domain' })
     async createDomain(@Body() body: CreateDomainDto) {
@@ -38,5 +32,11 @@ export class DomainController {
         @Query('key') key: string
     ) {
         return this.domainService.getUserIdentity(key);
+    }
+    
+    @Get(':key')
+    @ApiOperation({ summary: 'Get domain by key' })
+    async getDomainByKey(@Param('key') key: string) {
+        return this.domainService.getDomainByKey(key);
     }
 }
