@@ -337,7 +337,7 @@ export class EventService {
                     }
                 }
             })
-            if (!exist) return;
+            if (exist) return;
 
             await this.prisma.interaction.create({
                 data: {
