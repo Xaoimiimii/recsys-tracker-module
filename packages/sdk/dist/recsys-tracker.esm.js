@@ -180,7 +180,7 @@ class ConfigLoader {
             return this.config;
         }
         const moduleBaseUrl = "https://recsys-tracker-module.onrender.com";
-        const webConfigBaseUrl = "https://recsys-tracker-web-config.onrender.com";
+        // const webConfigBaseUrl = "https://recsys-tracker-web-config.onrender.com";
         try {
             // Bước 1: Gọi các API song song để lấy domain, return methods, event types và search keyword config
             const [domainResponse, rulesListResponse, returnMethodsResponse, eventTypesResponse, searchKeywordResponse, userIdentityResponse] = await Promise.all([
@@ -189,7 +189,7 @@ class ConfigLoader {
                 fetch(`${moduleBaseUrl}/return-method/${this.domainKey}`),
                 fetch(`${moduleBaseUrl}/rule/event-type`),
                 fetch(`${moduleBaseUrl}/search-keyword-config?domainKey=${this.domainKey}`),
-                fetch(`${webConfigBaseUrl}/domain/user-identity?key=${this.domainKey}`),
+                fetch(`${moduleBaseUrl}/domain/user-identity?key=${this.domainKey}`),
             ]);
             // Kiểm tra response
             if (!domainResponse.ok) {

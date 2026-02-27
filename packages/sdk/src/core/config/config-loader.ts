@@ -57,7 +57,7 @@ export class ConfigLoader {
     }
 
     const moduleBaseUrl = process.env.MODULE_API_URL;
-    const webConfigBaseUrl = process.env.WEB_CONFIG_API_URL;
+    // const webConfigBaseUrl = process.env.WEB_CONFIG_API_URL;
 
     try {
       // Bước 1: Gọi các API song song để lấy domain, return methods, event types và search keyword config
@@ -67,7 +67,7 @@ export class ConfigLoader {
         fetch(`${moduleBaseUrl}/return-method/${this.domainKey}`),
         fetch(`${moduleBaseUrl}/rule/event-type`),
         fetch(`${moduleBaseUrl}/search-keyword-config?domainKey=${this.domainKey}`),
-        fetch(`${webConfigBaseUrl}/domain/user-identity?key=${this.domainKey}`),
+        fetch(`${moduleBaseUrl}/domain/user-identity?key=${this.domainKey}`),
       ]);
 
       // Kiểm tra response
