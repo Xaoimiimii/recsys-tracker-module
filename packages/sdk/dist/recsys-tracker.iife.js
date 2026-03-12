@@ -182,7 +182,7 @@ var RecSysTracker = (function (exports) {
             if (!this.domainKey) {
                 return this.config;
             }
-            const moduleBaseUrl = "https://recsys-tracker-module-0umt.onrender.com/";
+            const moduleBaseUrl = "https://recsys-tracker-module-0umt.onrender.com";
             // const webConfigBaseUrl = "https://recsys-tracker-web-config.onrender.com";
             try {
                 // Bước 1: Gọi các API song song để lấy domain, return methods, event types và search keyword config
@@ -4078,7 +4078,7 @@ var RecSysTracker = (function (exports) {
         async pushKeywordToServer(userId, anonymousId, domainKey, keyword) {
             var _a, _b;
             // const baseUrl = process.env.API_URL || 'https://recsys-tracker-module.onrender.com';
-            const baseUrl = "https://recsys-tracker-module-0umt.onrender.com/";
+            const baseUrl = "https://recsys-tracker-module-0umt.onrender.com";
             const url = `${baseUrl}/recommendation/push-keyword`;
             const payload = {
                 UserId: userId,
@@ -5732,8 +5732,8 @@ var RecSysTracker = (function (exports) {
                     return;
                 }
                 // Khởi tạo EventDispatcher
-                // const baseUrl = "https://recsys-tracker-module-0umt.onrender.com/" || 'https://recsys-tracker-module.onrender.com';
-                const baseUrl = "https://recsys-tracker-module-0umt.onrender.com/";
+                // const baseUrl = "https://recsys-tracker-module-0umt.onrender.com" || 'https://recsys-tracker-module.onrender.com';
+                const baseUrl = "https://recsys-tracker-module-0umt.onrender.com";
                 this.eventDispatcher = new EventDispatcher({
                     endpoint: `${baseUrl}/event`,
                 });
