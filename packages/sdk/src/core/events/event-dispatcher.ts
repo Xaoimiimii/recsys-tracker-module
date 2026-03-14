@@ -45,7 +45,7 @@ export class EventDispatcher {
 
     // Check nếu event đang được gửi
     if (this.sendingEvents.has(event.id)) {
-      //console.log('[EventDispatcher] Event already being sent, skipping:', event.id);
+      console.log('[EventDispatcher] Event already being sent, skipping:', event.id);
       return true; // Return true để không retry
     }
 
@@ -77,17 +77,17 @@ export class EventDispatcher {
 
       const payload = JSON.stringify(payloadObject);
 
-    // Log payload sẽ gửi đi
-    // console.log('[EventDispatcher] Sending payload to API:', payloadObject);
+      // Log payload sẽ gửi đi
+      console.log('[EventDispatcher] Sending payload to API:', payloadObject);
 
       // Thử từng phương thức gửi theo thứ tự ưu tiên
-      const strategies: SendStrategy[] = ['beacon', 'fetch'];
+      const strategies: SendStrategy[] = ['fetch', 'beacon'];
 
       for (const strategy of strategies) {
         try {
-          //console.log('[EventDispatcher] Trying strategy:', strategy);
+          console.log('[EventDispatcher] Trying strategy:', strategy);
           const success = await this.sendWithStrategy(payload, strategy);
-          //console.log('[EventDispatcher] Strategy', strategy, 'result:', success);
+          console.log('[EventDispatcher] Strategy', strategy, 'result:', success);
           if (success) {
             if (this.displayManager && typeof this.displayManager.notifyActionTriggered === 'function') {
               this.displayManager.notifyActionTriggered(event.actionType as any);
@@ -96,7 +96,7 @@ export class EventDispatcher {
             return true;
           }
         } catch (error) {
-          //console.log('[EventDispatcher] Strategy', strategy, 'failed with error:', error);
+          console.log('[EventDispatcher] Strategy', strategy, 'failed with error:', error);
           // Thử phương thức tiếp theo
         }
       }
@@ -181,7 +181,8 @@ export class EventDispatcher {
       clearTimeout(timeoutId);
 
       if (!response.ok) {
-        // throw new Error(`HTTP ${response.status}`);
+        const errorText = await response.text();
+        console.error(`[EventDispatcher] HTTP ${response.status} Failed! Server says:`, errorText);
         return false;
       }
 
@@ -189,6 +190,7 @@ export class EventDispatcher {
     } catch (error) {
       clearTimeout(timeoutId);
       // throw error;
+      console.error('[EventDispatcher] Network/CORS Error in sendFetch:', error);
       return false;
     }
   }

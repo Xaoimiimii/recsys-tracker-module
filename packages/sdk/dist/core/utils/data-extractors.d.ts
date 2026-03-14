@@ -40,6 +40,10 @@ export declare function extractByPath(obj: any, path: string): any;
  * @param extractType - 'query' or 'pathname'
  * @param requestUrlPattern - Optional pattern for param extraction (e.g., '/api/user/:id')
  */
+/**
+ * Extract value from URL (pathname or query parameter)
+ * Đã fix lỗi case-sensitive, query param và bỏ require() gây crash trình duyệt
+ */
 export declare function extractFromUrl(url: string, value: string, extractType?: string, requestUrlPattern?: string): any;
 /**
  * Get value from HTML element

@@ -22,7 +22,7 @@ export function extractFromCookie(cookieName: string): string | null {
       return decodeURIComponent(value);
     }
   }
-  
+
   return null;
 }
 
@@ -36,7 +36,7 @@ export function extractFromLocalStorage(key: string): any {
   try {
     const value = localStorage.getItem(key);
     if (value === null) return null;
-    
+
     // Try parse JSON
     try {
       return JSON.parse(value);
@@ -58,7 +58,7 @@ export function extractFromSessionStorage(key: string): any {
   try {
     const value = sessionStorage.getItem(key);
     if (value === null) return null;
-    
+
     // Try parse JSON
     try {
       return JSON.parse(value);
@@ -116,37 +116,53 @@ export function extractByPath(obj: any, path: string): any {
  * @param extractType - 'query' or 'pathname'
  * @param requestUrlPattern - Optional pattern for param extraction (e.g., '/api/user/:id')
  */
+/**
+ * Extract value from URL (pathname or query parameter)
+ * Đã fix lỗi case-sensitive, query param và bỏ require() gây crash trình duyệt
+ */
 export function extractFromUrl(
   url: string,
   value: string,
   extractType?: string,
   requestUrlPattern?: string
 ): any {
+  // Báo cho TypeScript biết là "tôi biết biến này tồn tại nhưng cố tình bỏ qua"
+  void requestUrlPattern;
+
+  console.log(`[Tracker Spy] Đang bóc tách URL: "${url}"`);
+  console.log(`[Tracker Spy] Cấu hình Rule: Cần lấy Index = ${value}, Kiểu = ${extractType}`);
+
+  if (!url || !value) return null;
+
   try {
     const urlObj = new URL(url, typeof window !== 'undefined' ? window.location.origin : 'http://localhost');
 
-    if (extractType === 'query') {
-      // Extract query parameter
+    // Normalize string: chuyển về chữ thường để tránh lỗi "PathName" !== "pathname"
+    const type = (extractType || '').toLowerCase();
+
+    // 1. Trường hợp lấy Query Parameter
+    if (type === 'query' || type === 'queryparameter') {
       return urlObj.searchParams.get(value);
-    } else if (extractType === 'pathname') {
-      // Extract pathname segment by index
+    }
+
+    // 2. Trường hợp lấy Pathname (Hoặc nếu extractType bị undefined nhưng value là một con số)
+    if (type === 'pathname' || !isNaN(parseInt(value, 10))) {
       const index = parseInt(value, 10) - 1;
-      
+
       if (!isNaN(index)) {
-        // Value is numeric index - extract by position
+        // Hàm filter sẽ loại bỏ các chuỗi rỗng do dấu "/" thừa tạo ra
         const segments = urlObj.pathname.split('/').filter(s => s.length > 0);
+
+        console.log(`[Tracker Spy] Mảng sau khi cắt:`, segments);
+        console.log(`[Tracker Spy] Kết quả bốc được ở Index ${index}:`, segments[index] || 'RỖNG/NULL');
+
         return segments[index] || null;
-      } else if (requestUrlPattern) {
-        // Value is param name - extract using pattern matching
-        // This requires PathMatcher utility
-        const { PathMatcher } = require('./path-matcher');
-        const params = PathMatcher.extractParams(url, requestUrlPattern);
-        return params[value] || null;
       }
     }
 
     return null;
   } catch (error) {
+    console.error('[DataExtractor] URL Parsing Error:', error);
     return null;
   }
 }
