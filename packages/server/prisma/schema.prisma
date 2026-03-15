@@ -248,6 +248,7 @@ enum PayloadMappingSource {
   request_body
   request_url
   page_url
+  element
 }
 
 model PayloadMapping {
