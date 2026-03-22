@@ -49,7 +49,8 @@ export type PayloadMappingField = (typeof PayloadMappingField)[keyof typeof Payl
 export const PayloadMappingSource = {
   request_body: 'request_body',
   request_url: 'request_url',
-  page_url: 'page_url'
+  page_url: 'page_url',
+  element: 'element'
 } as const
 
 export type PayloadMappingSource = (typeof PayloadMappingSource)[keyof typeof PayloadMappingSource]
