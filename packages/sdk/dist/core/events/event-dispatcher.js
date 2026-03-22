@@ -58,7 +58,7 @@ export class EventDispatcher {
                     if (success) {
                         if (this.displayManager && typeof this.displayManager.notifyActionTriggered === 'function') {
                             this.displayManager.notifyActionTriggered(event.actionType);
-                            console.log('[EventDispatcher] Action type:', event.actionType);
+                            //console.log('[EventDispatcher] Action type:', event.actionType);
                         }
                         return true;
                     }
