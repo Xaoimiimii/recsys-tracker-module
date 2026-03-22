@@ -24,8 +24,6 @@ export class NetworkObserver {
         // Buffer for requests that arrived before UserIdentityManager was set
         this.pendingUserIdentityRequests = [];
         this.MAX_PENDING_REQUESTS = 10;
-        // Buffer for requests that arrived before rules are registered
-        this.pendingRuleRequests = [];
         // Registered rules that need network data
         this.registeredRules = new Map();
         this.originalFetch = window.fetch;
@@ -107,35 +105,9 @@ export class NetworkObserver {
      * Được gọi bởi PayloadBuilder khi phát hiện rule cần async data
      */
     registerRule(rule) {
-        var _a;
         if (!this.registeredRules.has(rule.id)) {
             this.registeredRules.set(rule.id, rule);
-            // MỚI: Khi có Rule mới được đăng ký, lập tức lục lại "phòng chờ" 
-            // xem có request nào đến sớm phù hợp với Rule này không
-            if (this.pendingRuleRequests.length > 0) {
-                console.log(`[NetworkObserver] Reprocessing ${this.pendingRuleRequests.length} buffered requests for new rule ${rule.id}`);
-                // Copy mảng để tránh lỗi vòng lặp
-                const requestsToProcess = [...this.pendingRuleRequests];
-                for (const requestInfo of requestsToProcess) {
-                    // Tìm REC phù hợp
-                    const context = (_a = this.recManager) === null || _a === void 0 ? void 0 : _a.findMatchingContext(rule.id, requestInfo.timestamp);
-                    if (context && this.matchesAnyPattern(rule, requestInfo)) {
-                        this.processRuleMappings(rule, context, requestInfo);
-                    }
-                }
-            }
         }
-    }
-    // Hàm phụ trợ để check match nhanh
-    matchesAnyPattern(rule, requestInfo) {
-        if (!rule.payloadMappings)
-            return false;
-        for (const mapping of rule.payloadMappings) {
-            if (this.isNetworkSource(mapping.source || '') && this.matchesPattern(mapping, requestInfo)) {
-                return true;
-            }
-        }
-        return false;
     }
     /**
      * Unregister rule (cleanup)
@@ -207,14 +179,17 @@ export class NetworkObserver {
      * Delegate user info extraction to UserIdentityManager
      */
     async handleRequest(requestInfo) {
-        if (!this.recManager)
+        if (!this.recManager) {
             return;
-        console.log(`[NetworkObserver] Caught request: ${requestInfo.url}. Registered Rules count: ${this.registeredRules.size}`);
+        }
         // STEP 1: USER IDENTITY HANDLING
+        // Delegate to UserIdentityManager nếu có
         if (this.userIdentityManager) {
             this.processUserIdentityRequest(requestInfo);
         }
         else {
+            // Buffer request if UserIdentityManager not ready yet
+            // Only buffer GET/POST requests to avoid memory issues
             if ((requestInfo.method === 'GET' || requestInfo.method === 'POST') &&
                 this.pendingUserIdentityRequests.length < this.MAX_PENDING_REQUESTS) {
                 this.pendingUserIdentityRequests.push(requestInfo);
@@ -222,11 +197,7 @@ export class NetworkObserver {
         }
         // STEP 2: SECURITY CHECK - Có registered rules không?
         if (this.registeredRules.size === 0) {
-            // MỚI: Thay vì return luôn, chúng ta nhét request vào phòng chờ!
-            // Giới hạn 50 request để tránh tràn RAM
-            if (this.pendingRuleRequests.length < 50) {
-                this.pendingRuleRequests.push(requestInfo);
-            }
+            // Không có rules để track events
             return;
         }
         // STEP 3: SECURITY CHECK - Request này có khả năng match với rule nào không?
@@ -334,23 +305,9 @@ export class NetworkObserver {
         }
         // Check URL pattern
         if (requestUrlPattern) {
-            // --- BẮT ĐẦU ĐOẠN SỬA LỖI ---
-            let pathToMatch = requestInfo.url;
-            try {
-                // Biến URL dài ngoằng thành object, dù là link web hay link API
-                const urlObj = new URL(requestInfo.url, typeof window !== 'undefined' ? window.location.origin : 'http://localhost');
-                // Chỉ bóc đúng phần pathname (VD: "/3/movie/2") để đi so sánh
-                pathToMatch = urlObj.pathname;
-            }
-            catch (e) {
-                // Fallback: Nếu lỗi thì cắt bỏ thủ công phần sau dấu ?
-                pathToMatch = requestInfo.url.split('?')[0];
-            }
-            // Đem pathname sạch đi so sánh với cái Pattern cấu hình trên Dashboard
-            if (!PathMatcher.match(pathToMatch, requestUrlPattern)) {
+            if (!PathMatcher.match(requestInfo.url, requestUrlPattern)) {
                 return false;
             }
-            // --- KẾT THÚC ĐOẠN SỬA LỖI ---
         }
         return true;
     }

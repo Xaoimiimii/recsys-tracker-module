@@ -19,7 +19,7 @@ export class EventDispatcher {
         }
         // Check nếu event đang được gửi
         if (this.sendingEvents.has(event.id)) {
-            console.log('[EventDispatcher] Event already being sent, skipping:', event.id);
+            //console.log('[EventDispatcher] Event already being sent, skipping:', event.id);
             return true; // Return true để không retry
         }
         // Mark event as being sent
@@ -47,24 +47,24 @@ export class EventDispatcher {
             };
             const payload = JSON.stringify(payloadObject);
             // Log payload sẽ gửi đi
-            console.log('[EventDispatcher] Sending payload to API:', payloadObject);
+            // console.log('[EventDispatcher] Sending payload to API:', payloadObject);
             // Thử từng phương thức gửi theo thứ tự ưu tiên
-            const strategies = ['fetch', 'beacon'];
+            const strategies = ['beacon', 'fetch'];
             for (const strategy of strategies) {
                 try {
-                    console.log('[EventDispatcher] Trying strategy:', strategy);
+                    //console.log('[EventDispatcher] Trying strategy:', strategy);
                     const success = await this.sendWithStrategy(payload, strategy);
-                    console.log('[EventDispatcher] Strategy', strategy, 'result:', success);
+                    //console.log('[EventDispatcher] Strategy', strategy, 'result:', success);
                     if (success) {
                         if (this.displayManager && typeof this.displayManager.notifyActionTriggered === 'function') {
                             this.displayManager.notifyActionTriggered(event.actionType);
-                            console.log('[EventDispatcher] Action type:', event.actionType);
+                            //console.log('[EventDispatcher] Action type:', event.actionType);
                         }
                         return true;
                     }
                 }
                 catch (error) {
-                    console.log('[EventDispatcher] Strategy', strategy, 'failed with error:', error);
+                    //console.log('[EventDispatcher] Strategy', strategy, 'failed with error:', error);
                     // Thử phương thức tiếp theo
                 }
             }
@@ -134,8 +134,7 @@ export class EventDispatcher {
             });
             clearTimeout(timeoutId);
             if (!response.ok) {
-                const errorText = await response.text();
-                console.error(`[EventDispatcher] HTTP ${response.status} Failed! Server says:`, errorText);
+                // throw new Error(`HTTP ${response.status}`);
                 return false;
             }
             return true;
@@ -143,7 +142,6 @@ export class EventDispatcher {
         catch (error) {
             clearTimeout(timeoutId);
             // throw error;
-            console.error('[EventDispatcher] Network/CORS Error in sendFetch:', error);
             return false;
         }
     }

@@ -33,25 +33,22 @@ interface NetworkRequestInfo {
  */
 export class NetworkObserver {
   private static instance: NetworkObserver | null = null;
-
+  
   private originalFetch: typeof fetch;
   private originalXhrOpen: any;
   private originalXhrSend: any;
   private isActive = false;
-
+  
   // Reference to REC manager
   private recManager: RuleExecutionContextManager | null = null;
-
+  
   // Reference to UserIdentityManager
   private userIdentityManager: UserIdentityManager | null = null;
-
+  
   // Buffer for requests that arrived before UserIdentityManager was set
   private pendingUserIdentityRequests: NetworkRequestInfo[] = [];
   private readonly MAX_PENDING_REQUESTS = 10;
-
-  // Buffer for requests that arrived before rules are registered
-  private pendingRuleRequests: NetworkRequestInfo[] = [];
-
+  
   // Registered rules that need network data
   private registeredRules: Map<number, TrackingRule> = new Map();
 
@@ -77,14 +74,14 @@ export class NetworkObserver {
   setUserIdentityManager(userIdentityManager: UserIdentityManager): void {
     //console.log('[NetworkObserver] Setting UserIdentityManager');
     this.userIdentityManager = userIdentityManager;
-
+    
     // Process any pending requests that were buffered
     if (this.pendingUserIdentityRequests.length > 0) {
       //console.log('[NetworkObserver] Processing', this.pendingUserIdentityRequests.length, 'pending requests');
       for (const requestInfo of this.pendingUserIdentityRequests) {
         this.processUserIdentityRequest(requestInfo);
       }
-
+      
       this.pendingUserIdentityRequests = [];
     }
   }
@@ -105,7 +102,7 @@ export class NetworkObserver {
       requestInfo.method
     );
     //console.log('[NetworkObserver] Match result:', matchesUserIdentity);
-
+    
     if (matchesUserIdentity) {
       //console.log('[NetworkObserver] ✅ Request matches user identity config, extracting...');
       // Parse response body nếu cần
@@ -118,7 +115,7 @@ export class NetworkObserver {
           requestInfo.responseBody = responseBodyText;
         }
       }
-
+      
       //console.log('[NetworkObserver] Calling UserIdentityManager.extractFromNetworkRequest');
       // Extract user info
       this.userIdentityManager.extractFromNetworkRequest(
@@ -155,34 +152,7 @@ export class NetworkObserver {
   registerRule(rule: TrackingRule): void {
     if (!this.registeredRules.has(rule.id)) {
       this.registeredRules.set(rule.id, rule);
-
-      // MỚI: Khi có Rule mới được đăng ký, lập tức lục lại "phòng chờ" 
-      // xem có request nào đến sớm phù hợp với Rule này không
-      if (this.pendingRuleRequests.length > 0) {
-        console.log(`[NetworkObserver] Reprocessing ${this.pendingRuleRequests.length} buffered requests for new rule ${rule.id}`);
-        // Copy mảng để tránh lỗi vòng lặp
-        const requestsToProcess = [...this.pendingRuleRequests];
-
-        for (const requestInfo of requestsToProcess) {
-          // Tìm REC phù hợp
-          const context = this.recManager?.findMatchingContext(rule.id, requestInfo.timestamp);
-          if (context && this.matchesAnyPattern(rule, requestInfo)) {
-            this.processRuleMappings(rule, context, requestInfo);
-          }
-        }
-      }
     }
-  }
-
-  // Hàm phụ trợ để check match nhanh
-  private matchesAnyPattern(rule: TrackingRule, requestInfo: NetworkRequestInfo): boolean {
-    if (!rule.payloadMappings) return false;
-    for (const mapping of rule.payloadMappings) {
-      if (this.isNetworkSource(mapping.source || '') && this.matchesPattern(mapping, requestInfo)) {
-        return true;
-      }
-    }
-    return false;
   }
 
   /**
@@ -198,7 +168,7 @@ export class NetworkObserver {
   private hookFetch(): void {
     const observer = this;
 
-    window.fetch = async function (input: RequestInfo | URL, init?: RequestInit) {
+    window.fetch = async function(input: RequestInfo | URL, init?: RequestInit) {
       const url = typeof input === 'string' ? input : (input as Request).url;
       const method = init?.method?.toUpperCase() || 'GET';
       const requestBody = init?.body;
@@ -207,10 +177,10 @@ export class NetworkObserver {
 
       // Call original fetch
       const response = await observer.originalFetch.call(window, input, init);
-
+      
       // Clone để đọc response mà không ảnh hưởng stream
       const clone = response.clone();
-
+      
       // SECURITY: Chỉ process nếu request này có thể match với rules
       // Truyền clone thay vì parse ngay
       observer.handleRequest({
@@ -231,7 +201,7 @@ export class NetworkObserver {
   private hookXHR(): void {
     const observer = this;
 
-    XMLHttpRequest.prototype.open = function (method: string, url: string, ...rest: any[]) {
+    XMLHttpRequest.prototype.open = function(method: string, url: string, ...rest: any[]) {
       (this as any)._networkObserverInfo = {
         method: method.toUpperCase(),
         url,
@@ -240,13 +210,13 @@ export class NetworkObserver {
       return observer.originalXhrOpen.call(this, method, url, ...rest);
     };
 
-    XMLHttpRequest.prototype.send = function (body?: any) {
+    XMLHttpRequest.prototype.send = function(body?: any) {
       const info = (this as any)._networkObserverInfo;
-
+      
       if (info) {
         info.requestBody = body;
-
-        this.addEventListener('load', function () {
+        
+        this.addEventListener('load', function() {
           observer.handleRequest({
             url: info.url,
             method: info.method,
@@ -256,7 +226,7 @@ export class NetworkObserver {
           });
         });
       }
-
+      
       return observer.originalXhrSend.call(this, body);
     };
   }
@@ -267,33 +237,32 @@ export class NetworkObserver {
    * Delegate user info extraction to UserIdentityManager
    */
   private async handleRequest(requestInfo: NetworkRequestInfo): Promise<void> {
-    if (!this.recManager) return;
-
-    console.log(`[NetworkObserver] Caught request: ${requestInfo.url}. Registered Rules count: ${this.registeredRules.size}`);
+    if (!this.recManager) {
+      return;
+    }
 
     // STEP 1: USER IDENTITY HANDLING
+    // Delegate to UserIdentityManager nếu có
     if (this.userIdentityManager) {
       this.processUserIdentityRequest(requestInfo);
     } else {
-      if ((requestInfo.method === 'GET' || requestInfo.method === 'POST') &&
-        this.pendingUserIdentityRequests.length < this.MAX_PENDING_REQUESTS) {
+      // Buffer request if UserIdentityManager not ready yet
+      // Only buffer GET/POST requests to avoid memory issues
+      if ((requestInfo.method === 'GET' || requestInfo.method === 'POST') && 
+          this.pendingUserIdentityRequests.length < this.MAX_PENDING_REQUESTS) {
         this.pendingUserIdentityRequests.push(requestInfo);
       }
     }
 
     // STEP 2: SECURITY CHECK - Có registered rules không?
     if (this.registeredRules.size === 0) {
-      // MỚI: Thay vì return luôn, chúng ta nhét request vào phòng chờ!
-      // Giới hạn 50 request để tránh tràn RAM
-      if (this.pendingRuleRequests.length < 50) {
-        this.pendingRuleRequests.push(requestInfo);
-      }
+      // Không có rules để track events
       return;
     }
-
+    
     // STEP 3: SECURITY CHECK - Request này có khả năng match với rule nào không?
     const potentialMatches = this.findPotentialMatchingRules(requestInfo);
-
+    
     if (potentialMatches.length === 0) {
       return; // Không match với rule nào để track events
     }
@@ -308,7 +277,7 @@ export class NetworkObserver {
         return;
       }
     }
-
+    
     // Process từng rule match
     for (const rule of potentialMatches) {
       // Tìm REC phù hợp cho rule này
@@ -353,7 +322,7 @@ export class NetworkObserver {
 
       // Extract value
       const value = this.extractValue(mapping, requestInfo);
-
+      
       if (value !== null && value !== undefined) {
         // Collect vào REC
         this.recManager!.collectField(
@@ -371,16 +340,16 @@ export class NetworkObserver {
    */
   private findPotentialMatchingRules(requestInfo: NetworkRequestInfo): TrackingRule[] {
     const matches: TrackingRule[] = [];
-
+    
     for (const rule of this.registeredRules.values()) {
       if (!rule.payloadMappings) continue;
-
+      
       // Check xem có mapping nào match với request này không
       for (const mapping of rule.payloadMappings) {
         // Chỉ check network sources
         const source = (mapping.source || '').toLowerCase();
         if (!this.isNetworkSource(source)) continue;
-
+        
         // Check pattern match
         if (this.matchesPattern(mapping, requestInfo)) {
           matches.push(rule);
@@ -388,7 +357,7 @@ export class NetworkObserver {
         }
       }
     }
-
+    
     return matches;
   }
 
@@ -399,7 +368,7 @@ export class NetworkObserver {
     return [
       'requestbody',
       'request_body',
-      'responsebody',
+      'responsebody', 
       'response_body',
       'requesturl',
       'request_url'
@@ -423,23 +392,9 @@ export class NetworkObserver {
 
     // Check URL pattern
     if (requestUrlPattern) {
-      // --- BẮT ĐẦU ĐOẠN SỬA LỖI ---
-      let pathToMatch = requestInfo.url;
-      try {
-        // Biến URL dài ngoằng thành object, dù là link web hay link API
-        const urlObj = new URL(requestInfo.url, typeof window !== 'undefined' ? window.location.origin : 'http://localhost');
-        // Chỉ bóc đúng phần pathname (VD: "/3/movie/2") để đi so sánh
-        pathToMatch = urlObj.pathname;
-      } catch (e) {
-        // Fallback: Nếu lỗi thì cắt bỏ thủ công phần sau dấu ?
-        pathToMatch = requestInfo.url.split('?')[0];
-      }
-
-      // Đem pathname sạch đi so sánh với cái Pattern cấu hình trên Dashboard
-      if (!PathMatcher.match(pathToMatch, requestUrlPattern)) {
+      if (!PathMatcher.match(requestInfo.url, requestUrlPattern)) {
         return false;
       }
-      // --- KẾT THÚC ĐOẠN SỬA LỖI ---
     }
 
     return true;
@@ -466,15 +421,15 @@ export class NetworkObserver {
         }
         // POST/PUT/PATCH/DELETE → Dùng request body như bình thường
         return this.extractFromRequestBody(mapping, requestInfo);
-
+      
       case 'responsebody':
       case 'response_body':
         return this.extractFromResponseBody(mapping, requestInfo);
-
+      
       case 'requesturl':
       case 'request_url':
         return this.extractFromRequestUrl(mapping, requestInfo);
-
+      
       default:
         return null;
     }
@@ -485,14 +440,14 @@ export class NetworkObserver {
    */
   private extractFromRequestBody(mapping: any, requestInfo: NetworkRequestInfo): any {
     const body = parseBody(requestInfo.requestBody);
-
+    
     if (!body) {
       return null;
     }
 
     const path = mapping.config?.Value;
     const result = extractByPath(body, path);
-
+    
     return result;
   }
 
@@ -501,15 +456,15 @@ export class NetworkObserver {
    */
   private extractFromResponseBody(mapping: any, requestInfo: NetworkRequestInfo): any {
     const body = parseBody(requestInfo.responseBody);
-
+    
     if (!body) {
       return null;
     }
 
     const path = mapping.config?.Value;
-
+    
     const result = extractByPath(body, path);
-
+    
     return result;
   }
 
@@ -530,7 +485,7 @@ export class NetworkObserver {
     window.fetch = this.originalFetch;
     XMLHttpRequest.prototype.open = this.originalXhrOpen;
     XMLHttpRequest.prototype.send = this.originalXhrSend;
-
+    
     this.isActive = false;
     this.registeredRules.clear();
   }

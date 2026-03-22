@@ -25,7 +25,6 @@ export declare class NetworkObserver {
     private userIdentityManager;
     private pendingUserIdentityRequests;
     private readonly MAX_PENDING_REQUESTS;
-    private pendingRuleRequests;
     private registeredRules;
     private constructor();
     /**
@@ -51,7 +50,6 @@ export declare class NetworkObserver {
      * Được gọi bởi PayloadBuilder khi phát hiện rule cần async data
      */
     registerRule(rule: TrackingRule): void;
-    private matchesAnyPattern;
     /**
      * Unregister rule (cleanup)
      */

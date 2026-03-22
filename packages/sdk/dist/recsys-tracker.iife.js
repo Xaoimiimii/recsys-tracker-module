@@ -582,7 +582,7 @@ var RecSysTracker = (function (exports) {
             }
             // Check nếu event đang được gửi
             if (this.sendingEvents.has(event.id)) {
-                console.log('[EventDispatcher] Event already being sent, skipping:', event.id);
+                //console.log('[EventDispatcher] Event already being sent, skipping:', event.id);
                 return true; // Return true để không retry
             }
             // Mark event as being sent
@@ -610,24 +610,24 @@ var RecSysTracker = (function (exports) {
                 };
                 const payload = JSON.stringify(payloadObject);
                 // Log payload sẽ gửi đi
-                console.log('[EventDispatcher] Sending payload to API:', payloadObject);
+                // console.log('[EventDispatcher] Sending payload to API:', payloadObject);
                 // Thử từng phương thức gửi theo thứ tự ưu tiên
-                const strategies = ['fetch', 'beacon'];
+                const strategies = ['beacon', 'fetch'];
                 for (const strategy of strategies) {
                     try {
-                        console.log('[EventDispatcher] Trying strategy:', strategy);
+                        //console.log('[EventDispatcher] Trying strategy:', strategy);
                         const success = await this.sendWithStrategy(payload, strategy);
-                        console.log('[EventDispatcher] Strategy', strategy, 'result:', success);
+                        //console.log('[EventDispatcher] Strategy', strategy, 'result:', success);
                         if (success) {
                             if (this.displayManager && typeof this.displayManager.notifyActionTriggered === 'function') {
                                 this.displayManager.notifyActionTriggered(event.actionType);
-                                console.log('[EventDispatcher] Action type:', event.actionType);
+                                //console.log('[EventDispatcher] Action type:', event.actionType);
                             }
                             return true;
                         }
                     }
                     catch (error) {
-                        console.log('[EventDispatcher] Strategy', strategy, 'failed with error:', error);
+                        //console.log('[EventDispatcher] Strategy', strategy, 'failed with error:', error);
                         // Thử phương thức tiếp theo
                     }
                 }
@@ -697,8 +697,7 @@ var RecSysTracker = (function (exports) {
                 });
                 clearTimeout(timeoutId);
                 if (!response.ok) {
-                    const errorText = await response.text();
-                    console.error(`[EventDispatcher] HTTP ${response.status} Failed! Server says:`, errorText);
+                    // throw new Error(`HTTP ${response.status}`);
                     return false;
                 }
                 return true;
@@ -706,7 +705,6 @@ var RecSysTracker = (function (exports) {
             catch (error) {
                 clearTimeout(timeoutId);
                 // throw error;
-                console.error('[EventDispatcher] Network/CORS Error in sendFetch:', error);
                 return false;
             }
         }
@@ -4616,38 +4614,32 @@ var RecSysTracker = (function (exports) {
      * @param extractType - 'query' or 'pathname'
      * @param requestUrlPattern - Optional pattern for param extraction (e.g., '/api/user/:id')
      */
-    /**
-     * Extract value from URL (pathname or query parameter)
-     * Đã fix lỗi case-sensitive, query param và bỏ require() gây crash trình duyệt
-     */
     function extractFromUrl(url, value, extractType, requestUrlPattern) {
-        console.log(`[Tracker Spy] Đang bóc tách URL: "${url}"`);
-        console.log(`[Tracker Spy] Cấu hình Rule: Cần lấy Index = ${value}, Kiểu = ${extractType}`);
-        if (!url || !value)
-            return null;
         try {
             const urlObj = new URL(url, typeof window !== 'undefined' ? window.location.origin : 'http://localhost');
-            // Normalize string: chuyển về chữ thường để tránh lỗi "PathName" !== "pathname"
-            const type = (extractType || '').toLowerCase();
-            // 1. Trường hợp lấy Query Parameter
-            if (type === 'query' || type === 'queryparameter') {
+            if (extractType === 'query') {
+                // Extract query parameter
                 return urlObj.searchParams.get(value);
             }
-            // 2. Trường hợp lấy Pathname (Hoặc nếu extractType bị undefined nhưng value là một con số)
-            if (type === 'pathname' || !isNaN(parseInt(value, 10))) {
+            else if (extractType === 'pathname') {
+                // Extract pathname segment by index
                 const index = parseInt(value, 10) - 1;
                 if (!isNaN(index)) {
-                    // Hàm filter sẽ loại bỏ các chuỗi rỗng do dấu "/" thừa tạo ra
+                    // Value is numeric index - extract by position
                     const segments = urlObj.pathname.split('/').filter(s => s.length > 0);
-                    console.log(`[Tracker Spy] Mảng sau khi cắt:`, segments);
-                    console.log(`[Tracker Spy] Kết quả bốc được ở Index ${index}:`, segments[index] || 'RỖNG/NULL');
                     return segments[index] || null;
+                }
+                else if (requestUrlPattern) {
+                    // Value is param name - extract using pattern matching
+                    // This requires PathMatcher utility
+                    const { PathMatcher } = require('./path-matcher');
+                    const params = PathMatcher.extractParams(url, requestUrlPattern);
+                    return params[value] || null;
                 }
             }
             return null;
         }
         catch (error) {
-            console.error('[DataExtractor] URL Parsing Error:', error);
             return null;
         }
     }
@@ -4707,8 +4699,6 @@ var RecSysTracker = (function (exports) {
             // Buffer for requests that arrived before UserIdentityManager was set
             this.pendingUserIdentityRequests = [];
             this.MAX_PENDING_REQUESTS = 10;
-            // Buffer for requests that arrived before rules are registered
-            this.pendingRuleRequests = [];
             // Registered rules that need network data
             this.registeredRules = new Map();
             this.originalFetch = window.fetch;
@@ -4790,35 +4780,9 @@ var RecSysTracker = (function (exports) {
          * Được gọi bởi PayloadBuilder khi phát hiện rule cần async data
          */
         registerRule(rule) {
-            var _a;
             if (!this.registeredRules.has(rule.id)) {
                 this.registeredRules.set(rule.id, rule);
-                // MỚI: Khi có Rule mới được đăng ký, lập tức lục lại "phòng chờ" 
-                // xem có request nào đến sớm phù hợp với Rule này không
-                if (this.pendingRuleRequests.length > 0) {
-                    console.log(`[NetworkObserver] Reprocessing ${this.pendingRuleRequests.length} buffered requests for new rule ${rule.id}`);
-                    // Copy mảng để tránh lỗi vòng lặp
-                    const requestsToProcess = [...this.pendingRuleRequests];
-                    for (const requestInfo of requestsToProcess) {
-                        // Tìm REC phù hợp
-                        const context = (_a = this.recManager) === null || _a === void 0 ? void 0 : _a.findMatchingContext(rule.id, requestInfo.timestamp);
-                        if (context && this.matchesAnyPattern(rule, requestInfo)) {
-                            this.processRuleMappings(rule, context, requestInfo);
-                        }
-                    }
-                }
             }
-        }
-        // Hàm phụ trợ để check match nhanh
-        matchesAnyPattern(rule, requestInfo) {
-            if (!rule.payloadMappings)
-                return false;
-            for (const mapping of rule.payloadMappings) {
-                if (this.isNetworkSource(mapping.source || '') && this.matchesPattern(mapping, requestInfo)) {
-                    return true;
-                }
-            }
-            return false;
         }
         /**
          * Unregister rule (cleanup)
@@ -4890,14 +4854,17 @@ var RecSysTracker = (function (exports) {
          * Delegate user info extraction to UserIdentityManager
          */
         async handleRequest(requestInfo) {
-            if (!this.recManager)
+            if (!this.recManager) {
                 return;
-            console.log(`[NetworkObserver] Caught request: ${requestInfo.url}. Registered Rules count: ${this.registeredRules.size}`);
+            }
             // STEP 1: USER IDENTITY HANDLING
+            // Delegate to UserIdentityManager nếu có
             if (this.userIdentityManager) {
                 this.processUserIdentityRequest(requestInfo);
             }
             else {
+                // Buffer request if UserIdentityManager not ready yet
+                // Only buffer GET/POST requests to avoid memory issues
                 if ((requestInfo.method === 'GET' || requestInfo.method === 'POST') &&
                     this.pendingUserIdentityRequests.length < this.MAX_PENDING_REQUESTS) {
                     this.pendingUserIdentityRequests.push(requestInfo);
@@ -4905,11 +4872,7 @@ var RecSysTracker = (function (exports) {
             }
             // STEP 2: SECURITY CHECK - Có registered rules không?
             if (this.registeredRules.size === 0) {
-                // MỚI: Thay vì return luôn, chúng ta nhét request vào phòng chờ!
-                // Giới hạn 50 request để tránh tràn RAM
-                if (this.pendingRuleRequests.length < 50) {
-                    this.pendingRuleRequests.push(requestInfo);
-                }
+                // Không có rules để track events
                 return;
             }
             // STEP 3: SECURITY CHECK - Request này có khả năng match với rule nào không?
@@ -5017,23 +4980,9 @@ var RecSysTracker = (function (exports) {
             }
             // Check URL pattern
             if (requestUrlPattern) {
-                // --- BẮT ĐẦU ĐOẠN SỬA LỖI ---
-                let pathToMatch = requestInfo.url;
-                try {
-                    // Biến URL dài ngoằng thành object, dù là link web hay link API
-                    const urlObj = new URL(requestInfo.url, typeof window !== 'undefined' ? window.location.origin : 'http://localhost');
-                    // Chỉ bóc đúng phần pathname (VD: "/3/movie/2") để đi so sánh
-                    pathToMatch = urlObj.pathname;
-                }
-                catch (e) {
-                    // Fallback: Nếu lỗi thì cắt bỏ thủ công phần sau dấu ?
-                    pathToMatch = requestInfo.url.split('?')[0];
-                }
-                // Đem pathname sạch đi so sánh với cái Pattern cấu hình trên Dashboard
-                if (!PathMatcher.match(pathToMatch, requestUrlPattern)) {
+                if (!PathMatcher.match(requestInfo.url, requestUrlPattern)) {
                     return false;
                 }
-                // --- KẾT THÚC ĐOẠN SỬA LỖI ---
             }
             return true;
         }
@@ -5098,7 +5047,7 @@ var RecSysTracker = (function (exports) {
          */
         extractFromRequestUrl(mapping, requestInfo) {
             const { ExtractType, Value, RequestUrlPattern } = mapping.config;
-            return extractFromUrl(requestInfo.url, Value, ExtractType);
+            return extractFromUrl(requestInfo.url, Value, ExtractType, RequestUrlPattern);
         }
         /**
          * Restore original functions (for cleanup/testing)
