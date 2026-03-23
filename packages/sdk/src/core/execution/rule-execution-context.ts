@@ -48,8 +48,8 @@ export interface RuleExecutionContext {
  */
 export class RuleExecutionContextManager {
   private contexts: Map<string, RuleExecutionContext> = new Map();
-  private readonly TIME_WINDOW = 3000; // 3s - Request phải xảy ra trong window này
-  private readonly MAX_WAIT_TIME = 1000; // 1s - Tự động expire nếu quá thời gian (giảm từ 5s để UX tốt hơn)
+  private readonly TIME_WINDOW = 5000; // 5s - Request phải xảy ra trong window này
+  private readonly MAX_WAIT_TIME = 5000; // 5s - Tự động expire nếu quá thời gian
 
   /**
    * Tạo REC mới cho một trigger

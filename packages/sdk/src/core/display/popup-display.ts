@@ -955,23 +955,6 @@ export class PopupDisplay {
     // Invalidate cache since user context has changed
     this.clearCache();
     
-    // Send evaluation request
-    try {
-      const evaluationUrl = `${this.apiBaseUrl}/evaluation`;
-      await fetch(evaluationUrl, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          DomainKey: this.domainKey,
-          Rank: rank
-        })
-      });
-    } catch (error) {
-      // //console.error('[PopupDisplay] Failed to send evaluation:', error);
-    }
-    
     // const targetUrl = `/song/${id}`;
     let urlPattern = this.config.layoutJson.itemUrlPattern || '/song/{:id}';
     const targetUrl = urlPattern.replace('{:id}', id.toString());
@@ -1009,6 +992,24 @@ export class PopupDisplay {
     } catch (error) {
       // Fallback to traditional navigation if History API fails
       window.location.href = targetUrl; 
+    }
+
+    // Send evaluation request after navigation attempt
+    try {
+      const evaluationUrl = `${this.apiBaseUrl}/evaluation`;
+      void fetch(evaluationUrl, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          DomainKey: this.domainKey,
+          Rank: rank
+        }),
+        keepalive: true
+      });
+    } catch (error) {
+      // //console.error('[PopupDisplay] Failed to send evaluation:', error);
     }
   }
 

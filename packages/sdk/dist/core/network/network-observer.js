@@ -11,6 +11,7 @@
  */
 import { PathMatcher } from '../utils/path-matcher';
 import { parseBody, extractByPath, extractFromUrl } from '../utils/data-extractors';
+const DEBUG_REQUEST_TIMING = false;
 /**
  * NetworkObserver - Singleton passive listener
  */
@@ -222,6 +223,16 @@ export class NetworkObserver {
             const context = this.recManager.findMatchingContext(rule.id, requestInfo.timestamp);
             if (!context) {
                 continue;
+            }
+            if (DEBUG_REQUEST_TIMING) {
+                const deltaMs = requestInfo.timestamp - context.triggeredAt;
+                // eslint-disable-next-line no-console
+                console.log('[NetworkObserver] Request/trigger delta(ms):', {
+                    ruleId: rule.id,
+                    method: requestInfo.method,
+                    url: requestInfo.url,
+                    deltaMs
+                });
             }
             // Process mappings cho rule này
             this.processRuleMappings(rule, context, requestInfo);

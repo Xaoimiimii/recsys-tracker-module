@@ -2120,23 +2120,6 @@
                 return;
             // Invalidate cache since user context has changed
             this.clearCache();
-            // Send evaluation request
-            try {
-                const evaluationUrl = `${this.apiBaseUrl}/evaluation`;
-                await fetch(evaluationUrl, {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                    },
-                    body: JSON.stringify({
-                        DomainKey: this.domainKey,
-                        Rank: rank
-                    })
-                });
-            }
-            catch (error) {
-                // //console.error('[PopupDisplay] Failed to send evaluation:', error);
-            }
             // const targetUrl = `/song/${id}`;
             let urlPattern = this.config.layoutJson.itemUrlPattern || '/song/{:id}';
             const targetUrl = urlPattern.replace('{:id}', id.toString());
@@ -2169,6 +2152,24 @@
             catch (error) {
                 // Fallback to traditional navigation if History API fails
                 window.location.href = targetUrl;
+            }
+            // Send evaluation request after navigation attempt
+            try {
+                const evaluationUrl = `${this.apiBaseUrl}/evaluation`;
+                void fetch(evaluationUrl, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        DomainKey: this.domainKey,
+                        Rank: rank
+                    }),
+                    keepalive: true
+                });
+            }
+            catch (error) {
+                // //console.error('[PopupDisplay] Failed to send evaluation:', error);
             }
         }
         forceShow(isUserAction = false, actionType = null) {
@@ -2840,23 +2841,6 @@
         async handleItemClick(id, rank) {
             if (!id)
                 return;
-            // Send evaluation request
-            try {
-                const evaluationUrl = `${this.apiBaseUrl}/evaluation`;
-                await fetch(evaluationUrl, {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                    },
-                    body: JSON.stringify({
-                        DomainKey: this.domainKey,
-                        Rank: rank
-                    })
-                });
-            }
-            catch (error) {
-                // console.error('[InlineDisplay] Failed to send evaluation:', error);
-            }
             let urlPattern = this.config.layoutJson.itemUrlPattern || '/song/{:id}';
             const targetUrl = urlPattern.replace('{:id}', id.toString());
             // Try SPA-style navigation first
@@ -2888,6 +2872,24 @@
             catch (error) {
                 // Fallback to traditional navigation if History API fails
                 window.location.href = targetUrl;
+            }
+            // Send evaluation request after navigation attempt
+            try {
+                const evaluationUrl = `${this.apiBaseUrl}/evaluation`;
+                void fetch(evaluationUrl, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        DomainKey: this.domainKey,
+                        Rank: rank
+                    }),
+                    keepalive: true
+                });
+            }
+            catch (error) {
+                // console.error('[InlineDisplay] Failed to send evaluation:', error);
             }
         }
     }
@@ -4132,8 +4134,8 @@
     class RuleExecutionContextManager {
         constructor() {
             this.contexts = new Map();
-            this.TIME_WINDOW = 3000; // 3s - Request phải xảy ra trong window này
-            this.MAX_WAIT_TIME = 1000; // 1s - Tự động expire nếu quá thời gian (giảm từ 5s để UX tốt hơn)
+            this.TIME_WINDOW = 5000; // 5s - Request phải xảy ra trong window này
+            this.MAX_WAIT_TIME = 5000; // 5s - Tự động expire nếu quá thời gian
         }
         /**
          * Tạo REC mới cho một trigger

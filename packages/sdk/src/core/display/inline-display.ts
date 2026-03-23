@@ -739,23 +739,6 @@ export class InlineDisplay {
   private async handleItemClick(id: string | number, rank: number): Promise<void> {
       if (!id) return;
       
-      // Send evaluation request
-      try {
-        const evaluationUrl = `${this.apiBaseUrl}/evaluation`;
-        await fetch(evaluationUrl, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({
-            DomainKey: this.domainKey,
-            Rank: rank
-          })
-        });
-      } catch (error) {
-        // console.error('[InlineDisplay] Failed to send evaluation:', error);
-      }
-      
       let urlPattern = this.config.layoutJson.itemUrlPattern || '/song/{:id}';
       const targetUrl = urlPattern.replace('{:id}', id.toString());
       
@@ -792,6 +775,24 @@ export class InlineDisplay {
       } catch (error) {
         // Fallback to traditional navigation if History API fails
         window.location.href = targetUrl;
+      }
+
+      // Send evaluation request after navigation attempt
+      try {
+        const evaluationUrl = `${this.apiBaseUrl}/evaluation`;
+        void fetch(evaluationUrl, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            DomainKey: this.domainKey,
+            Rank: rank
+          }),
+          keepalive: true
+        });
+      } catch (error) {
+        // console.error('[InlineDisplay] Failed to send evaluation:', error);
       }
   }
 }

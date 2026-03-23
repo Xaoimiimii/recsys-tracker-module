@@ -20,6 +20,8 @@ import {
   extractFromUrl
 } from '../utils/data-extractors';
 
+const DEBUG_REQUEST_TIMING = false;
+
 interface NetworkRequestInfo {
   url: string;
   method: string;
@@ -288,6 +290,17 @@ export class NetworkObserver {
 
       if (!context) {
         continue;
+      }
+
+      if (DEBUG_REQUEST_TIMING) {
+        const deltaMs = requestInfo.timestamp - context.triggeredAt;
+        // eslint-disable-next-line no-console
+        console.log('[NetworkObserver] Request/trigger delta(ms):', {
+          ruleId: rule.id,
+          method: requestInfo.method,
+          url: requestInfo.url,
+          deltaMs
+        });
       }
 
       // Process mappings cho rule này
