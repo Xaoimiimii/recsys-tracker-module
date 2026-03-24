@@ -225,37 +225,57 @@ export class EventService {
             //     if (!exist) validItemIds.push(itemId);
             // }
 
-            const rating = await this.prisma.rating.findUnique({
+            // const rating = await this.prisma.rating.findUnique({
+            //     where: {
+            //         UserId_ItemId: {
+            //             UserId: user.Id,
+            //             ItemId: item.Id,
+            //         }
+            //     }
+            // });
+
+            // if (!rating) {
+            //     await this.prisma.rating.create({
+            //         data: {
+                        // UserId: user.Id,
+                        // ItemId: item.Id,
+                        // Value: event.RatingValue,
+                        // ReviewText: event.RatingReview,
+                        // CreatedAt: event.Timestamp,
+                        // DomainId: domain.Id,
+            //         }
+            //     });
+            // } else {
+            //     await this.prisma.rating.update({
+            //         where: {
+            //             Id: rating.Id,
+            //         },
+            //         data: {
+            //             Value: event.RatingValue,
+            //             CreatedAt: event.Timestamp,
+            //         }
+            //     });
+            // }
+            await this.prisma.rating.upsert({
                 where: {
                     UserId_ItemId: {
                         UserId: user.Id,
-                        ItemId: item.Id,
+                        ItemId: item.Id
                     }
+                },
+                update: {
+                    Value: event.RatingValue,
+                    CreatedAt: event.Timestamp,
+                },
+                create: {
+                    UserId: user.Id,
+                    ItemId: item.Id,
+                    Value: event.RatingValue,
+                    ReviewText: event.RatingReview,
+                    CreatedAt: event.Timestamp,
+                    DomainId: domain.Id,
                 }
             });
-
-            if (!rating) {
-                await this.prisma.rating.create({
-                    data: {
-                        UserId: user.Id,
-                        ItemId: item.Id,
-                        Value: event.RatingValue,
-                        ReviewText: event.RatingReview,
-                        CreatedAt: event.Timestamp,
-                        DomainId: domain.Id,
-                    }
-                });
-            } else {
-                await this.prisma.rating.update({
-                    where: {
-                        Id: rating.Id,
-                    },
-                    data: {
-                        Value: event.RatingValue,
-                        CreatedAt: event.Timestamp,
-                    }
-                });
-            }
         }
         else if (event.EventTypeId === 3) {
             if (event.RatingReview === null || event.RatingReview === undefined) throw new BadRequestException(`Rating review is required for review events.`);
@@ -273,36 +293,55 @@ export class EventService {
             //     if (!exist) validItemIds.push(itemId);
             // }
 
-            const rating = await this.prisma.rating.findUnique({
+            // const rating = await this.prisma.rating.findUnique({
+            //     where: {
+            //         UserId_ItemId: {
+            //             UserId: user.Id,
+            //             ItemId: item.Id,
+            //         }
+            //     }
+            // });
+
+            // if (!rating) {
+            //     await this.prisma.rating.create({
+            //         data: {
+            //             UserId: user.Id,
+            //             ItemId: item.Id,
+            //             ReviewText: event.RatingReview,
+            //             CreatedAt: event.Timestamp,
+            //             DomainId: domain.Id,
+            //         }
+            //     });
+            // } else {
+            //     await this.prisma.rating.update({
+            //         where: {
+            //             Id: rating.Id,
+            //         },
+            //         data: {
+            //             ReviewText: event.RatingReview,
+            //             CreatedAt: event.Timestamp,
+            //         }
+            //     });
+            // }
+            await this.prisma.rating.upsert({
                 where: {
                     UserId_ItemId: {
                         UserId: user.Id,
-                        ItemId: item.Id,
+                        ItemId: item.Id
                     }
+                },
+                update: {
+                    ReviewText: event.RatingReview,
+                    CreatedAt: event.Timestamp,
+                },
+                create: {
+                    UserId: user.Id,
+                    ItemId: item.Id,
+                    ReviewText: event.RatingReview,
+                    CreatedAt: event.Timestamp,
+                    DomainId: domain.Id,
                 }
             });
-
-            if (!rating) {
-                await this.prisma.rating.create({
-                    data: {
-                        UserId: user.Id,
-                        ItemId: item.Id,
-                        ReviewText: event.RatingReview,
-                        CreatedAt: event.Timestamp,
-                        DomainId: domain.Id,
-                    }
-                });
-            } else {
-                await this.prisma.rating.update({
-                    where: {
-                        Id: rating.Id,
-                    },
-                    data: {
-                        ReviewText: event.RatingReview,
-                        CreatedAt: event.Timestamp,
-                    }
-                });
-            }
         }
         // click --> action type
         else if (event.EventTypeId === 1) {
@@ -328,51 +367,88 @@ export class EventService {
                     interactionType = InteractionType.Submit;
                     break;
             }
-            const exist = await this.prisma.interaction.findUnique({
+            // const exist = await this.prisma.interaction.findUnique({
+            //     where: {
+            //         UserId_ItemId_InteractionTypeId: {
+            //             UserId: user.Id,
+            //             ItemId: item.Id,
+            //             InteractionTypeId: interactionType,
+            //         }
+            //     }
+            // })
+            // if (exist) return;
+
+            // await this.prisma.interaction.create({
+            //     data: {
+            //         UserId: user.Id,
+            //         ItemId: item.Id,
+            //         InteractionTypeId: interactionType,
+            //         CreatedAt: event.Timestamp,
+            //         DomainId: domain.Id,
+            //     }
+            // });
+
+            await this.prisma.interaction.upsert({
                 where: {
                     UserId_ItemId_InteractionTypeId: {
                         UserId: user.Id,
                         ItemId: item.Id,
-                        InteractionTypeId: interactionType,
+                        InteractionTypeId: interactionType
                     }
-                }
-            })
-            if (exist) return;
+                },
+                update: {
 
-            await this.prisma.interaction.create({
-                data: {
+                },
+                create: {
                     UserId: user.Id,
                     ItemId: item.Id,
                     InteractionTypeId: interactionType,
                     CreatedAt: event.Timestamp,
-                    DomainId: domain.Id,
+                    DomainId: domain.Id
                 }
             });
         }
         else {
-            const exist = await this.prisma.interaction.findUnique({
+            // const exist = await this.prisma.interaction.findUnique({
+            //     where: {
+            //         UserId_ItemId_InteractionTypeId: {
+            //             UserId: user.Id,
+            //             ItemId: item.Id,
+            //             InteractionTypeId: event.EventTypeId,
+            //         }
+            //     }
+            // })
+            // if (!exist) return;
+
+            // await this.prisma.interaction.create({
+            //     data: {
+            //         UserId: user.Id,
+            //         ItemId: item.Id,
+            //         InteractionTypeId: event.EventTypeId,
+            //         CreatedAt: event.Timestamp,
+            //         DomainId: domain.Id,
+            //     }
+            // });
+            await this.prisma.interaction.upsert({
                 where: {
                     UserId_ItemId_InteractionTypeId: {
                         UserId: user.Id,
                         ItemId: item.Id,
-                        InteractionTypeId: event.EventTypeId,
+                        InteractionTypeId: event.EventTypeId
                     }
-                }
-            })
-            if (!exist) return;
+                },
+                update: {
 
-            await this.prisma.interaction.create({
-                data: {
+                },
+                create: {
                     UserId: user.Id,
                     ItemId: item.Id,
                     InteractionTypeId: event.EventTypeId,
                     CreatedAt: event.Timestamp,
-                    DomainId: domain.Id,
+                    DomainId: domain.Id
                 }
             });
         }
-
-        
 
         return createdEvent.Id;
     }
