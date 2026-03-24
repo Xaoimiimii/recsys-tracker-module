@@ -4132,8 +4132,8 @@ class SearchKeywordPlugin extends BasePlugin {
 class RuleExecutionContextManager {
     constructor() {
         this.contexts = new Map();
-        this.TIME_WINDOW = 5000; // 5s - Request phải xảy ra trong window này
-        this.MAX_WAIT_TIME = 5000; // 5s - Tự động expire nếu quá thời gian
+        this.TIME_WINDOW = 10000; // 10s - Request phải xảy ra trong window này
+        this.MAX_WAIT_TIME = 10000; // 10s - Tự động expire nếu quá thời gian
     }
     /**
      * Tạo REC mới cho một trigger
