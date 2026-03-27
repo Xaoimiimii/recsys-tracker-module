@@ -10,7 +10,7 @@ export declare class InlineDisplay {
     private readonly DEFAULT_DELAY;
     private domainKey;
     private apiBaseUrl;
-    constructor(_domainKey: string, _slotName: string, selector: string, _apiBaseUrl: string, config: InlineConfig | undefined, recommendationGetter: () => Promise<RecommendationResponse>);
+    constructor(_domainKey: string, _slotName: string, selector: string, _apiBaseUrl: string, config: InlineConfig | undefined, recommendationGetter: (limit: number) => Promise<RecommendationResponse>);
     start(): void;
     stop(): void;
     private setupObserver;

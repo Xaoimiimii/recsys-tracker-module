@@ -164,13 +164,13 @@ export class DisplayManager {
         config.selector,
         this.apiBaseUrl,
         config, // Truyền object config
-        async () => {
+        async (limit: number) => {
           // Use cached recommendations from init if available
           if (this.cachedRecommendations) {
             return this.cachedRecommendations;
           }
           // Otherwise fetch new data
-          return this.getRecommendations(50);
+          return this.getRecommendations(limit);
         }
       );
       
@@ -181,7 +181,7 @@ export class DisplayManager {
     }
   }
 
-  // --- LOGIC FETCH RECOMMENDATION (GIỮ NGUYÊN) ---
+  // --- LOGIC FETCH RECOMMENDATION  ---
   private async fetchRecommendationsOnce(limit: number = 50): Promise<RecommendationResponse> {
     if (this.cachedRecommendations) return this.cachedRecommendations;
     if (this.fetchPromise) return this.fetchPromise;

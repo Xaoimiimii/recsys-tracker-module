@@ -134,13 +134,13 @@ export class DisplayManager {
             if (!config.selector)
                 return;
             const inlineDisplay = new InlineDisplay(this.domainKey, key, config.selector, this.apiBaseUrl, config, // Truyền object config
-            async () => {
+            async (limit) => {
                 // Use cached recommendations from init if available
                 if (this.cachedRecommendations) {
                     return this.cachedRecommendations;
                 }
                 // Otherwise fetch new data
-                return this.getRecommendations(50);
+                return this.getRecommendations(limit);
             });
             this.inlineDisplays.set(key, inlineDisplay);
             inlineDisplay.start();
@@ -149,7 +149,7 @@ export class DisplayManager {
             // ////console.error('[DisplayManager] Error initializing inline:', error);
         }
     }
-    // --- LOGIC FETCH RECOMMENDATION (GIỮ NGUYÊN) ---
+    // --- LOGIC FETCH RECOMMENDATION  ---
     async fetchRecommendationsOnce(limit = 50) {
         if (this.cachedRecommendations)
             return this.cachedRecommendations;

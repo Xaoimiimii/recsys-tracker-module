@@ -2273,10 +2273,10 @@ var RecSysTracker = (function (exports) {
             }
         }
         async fetchRecommendations() {
+            var _a;
             try {
-                // const limit = (this.config.layoutJson as any)?.maxItems || 50;
-                // console.log('[PopupDisplay] Calling recommendationGetter with limit:', limit);
-                const result = await this.recommendationGetter();
+                const limit = ((_a = this.config.layoutJson) === null || _a === void 0 ? void 0 : _a.maxItems) || 50;
+                const result = await this.recommendationGetter(limit);
                 // console.log('[PopupDisplay] recommendationGetter result:', result);
                 // recommendationGetter now returns full RecommendationResponse
                 if (result && result.item && Array.isArray(result.item)) {
@@ -3024,13 +3024,13 @@ var RecSysTracker = (function (exports) {
                 if (!config.selector)
                     return;
                 const inlineDisplay = new InlineDisplay(this.domainKey, key, config.selector, this.apiBaseUrl, config, // Truyền object config
-                async () => {
+                async (limit) => {
                     // Use cached recommendations from init if available
                     if (this.cachedRecommendations) {
                         return this.cachedRecommendations;
                     }
                     // Otherwise fetch new data
-                    return this.getRecommendations(50);
+                    return this.getRecommendations(limit);
                 });
                 this.inlineDisplays.set(key, inlineDisplay);
                 inlineDisplay.start();
@@ -3039,7 +3039,7 @@ var RecSysTracker = (function (exports) {
                 // ////console.error('[DisplayManager] Error initializing inline:', error);
             }
         }
-        // --- LOGIC FETCH RECOMMENDATION (GIỮ NGUYÊN) ---
+        // --- LOGIC FETCH RECOMMENDATION  ---
         async fetchRecommendationsOnce(limit = 50) {
             if (this.cachedRecommendations)
                 return this.cachedRecommendations;

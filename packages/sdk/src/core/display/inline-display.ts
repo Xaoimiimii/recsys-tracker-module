@@ -4,7 +4,7 @@ import { RecommendationItem, RecommendationResponse, normalizeItems } from '../r
 export class InlineDisplay {
   private selector: string;
   private config: InlineConfig;
-  private recommendationGetter: () => Promise<RecommendationResponse>;
+  private recommendationGetter: (limit: number) => Promise<RecommendationResponse>;
   private observer: MutationObserver | null = null;
   private debounceTimer: NodeJS.Timeout | null = null;
   private autoSlideTimeout: NodeJS.Timeout | null = null;
@@ -19,7 +19,7 @@ export class InlineDisplay {
     selector: string,
     _apiBaseUrl: string,
     config: InlineConfig = {} as InlineConfig,
-    recommendationGetter: () => Promise<RecommendationResponse>
+    recommendationGetter: (limit: number) => Promise<RecommendationResponse>
   ) {
     this.selector = selector;
     this.domainKey = _domainKey;
@@ -123,9 +123,8 @@ export class InlineDisplay {
 
   private async fetchRecommendations(): Promise<RecommendationResponse> {
     try {
-      // const limit = (this.config.layoutJson as any)?.maxItems || 50;
-      // console.log('[PopupDisplay] Calling recommendationGetter with limit:', limit);
-      const result = await this.recommendationGetter();
+      const limit = (this.config.layoutJson as any)?.maxItems || 50;
+      const result = await this.recommendationGetter(limit);
       // console.log('[PopupDisplay] recommendationGetter result:', result);
       // recommendationGetter now returns full RecommendationResponse
       if (result && result.item && Array.isArray(result.item)) {

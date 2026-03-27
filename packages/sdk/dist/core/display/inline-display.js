@@ -92,10 +92,10 @@ export class InlineDisplay {
         }
     }
     async fetchRecommendations() {
+        var _a;
         try {
-            // const limit = (this.config.layoutJson as any)?.maxItems || 50;
-            // console.log('[PopupDisplay] Calling recommendationGetter with limit:', limit);
-            const result = await this.recommendationGetter();
+            const limit = ((_a = this.config.layoutJson) === null || _a === void 0 ? void 0 : _a.maxItems) || 50;
+            const result = await this.recommendationGetter(limit);
             // console.log('[PopupDisplay] recommendationGetter result:', result);
             // recommendationGetter now returns full RecommendationResponse
             if (result && result.item && Array.isArray(result.item)) {
