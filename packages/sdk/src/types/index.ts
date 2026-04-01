@@ -85,6 +85,13 @@ export interface TrackerOptions {
   batchSize?: number;
   batchDelay?: number; // ms
   offlineStorage?: boolean;
+  requireConsent?: boolean; 
+  consentConfig?: {
+    message?: string;
+    acceptText?: string;
+    privacyUrl?: string;
+    themeColor?: string;
+  };
 }
 
 // Plugin-related types (đồng bộ với plugin interfaces)

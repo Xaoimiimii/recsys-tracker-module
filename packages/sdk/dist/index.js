@@ -9,6 +9,7 @@ import { ClickPlugin } from './core/plugins/click-plugin';
 import { RatingPlugin } from './core/plugins/rating-plugin';
 import { ReviewPlugin } from './core/plugins/review-plugin';
 import { SearchKeywordPlugin } from './core/plugins/search-keyword-plugin';
+// import { ConsentPlugin } from './core/plugins/consent-plugin';
 // RecSysTracker - Main SDK class
 export class RecSysTracker {
     constructor() {
@@ -93,6 +94,17 @@ export class RecSysTracker {
             //console.log('[RecSysTracker] ✅ SDK initialized successfully');
         }, 'init');
     }
+    // public setConsent(granted: boolean): void {
+    //   // 1. Cập nhật cho Buffer để "mở khóa" luồng gửi batch
+    //   this.eventBuffer.setConsent(granted);
+    //   if (granted) {
+    //     if (this.pluginManager.getPluginNames().length > 0) {
+    //       this.startPlugins();
+    //     }
+    //     // 3. (Tùy chọn) Force gửi ngay đợt batch đầu tiên
+    //     this.flush();
+    //   }
+    // }
     // Tự động khởi tạo plugins dựa trên tracking rules
     async autoInitializePlugins() {
         var _a;
@@ -120,9 +132,13 @@ export class RecSysTracker {
             }
             // Always load SearchKeywordPlugin to check for search keyword config
             this.use(new SearchKeywordPlugin());
+            // const consentPlugin = new ConsentPlugin();
+            // this.use(consentPlugin);
             if (this.pluginManager.getPluginNames().length > 0) {
                 this.startPlugins();
             }
+            // const status = localStorage.getItem('recsys_consent_status');
+            // this.eventBuffer.setConsent(status === 'granted');
         }
     }
     // Track custom event - NEW SIGNATURE (supports flexible payload)

@@ -38,6 +38,7 @@ class LocalStorageAdapter {
 // Xử lý retry khi gửi thất bại
 // Gửi theo batch để tối ưu hiệu năng
 export class EventBuffer {
+    // private hasConsent: boolean = false;
     constructor(options) {
         this.queue = [];
         this.storageKey = 'recsys_tracker_queue';
@@ -62,6 +63,9 @@ export class EventBuffer {
     }
     // Lấy các sự kiện để gửi theo batch (chỉ lấy những event đã đến thời gian retry)
     getBatch(size) {
+        // if (!this.hasConsent) {
+        //   return [];
+        // }
         const now = Date.now();
         const readyEvents = this.queue.filter(event => {
             // Nếu chưa từng retry hoặc đã đến thời gian retry tiếp theo
@@ -109,6 +113,10 @@ export class EventBuffer {
         this.queue = [];
         this.storage.remove(this.storageKey);
     }
+    // public setConsent(status: boolean): void {
+    //   this.hasConsent = status;
+    //   // console.log('[EventBuffer] Consent status updated:', status);
+    // }
     // Lưu queue vào storage
     persistToStorage() {
         if (!this.offlineStorageEnabled) {

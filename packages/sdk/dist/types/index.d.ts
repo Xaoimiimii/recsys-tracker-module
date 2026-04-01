@@ -76,6 +76,13 @@ export interface TrackerOptions {
     batchSize?: number;
     batchDelay?: number;
     offlineStorage?: boolean;
+    requireConsent?: boolean;
+    consentConfig?: {
+        message?: string;
+        acceptText?: string;
+        privacyUrl?: string;
+        themeColor?: string;
+    };
 }
 export type RuleSource = 'ai_detect' | 'regex_group';
 export interface PayloadExtractor {

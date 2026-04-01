@@ -465,6 +465,7 @@
     // Xử lý retry khi gửi thất bại
     // Gửi theo batch để tối ưu hiệu năng
     class EventBuffer {
+        // private hasConsent: boolean = false;
         constructor(options) {
             this.queue = [];
             this.storageKey = 'recsys_tracker_queue';
@@ -489,6 +490,9 @@
         }
         // Lấy các sự kiện để gửi theo batch (chỉ lấy những event đã đến thời gian retry)
         getBatch(size) {
+            // if (!this.hasConsent) {
+            //   return [];
+            // }
             const now = Date.now();
             const readyEvents = this.queue.filter(event => {
                 // Nếu chưa từng retry hoặc đã đến thời gian retry tiếp theo
@@ -536,6 +540,10 @@
             this.queue = [];
             this.storage.remove(this.storageKey);
         }
+        // public setConsent(status: boolean): void {
+        //   this.hasConsent = status;
+        //   // console.log('[EventBuffer] Consent status updated:', status);
+        // }
         // Lưu queue vào storage
         persistToStorage() {
             if (!this.offlineStorageEnabled) {
@@ -5703,6 +5711,7 @@
         }
     }
 
+    // import { ConsentPlugin } from './core/plugins/consent-plugin';
     // RecSysTracker - Main SDK class
     class RecSysTracker {
         constructor() {
@@ -5787,6 +5796,17 @@
                 //console.log('[RecSysTracker] ✅ SDK initialized successfully');
             }, 'init');
         }
+        // public setConsent(granted: boolean): void {
+        //   // 1. Cập nhật cho Buffer để "mở khóa" luồng gửi batch
+        //   this.eventBuffer.setConsent(granted);
+        //   if (granted) {
+        //     if (this.pluginManager.getPluginNames().length > 0) {
+        //       this.startPlugins();
+        //     }
+        //     // 3. (Tùy chọn) Force gửi ngay đợt batch đầu tiên
+        //     this.flush();
+        //   }
+        // }
         // Tự động khởi tạo plugins dựa trên tracking rules
         async autoInitializePlugins() {
             var _a;
@@ -5814,9 +5834,13 @@
                 }
                 // Always load SearchKeywordPlugin to check for search keyword config
                 this.use(new SearchKeywordPlugin());
+                // const consentPlugin = new ConsentPlugin();
+                // this.use(consentPlugin);
                 if (this.pluginManager.getPluginNames().length > 0) {
                     this.startPlugins();
                 }
+                // const status = localStorage.getItem('recsys_consent_status');
+                // this.eventBuffer.setConsent(status === 'granted');
             }
         }
         // Track custom event - NEW SIGNATURE (supports flexible payload)
