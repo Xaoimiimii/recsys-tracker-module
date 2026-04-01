@@ -70,7 +70,7 @@ export class EventBuffer {
   private maxQueueSize: number = 100;
   private maxRetries: number = 3;
   private offlineStorageEnabled: boolean = true;
-  // private hasConsent: boolean = false;
+  private hasConsent: boolean = false;
 
   constructor(options?: {
     maxQueueSize?: number;
@@ -99,9 +99,9 @@ export class EventBuffer {
 
   // Lấy các sự kiện để gửi theo batch (chỉ lấy những event đã đến thời gian retry)
   getBatch(size: number): TrackedEvent[] {
-    // if (!this.hasConsent) {
-    //   return [];
-    // }
+    if (!this.hasConsent) {
+      return [];
+    }
     const now = Date.now();
     const readyEvents = this.queue.filter(event => {
       // Nếu chưa từng retry hoặc đã đến thời gian retry tiếp theo
@@ -159,10 +159,10 @@ export class EventBuffer {
     this.storage.remove(this.storageKey);
   }
 
-  // public setConsent(status: boolean): void {
-  //   this.hasConsent = status;
-  //   // console.log('[EventBuffer] Consent status updated:', status);
-  // }
+  public setConsent(status: boolean): void {
+    this.hasConsent = status;
+    // console.log('[EventBuffer] Consent status updated:', status);
+  }
 
   // Lưu queue vào storage
   private persistToStorage(): void {
