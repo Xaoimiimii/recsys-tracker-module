@@ -6150,6 +6150,10 @@ class RecSysTracker {
                 if (this.eventBuffer.isEmpty() || !this.eventDispatcher) {
                     return;
                 }
+                const consentStatus = localStorage.getItem('recsys_consent_status');
+                if (consentStatus !== 'granted') {
+                    return;
+                }
                 //console.log('[RecSysTracker] Sending events on unload, buffer size:', this.eventBuffer.size());
                 unloadHandled = true;
                 // Send all remaining events dùng sendBeacon

@@ -343,6 +343,11 @@ export class RecSysTracker {
           return;
         }
 
+        const consentStatus = localStorage.getItem('recsys_consent_status');
+        if (consentStatus !== 'granted') {
+          return; 
+        }
+
         //console.log('[RecSysTracker] Sending events on unload, buffer size:', this.eventBuffer.size());
         unloadHandled = true;
 
