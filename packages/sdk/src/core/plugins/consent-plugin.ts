@@ -121,7 +121,7 @@ export class ConsentPlugin extends BasePlugin {
 
     if (title) title.textContent = this.t('title');
     if (desc) {
-      desc.innerHTML = `${this.t('description')} ${this.t('policyLink')}`;
+      desc.innerHTML = `${this.t('description')}`;
     }
     if (declineBtn) declineBtn.textContent = this.t('decline');
     if (acceptBtn) acceptBtn.textContent = this.t('accept');
